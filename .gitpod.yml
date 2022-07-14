@@ -1,0 +1,23 @@
+tasks:
+  - name: infra
+    before: cd infra
+    init: |
+      npm install
+    command: |
+      npm run build
+  - name: cli
+    before: cd cli
+    init: |
+      npm install
+  - name: jvm
+    before: cd lib/java/matano 
+    init: |
+      gradle build
+
+image:
+  file: .gitpod.Dockerfile
+
+jetbrains:
+  intellij:
+    prebuilds:
+      version: stable

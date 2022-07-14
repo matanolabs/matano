@@ -1,0 +1,14 @@
+{
+  "name": "kafka-topic-provider",
+  "version": "1.0.0",
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.77",
+    "@types/cfn-response": "^1.0.4"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.1161.0",
+    "dayjs": "1.10.4",
+    "kafkajs": "1.15.0",
+    "cfn-response": "1.0.1"
+  }
+}

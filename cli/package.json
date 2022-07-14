@@ -1,0 +1,73 @@
+{
+  "name": "matano",
+  "version": "0.0.0",
+  "description": "oclif example Hello World CLI",
+  "author": "🐻‍❄️ Samrose Ahmed 🐻‍❄️",
+  "bin": {
+    "matano": "./bin/run"
+  },
+  "homepage": "https://github.com/matano/hello-world",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "repository": "matano/hello-world",
+  "files": [
+    "/bin",
+    "/dist",
+    "/npm-shrinkwrap.json",
+    "/oclif.manifest.json"
+  ],
+  "dependencies": {
+    "enquirer": "^2.3",
+    "@oclif/core": "^1",
+    "@oclif/plugin-autocomplete": "*",
+    "@oclif/plugin-help": "^5",
+    "@oclif/plugin-plugins": "^2.0.1",
+    "execa": "^5",
+    "ora": "^4"
+  },
+  "devDependencies": {
+    "@oclif/test": "^2",
+    "@types/node": "^16.9.4",
+    "globby": "^11",
+    "mocha": "^9",
+    "oclif": "^3",
+    "shx": "^0.3.3",
+    "ts-node": "^10.2.1",
+    "tslib": "^2.3.1",
+    "typescript": "^4.7"
+  },
+  "oclif": {
+    "bin": "matano",
+    "dirname": "matano",
+    "commands": "./dist/commands",
+    "plugins": [
+      "@oclif/plugin-help",
+      "@oclif/plugin-plugins",
+      "@oclif/plugin-autocomplete"
+    ],
+    "topicSeparator": " ",
+    "topics": {
+      "hello": {
+        "description": "Create the security."
+      }
+    }
+  },
+  "scripts": {
+    "full-install": "npm install && npm run build && npm uninstall -g matano && npm install -g .",
+    "build": "rm -rf dist && tsc -b",
+    "lint": "eslint . --ext .ts --config .eslintrc",
+    "postpack": "shx rm -f oclif.manifest.json",
+    "posttest": "yarn lint",
+    "prepack": "yarn build && oclif manifest && oclif readme",
+    "test": "mocha --forbid-only \"test/**/*.test.ts\"",
+    "version": "oclif readme && git add README.md"
+  },
+  "engines": {
+    "node": ">=12.0.0"
+  },
+  "bugs": "https://github.com/matano/hello-world/issues",
+  "keywords": [
+    "oclif"
+  ],
+  "types": "dist/index.d.ts"
+}

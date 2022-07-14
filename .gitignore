@@ -1,0 +1,18 @@
+*.js
+!jest.config.js
+*.d.ts
+node_modules
+dist
+.metals
+.vscode
+.matano
+
+# CDK asset staging directory
+.cdk.staging
+cdk.out
+
+*-debug.log
+*-error.log
+/tmp
+oclif.manifest.json
+test

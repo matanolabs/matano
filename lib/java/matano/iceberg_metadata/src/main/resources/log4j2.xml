@@ -1,0 +1,19 @@
+<Configuration status="WARN">
+    <Appenders>
+        <Console name="ConsoleAppender" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d{YYYY-MM-dd HH:mm:ss} [%t] %-5p %c:%L - %m%n" />
+        </Console>
+    </Appenders>
+
+    <Loggers>
+        <Root level="INFO">
+            <AppenderRef ref="ConsoleAppender"/>
+        </Root>
+        <Logger name="org.apache.parquet" level = "WARN" />
+        <Logger name="com.amazonaws.request" level="DEBUG" />
+        <Logger name="software.amazon.awssdk" level="INFO" />
+        <Logger name="org.apache.iceberg" level="DEBUG" />
+        <Logger name="software.amazon.awssdk.request" level="DEBUG" />
+        <Logger name="org.apache.http.wire" level="DEBUG" />
+    </Loggers>
+</Configuration>
