@@ -32,7 +32,7 @@ USAGE
 * [`matano autocomplete [SHELL]`](#matano-autocomplete-shell)
 * [`matano bootstrap`](#matano-bootstrap)
 * [`matano deploy`](#matano-deploy)
-* [`matano generate matano_dir`](#matano-generate-matano_dir)
+* [`matano generate:matano_dir`](#matano-generatematano_dir)
 * [`matano help [COMMAND]`](#matano-help-command)
 * [`matano plugins`](#matano-plugins)
 * [`matano plugins:install PLUGIN...`](#matano-pluginsinstall-plugin)
@@ -42,7 +42,7 @@ USAGE
 * [`matano plugins:uninstall PLUGIN...`](#matano-pluginsuninstall-plugin)
 * [`matano plugins:uninstall PLUGIN...`](#matano-pluginsuninstall-plugin-1)
 * [`matano plugins:uninstall PLUGIN...`](#matano-pluginsuninstall-plugin-2)
-* [`matano plugins update`](#matano-plugins-update)
+* [`matano plugins:update`](#matano-pluginsupdate)
 
 ## `matano autocomplete [SHELL]`
 
@@ -118,13 +118,13 @@ EXAMPLES
 
 _See code: [dist/commands/deploy.ts](https://github.com/matano/hello-world/blob/v0.0.0/dist/commands/deploy.ts)_
 
-## `matano generate matano_dir`
+## `matano generate:matano_dir`
 
 Generates a sample Matano directory to get started.
 
 ```
 USAGE
-  $ matano generate matano_dir
+  $ matano generate:matano_dir
 
 DESCRIPTION
   Generates a sample Matano directory to get started.
@@ -132,6 +132,8 @@ DESCRIPTION
 EXAMPLES
   $ matano generate:matano-dir
 ```
+
+_See code: [dist/commands/generate/matano_dir.ts](https://github.com/matano/hello-world/blob/v0.0.0/dist/commands/generate/matano_dir.ts)_
 
 ## `matano help [COMMAND]`
 
@@ -201,7 +203,7 @@ DESCRIPTION
   the CLI without the need to patch and update the whole CLI.
 
 ALIASES
-  $ matano plugins add
+  $ matano plugins:add
 
 EXAMPLES
   $ matano plugins:install myplugin 
@@ -233,6 +235,8 @@ EXAMPLES
   $ matano plugins:inspect myplugin
 ```
 
+_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v2.1.0/src/commands/plugins/inspect.ts)_
+
 ## `matano plugins:install PLUGIN...`
 
 Installs a plugin into the CLI.
@@ -261,7 +265,7 @@ DESCRIPTION
   the CLI without the need to patch and update the whole CLI.
 
 ALIASES
-  $ matano plugins add
+  $ matano plugins:add
 
 EXAMPLES
   $ matano plugins:install myplugin 
@@ -270,6 +274,8 @@ EXAMPLES
 
   $ matano plugins:install someuser/someplugin
 ```
+
+_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v2.1.0/src/commands/plugins/install.ts)_
 
 ## `matano plugins:link PLUGIN`
 
@@ -298,28 +304,7 @@ EXAMPLES
   $ matano plugins:link myplugin
 ```
 
-## `matano plugins:uninstall PLUGIN...`
-
-Removes a plugin from the CLI.
-
-```
-USAGE
-  $ matano plugins:uninstall PLUGIN...
-
-ARGUMENTS
-  PLUGIN  plugin to uninstall
-
-FLAGS
-  -h, --help     Show CLI help.
-  -v, --verbose
-
-DESCRIPTION
-  Removes a plugin from the CLI.
-
-ALIASES
-  $ matano plugins unlink
-  $ matano plugins remove
-```
+_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v2.1.0/src/commands/plugins/link.ts)_
 
 ## `matano plugins:uninstall PLUGIN...`
 
@@ -340,8 +325,8 @@ DESCRIPTION
   Removes a plugin from the CLI.
 
 ALIASES
-  $ matano plugins unlink
-  $ matano plugins remove
+  $ matano plugins:unlink
+  $ matano plugins:remove
 ```
 
 ## `matano plugins:uninstall PLUGIN...`
@@ -363,17 +348,42 @@ DESCRIPTION
   Removes a plugin from the CLI.
 
 ALIASES
-  $ matano plugins unlink
-  $ matano plugins remove
+  $ matano plugins:unlink
+  $ matano plugins:remove
 ```
 
-## `matano plugins update`
+_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v2.1.0/src/commands/plugins/uninstall.ts)_
+
+## `matano plugins:uninstall PLUGIN...`
+
+Removes a plugin from the CLI.
+
+```
+USAGE
+  $ matano plugins:uninstall PLUGIN...
+
+ARGUMENTS
+  PLUGIN  plugin to uninstall
+
+FLAGS
+  -h, --help     Show CLI help.
+  -v, --verbose
+
+DESCRIPTION
+  Removes a plugin from the CLI.
+
+ALIASES
+  $ matano plugins:unlink
+  $ matano plugins:remove
+```
+
+## `matano plugins:update`
 
 Update installed plugins.
 
 ```
 USAGE
-  $ matano plugins update [-h] [-v]
+  $ matano plugins:update [-h] [-v]
 
 FLAGS
   -h, --help     Show CLI help.
@@ -382,4 +392,6 @@ FLAGS
 DESCRIPTION
   Update installed plugins.
 ```
+
+_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v2.1.0/src/commands/plugins/update.ts)_
 <!-- commandsstop -->
