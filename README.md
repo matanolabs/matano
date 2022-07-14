@@ -64,7 +64,7 @@ You can also manually install from source.
 
 ```bash
 git clone https://github.com/matanolabs/matano.git
-cd cli && npm run full-install
+make install
 ```
 
 You can update matano using `matano update`.
