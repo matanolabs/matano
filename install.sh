@@ -1,8 +1,13 @@
 #!/bin/bash
-set -euo pipefail
+set -Eeuo pipefail
 
 run() {
-    INSTALL_DIR="$HOME/.matano"
+    while [[ "$#" -gt 0 ]]; do case $1 in
+        -i|--install-dir) USER_INSTALL_DIR="$2"; shift;shift;;
+        *) usage "Unknown parameter passed: $1"; shift;shift;;
+    esac; done
+
+    INSTALL_DIR=${USER_INSTALL_DIR:-"$HOME/.matano"}
     INSTALL_CODE_DIR="$INSTALL_DIR/matano"
 
     echo "🟡 Installing matano..."
@@ -18,4 +23,4 @@ run() {
     echo "✅ Installed Matano. Run matano to get started."
 }
 
-run
+run "$@"
