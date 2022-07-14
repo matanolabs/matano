@@ -6,7 +6,7 @@
   "bin": {
     "matano": "./bin/run"
   },
-  "homepage": "https://github.com/matano/hello-world",
+  "homepage": "https://github.com/matanolabs/matano",
   "license": "MIT",
   "main": "dist/index.js",
   "repository": "matano/hello-world",
@@ -47,7 +47,7 @@
       "@oclif/plugin-plugins",
       "@oclif/plugin-autocomplete"
     ],
-    "topicSeparator": " ",
+    "topicSeparator": ":",
     "topics": {
       "generate": {
         "description": "Utilities to get started and generate boilerplate."
@@ -67,7 +67,7 @@
   "engines": {
     "node": ">=12.0.0"
   },
-  "bugs": "https://github.com/matano/hello-world/issues",
+  "bugs": "https://github.com/matanolabs/matano/issues",
   "keywords": [
     "oclif"
   ],
