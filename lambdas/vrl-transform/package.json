@@ -1,0 +1,30 @@
+{
+  "name": "@matano/vrl-transform",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "rm -rf dist && mkdir -p dist && concurrently 'esbuild transform.ts --platform=node --external:@matano/vrl-transform-bindings --outfile=dist/output.js --bundle --loader:.ts=ts' 'tsc --noEmit'",
+    "watch": "tsc -w",
+    "test": "jest"
+  },
+  "devDependencies": {
+    "concurrently": "^7.2.2",
+    "esbuild": "^0.14.48",
+    "@types/aws-lambda": "^8.10.77",
+    "@types/prettier": "^2.6.3",
+    "@types/jest": "^26.0.10",
+    "@types/node": "^18.0.1",
+    "aws-sdk": "^2.1167.0",
+    "jest": "^26.4.2",
+    "ts-jest": "^26.2.0",
+    "ts-node": "^9.0.0",
+    "typescript": "^4.7"
+  },
+  "prettier": {
+    "printWidth": 120
+  },
+  "dependencies": {
+    "@matano/msk-authenticator": "1.0.0",
+    "@matano/vrl-transform-bindings": "1.0.0",
+    "kafkajs": "markgaylard/kafkajs#pluggable-auth"
+  }
+}

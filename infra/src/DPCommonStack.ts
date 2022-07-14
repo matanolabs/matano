@@ -9,16 +9,18 @@ import {
   ManagedKafkaEventSource,
   SelfManagedKafkaEventSourceProps,
   ManagedKafkaEventSourceProps,
+  SqsEventSource
 } from "aws-cdk-lib/aws-lambda-event-sources";
 
 import { MatanoStack, MatanoStackProps } from "../lib/MatanoStack";
 import { S3BucketWithNotifications } from "./DPStorageStack";
 import { KafkaCluster, MskClusterType } from "../lib/KafkaCluster";
 import { KafkaTopic } from "../lib/KafkaTopic";
+import { NodejsFunction, NodejsFunctionProps } from "aws-cdk-lib/aws-lambda-nodejs";
 
 // The list of Kafka brokers
 const bootstrapServers = ["present-tadpole-14955-us1-kafka.upstash.io:9092"];
-const logsources = ["cloudtrail"];
+const logsources = ["coredns"];
 
 interface DPCommonStackProps extends MatanoStackProps {
   rawEventsBucketWithNotifications: S3BucketWithNotifications;
@@ -34,8 +36,8 @@ export class DPCommonStack extends MatanoStack {
           secretArn:
             "arn:aws:secretsmanager:us-west-2:903370141120:secret:apptrail-security-lake-test-kafka-secret-FCNzLo",
         })
-      : new KafkaCluster(this, "MatanoKafkaCluster", {
-          clusterName: "serverless-matanor-cluster",
+      : new KafkaCluster(this, "Cluster", {
+          clusterName: "serverless-matano-cluster",
           clusterType: MskClusterType.SERVERLESS,
         });
 
@@ -58,6 +60,44 @@ export class DPCommonStack extends MatanoStack {
       ],
     });
 
+    const vpcProps: Partial<NodejsFunctionProps> | {} =
+    cluster.clusterType != "self-managed"
+      ? {
+          vpc: cluster.vpc,
+          vpcSubnets: cluster.vpc.publicSubnets.map((subnet) => subnet.subnetId),
+          securityGroups: [cluster.securityGroup],
+        }
+      : {};
+
+    // const transformerLambda = new NodejsFunction(this, "TransformerLambda", {
+    //   functionName: "MatanoTransformerLambdaFunction",
+    //   entry: "../lambdas/vrl-transform/transform.ts",
+    //   depsLockFilePath: "../lambdas/package-lock.json",
+    //   runtime: lambda.Runtime.NODEJS_14_X,
+    //   ...vpcProps,
+    //   allowPublicSubnet: true,
+    //   bundling: {
+    //     externalModules: ["aws-sdk", "@matano/vrl-transform-bindings"],
+    //     // nodeModules: ["@matano/vrl-transform-bindings"],
+    //   },
+    //   timeout: cdk.Duration.seconds(30),
+    //   initialPolicy: [
+    //     new iam.PolicyStatement({
+    //       actions: ["secretsmanager:*", "kafka:*", "kafka-cluster:*", "dynamodb:*", "s3:*", "athena:*", "glue:*"],
+    //       resources: ["*"],
+    //     }),
+    //   ],
+    // });
+    // transformerLambda.addEventSource(
+    //   new SqsEventSource(
+    //     props.rawEventsBucketWithNotifications.queue,
+    //     {
+    //       batchSize: 100,
+    //       maxBatchingWindow: cdk.Duration.seconds(1),
+    //     }
+    //   )
+    // );
+
     const topics = ([] as string[]).concat(...logsources.map((l) => [l, `raw.${l}`])).map((topicName) => {
       const topic = new KafkaTopic(this, `${topicName}Topic`, {
         cluster: cluster,
@@ -67,6 +107,7 @@ export class DPCommonStack extends MatanoStack {
           replicationFactor: 3,
         },
       });
+      topic.node.addDependency(cluster);
       forwarderLambda.node.addDependency(topic);
 
       const kafkaSourceProps = {

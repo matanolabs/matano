@@ -3,7 +3,7 @@ import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as msk from "@aws-cdk/aws-msk-alpha";
 import * as iam from "aws-cdk-lib/aws-iam";
 import { ISecret, Secret } from "aws-cdk-lib/aws-secretsmanager";
-import { IVpc, Vpc, SecurityGroup } from "aws-cdk-lib/aws-ec2";
+import { IVpc, Vpc, SecurityGroup, Port } from "aws-cdk-lib/aws-ec2";
 import * as cr from "aws-cdk-lib/custom-resources";
 import { CustomResource, Stack } from "aws-cdk-lib";
 import { Construct, Node } from "constructs";
@@ -76,18 +76,21 @@ export class KafkaCluster extends KafkaClusterBase {
 
 
     this.vpc = Vpc.fromLookup(this, "Vpc", { isDefault: true });
-    const securityGroup = new SecurityGroup(this, "SecurityGroup", {
+    this.securityGroup = new SecurityGroup(this, "SecurityGroup", {
       vpc: this.vpc,
     });
-    // console.log({
-    //   SubnetIds: this.vpc.publicSubnets.map((subnet) => subnet.subnetId),
-    // })
+    this.securityGroup.connections.allowFrom(this.securityGroup, Port.allTcp(), "Allow all TCP within SecurityGroup");
+    
+    console.log({
+      SubnetIds: this.vpc.publicSubnets.map((subnet) => subnet.subnetId),
+      securityGroup: this.securityGroup.securityGroupId,
+    });
     const parameters = {
       ClusterName: props.clusterName,
       Serverless: JSON.stringify({
         VpcConfigs: [
           {
-            SecurityGroupIds: [securityGroup.securityGroupId],
+            SecurityGroupIds: [this.securityGroup.securityGroupId],
             SubnetIds: this.vpc.publicSubnets.map((subnet) => subnet.subnetId),
           },
         ],
@@ -204,8 +207,8 @@ class MskServerlessProvider extends Construct {
     // Lambda function to support cloudformation custom resource to create kafka topics.
     const mskServerlessHandler = new NodejsFunction(this, "MskServerlessHandler", {
       functionName: "MskServerlessHandler",
-      entry: "../lambdas/MskServerlessProviderLambda/msk-serverless-handler.ts",
-      depsLockFilePath: "../lambdas/MskServerlessProviderLambda/package-lock.json",
+      entry: "../lambdas/msk-serverless-provider/msk-serverless-handler.ts",
+      depsLockFilePath: "../lambdas/msk-serverless-provider/package-lock.json",
       handler: "onEvent",
       runtime: lambda.Runtime.NODEJS_14_X,
       // vpc: vpcStack.vpc,

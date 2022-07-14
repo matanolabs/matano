@@ -1,0 +1,37 @@
+[package]
+name = "vrl-transform-bindings"
+version = "1.0.0"
+description = "Rust bindings to VRL for transforming raw Kafka Messages to output ones"
+license = "ISC"
+edition = "2021"
+exclude = ["index.node"]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+base64 = "0.13.0"
+thiserror = "1.0.30"
+http = "0.2.8"
+pretty_env_logger = "0.4.0"
+serde = { version = "1.0.130", default-features = false, features = ["derive"] }
+serde_json = "1.0.71"
+structopt = { version = "0.3.25", default-features = false }
+tokio = { version = "1.14.0", default-features = false, features = ["full"] }
+# warp = "0.3.2"
+ts-rs = "6.1"
+
+
+vrl = { path = "./vector/lib/vrl/vrl" }
+vrl-stdlib = { path = "./vector/lib/vrl/stdlib" }
+value = { path = "./vector/lib/value" }
+vector_common = { path = "./vector/lib/vector-common" }
+vector-vrl-functions = { path = "./vector/lib/vector-vrl-functions" }
+lookup = { path = "./vector/lib/lookup" }
+# enrichment = { path = "./vector/lib/enrichment" }
+
+
+[dependencies.neon]
+version = "0.10"
+default-features = false
+features = ["napi-6"]

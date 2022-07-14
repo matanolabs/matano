@@ -1,0 +1,14 @@
+{
+    "compilerOptions": {
+      "lib": [
+        "ES2018"
+      ],
+      "target": "ES2018",
+      "module": "commonjs",
+      "strict": true,
+      "esModuleInterop": true,
+      "forceConsistentCasingInFileNames": true
+    },
+    "$schema": "https://json.schemastore.org/tsconfig",
+    "display": "Recommended",
+}

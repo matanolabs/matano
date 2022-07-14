@@ -43,7 +43,6 @@ export class KafkaTopic extends Construct {
 
   constructor(scope: Construct, id: string, props: KafkaTopicProps) {
     super(scope, id);
-    this.node.addDependency(props.cluster);
 
     const topicProvider = KafkaTopicProvider.getOrCreate(this, props.cluster);
 
@@ -99,14 +98,15 @@ class KafkaTopicProvider extends Construct {
         ? {
             vpc: cluster.vpc,
             vpcSubnets: cluster.vpc.publicSubnets.map((subnet) => subnet.subnetId),
+            securityGroups: [cluster.securityGroup],
           }
         : {};
 
     // Lambda function to support cloudformation custom resource to create kafka topics.
     const kafkaTopicHandler = new NodejsFunction(this, "KafkaTopicHandler", {
       functionName: "KafkaTopicHandler",
-      entry: "../lambdas/KafkaTopicProviderLambda/kafka-topic-handler.ts",
-      depsLockFilePath: "../lambdas/KafkaTopicProviderLambda/package-lock.json",
+      entry: "../lambdas/kafka-topic-provider/kafka-topic-handler.ts",
+      depsLockFilePath: "../lambdas/kafka-topic-provider/package-lock.json",
       handler: "onEvent",
       runtime: lambda.Runtime.NODEJS_14_X,
       ...vpcProps,
@@ -118,7 +118,7 @@ class KafkaTopicProvider extends Construct {
     kafkaTopicHandler.addToRolePolicy(
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
-        actions: ["kafka:*"],
+        actions: ["kafka:*", "kafka-cluster:*"],
         resources: ["*"],
       })
     );
