@@ -1,7 +1,7 @@
 {
   "name": "matano",
   "version": "0.0.0",
-  "description": "oclif example Hello World CLI",
+  "description": "Matano - the open source security lake platform for AWS.",
   "author": "🐻‍❄️ Samrose Ahmed 🐻‍❄️",
   "bin": {
     "matano": "./bin/run"
@@ -17,13 +17,14 @@
     "/oclif.manifest.json"
   ],
   "dependencies": {
-    "enquirer": "^2.3",
-    "@oclif/core": "^1",
+    "@oclif/core": "^1.9.5",
     "@oclif/plugin-autocomplete": "*",
     "@oclif/plugin-help": "^5",
     "@oclif/plugin-plugins": "^2.0.1",
+    "enquirer": "^2.3",
     "execa": "^5",
-    "ora": "^4"
+    "ora": "^4",
+    "chalk": "^4"
   },
   "devDependencies": {
     "@oclif/test": "^2",
@@ -39,6 +40,7 @@
   "oclif": {
     "bin": "matano",
     "dirname": "matano",
+    "helpClass": "./dist/help",
     "commands": "./dist/commands",
     "plugins": [
       "@oclif/plugin-help",
@@ -47,8 +49,8 @@
     ],
     "topicSeparator": " ",
     "topics": {
-      "hello": {
-        "description": "Create the security."
+      "generate": {
+        "description": "Utilities to get started and generate boilerplate."
       }
     }
   },
