@@ -43,7 +43,7 @@ export class DPCommonStack extends MatanoStack {
 
     const forwarderLambda = new PythonFunction(this, "MatanoForwarderLambda", {
       functionName: "MatanoForwarderLambdaFunction",
-      entry: "../lambdas/MatanoForwarderLambda",
+      entry: "../lib/python/matano_forwarder",
       index: "matano_forwarder_lambda/main.py",
       handler: "lambda_handler",
       runtime: lambda.Runtime.PYTHON_3_9,
@@ -71,8 +71,8 @@ export class DPCommonStack extends MatanoStack {
 
     // const transformerLambda = new NodejsFunction(this, "TransformerLambda", {
     //   functionName: "MatanoTransformerLambdaFunction",
-    //   entry: "../lambdas/vrl-transform/transform.ts",
-    //   depsLockFilePath: "../lambdas/package-lock.json",
+    //   entry: "../lib/js/vrl-transform/transform.ts",
+    //   depsLockFilePath: "../lib/js/package-lock.json",
     //   runtime: lambda.Runtime.NODEJS_14_X,
     //   ...vpcProps,
     //   allowPublicSubnet: true,

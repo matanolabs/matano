@@ -66,7 +66,7 @@ export class DetectionsStack extends MatanoStack {
     super(scope, id, props);
 
     const detectionsLayer = new PythonLayerVersion(this, "MatanoDetectionsCommonLayer", {
-      entry: path.resolve("..", "lib/python"),
+      entry: path.resolve("..", "lib/python/matano_detection"),
       compatibleRuntimes: [lambda.Runtime.PYTHON_3_9],
     });
 
