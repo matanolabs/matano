@@ -68,7 +68,10 @@ const config = {
             label: 'Docs',
           },
           {to: '/blog', label: 'Blog', position: 'left'},
-          // <iframe src="https://ghbtns.com/github-btn.html?user=twbs&repo=bootstrap&type=star&count=true&size=large" frameborder="0" scrolling="0" width="170" height="30" title="GitHub"></iframe>
+          {
+            type: 'custom-githubButton', 
+            position: "right",
+          },
           {
             href: 'https://github.com/matnolabs/matano',
             label: 'GitHub',

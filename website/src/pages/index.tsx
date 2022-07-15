@@ -36,9 +36,7 @@ function HomepageHeader() {
 export default function Home(): JSX.Element {
   const { siteConfig } = useDocusaurusContext();
   return (
-    <Layout
-      //title={`Open source security lake platform for AWS`}
-      description="Description will go into a meta tag in <head />">
+    <Layout>
       <HomepageHeader />
       <Head>
         <title>Matano | Open source security lake for AWS</title>
