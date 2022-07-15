@@ -6,7 +6,7 @@
 </div>
 
 <h1 align="center">
-  <img src="doc/assets/cover.png" width="500">
+  <img src="website/src/assets/cover.png" width="500">
 </h1>
 
 <p style="font-size:22px;" align="center">
