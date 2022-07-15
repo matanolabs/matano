@@ -1,13 +1,7 @@
-oclif-hello-world
+matano
 =================
 
-oclif example Hello World CLI
-
-[![oclif](https://img.shields.io/badge/cli-oclif-brightgreen.svg)](https://oclif.io)
-[![Version](https://img.shields.io/npm/v/oclif-hello-world.svg)](https://npmjs.org/package/oclif-hello-world)
-[![CircleCI](https://circleci.com/gh/oclif/hello-world/tree/main.svg?style=shield)](https://circleci.com/gh/oclif/hello-world/tree/main)
-[![Downloads/week](https://img.shields.io/npm/dw/oclif-hello-world.svg)](https://npmjs.org/package/oclif-hello-world)
-[![License](https://img.shields.io/npm/l/oclif-hello-world.svg)](https://github.com/oclif/hello-world/blob/main/package.json)
+matano CLI
 
 <!-- toc -->
 * [Usage](#usage)
@@ -16,7 +10,6 @@ oclif example Hello World CLI
 # Usage
 <!-- usage -->
 ```sh-session
-$ npm install -g matano
 $ matano COMMAND
 running command...
 $ matano (--version)
@@ -32,7 +25,7 @@ USAGE
 * [`matano autocomplete [SHELL]`](#matano-autocomplete-shell)
 * [`matano bootstrap`](#matano-bootstrap)
 * [`matano deploy`](#matano-deploy)
-* [`matano generate:matano_dir`](#matano-generatematano_dir)
+* [`matano generate:matano-dir DIRECTORY-NAME`](#matano-generatematano-dir-directory-name)
 * [`matano help [COMMAND]`](#matano-help-command)
 * [`matano plugins`](#matano-plugins)
 * [`matano plugins:install PLUGIN...`](#matano-pluginsinstall-plugin)
@@ -118,13 +111,16 @@ EXAMPLES
 
 _See code: [dist/commands/deploy.ts](https://github.com/matano/hello-world/blob/v0.0.0/dist/commands/deploy.ts)_
 
-## `matano generate:matano_dir`
+## `matano generate:matano-dir DIRECTORY-NAME`
 
 Generates a sample Matano directory to get started.
 
 ```
 USAGE
-  $ matano generate:matano_dir
+  $ matano generate:matano-dir [DIRECTORY-NAME]
+
+ARGUMENTS
+  DIRECTORY-NAME  The name of the directory to create
 
 DESCRIPTION
   Generates a sample Matano directory to get started.
@@ -133,7 +129,7 @@ EXAMPLES
   $ matano generate:matano-dir
 ```
 
-_See code: [dist/commands/generate/matano_dir.ts](https://github.com/matano/hello-world/blob/v0.0.0/dist/commands/generate/matano_dir.ts)_
+_See code: [dist/commands/generate/matano-dir.ts](https://github.com/matano/hello-world/blob/v0.0.0/dist/commands/generate/matano-dir.ts)_
 
 ## `matano help [COMMAND]`
 
