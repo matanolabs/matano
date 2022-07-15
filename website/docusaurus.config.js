@@ -53,10 +53,12 @@ const config = {
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
       navbar: {
-        title: 'Matano',
+        // title: 'Matano',
         logo: {
           alt: 'Matano',
-          src: 'img/logo.svg',
+          src: 'matano-logo/vector/default-monochrome-black.svg',
+          srcDark: 'matano-logo/vector/default-monochrome-white.svg',
+          style: { height: "30px" },
         },
         items: [
           {
@@ -75,6 +77,11 @@ const config = {
       },
       footer: {
         style: 'dark',
+        logo: {
+          alt: 'Matano',
+          src: 'matano-logo/vector/default-monochrome-white.svg',
+          style: { height: "30px" },
+        },
         links: [
           {
             title: 'Docs',
