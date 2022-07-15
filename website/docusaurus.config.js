@@ -73,7 +73,7 @@ const config = {
             position: "right",
           },
           {
-            href: 'https://github.com/matnolabs/matano',
+            href: 'https://github.com/matanolabs/matano',
             label: 'GitHub',
             position: 'right',
           },
