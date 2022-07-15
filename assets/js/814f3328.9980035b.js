@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunk_matano_website=self.webpackChunk_matano_website||[]).push([[535],{5641:t=>{t.exports=JSON.parse('{"title":"Recent posts","items":[{"title":"First Blog Post","permalink":"/blog/first-blog-post"}]}')}}]);
