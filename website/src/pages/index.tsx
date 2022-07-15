@@ -14,8 +14,8 @@ function HomepageHeader() {
   return (
     <header className={clsx('hero', styles.heroBanner)}>
       <div className="container">
-        <h1 className="hero__title">{siteConfig.title}</h1>
-        <p className="hero__subtitle">{siteConfig.tagline}</p>
+        <h1 className="hero__title" >{siteConfig.tagline}</h1>
+        <p className="hero__subtitle">You are super duper secure in the multi cloud on our serverless Rust lake.</p>
         <div className={styles.buttons}>
           <Link
             className="button button--secondary button--lg"
