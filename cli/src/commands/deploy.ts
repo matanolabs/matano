@@ -5,6 +5,7 @@ import execa from "execa";
 import ora from "ora";
 import * as fs from "fs";
 import path from "path";
+import { ROOT_DIR } from "..";
 
 export default class Deploy extends Command {
   static description = "Deploys matano.";
@@ -60,9 +61,9 @@ export default class Deploy extends Command {
     for (const [key, value] of Object.entries(cdkContext)) {
       cdkArgs.push(`--context`, `${key}=${value}`);
     }
-
+    this.log(ROOT_DIR);
     await execa("cdk", cdkArgs, {
-      cwd: path.resolve(process.cwd(), "../infra"),
+      cwd: path.resolve(ROOT_DIR, "../../infra"),
       env: {
         MATANO_CDK_ACCOUNT: awsAccountId,
         MATANO_CDK_REGION: awsRegion,
