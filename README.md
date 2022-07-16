@@ -1,17 +1,14 @@
 <div align="center">
-  <a href="https://matano.dev">
-    <img src="https://arhivach.ng/storage/0/19/0191ea69f1a425848e8fdf6ac6a72732.jpg" width="100">
-  </a>
-  <br>
+  <img src="https://arhivach.ng/storage/0/19/0191ea69f1a425848e8fdf6ac6a72732.jpg" width="100">
 </div>
 
-<h1 align="center">
-  <img src="website/src/assets/cover.png" width="500">
-</h1>
+<div align="center">
+  <a href="https://matano.dev"><img src="website/src/assets/cover.png" width="500"></a>
+</div>
 
-<p style="font-size:22px;" align="center">
-The open-source security lake platform for AWS.
-</p>
+<div align="center">
+  <h3>The open-source security lake platform for AWS.</h3>
+</div>
 
 <div align="center">
     <img src="https://img.shields.io/badge/Deploys%20to-AWS-%23FF9900.svg?style=for-the-badge&logo=amazon-aws&logoColor=white&labelColor=232F3E"/>
