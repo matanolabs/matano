@@ -1,8 +1,4 @@
 <div align="center">
-  <img src="https://arhivach.ng/storage/0/19/0191ea69f1a425848e8fdf6ac6a72732.jpg" width="100">
-</div>
-
-<div align="center">
   <a href="https://matano.dev"><img src="website/src/assets/cover.png" width="500"></a>
 </div>
 
