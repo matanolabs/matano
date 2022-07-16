@@ -23,6 +23,9 @@ The open-source security lake platform for AWS.
 
 </div>
 
+## What is Matano?
+
+Matano is an open source security lake platform for AWS. It lets you ingest petabytes of security and log data from various sources, store and query them in a data lake, and create Python detections as code for realtime alerting. Matano is *fully serverless* and designed specifically for AWS and focuses on enabling high scale, low cost, and zero-ops. Matano deploys fully into your AWS account.
 
 ## Features
 
@@ -44,30 +47,34 @@ Matano is a fully serverless platform, designed for zero-ops and unlimited elast
 #### Detections as code
 Write Python detections to implement realtime alerting on your log data.
 
+#### Modern CDK based deployment
+Matano deploys under the hood using the AWS CDK, giving you a modern, extensible Infrastructure as Code deployment experience. 
+
 ## Installing
+
+You can install the matano CLI to deploy Matano into your AWS account, and manage your Matano deployment.
 
 ### Requirements
 
-git, node>=12 and npm are required.
+- node>=12 and npm
+- Docker
 
-### Installation script
+<!-- ### Installation script
 
 ```bash
 curl -sS https://raw.githubusercontent.com/matanolabs/matano/main/install.sh | bash
 ```
 
-Matano will be installed by default in `"$HOME/.matano"`. You can configure this using the `--install-dir` option.
+Matano will be installed by default in `"$HOME/.matano"`. You can configure this using the `--install-dir` option. -->
 
 ### From source
 
-You can also manually install from source.
+You can manually install from source.
 
 ```bash
 git clone https://github.com/matanolabs/matano.git
 make install
 ```
-
-You can update matano using `matano update`.
 
 ## License
 
