@@ -13,12 +13,16 @@
     <!-- <img src="https://img.shields.io/github/v/release/matanolabs/matano?style=flat-square"/> -->
     <a href="https://discord.gg/YSYfHMbfZQ" target="_blank"><img src="https://img.shields.io/discord/996484553290022973?logo=discord&style=flat-square"/></a>
     <a href="http://twitter.com/intent/tweet?url=https%3A%2F%2Fgithub.com%2Fmatanolabs%2Fmatano" target="_blank"><img src="https://img.shields.io/twitter/url?style=social&url=https%3A%2F%2Fgithub.com%2Fmatanolabs%2Fmatano" alt="Twitter"/></a>
-
 </div>
 
 ## What is Matano?
 
 Matano is an open source security lake platform for AWS. It lets you ingest petabytes of security and log data from various sources, store and query them in a data lake, and create Python detections as code for realtime alerting. Matano is *fully serverless* and designed specifically for AWS and focuses on enabling high scale, low cost, and zero-ops. Matano deploys fully into your AWS account.
+
+<div align="center">
+  <br>
+  <img src="website/src/assets/diagram.png" width="1000">
+</div>
 
 ## Features
 
