@@ -185,8 +185,10 @@ def insert_col(obj, ecs_field, ecs_fields_raw):
             add_struct(obj, subpath, ecs_field, ".".join(subpath) == col_name)
 
 
+ecs_version_int = int(ECS_VERSION.replace(".", ""))
+
 if __name__ == "__main__":
-    ret = { "type": "struct", "fields": [], "schema-id": 831, }
+    ret = { "type": "struct", "fields": [], "schema-id": ecs_version_int, }
 
     for ecs_field in ecs_fields_raw:
         insert_col(ret, ecs_field, ecs_fields_raw)

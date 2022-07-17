@@ -40,7 +40,6 @@ class MatanoIcebergTableCustomResource {
     val mapper = jacksonObjectMapper()
 
     fun createIcebergCatalog(): GlueCatalog {
-        println("cehs-------")
         return GlueCatalog().apply { initialize("glue_catalog", icebergProperties) }
     }
 
@@ -49,10 +48,7 @@ class MatanoIcebergTableCustomResource {
             "Create" -> create(event, context)
             "Update" -> update(event, context)
             "Delete" -> delete(event, context)
-            else -> {
-                println("Unexpected request type \"" + event.requestType + "\" for event " + event)
-                throw RuntimeException("Unexpected request type.")
-            }
+            else -> throw RuntimeException("Unexpected request type: ${event.requestType}.")
         }
         return if (res == null) null else mapper.convertValue(res, Map::class.java)
     }
@@ -65,7 +61,7 @@ class MatanoIcebergTableCustomResource {
         println(mapper.writeValueAsString(parsedSchema))
         val icebergSchema = SchemaParser.fromJson(mapper.writeValueAsString(parsedSchema))
         val tableId = TableIdentifier.of(Namespace.of(MATANO_NAMESPACE), logSourceName)
-        val partition = PartitionSpec.builderFor(icebergSchema).day("timestamp").build()
+        val partition = PartitionSpec.builderFor(icebergSchema).day(TIMESTAMP_COLUMN_NAME).build()
         val table = icebergCatalog.createTable(tableId, icebergSchema, partition, mapOf(
                 "format-version" to "2",
         ))
@@ -107,6 +103,7 @@ class MatanoIcebergTableCustomResource {
 
     companion object {
         private const val MATANO_NAMESPACE = "matano"
+        private const val TIMESTAMP_COLUMN_NAME = "@timestamp"
         val icebergProperties = mapOf(
                 "catalog-name" to "iceberg",
                 "catalog-impl" to "org.apache.iceberg.aws.glue.GlueCatalog",
