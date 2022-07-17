@@ -127,6 +127,7 @@ def add_struct(obj, path, ecs_field, is_leaf):
             "name": path[-1],
             "type": map_ecs_iceberg_type(ecs_field["Type"]),
             "required": False,
+            "doc": ecs_field["Description"],
         })
     else:
         append_obj.append({
@@ -137,6 +138,7 @@ def add_struct(obj, path, ecs_field, is_leaf):
                 "fields": [],
             },
             "required": False,
+            "doc": ecs_field["Description"],
         })
 
 def insert_col(obj, ecs_field, ecs_fields_raw):
