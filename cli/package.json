@@ -54,7 +54,7 @@
   },
   "scripts": {
     "clean": "rm -rf dist && rm -rf node_modules",
-    "full-install": "npm install && npm run build && npm uninstall -g matano && npm install -g .",
+    "full-install": "npm ci && npm run build && npm uninstall -g matano && npm install -g .",
     "build": "rm -rf dist && tsc -b",
     "lint": "eslint . --ext .ts --config .eslintrc",
     "postpack": "shx rm -f oclif.manifest.json",

@@ -76,7 +76,7 @@ class MatanoLogSource extends Construct {
   constructor(scope: Construct, id: string, props: MatanoLogSourceProps) {
     super(scope, id);
 
-    const config = readConfig(props.logSourceDirectory, "log_source.toml")
+    const config = readConfig(props.logSourceDirectory, "log_source.yml")
     const { name: logSourceName, schema } = config;
 
     const matanoIcebergTable = new MatanoIcebergTable(this, "MatanoIcebergTable", {
@@ -223,7 +223,9 @@ export class DPStorageStack extends MatanoStack {
           "StringEquals": { "sts:ExternalId": cdk.Stack.of(this).account }
         },
       }),
-    })
+    });
+
+    console.log(this.matanoUserDirectory);
 
     const logSourcesDirectory = path.join(this.matanoUserDirectory, "log_sources");
     const logSources = getDirectories(logSourcesDirectory);

@@ -1,11 +1,12 @@
 import * as fs from "fs";
 import * as path from "path";
-import * as TOML from "@iarna/toml";
+import * as YAML from 'yaml';
+
 
 export function readConfig(directory: string, filename: string): Record<string, any> {
-  return TOML.parse(fs.readFileSync(path.join(directory, filename), "utf8"));
+  return YAML.parse(fs.readFileSync(path.join(directory, filename), "utf8"));
 }
 
 export function readDetectionConfig(detectionDirectory: string): Record<string, any> {
-  return readConfig(detectionDirectory, "detection.toml");
+  return readConfig(detectionDirectory, "detection.yml");
 }

@@ -1,4 +1,5 @@
 {
+  "matanoUserDirectory": "/home/samrose/workplace/matano/example",
   "vpc-provider:account=946413832404:filter.isDefault=true:region=us-west-2:returnAsymmetricSubnets=true": {
     "vpcId": "vpc-05175918865d89771",
     "vpcCidrBlock": "172.31.0.0/16",
