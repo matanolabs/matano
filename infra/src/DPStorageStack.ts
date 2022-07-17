@@ -90,6 +90,10 @@ class MatanoLogSource extends Construct {
       logging: false,
       bufferingInterval: cdk.Duration.minutes(1),
       bufferingSize: cdk.Size.mebibytes(128),
+      // We use multi record deaggregation to efficiently pack as many of our messages into a Kinesis Record.
+      // As of now (07/2022), Kinesis Firehose (oddly) does not support record deaggregation without using dynamic partitioning.
+      // We have no use of dynamic partitioning, but we need to use it to use multi record deaggregation, so we enable it and set up a
+      // dummy metadata extraction query (`!{partitionKeyFromQuery:dummy}` will be mapped to the static "data", see below). Hilarious, I know.
       dataOutputPrefix: `lake/${logSourceName}/!{partitionKeyFromQuery:dummy}/`,
       errorOutputPrefix: `lake/${logSourceName}/error/year=!{timestamp:yyyy}/month=!{timestamp:MM}/day=!{timestamp:dd}/hour=!{timestamp:HH}/!{firehose:error-output-type}/`
     });
@@ -159,8 +163,8 @@ class MatanoLogSource extends Construct {
           parameters: [
             {
               parameterName: 'MetadataExtractionQuery',
-              // epoch milliseconds -> date
-              parameterValue: '{dummy: (select("timestamp") | map_values("data") | .timestamp)}',
+              // This is is a dummy query that will always return {"dummy": "data"}. See above for why.
+              parameterValue: '{dummy: (select("@timestamp") | map_values("data") | ."@timestamp")}',
             },
             {
               parameterName: 'JsonParsingEngine',

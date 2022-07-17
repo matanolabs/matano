@@ -105,7 +105,7 @@ class IcebergMetadataWriter {
         val icebergTable = tableObj!!.table
 
         val metrics = readParquetMetrics(s3Path, icebergTable)
-        val partition = PartitionSpec.builderFor(icebergTable.schema()).day("timestamp").build()
+        val partition = PartitionSpec.builderFor(icebergTable.schema()).day(TIMESTAMP_COLUMN_NAME).build()
         val dataFile = DataFiles.builder(partition)
                 .withPath(s3Path)
                 .withFileSizeInBytes(s3ObjectSize)
@@ -117,6 +117,7 @@ class IcebergMetadataWriter {
 
     companion object {
         private const val MATANO_NAMESPACE = "matano"
+        private const val TIMESTAMP_COLUMN_NAME = "@timestamp"
         private val WAREHOUSE_PATH = "s3://${System.getenv("MATANO_ICEBERG_BUCKET")}/lake"
         val icebergProperties = mapOf(
                 "catalog-name" to "iceberg",
