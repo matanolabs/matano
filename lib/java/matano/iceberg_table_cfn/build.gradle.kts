@@ -1,3 +1,5 @@
+import java.nio.file.Paths
+
 plugins {
     application
     kotlin("jvm") version "1.7.0"
@@ -73,6 +75,13 @@ tasks.register("release") {
             from("${project.buildDir}/libs/output.jar")
             into("/asset-output")
         }
+    }
+}
+
+sourceSets.main {
+    resources {
+        srcDir(Paths.get(project.rootDir.absolutePath, "../../../data"))
+        include("*.json")
     }
 }
 

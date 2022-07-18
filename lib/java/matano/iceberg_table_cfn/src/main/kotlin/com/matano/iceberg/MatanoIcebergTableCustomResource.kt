@@ -12,6 +12,21 @@ import org.apache.iceberg.aws.glue.GlueCatalog
 import org.apache.iceberg.catalog.Namespace
 import org.apache.iceberg.catalog.TableIdentifier
 
+fun main() {
+    val stuff = MatanoIcebergTableCustomResource::class.java.classLoader.getResource("ecs_iceberg_schema.json")!!.readText()
+
+    println(stuff.subSequence(0, 400))
+//    val pp = Paths.get("/home/samrose/workplace/matano/test123.json")
+//    val ss11 = Files.readString(pp)
+//    val iceSch = SchemaParser.fromJson(ss11)
+//    val mitcr = MatanoIcebergTableCustomResource()
+//    mitcr.icebergCatalog.createTable(
+//            TableIdentifier.of(Namespace.of("matano"), "oilosity"),
+//            iceSch,
+//            PartitionSpec.unpartitioned()
+//    )
+}
+
 // Cloudformation stringifies all values in properties!
 data class IcebergField(
         val name: String,
@@ -55,11 +70,16 @@ class MatanoIcebergTableCustomResource {
 
     fun create(event: CloudFormationCustomResourceEvent, context: Context): CfnResponse? {
         val logSourceName = event.resourceProperties["logSourceName"] as String
-        val schemaRaw = mapper.convertValue(event.resourceProperties["schema"], IcebergSchema::class.java)
-        println(mapper.writeValueAsString(schemaRaw))
-        val parsedSchema = schemaRaw.parsed()
-        println(mapper.writeValueAsString(parsedSchema))
-        val icebergSchema = SchemaParser.fromJson(mapper.writeValueAsString(parsedSchema))
+
+        val inputSchemaStr: String = if (event.resourceProperties["schema"] != null) {
+            val schemaRaw = mapper.convertValue(event.resourceProperties["schema"], IcebergSchema::class.java)
+            println(mapper.writeValueAsString(schemaRaw))
+            val parsedSchema = schemaRaw.parsed()
+            println(mapper.writeValueAsString(parsedSchema))
+            mapper.writeValueAsString(parsedSchema)
+        } else ECS_ICEBERG_SCHEMA_JSON_TEXT
+
+        val icebergSchema = SchemaParser.fromJson(inputSchemaStr)
         val tableId = TableIdentifier.of(Namespace.of(MATANO_NAMESPACE), logSourceName)
         val partition = PartitionSpec.builderFor(icebergSchema).day(TIMESTAMP_COLUMN_NAME).build()
         val table = icebergCatalog.createTable(tableId, icebergSchema, partition, mapOf(
@@ -102,6 +122,7 @@ class MatanoIcebergTableCustomResource {
     }
 
     companion object {
+        private val ECS_ICEBERG_SCHEMA_JSON_TEXT = this::class.java.classLoader.getResource("ecs_iceberg_schema.json")!!.readText()
         private const val MATANO_NAMESPACE = "matano"
         private const val TIMESTAMP_COLUMN_NAME = "@timestamp"
         val icebergProperties = mapOf(
