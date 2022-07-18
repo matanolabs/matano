@@ -2,4 +2,4 @@
 
 name: "cheese"
 log_sources:
-  - "me_source"
+  - "mesource"

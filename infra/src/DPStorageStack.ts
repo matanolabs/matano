@@ -231,7 +231,7 @@ export class DPStorageStack extends MatanoStack {
     const logSources = getDirectories(logSourcesDirectory);
 
     for (const logSource of logSources) {
-      new MatanoLogSource(this, `MatanoLogSource-${logSource}`, {
+      new MatanoLogSource(this, `MatanoLogSource${logSource}`, {
         logSourceDirectory: path.join(logSourcesDirectory, logSource),
         outputBucket: this.outputEventsBucketWithNotifications,
         firehoseRole,
