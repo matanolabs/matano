@@ -2,6 +2,7 @@ import * as cdk from "aws-cdk-lib";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as msk from "@aws-cdk/aws-msk-alpha";
 import * as iam from "aws-cdk-lib/aws-iam";
+import * as ec2 from "aws-cdk-lib/aws-ec2";
 import { ISecret, Secret } from "aws-cdk-lib/aws-secretsmanager";
 import { IVpc, Vpc, SecurityGroup, Port } from "aws-cdk-lib/aws-ec2";
 import * as cr from "aws-cdk-lib/custom-resources";
@@ -9,17 +10,8 @@ import { CustomResource, Stack } from "aws-cdk-lib";
 import { Construct, Node } from "constructs";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
 
-export const enum MskClusterType {
-  /**
-   * Default Msk Kafka cluster type
-   */
-  DEFAULT = "msk",
-  /**
-   * Serverless Msk Kafka cluster
-   */
-  SERVERLESS = "msk-serverless",
-}
-type ClusterType = "msk" | "self-managed" | "msk-serverless";
+export type MskClusterType  = "msk" | "msk-serverless";
+export type ClusterType = MskClusterType | "self-managed";
 interface KafkaClusterBaseProps {
   clusterType: ClusterType;
 }
@@ -30,10 +22,6 @@ export type IKafkaCluster = {
   | (KafkaCluster & {
       clusterType: "msk" | "msk-serverless";
     })
-  | {
-      clusterType: "self-managed";
-      secret: ISecret;
-    }
 );
 
 interface SelfManagedKafkaAttributes {
@@ -52,6 +40,7 @@ class KafkaClusterBase extends Construct {
 interface MskKafkaClusterProps extends KafkaClusterBaseProps {
   clusterName: string;
   clusterType: MskClusterType;
+  vpc: IVpc;
 }
 type ClusterInfo =
   | {
@@ -74,8 +63,7 @@ export class KafkaCluster extends KafkaClusterBase {
       ...props,
     });
 
-
-    this.vpc = Vpc.fromLookup(this, "Vpc", { isDefault: true });
+    this.vpc = props.vpc;
     this.securityGroup = new SecurityGroup(this, "SecurityGroup", {
       vpc: this.vpc,
     });
@@ -131,6 +119,8 @@ export class KafkaCluster extends KafkaClusterBase {
               vpc: this.vpc,
               clusterName: props.clusterName,
               kafkaVersion: msk.KafkaVersion.V2_8_1,
+              clientAuthentication: msk.ClientAuthentication.sasl({iam: true,}),
+              instanceType: new ec2.InstanceType("kafka.t3.small"),
             }),
           };
 
@@ -166,23 +156,23 @@ export class KafkaCluster extends KafkaClusterBase {
   /**
    * Imports a self-managed kafka cluster by (ssm) secret name & bootstrap servers.
    */
-  public static fromSelfManagedAttributes(
-    scope: Construct,
-    id: string,
-    props: SelfManagedKafkaAttributes
-  ): IKafkaCluster {
-    return new (class extends KafkaClusterBase {
-      secret: ISecret;
-      clusterType: "self-managed";
-      constructor(scope: Construct, id: string) {
-        super(scope, id, {
-          clusterType: "self-managed",
-        });
-        this.secret = Secret.fromSecretCompleteArn(scope, id, props.secretArn);
-        this.bootstrapAddress = props.bootstrapAddress;
-      }
-    })(scope, id);
-  }
+  // public static fromSelfManagedAttributes(
+  //   scope: Construct,
+  //   id: string,
+  //   props: SelfManagedKafkaAttributes
+  // ): IKafkaCluster {
+  //   return new (class extends KafkaClusterBase {
+  //     secret: ISecret;
+  //     clusterType: "self-managed";
+  //     constructor(scope: Construct, id: string) {
+  //       super(scope, id, {
+  //         clusterType: "self-managed",
+  //       });
+  //       this.secret = Secret.fromSecretCompleteArn(scope, id, props.secretArn);
+  //       this.bootstrapAddress = props.bootstrapAddress;
+  //     }
+  //   })(scope, id);
+  // }
 }
 
 class MskServerlessProvider extends Construct {

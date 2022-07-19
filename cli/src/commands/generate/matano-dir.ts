@@ -22,15 +22,6 @@ log_sources:
 const sampleLogSourceYml = `# ${autogenerateNote}
 
 name: "me_source"
-
-schema:
-  fields:
-    - { "name": "@timestamp", "type": "timestamp" }
-    - { "name": "id", "type":  "long" }
-    - { "name": "name", "type":  "string" }
-    - { "name": "category", "type":  "string" }
-    - { "name": "description", "type":  "string" }
-    - { "name": "product", "type":  "string" }
 `;
 
 const sampleDetectionReqs = `# ${autogenerateNote}

@@ -20,6 +20,8 @@ import { MatanoIcebergTable } from "../lib/iceberg";
 import { getDirectories } from "../lib/utils";
 import { readConfig } from "../lib/detections";
 import { CfnDeliveryStream } from "aws-cdk-lib/aws-kinesisfirehose";
+import { KafkaTopic } from "../lib/KafkaTopic";
+import { IKafkaCluster, KafkaCluster } from "../lib/KafkaCluster";
 
 interface S3BucketWithNotificationsProps extends s3.BucketProps {
   maxReceiveCount?: number;
@@ -70,6 +72,7 @@ interface MatanoLogSourceProps {
   logSourceDirectory: string;
   outputBucket: s3.Bucket;
   firehoseRole: iam.Role;
+  kafkaCluster?: IKafkaCluster; //todo: fix
 }
 const MATANO_GLUE_DATABASE_NAME = "matano";
 class MatanoLogSource extends Construct {
@@ -184,10 +187,19 @@ class MatanoLogSource extends Construct {
     firehoseStream.node.addDependency(matanoIcebergTable);
     firehoseStream.node.addDependency(props.firehoseRole);
 
+    // new KafkaTopic(this, `KafkaTopic-${logSourceName}`, {
+    //   topicName: `${logSourceName}-raw`,
+    //   cluster: props.kafkaCluster,
+    //   topicConfig: {
+    //     numPartitions: 10,
+    //     replicationFactor: 1,
+    //   }
+    // });
   }
 }
 
 interface DPStorageStackProps extends MatanoStackProps {
+  kafkaCluster?: IKafkaCluster;
 }
 
 
@@ -235,6 +247,7 @@ export class DPStorageStack extends MatanoStack {
         logSourceDirectory: path.join(logSourcesDirectory, logSource),
         outputBucket: this.outputEventsBucketWithNotifications,
         firehoseRole,
+        kafkaCluster: props.kafkaCluster,
       })
     }
 

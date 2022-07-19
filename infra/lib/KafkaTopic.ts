@@ -1,6 +1,7 @@
 import * as path from "path";
 import * as cdk from "aws-cdk-lib";
 import * as iam from "aws-cdk-lib/aws-iam";
+import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import { CustomResource, Stack } from "aws-cdk-lib";
 import { Construct, Node } from "constructs";
@@ -8,6 +9,7 @@ import * as cr from "aws-cdk-lib/custom-resources";
 import { NodejsFunction, NodejsFunctionProps } from "aws-cdk-lib/aws-lambda-nodejs";
 
 import { IKafkaCluster } from "./KafkaCluster";
+import { MatanoStack } from "./MatanoStack";
 
 interface KafkaTopicConfig {
   /**
@@ -62,26 +64,26 @@ export class KafkaTopic extends Construct {
   }
 }
 
+interface KafkaTopicProviderProps {
+  cluster: IKafkaCluster;
+  vpc: ec2.IVpc;
+}
+
 class KafkaTopicProvider extends Construct {
   private readonly provider: cr.Provider;
   /**
    * Returns the singleton provider.
    */
   public static getOrCreate(scope: Construct, cluster: IKafkaCluster) {
-    const policyStatement =
-      cluster.clusterType != "self-managed"
-        ? new iam.PolicyStatement({
-            actions: ["kafka:CreateTopic"],
-            resources: [cluster.clusterArn],
-          })
-        : undefined;
+    const policyStatement = undefined;
 
-    const stack = Stack.of(scope);
+    const stack = Stack.of(scope) as MatanoStack;
     const id = `KafkaTopicProvider`;
     const x =
       (Node.of(stack).tryFindChild(id) as KafkaTopicProvider) ||
       new KafkaTopicProvider(stack, id, {
         cluster,
+        vpc: stack.matanoVpc,
       });
     if (policyStatement != null) {
       x.provider.onEventHandler.addToRolePolicy(policyStatement);
@@ -90,17 +92,16 @@ class KafkaTopicProvider extends Construct {
     return x.provider;
   }
 
-  private constructor(scope: Construct, id: string, { cluster }: { cluster: IKafkaCluster }) {
+  private constructor(scope: Construct, id: string, props: KafkaTopicProviderProps) {
     super(scope, id);
 
-    const vpcProps: Partial<NodejsFunctionProps> | {} =
-      cluster.clusterType != "self-managed"
-        ? {
-            vpc: cluster.vpc,
-            vpcSubnets: cluster.vpc.publicSubnets.map((subnet) => subnet.subnetId),
-            securityGroups: [cluster.securityGroup],
-          }
-        : {};
+    const vpcProps: Partial<NodejsFunctionProps> = {
+      vpc: props.vpc,
+      vpcSubnets: {
+        subnets: props.vpc.publicSubnets,
+      },
+      securityGroups: [props.cluster.securityGroup],
+    }
 
     // Lambda function to support cloudformation custom resource to create kafka topics.
     const kafkaTopicHandler = new NodejsFunction(this, "KafkaTopicHandler", {

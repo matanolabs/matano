@@ -5,7 +5,9 @@ import execa from "execa";
 import ora from "ora";
 import * as fs from "fs";
 import path from "path";
+import * as YAML from 'yaml';
 import { PROJ_ROOT_DIR, } from "..";
+import { readConfig } from "../util";
 
 export default class Deploy extends Command {
   static description = "Deploys matano.";
@@ -55,8 +57,14 @@ export default class Deploy extends Command {
     if (awsProfile) {
       cdkArgs.push("--profile", awsProfile);
     }
-    const cdkContext = {
-      matanoUserDirectory: path.resolve(flags["user-directory"]!!) ?? defaultUserDir,
+
+    const matanoUserDirectory = path.resolve(flags["user-directory"]!!) ?? defaultUserDir;
+    const matanoConf = readConfig(matanoUserDirectory, "matano.config.yml");
+
+    const cdkContext: Record<string, any> = {
+      matanoUserDirectory,
+      matanoAwsAccountId: awsAccountId,
+      matanoAwsRegion: awsRegion,
     };
 
     for (const [key, value] of Object.entries(cdkContext)) {
@@ -65,7 +73,7 @@ export default class Deploy extends Command {
 
     this.log(path.resolve(PROJ_ROOT_DIR, "infra"))
     this.log(path.resolve(PROJ_ROOT_DIR, "infra", "node_modules/.bin/cdk"))
-    await execa(path.resolve(PROJ_ROOT_DIR, "infra", "node_modules/.bin/cdk"), cdkArgs, {
+    const subprocess = execa(path.resolve(PROJ_ROOT_DIR, "infra", "node_modules/.bin/cdk"), cdkArgs, {
       cwd: path.resolve(PROJ_ROOT_DIR, "infra"),
       env: {
         MATANO_CDK_ACCOUNT: awsAccountId,
@@ -73,6 +81,10 @@ export default class Deploy extends Command {
       },
     });
 
+    subprocess.stdout?.pipe(process.stdout);
+    subprocess.stderr?.pipe(process.stdout);
+
+    await subprocess;
     spinner.succeed("Successfully deployed.");
   }
 }

@@ -14,7 +14,7 @@ import {
 
 import { MatanoStack, MatanoStackProps } from "../lib/MatanoStack";
 import { S3BucketWithNotifications } from "./DPStorageStack";
-import { KafkaCluster, MskClusterType } from "../lib/KafkaCluster";
+import { KafkaCluster } from "../lib/KafkaCluster";
 import { KafkaTopic } from "../lib/KafkaTopic";
 import { NodejsFunction, NodejsFunctionProps } from "aws-cdk-lib/aws-lambda-nodejs";
 
@@ -30,19 +30,14 @@ export class DPCommonStack extends MatanoStack {
   constructor(scope: Construct, id: string, props: DPCommonStackProps) {
     super(scope, id, props);
 
-    const cluster = process.env.MATANO_KAFKA_SELFMANAGED
-      ? KafkaCluster.fromSelfManagedAttributes(this, "Cluster", {
-          bootstrapAddress: bootstrapServers.join(","),
-          secretArn:
-            "arn:aws:secretsmanager:us-west-2:903370141120:secret:apptrail-security-lake-test-kafka-secret-FCNzLo",
-        })
-      : new KafkaCluster(this, "Cluster", {
-          clusterName: "serverless-matano-cluster",
-          clusterType: MskClusterType.SERVERLESS,
-        });
+    const cluster = new KafkaCluster(this, "Cluster", {
+      clusterName: "matano-msk-cluster",
+      clusterType: this.matanoConfig.kafka_cluster_type,
+      vpc: this.matanoVpc,
+    });
 
     const forwarderLambda = new PythonFunction(this, "MatanoForwarderLambda", {
-      functionName: "MatanoForwarderLambdaFunction",
+      // functionName: "MatanoForwarderLambdaFunction",
       entry: "../lib/python/matano_forwarder",
       index: "matano_forwarder_lambda/main.py",
       handler: "lambda_handler",
@@ -50,7 +45,6 @@ export class DPCommonStack extends MatanoStack {
       memorySize: 1024,
       timeout: cdk.Duration.seconds(100),
       environment: {
-        USAGE_BUCKET_NAME: "dd",
       },
       initialPolicy: [
         new iam.PolicyStatement({
@@ -60,14 +54,11 @@ export class DPCommonStack extends MatanoStack {
       ],
     });
 
-    const vpcProps: Partial<NodejsFunctionProps> | {} =
-    cluster.clusterType != "self-managed"
-      ? {
-          vpc: cluster.vpc,
-          vpcSubnets: cluster.vpc.publicSubnets.map((subnet) => subnet.subnetId),
-          securityGroups: [cluster.securityGroup],
-        }
-      : {};
+    const vpcProps: Partial<NodejsFunctionProps> | {} = {
+      vpc: cluster.vpc,
+      vpcSubnets: cluster.vpc.publicSubnets.map((subnet) => subnet.subnetId),
+      securityGroups: [cluster.securityGroup],
+    };
 
     // const transformerLambda = new NodejsFunction(this, "TransformerLambda", {
     //   functionName: "MatanoTransformerLambdaFunction",
@@ -98,38 +89,30 @@ export class DPCommonStack extends MatanoStack {
     //   )
     // );
 
-    const topics = ([] as string[]).concat(...logsources.map((l) => [l, `raw.${l}`])).map((topicName) => {
-      const topic = new KafkaTopic(this, `${topicName}Topic`, {
-        cluster: cluster,
-        topicName,
-        topicConfig: {
-          numPartitions: 2,
-          replicationFactor: 3,
-        },
-      });
-      topic.node.addDependency(cluster);
-      forwarderLambda.node.addDependency(topic);
+    // const topics = ([] as string[]).concat(...logsources.map((l) => [l, `raw.${l}`])).map((topicName) => {
+    //   const topic = new KafkaTopic(this, `${topicName}Topic`, {
+    //     cluster: cluster,
+    //     topicName,
+    //     topicConfig: {
+    //       numPartitions: 2,
+    //       replicationFactor: 3,
+    //     },
+    //   });
+    //   topic.node.addDependency(cluster);
+    //   forwarderLambda.node.addDependency(topic);
 
-      const kafkaSourceProps = {
-        topic: topicName,
-        batchSize: 10_000, // TODO
-        startingPosition: lambda.StartingPosition.LATEST, // TODO
-      };
+    //   const kafkaSourceProps = {
+    //     topic: topicName,
+    //     batchSize: 10_000, // TODO
+    //     startingPosition: lambda.StartingPosition.LATEST, // TODO
+    //   };
 
-      const kafkaSource =
-        cluster.clusterType === "self-managed"
-          ? new SelfManagedKafkaEventSource({
-              ...kafkaSourceProps,
-              authenticationMethod: AuthenticationMethod.SASL_SCRAM_256_AUTH,
-              bootstrapServers: bootstrapServers,
-              secret: cluster.secret,
-            })
-          : new ManagedKafkaEventSource({
-              ...kafkaSourceProps,
-              clusterArn: cluster.clusterArn,
-            });
+    //   const kafkaSource = new ManagedKafkaEventSource({
+    //     ...kafkaSourceProps,
+    //     clusterArn: cluster.clusterArn,
+    //   });
 
-      forwarderLambda.addEventSource(kafkaSource);
-    });
+    //   forwarderLambda.addEventSource(kafkaSource);
+    // });
   }
 }

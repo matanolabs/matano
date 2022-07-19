@@ -26,12 +26,12 @@ new IcebergMetadataStack(app, "IcebergMetadataStack", {
   outputBucket: dpStorageStack.outputEventsBucketWithNotifications,
 });
 
-// new DPCommonStack(app, "DPCommonStack", {
-//   stackName: "MatanoDPCommonStack",
-//   env,
-//   rawEventsBucketWithNotifications: dpStorageStack.rawEventsBucketWithNotifications,
-//   outputEventsBucketWithNotifications: dpStorageStack.outputEventsBucketWithNotifications,
-// });
+new DPCommonStack(app, "DPCommonStack", {
+  stackName: "MatanoDPCommonStack",
+  env,
+  rawEventsBucketWithNotifications: dpStorageStack.rawEventsBucketWithNotifications,
+  outputEventsBucketWithNotifications: dpStorageStack.outputEventsBucketWithNotifications,
+});
 
 new DetectionsStack(app, "DetectionsStack", {
   stackName: "MatanoDetectionsStack",

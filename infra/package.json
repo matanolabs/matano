@@ -20,17 +20,21 @@
     "ts-jest": "^26.2.0"
   },
   "dependencies": {
-    "@aws-cdk/aws-lambda-python-alpha": "^2.28.0-alpha.0",
-    "@aws-cdk/aws-msk-alpha": "^2.28.0-alpha.0",
     "@aws-cdk/aws-kinesisfirehose-alpha": "^2.28.0-alpha.0",
     "@aws-cdk/aws-kinesisfirehose-destinations-alpha": "^2.28.0-alpha.0",
-    "yaml": "^2.1.1",
+    "@aws-cdk/aws-lambda-python-alpha": "^2.28.0-alpha.0",
+    "@aws-cdk/aws-msk-alpha": "^2.28.0-alpha.0",
+    "@aws-cdk/cx-api": "*",
     "aws-cdk": "^2.28",
     "aws-cdk-lib": "^2.28",
+    "aws-sdk": "^2.1093",
     "constructs": "^10.0.0",
+    "fs-extra": "^10.1.0",
+    "promptly": "^3.2.0",
     "source-map-support": "^0.5.16",
     "ts-node": "^10.0.0",
-    "typescript": "^4.7"
+    "typescript": "^4.7",
+    "yaml": "^2.1.1"
   },
   "prettier": {
     "printWidth": 120
