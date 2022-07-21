@@ -18,7 +18,7 @@ interface MatanoLogSourceProps {
   logSourceDirectory: string;
   outputBucket: s3.Bucket;
   firehoseRole: iam.Role;
-  kafkaCluster?: IKafkaCluster; //todo: fix
+  kafkaCluster: IKafkaCluster;
 }
 const MATANO_GLUE_DATABASE_NAME = "matano";
 export class MatanoLogSource extends Construct {
@@ -133,15 +133,14 @@ export class MatanoLogSource extends Construct {
     firehoseStream.node.addDependency(matanoIcebergTable);
     firehoseStream.node.addDependency(props.firehoseRole);
 
-    if (props.kafkaCluster) {
-        new KafkaTopic(this, `KafkaTopic-${logSourceName}-raw`, {
-            topicName: `${logSourceName}-raw`,
-            cluster: props.kafkaCluster,
-            topicConfig: {
-                numPartitions: 10,
-                replicationFactor: 1,
-            }
-        });
-    }
+    new KafkaTopic(this, `KafkaTopic-${logSourceName}-raw`, {
+        topicName: `${logSourceName}-raw`,
+        cluster: props.kafkaCluster,
+        topicConfig: {
+            numPartitions: 10,
+            replicationFactor: 1,
+        }
+    });
+
   }
 }

@@ -19,7 +19,7 @@ import { MatanoLogSource } from "../lib/log-source";
 interface DPMainStackProps extends MatanoStackProps {
   rawEventsBucket: S3BucketWithNotifications;
   outputEventsBucket: S3BucketWithNotifications;
-  kafkaCluster?: IKafkaCluster;
+  kafkaCluster: IKafkaCluster;
 }
 
 export class DPMainStack extends MatanoStack {
