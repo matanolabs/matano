@@ -34,8 +34,6 @@ export class DPMainStack extends MatanoStack {
       }),
     });
 
-    console.log(this.matanoUserDirectory);
-
     const logSourcesDirectory = path.join(this.matanoUserDirectory, "log_sources");
     const logSources = getDirectories(logSourcesDirectory);
 
@@ -51,5 +49,36 @@ export class DPMainStack extends MatanoStack {
     new IcebergMetadata(this, "IcebergMetadata", {
       outputBucket: props.outputEventsBucket,
     });
+
+
+    // const transformerLambda = new NodejsFunction(this, "TransformerLambda", {
+    //   functionName: "MatanoTransformerLambdaFunction",
+    //   entry: "../lib/js/vrl-transform/transform.ts",
+    //   depsLockFilePath: "../lib/js/package-lock.json",
+    //   runtime: lambda.Runtime.NODEJS_14_X,
+    //   ...vpcProps,
+    //   allowPublicSubnet: true,
+    //   bundling: {
+    //     externalModules: ["aws-sdk", "@matano/vrl-transform-bindings"],
+    //     // nodeModules: ["@matano/vrl-transform-bindings"],
+    //   },
+    //   timeout: cdk.Duration.seconds(30),
+    //   initialPolicy: [
+    //     new iam.PolicyStatement({
+    //       actions: ["secretsmanager:*", "kafka:*", "kafka-cluster:*", "dynamodb:*", "s3:*", "athena:*", "glue:*"],
+    //       resources: ["*"],
+    //     }),
+    //   ],
+    // });
+    // transformerLambda.addEventSource(
+    //   new SqsEventSource(
+    //     props.rawEventsBucketWithNotifications.queue,
+    //     {
+    //       batchSize: 100,
+    //       maxBatchingWindow: cdk.Duration.seconds(1),
+    //     }
+    //   )
+    // );
+
   }
 }
