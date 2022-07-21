@@ -25,6 +25,7 @@ const dpMainStack = new DPMainStack(app, "DPMainStack", {
   env,
   rawEventsBucket: dpCommonStack.rawEventsBucketWithNotifications,
   outputEventsBucket: dpCommonStack.outputEventsBucketWithNotifications,
+  kafkaCluster: dpCommonStack.kafkaCluster,
 });
 
 new IcebergMetadataStack(app, "IcebergMetadataStack", {

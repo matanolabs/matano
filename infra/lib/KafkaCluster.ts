@@ -124,7 +124,7 @@ export class KafkaCluster extends KafkaClusterBase {
             }),
           };
 
-    this.bootstrapAddress = props.clusterType === "msk-serverless" ? this.bootstrapBrokers("BootstrapBrokerStringSaslIam") : this.bootstrapBrokers("BootstrapBrokerString");
+    this.bootstrapAddress = this.bootstrapBrokers("BootstrapBrokerStringSaslIam");
   }
 
   get clusterArn(): string {

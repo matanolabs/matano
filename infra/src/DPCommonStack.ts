@@ -31,11 +31,12 @@ export class DPCommonStack extends MatanoStack {
 
   rawEventsBucketWithNotifications: S3BucketWithNotifications;
   outputEventsBucketWithNotifications: S3BucketWithNotifications;
+  kafkaCluster: KafkaCluster;
 
   constructor(scope: Construct, id: string, props: DPCommonStackProps) {
     super(scope, id, props);
 
-    const cluster = new KafkaCluster(this, "KafkaCluster", {
+    this.kafkaCluster = new KafkaCluster(this, "KafkaCluster", {
       clusterName: "matano-msk-cluster",
       clusterType: this.matanoConfig.kafka_cluster_type,
       vpc: this.matanoVpc,
