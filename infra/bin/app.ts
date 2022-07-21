@@ -4,7 +4,6 @@ import * as cdk from "aws-cdk-lib";
 
 import { DPCommonStack } from "../src/DPCommonStack";
 import { DPMainStack } from "../src/DPMainStack";
-import { IcebergMetadataStack } from "../src/IcebergMetadataStack";
 import { DetectionsStack } from "../src/DetectionsStack";
 import { tagResources } from "../lib/MatanoStack";
 
@@ -27,14 +26,6 @@ const dpMainStack = new DPMainStack(app, "DPMainStack", {
   outputEventsBucket: dpCommonStack.outputEventsBucketWithNotifications,
   kafkaCluster: dpCommonStack.kafkaCluster,
 });
-
-new IcebergMetadataStack(app, "IcebergMetadataStack", {
-  stackName: "MatanoIcebergMetadataStack",
-  env,
-  outputBucket: dpCommonStack.outputEventsBucketWithNotifications,
-});
-
-
 
 new DetectionsStack(app, "DetectionsStack", {
   stackName: "MatanoDetectionsStack",
