@@ -45,7 +45,7 @@ class Detection extends Construct {
     (lambdaFunction.node.defaultChild as lambda.CfnFunction).handler = "detection.handler.handler";
 
     const config = readDetectionConfig(detectionDirectory);
-    console.log(`Using config: ${JSON.stringify(config)}`);
+
     const logSources = config["log_sources"];
     if (logSources.length == 0) {
       throw "Must have at least one log source configured for a detection.";

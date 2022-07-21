@@ -30,19 +30,13 @@ export function tagResources(
   })
 }
 
-export class MatanoBaseStack extends cdk.Stack {
-  constructor(scope: Construct, id: string, props: cdk.StackProps) {
-    super(scope, id, props);
-  }
-}
-
 interface MatanoConfig {
   kafka_cluster_type: "msk" | "msk-serverless";
 }
 
 export interface MatanoStackProps extends cdk.StackProps {}
 
-export class MatanoStack extends MatanoBaseStack {
+export class MatanoStack extends cdk.Stack {
   matanoConfig: MatanoConfig;
   constructor(scope: Construct, id: string, props: MatanoStackProps) {
     super(scope, id, props);
