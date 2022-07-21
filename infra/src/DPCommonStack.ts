@@ -56,11 +56,14 @@ export class DPCommonStack extends MatanoStack {
       ]
     });
 
+    cdk.Tags.of(this.rawEventsBucketWithNotifications.bucket).add("Name", "matano-raw-events");
+    cdk.Tags.of(this.outputEventsBucketWithNotifications.bucket).add("Name", "matano-output-events");
+
     const matanoDatabase = new glue.CfnDatabase(this, "MatanoDatabase", {
       databaseInput: {
         name: MATANO_DATABASE_NAME,
         description: "Glue database storing Matano Iceberg tables.",
-        locationUri: `s3://${this.outputEventsBucketWithNotifications.bucketName}/lake`,
+        locationUri: `s3://${this.outputEventsBucketWithNotifications.bucket.bucketName}/lake`,
       },
       catalogId: cdk.Fn.ref("AWS::AccountId"),
     });

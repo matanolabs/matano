@@ -39,7 +39,7 @@ new IcebergMetadataStack(app, "IcebergMetadataStack", {
 new DetectionsStack(app, "DetectionsStack", {
   stackName: "MatanoDetectionsStack",
   env,
-  rawEventsBucket: dpCommonStack.rawEventsBucketWithNotifications,
+  rawEventsBucket: dpCommonStack.rawEventsBucketWithNotifications.bucket,
 });
 
 

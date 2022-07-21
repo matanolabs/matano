@@ -42,7 +42,7 @@ export class DPMainStack extends MatanoStack {
     for (const logSource of logSources) {
       new MatanoLogSource(this, `MatanoLogSource${logSource}`, {
         logSourceDirectory: path.join(logSourcesDirectory, logSource),
-        outputBucket: props.outputEventsBucket,
+        outputBucket: props.outputEventsBucket.bucket,
         firehoseRole,
         kafkaCluster: props.kafkaCluster,
       });

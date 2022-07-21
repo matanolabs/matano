@@ -8,20 +8,21 @@ import * as sns from "aws-cdk-lib/aws-sns";
 import { SqsSubscription } from "aws-cdk-lib/aws-sns-subscriptions";
 
 interface S3BucketWithNotificationsProps extends s3.BucketProps {
+  bucketProps?: s3.BucketProps;
   maxReceiveCount?: number;
   eventType?: s3.EventType;
   s3Filters?: s3.NotificationKeyFilter[];
   queueProps?: Partial<sqs.QueueProps>;
 }
-export class S3BucketWithNotifications extends s3.Bucket {
+export class S3BucketWithNotifications extends Construct {
+  bucket: s3.Bucket;
   queue: sqs.Queue;
   dlq: sqs.Queue;
   topic: sns.Topic;
   constructor(scope: Construct, id: string, props: S3BucketWithNotificationsProps) {
-    super(scope, id, {
-      bucketName: props.bucketName,
-      ...props,
-    });
+    super(scope, id);
+
+    this.bucket = new s3.Bucket(this, "Bucket", props.bucketProps);
 
     this.dlq = new sqs.Queue(this, "DLQ", {
       queueName: props.bucketName ? `${props.bucketName}-dlq` : undefined,
@@ -47,6 +48,6 @@ export class S3BucketWithNotifications extends s3.Bucket {
       })
     );
 
-    this.addEventNotification(props.eventType ?? s3.EventType.OBJECT_CREATED_PUT, new s3n.SnsDestination(this.topic), ...(props.s3Filters ?? []));
+    this.bucket.addEventNotification(props.eventType ?? s3.EventType.OBJECT_CREATED_PUT, new s3n.SnsDestination(this.topic), ...(props.s3Filters ?? []));
   }
 }
