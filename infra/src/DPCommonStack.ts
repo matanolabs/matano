@@ -13,10 +13,10 @@ import {
 } from "aws-cdk-lib/aws-lambda-event-sources";
 
 import { MatanoStack, MatanoStackProps } from "../lib/MatanoStack";
-import { S3BucketWithNotifications } from "./DPStorageStack";
 import { KafkaCluster } from "../lib/KafkaCluster";
 import { KafkaTopic } from "../lib/KafkaTopic";
 import { NodejsFunction, NodejsFunctionProps } from "aws-cdk-lib/aws-lambda-nodejs";
+import { S3BucketWithNotifications } from "../lib/s3-bucket-notifs";
 
 // The list of Kafka brokers
 const bootstrapServers = ["present-tadpole-14955-us1-kafka.upstash.io:9092"];

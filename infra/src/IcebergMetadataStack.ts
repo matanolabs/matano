@@ -5,8 +5,8 @@ import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as iam from "aws-cdk-lib/aws-iam";
 import { MatanoStack, MatanoStackProps } from "../lib/MatanoStack";
 import { execSync } from "child_process";
-import { S3BucketWithNotifications } from "./DPStorageStack";
 import { SqsEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
+import { S3BucketWithNotifications } from "../lib/s3-bucket-notifs";
 
 interface IcebergMetadataStackProps extends MatanoStackProps {
   outputBucket: S3BucketWithNotifications;

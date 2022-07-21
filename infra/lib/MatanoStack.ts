@@ -47,6 +47,8 @@ export class MatanoStack extends MatanoBaseStack {
   constructor(scope: Construct, id: string, props: MatanoStackProps) {
     super(scope, id, props);
     this.matanoConfig = YAML.parse(fs.readFileSync(path.resolve(this.matanoUserDirectory, "matano.config.yml"), "utf8"));
+
+    console.log(this.matanoConfig);
   }
 
   get matanoUserDirectory(): string {
