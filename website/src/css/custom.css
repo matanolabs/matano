@@ -4,7 +4,7 @@
  * work well for content-centric websites.
  */
 
- @import url('https://fonts.googleapis.com/css2?family=Barlow:wght@500');
+ @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600&family=Inter');
 
 /* You can override the default Infima variables here. */
 :root {
@@ -17,6 +17,8 @@
   --ifm-color-primary-lightest: #6c95ec;
   --ifm-code-font-size: 95%;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+  --ifm-font-family-base: "Inter";
+  --ifm-hero-text-color: "black";
 }
 
 .footer--dark {
