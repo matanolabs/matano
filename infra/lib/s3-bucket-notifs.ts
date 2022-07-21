@@ -11,6 +11,7 @@ interface S3BucketWithNotificationsProps extends s3.BucketProps {
   maxReceiveCount?: number;
   eventType?: s3.EventType;
   s3Filters?: s3.NotificationKeyFilter[];
+  queueProps?: Partial<sqs.QueueProps>;
 }
 export class S3BucketWithNotifications extends s3.Bucket {
   queue: sqs.Queue;
@@ -28,6 +29,7 @@ export class S3BucketWithNotifications extends s3.Bucket {
     });
 
     this.queue = new sqs.Queue(this, "Queue", {
+      ...props.queueProps,
       queueName: props.bucketName ? `${props.bucketName}-queue` : undefined,
       deadLetterQueue: {
         queue: this.dlq,

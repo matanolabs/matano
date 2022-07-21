@@ -1,6 +1,7 @@
 {
   "app": "node dist/bin/app.js",
   "versionReporting": false,
+  "requireApproval": "never",
   "watch": {
     "include": [
       "**"

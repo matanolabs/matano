@@ -11,54 +11,82 @@ import {
   ManagedKafkaEventSourceProps,
   SqsEventSource
 } from "aws-cdk-lib/aws-lambda-event-sources";
-
+import * as glue from "aws-cdk-lib/aws-glue";
 import { MatanoStack, MatanoStackProps } from "../lib/MatanoStack";
 import { KafkaCluster } from "../lib/KafkaCluster";
 import { KafkaTopic } from "../lib/KafkaTopic";
 import { NodejsFunction, NodejsFunctionProps } from "aws-cdk-lib/aws-lambda-nodejs";
 import { S3BucketWithNotifications } from "../lib/s3-bucket-notifs";
 
+
+export const MATANO_DATABASE_NAME = "matano";
+
 // The list of Kafka brokers
 const bootstrapServers = ["present-tadpole-14955-us1-kafka.upstash.io:9092"];
 const logsources = ["coredns"];
 
 interface DPCommonStackProps extends MatanoStackProps {
-  rawEventsBucketWithNotifications: S3BucketWithNotifications;
-  outputEventsBucketWithNotifications: S3BucketWithNotifications;
 }
 export class DPCommonStack extends MatanoStack {
+
+  rawEventsBucketWithNotifications: S3BucketWithNotifications;
+  outputEventsBucketWithNotifications: S3BucketWithNotifications;
+
   constructor(scope: Construct, id: string, props: DPCommonStackProps) {
     super(scope, id, props);
 
-    const cluster = new KafkaCluster(this, "Cluster", {
+    const cluster = new KafkaCluster(this, "KafkaCluster", {
       clusterName: "matano-msk-cluster",
       clusterType: this.matanoConfig.kafka_cluster_type,
       vpc: this.matanoVpc,
     });
 
-    const forwarderLambda = new PythonFunction(this, "MatanoForwarderLambda", {
-      // functionName: "MatanoForwarderLambdaFunction",
-      entry: "../lib/python/matano_forwarder",
-      index: "matano_forwarder_lambda/main.py",
-      handler: "lambda_handler",
-      runtime: lambda.Runtime.PYTHON_3_9,
-      memorySize: 1024,
-      timeout: cdk.Duration.seconds(100),
-      environment: {
-      },
-      initialPolicy: [
-        new iam.PolicyStatement({
-          actions: ["secretsmanager:*", "kafka:*", "kafka-cluster:*", "dynamodb:*", "s3:*", "athena:*", "glue:*"],
-          resources: ["*"],
-        }),
-      ],
+    this.rawEventsBucketWithNotifications = new S3BucketWithNotifications(this, "RawEventsBucket", {
+      // bucketName: "matano-raw-events",
     });
 
-    const vpcProps: Partial<NodejsFunctionProps> | {} = {
-      vpc: cluster.vpc,
-      vpcSubnets: cluster.vpc.publicSubnets.map((subnet) => subnet.subnetId),
-      securityGroups: [cluster.securityGroup],
-    };
+    this.outputEventsBucketWithNotifications = new S3BucketWithNotifications(this, "OutputEventsBucket", {
+      // bucketName: "matano-output-events",
+      queueProps: {
+        visibilityTimeout: cdk.Duration.seconds(185),
+      },
+      s3Filters: [
+        { prefix: "lake", suffix: "parquet" },
+      ]
+    });
+
+    const matanoDatabase = new glue.CfnDatabase(this, "MatanoDatabase", {
+      databaseInput: {
+        name: MATANO_DATABASE_NAME,
+        description: "Glue database storing Matano Iceberg tables.",
+        locationUri: `s3://${this.outputEventsBucketWithNotifications.bucketName}/lake`,
+      },
+      catalogId: cdk.Fn.ref("AWS::AccountId"),
+    });
+
+    // const forwarderLambda = new PythonFunction(this, "MatanoForwarderLambda", {
+    //   // functionName: "MatanoForwarderLambdaFunction",
+    //   entry: "../lib/python/matano_forwarder",
+    //   index: "matano_forwarder_lambda/main.py",
+    //   handler: "lambda_handler",
+    //   runtime: lambda.Runtime.PYTHON_3_9,
+    //   memorySize: 1024,
+    //   timeout: cdk.Duration.seconds(100),
+    //   environment: {
+    //   },
+    //   initialPolicy: [
+    //     new iam.PolicyStatement({
+    //       actions: ["secretsmanager:*", "kafka:*", "kafka-cluster:*", "dynamodb:*", "s3:*", "athena:*", "glue:*"],
+    //       resources: ["*"],
+    //     }),
+    //   ],
+    // });
+
+    // const vpcProps: Partial<NodejsFunctionProps> | {} = {
+    //   vpc: cluster.vpc,
+    //   vpcSubnets: cluster.vpc.publicSubnets.map((subnet) => subnet.subnetId),
+    //   securityGroups: [cluster.securityGroup],
+    // };
 
     // const transformerLambda = new NodejsFunction(this, "TransformerLambda", {
     //   functionName: "MatanoTransformerLambdaFunction",

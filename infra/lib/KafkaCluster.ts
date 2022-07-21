@@ -120,7 +120,7 @@ export class KafkaCluster extends KafkaClusterBase {
               clusterName: props.clusterName,
               kafkaVersion: msk.KafkaVersion.V2_8_1,
               clientAuthentication: msk.ClientAuthentication.sasl({iam: true,}),
-              instanceType: new ec2.InstanceType("kafka.t3.small"),
+              instanceType: new ec2.InstanceType("t3.small"),
             }),
           };
 

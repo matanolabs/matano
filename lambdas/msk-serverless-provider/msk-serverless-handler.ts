@@ -50,7 +50,6 @@ export async function createCluster(
     Data: {
       ClusterArn: response.ClusterArn,
       ClusterName: response.ClusterName,
-      
     },
   };
 }

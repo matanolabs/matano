@@ -60,11 +60,13 @@ export default class Deploy extends Command {
 
     const matanoUserDirectory = path.resolve(flags["user-directory"]!!) ?? defaultUserDir;
     const matanoConf = readConfig(matanoUserDirectory, "matano.config.yml");
+    const matanoContext = fs.readFileSync(path.resolve(matanoUserDirectory, "matano.context.json"), "utf8");
 
     const cdkContext: Record<string, any> = {
       matanoUserDirectory,
       matanoAwsAccountId: awsAccountId,
       matanoAwsRegion: awsRegion,
+      matanoContext,
     };
 
     for (const [key, value] of Object.entries(cdkContext)) {

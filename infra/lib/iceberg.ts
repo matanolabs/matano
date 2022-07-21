@@ -7,6 +7,8 @@ import * as iam from "aws-cdk-lib/aws-iam";
 import * as cr from "aws-cdk-lib/custom-resources";
 import { CustomResource } from "aws-cdk-lib";
 import { execSync } from "child_process";
+import { S3BucketWithNotifications } from "./s3-bucket-notifs";
+import { SqsEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
 
 interface MatanoIcebergTableProps {
   logSourceName: string;
@@ -90,5 +92,52 @@ export class IcebergTableProvider extends Construct {
     this.provider = new cr.Provider(this, "MatanoIcebergTableCrProvider", {
       onEventHandler: providerFunc,
     });
+  }
+}
+
+
+interface IcebergMetadataProps {
+  outputBucket: S3BucketWithNotifications;
+}
+export class IcebergMetadata extends Construct {
+  constructor(scope: Construct, id: string, props: IcebergMetadataProps) {
+    super(scope, id);
+
+    const codePath = path.resolve(path.join("../lib/java/matano"));
+
+    const lambdaFunction = new lambda.Function(this, "MatanoIcebergMetadataWriterFunction", {
+      description: "This function ingests written input files into an Iceberg table.",
+      runtime: lambda.Runtime.JAVA_11,
+      memorySize: 512,
+      handler: "com.matano.iceberg.IcebergMetadataHandler::handleRequest",
+      timeout: cdk.Duration.minutes(3),
+      code: lambda.Code.fromAsset(codePath, {
+        assetHashType: cdk.AssetHashType.OUTPUT,
+        bundling: {
+          image: lambda.Runtime.JAVA_11.bundlingImage,
+          volumes: [
+            {
+              hostPath: path.resolve("~/.gradle/caches"),
+              containerPath: "/root/.gradle/caches",
+            },
+          ],
+          command: ["./gradlew", ":iceberg_metadata:release",],
+          local:  {
+            tryBundle(outputDir, options) {
+              execSync(`gradle -p ${codePath} :iceberg_metadata:release && cp ../lib/java/matano/iceberg_metadata/build/libs/output.jar ${outputDir}/output.jar`)
+              return true;
+            },
+          }
+        },
+      }),
+      initialPolicy: [new iam.PolicyStatement({
+        actions: ["glue:*", "s3:*",],
+        resources: ["*"],
+      })],
+    });
+
+    const eventSource = new SqsEventSource(props.outputBucket.queue, {});
+    lambdaFunction.addEventSource(eventSource);
+
   }
 }
