@@ -44,9 +44,6 @@ Matano is a fully serverless platform, designed for zero-ops and unlimited elast
 #### Detections as code
 Write Python detections to implement realtime alerting on your log data.
 
-#### Modern CDK based deployment
-Matano deploys under the hood using the AWS CDK, giving you a modern, extensible Infrastructure as Code deployment experience. 
-
 ## Installing
 
 You can install the matano CLI to deploy Matano into your AWS account, and manage your Matano deployment.
