@@ -1,4 +1,4 @@
-import csv, os, json, sys, random
+import csv, os, json, sys
 import tarfile
 import tempfile
 from urllib.request import urlretrieve
@@ -24,7 +24,9 @@ with open(csv_filepath) as csvf:
     reader = csv.DictReader(csvf)
     ecs_fields_raw = list(reader)
 
-def map_ecs_iceberg_type(ecs_type):
+def map_ecs_iceberg_type(ecs_type, path=None):
+    colname = ".".join(path)
+
     if ecs_type == "keyword":
         return "string"
     elif ecs_type == "scaled_float":
@@ -49,7 +51,7 @@ def map_ecs_iceberg_type(ecs_type):
             "fields": [
                 # TODO: FIX THIS
                 {
-                    "id": random.randint(7000, 8000),
+                    "id": ecs_field_id(colname + ".lon", True),
                     "name": "lon",
                     "required": True,
                     "type": "float",
@@ -57,7 +59,7 @@ def map_ecs_iceberg_type(ecs_type):
                     "write-default": None,
                 },
                 {
-                    "id": random.randint(8000, 9000),
+                    "id": ecs_field_id(colname + ".lat", True),
                     "name": "lat",
                     "required": True,
                     "type": "float",
@@ -67,10 +69,10 @@ def map_ecs_iceberg_type(ecs_type):
             ]
         }
     elif ecs_type == "nested":
+        # raise Exception(f"NOOOOOOOOOOOOOOOO: {name}")
         return {
             "type": "list",
-            "element-id": random.randint(9000, 10000),
-            "element-required": False,
+            "element-id": ecs_field_id(colname),
             "element": "string",
         }
     elif ecs_type == "match_only_text":
@@ -94,18 +96,30 @@ def make_ecs_field_ids(ecs_fields):
             all_parts.append(subpart)
 
     return { part: idx for idx, part in enumerate(all_parts)}
-
+    
 
 ecs_field_ids = make_ecs_field_ids(ecs_fields_raw)
 
-def ecs_field_id(col_name):
-    return ecs_field_ids[col_name]
 
+EXTRA_FIELDS_COUNTER = 1
+def make_extra_field_id():
+    max_field_id = max(ecs_field_ids.values())
+    global EXTRA_FIELDS_COUNTER
+    ret = max_field_id + EXTRA_FIELDS_COUNTER
+    EXTRA_FIELDS_COUNTER += 1
+    return ret
+
+def ecs_field_id(col_name, extra=False):
+    if extra: return make_extra_field_id()
+    else: return ecs_field_ids[col_name]
+
+def is_struct(field):
+    return isinstance(field["type"], dict) and field["type"]["type"] == "struct"
 
 def get_field_val(dic, path):
     ret = deepcopy(dic)
     for part in path:
-        access_obj = ret["type"]["fields"] if (isinstance(ret["type"], dict)) else ret["fields"]
+        access_obj = ret["type"]["fields"] if is_struct(ret) else ret["fields"]
         ret = find_arr(access_obj, lambda f: f["name"] == part)
     return ret
 
@@ -123,16 +137,16 @@ def add_struct(obj, path, ecs_field, is_leaf):
 
     for idx in range(len(path) - 1):
         part = path[idx]
-        access_obj = copy["type"]["fields"] if (isinstance(copy["type"], dict)) else copy["fields"]
+        access_obj = copy["type"]["fields"] if is_struct(copy) else copy["fields"]
         copy = find_arr(access_obj, lambda f: f["name"] == part)
 
-    append_obj = copy["type"]["fields"] if (isinstance(copy["type"], dict)) else copy["fields"]
+    append_obj = copy["type"]["fields"] if is_struct(copy) else copy["fields"]
 
     if is_leaf:
         append_obj.append({
             "id": ecs_field_id(colname),
             "name": get_iceberg_field_name(path[-1]),
-            "type": map_ecs_iceberg_type(ecs_field["Type"]),
+            "type": map_ecs_iceberg_type(ecs_field["Type"], path),
             "required": False,
             "doc": ecs_field["Description"],
         })
@@ -204,4 +218,4 @@ if __name__ == "__main__":
 
     outpath = os.path.join(__file__, "../../data/ecs_iceberg_schema.json")
     with open(os.path.abspath(outpath), "w") as outf:
-        json.dump(ret, outf)
+        json.dump(ret, outf, indent=2)

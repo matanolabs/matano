@@ -204,7 +204,7 @@
                     "type": "struct",
                     "fields": [
                       {
-                        "id": 7552,
+                        "id": 5507,
                         "name": "lon",
                         "required": true,
                         "type": "float",
@@ -212,7 +212,7 @@
                         "write-default": null
                       },
                       {
-                        "id": 8104,
+                        "id": 5508,
                         "name": "lat",
                         "required": true,
                         "type": "float",
@@ -1219,7 +1219,7 @@
                     "type": "struct",
                     "fields": [
                       {
-                        "id": 7541,
+                        "id": 5509,
                         "name": "lon",
                         "required": true,
                         "type": "float",
@@ -1227,7 +1227,7 @@
                         "write-default": null
                       },
                       {
-                        "id": 8603,
+                        "id": 5510,
                         "name": "lat",
                         "required": true,
                         "type": "float",
@@ -3144,7 +3144,7 @@
                     "type": "struct",
                     "fields": [
                       {
-                        "id": 7225,
+                        "id": 5511,
                         "name": "lon",
                         "required": true,
                         "type": "float",
@@ -3152,7 +3152,7 @@
                         "write-default": null
                       },
                       {
-                        "id": 8467,
+                        "id": 5512,
                         "name": "lat",
                         "required": true,
                         "type": "float",
@@ -3785,7 +3785,7 @@
                     "type": "struct",
                     "fields": [
                       {
-                        "id": 7450,
+                        "id": 5513,
                         "name": "lon",
                         "required": true,
                         "type": "float",
@@ -3793,7 +3793,7 @@
                         "write-default": null
                       },
                       {
-                        "id": 8326,
+                        "id": 5514,
                         "name": "lat",
                         "required": true,
                         "type": "float",
@@ -4456,8 +4456,7 @@
                   "name": "sections",
                   "type": {
                     "type": "list",
-                    "element-id": 9595,
-                    "element-required": false,
+                    "element-id": 1598,
                     "element": "string"
                   },
                   "required": false,
@@ -4468,8 +4467,7 @@
                   "name": "segments",
                   "type": {
                     "type": "list",
-                    "element-id": 9361,
-                    "element-required": false,
+                    "element-id": 1609,
                     "element": "string"
                   },
                   "required": false,
@@ -5450,8 +5448,7 @@
                         "name": "sections",
                         "type": {
                           "type": "list",
-                          "element-id": 9770,
-                          "element-required": false,
+                          "element-id": 2120,
                           "element": "string"
                         },
                         "required": false,
@@ -5462,8 +5459,7 @@
                         "name": "segments",
                         "type": {
                           "type": "list",
-                          "element-id": 9146,
-                          "element-required": false,
+                          "element-id": 2134,
                           "element": "string"
                         },
                         "required": false,
@@ -6886,7 +6882,7 @@
                     "type": "struct",
                     "fields": [
                       {
-                        "id": 7190,
+                        "id": 5515,
                         "name": "lon",
                         "required": true,
                         "type": "float",
@@ -6894,7 +6890,7 @@
                         "write-default": null
                       },
                       {
-                        "id": 8461,
+                        "id": 5516,
                         "name": "lat",
                         "required": true,
                         "type": "float",
@@ -7504,7 +7500,7 @@
                     "type": "struct",
                     "fields": [
                       {
-                        "id": 7829,
+                        "id": 5517,
                         "name": "lon",
                         "required": true,
                         "type": "float",
@@ -7512,7 +7508,7 @@
                         "write-default": null
                       },
                       {
-                        "id": 8279,
+                        "id": 5518,
                         "name": "lat",
                         "required": true,
                         "type": "float",
@@ -8167,8 +8163,7 @@
                               "name": "sections",
                               "type": {
                                 "type": "list",
-                                "element-id": 9057,
-                                "element-required": false,
+                                "element-id": 4286,
                                 "element": "string"
                               },
                               "required": false,
@@ -8179,8 +8174,7 @@
                               "name": "segments",
                               "type": {
                                 "type": "list",
-                                "element-id": 9452,
-                                "element-required": false,
+                                "element-id": 4303,
                                 "element": "string"
                               },
                               "required": false,
@@ -8698,7 +8692,7 @@
                           "type": "struct",
                           "fields": [
                             {
-                              "id": 7460,
+                              "id": 5519,
                               "name": "lon",
                               "required": true,
                               "type": "float",
@@ -8706,7 +8700,7 @@
                               "write-default": null
                             },
                             {
-                              "id": 8060,
+                              "id": 5520,
                               "name": "lat",
                               "required": true,
                               "type": "float",
