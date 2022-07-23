@@ -25,6 +25,10 @@
   --ifm-footer-background-color: #04152f;
 }
 
+[data-theme='light'] {
+  --ifm-menu-color: #3d434b;
+}
+
 /* For readability concerns, you should choose a lighter palette in dark mode. */
 [data-theme='dark'] {
   --ifm-color-primary: #4276e7;

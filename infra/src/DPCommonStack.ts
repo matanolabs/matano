@@ -65,7 +65,7 @@ export class DPCommonStack extends MatanoStack {
         description: "Glue database storing Matano Iceberg tables.",
         locationUri: `s3://${this.outputEventsBucketWithNotifications.bucket.bucketName}/lake`,
       },
-      catalogId: cdk.Fn.ref("AWS::AccountId"),
+      catalogId: cdk.Aws.ACCOUNT_ID,
     });
 
   }

@@ -29,7 +29,7 @@ export class DPMainStack extends MatanoStack {
     const firehoseRole = new iam.Role(this, "MatanoFirehoseRole", {
       assumedBy: new iam.ServicePrincipal("firehose.amazonaws.com", {
         conditions: {
-          StringEquals: { "sts:ExternalId": cdk.Stack.of(this).account },
+          StringEquals: { "sts:ExternalId": cdk.Aws.ACCOUNT_ID },
         },
       }),
     });
