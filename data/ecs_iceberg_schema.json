@@ -4456,6 +4456,7 @@
                   "name": "sections",
                   "type": {
                     "type": "list",
+                    "element-required": false,
                     "element-id": 1598,
                     "element": "string"
                   },
@@ -4467,6 +4468,7 @@
                   "name": "segments",
                   "type": {
                     "type": "list",
+                    "element-required": false,
                     "element-id": 1609,
                     "element": "string"
                   },
@@ -5448,6 +5450,7 @@
                         "name": "sections",
                         "type": {
                           "type": "list",
+                          "element-required": false,
                           "element-id": 2120,
                           "element": "string"
                         },
@@ -5459,6 +5462,7 @@
                         "name": "segments",
                         "type": {
                           "type": "list",
+                          "element-required": false,
                           "element-id": 2134,
                           "element": "string"
                         },
@@ -8163,6 +8167,7 @@
                               "name": "sections",
                               "type": {
                                 "type": "list",
+                                "element-required": false,
                                 "element-id": 4286,
                                 "element": "string"
                               },
@@ -8174,6 +8179,7 @@
                               "name": "segments",
                               "type": {
                                 "type": "list",
+                                "element-required": false,
                                 "element-id": 4303,
                                 "element": "string"
                               },
