@@ -4,7 +4,6 @@ import * as cdk from "aws-cdk-lib";
 
 import { DPCommonStack } from "../src/DPCommonStack";
 import { DPMainStack } from "../src/DPMainStack";
-import { DetectionsStack } from "../src/DetectionsStack";
 import { tagResources } from "../lib/MatanoStack";
 
 const app = new cdk.App();
@@ -26,13 +25,6 @@ const dpMainStack = new DPMainStack(app, "DPMainStack", {
   outputEventsBucket: dpCommonStack.outputEventsBucketWithNotifications,
   kafkaCluster: dpCommonStack.kafkaCluster,
 });
-
-new DetectionsStack(app, "DetectionsStack", {
-  stackName: "MatanoDetectionsStack",
-  env,
-  rawEventsBucket: dpCommonStack.rawEventsBucketWithNotifications.bucket,
-});
-
 
 tagResources(app, () => ({
   "matano:managed": "true",

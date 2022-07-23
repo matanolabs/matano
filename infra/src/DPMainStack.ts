@@ -9,12 +9,13 @@ import * as s3 from "aws-cdk-lib/aws-s3";
 import * as glue from "aws-cdk-lib/aws-glue";
 import { IcebergMetadata, MatanoIcebergTable } from "../lib/iceberg";
 import { getDirectories } from "../lib/utils";
-import { readConfig } from "../lib/detections";
+import { readConfig } from "../lib/utils";
 import { CfnDeliveryStream } from "aws-cdk-lib/aws-kinesisfirehose";
 import { KafkaTopic } from "../lib/KafkaTopic";
 import { IKafkaCluster, KafkaCluster } from "../lib/KafkaCluster";
 import { S3BucketWithNotifications } from "../lib/s3-bucket-notifs";
 import { MatanoLogSource } from "../lib/log-source";
+import { MatanoDetections } from "../lib/detections";
 
 interface DPMainStackProps extends MatanoStackProps {
   rawEventsBucket: S3BucketWithNotifications;
@@ -50,6 +51,9 @@ export class DPMainStack extends MatanoStack {
       outputBucket: props.outputEventsBucket,
     });
 
+    // new MatanoDetections(this, "MatanoDetections", {
+    //   rawEventsBucket: props.rawEventsBucket.bucket,
+    // });
 
     // const transformerLambda = new NodejsFunction(this, "TransformerLambda", {
     //   functionName: "MatanoTransformerLambdaFunction",
