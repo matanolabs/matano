@@ -72,7 +72,7 @@ def map_ecs_iceberg_type(ecs_type, path=None):
         return {
             "type": "list",
             "element-required": False,
-            "element-id": ecs_field_id(colname),
+            "element-id": ecs_field_id(colname, extra=True),
             "element": "string",
         }
     elif ecs_type == "match_only_text":

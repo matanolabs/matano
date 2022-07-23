@@ -4457,7 +4457,7 @@
                   "type": {
                     "type": "list",
                     "element-required": false,
-                    "element-id": 1598,
+                    "element-id": 5515,
                     "element": "string"
                   },
                   "required": false,
@@ -4469,7 +4469,7 @@
                   "type": {
                     "type": "list",
                     "element-required": false,
-                    "element-id": 1609,
+                    "element-id": 5516,
                     "element": "string"
                   },
                   "required": false,
@@ -5451,7 +5451,7 @@
                         "type": {
                           "type": "list",
                           "element-required": false,
-                          "element-id": 2120,
+                          "element-id": 5517,
                           "element": "string"
                         },
                         "required": false,
@@ -5463,7 +5463,7 @@
                         "type": {
                           "type": "list",
                           "element-required": false,
-                          "element-id": 2134,
+                          "element-id": 5518,
                           "element": "string"
                         },
                         "required": false,
@@ -6886,7 +6886,7 @@
                     "type": "struct",
                     "fields": [
                       {
-                        "id": 5515,
+                        "id": 5519,
                         "name": "lon",
                         "required": true,
                         "type": "float",
@@ -6894,7 +6894,7 @@
                         "write-default": null
                       },
                       {
-                        "id": 5516,
+                        "id": 5520,
                         "name": "lat",
                         "required": true,
                         "type": "float",
@@ -7504,7 +7504,7 @@
                     "type": "struct",
                     "fields": [
                       {
-                        "id": 5517,
+                        "id": 5521,
                         "name": "lon",
                         "required": true,
                         "type": "float",
@@ -7512,7 +7512,7 @@
                         "write-default": null
                       },
                       {
-                        "id": 5518,
+                        "id": 5522,
                         "name": "lat",
                         "required": true,
                         "type": "float",
@@ -8168,7 +8168,7 @@
                               "type": {
                                 "type": "list",
                                 "element-required": false,
-                                "element-id": 4286,
+                                "element-id": 5523,
                                 "element": "string"
                               },
                               "required": false,
@@ -8180,7 +8180,7 @@
                               "type": {
                                 "type": "list",
                                 "element-required": false,
-                                "element-id": 4303,
+                                "element-id": 5524,
                                 "element": "string"
                               },
                               "required": false,
@@ -8698,7 +8698,7 @@
                           "type": "struct",
                           "fields": [
                             {
-                              "id": 5519,
+                              "id": 5525,
                               "name": "lon",
                               "required": true,
                               "type": "float",
@@ -8706,7 +8706,7 @@
                               "write-default": null
                             },
                             {
-                              "id": 5520,
+                              "id": 5526,
                               "name": "lat",
                               "required": true,
                               "type": "float",
