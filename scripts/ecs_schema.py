@@ -57,7 +57,7 @@ def map_ecs_iceberg_type(ecs_type):
                     "write-default": None,
                 },
                 {
-                    "id": random.randint(7000, 8000),
+                    "id": random.randint(8000, 9000),
                     "name": "lat",
                     "required": True,
                     "type": "float",
@@ -69,7 +69,7 @@ def map_ecs_iceberg_type(ecs_type):
     elif ecs_type == "nested":
         return {
             "type": "list",
-            "element-id": random.randint(7000, 8000),
+            "element-id": random.randint(9000, 10000),
             "element-required": False,
             "element": "string",
         }
