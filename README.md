@@ -2,17 +2,29 @@
   <a href="https://matano.dev"><img src="website/src/assets/cover.png" width="500"></a>
 </div>
 
+<!-- <h1 align="center">Matano</h1> -->
+
 <div align="center">
   <h3>The open-source security lake platform for AWS.</h3>
 </div>
 
 <div align="center">
-    <img src="https://img.shields.io/badge/Deploys%20to-AWS-%23FF9900.svg?style=for-the-badge&logo=amazon-aws&logoColor=white&labelColor=232F3E"/>
+    <a href="#"><img src="https://img.shields.io/badge/Deploys%20to-AWS-%23FF9900.svg?style=for-the-badge&logo=amazon-aws&logoColor=white&labelColor=232F3E"/></a>
     <br>
-    <img src="https://img.shields.io/github/license/matanolabs/matano?style=flat"/>
+    <a href="/LICENSE" target="_blank"><img src="https://img.shields.io/github/license/matanolabs/matano?style=flat"/></a>
     <!-- <img src="https://img.shields.io/github/v/release/matanolabs/matano?style=flat-square"/> -->
     <a href="https://discord.gg/YSYfHMbfZQ" target="_blank"><img src="https://img.shields.io/discord/996484553290022973?logo=discord&style=flat-square"/></a>
     <a href="http://twitter.com/intent/tweet?url=https%3A%2F%2Fgithub.com%2Fmatanolabs%2Fmatano" target="_blank"><img src="https://img.shields.io/twitter/url?style=social&url=https%3A%2F%2Fgithub.com%2Fmatanolabs%2Fmatano" alt="Twitter"/></a>
+</div>
+
+<div align="center">
+    <h3 align="center">
+        <a href="https://www.matano.dev">Website</a>
+        <span> | </span>
+        <a href="https://matano.dev/docs/intro">Docs</a>
+        <span> | </span>
+        <a href="https://discord.gg/YSYfHMbfZQ">Community</a>
+    </h3>
 </div>
 
 ## What is Matano?
