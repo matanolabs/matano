@@ -132,17 +132,17 @@ export class MatanoLogSource extends Construct {
     firehoseStream.node.addDependency(matanoIcebergTable);
     firehoseStream.node.addDependency(props.firehoseRole);
 
-    new KafkaTopic(this, `KafkaTopic-${logSourceName}-raw`, {
-        topicName: `${logSourceName}-raw`,
+    new KafkaTopic(this, `KafkaTopic-${logSourceName}-Raw`, {
+        topicName: `raw.${logSourceName}`,
         cluster: props.kafkaCluster,
         topicConfig: {
-            numPartitions: 10,
+            numPartitions: 1,
             replicationFactor: 1,
         }
     });
 
-    new KafkaTopic(this, `KafkaTopic-${logSourceName}-output`, {
-      topicName: `${logSourceName}-output`,
+    new KafkaTopic(this, `KafkaTopic-${logSourceName}-Output`, {
+      topicName: `output.${logSourceName}`,
       cluster: props.kafkaCluster,
       topicConfig: {
           numPartitions: 1,

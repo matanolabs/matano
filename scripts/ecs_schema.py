@@ -69,7 +69,6 @@ def map_ecs_iceberg_type(ecs_type, path=None):
             ]
         }
     elif ecs_type == "nested":
-        # raise Exception(f"NOOOOOOOOOOOOOOOO: {name}")
         return {
             "type": "list",
             "element-id": ecs_field_id(colname),
@@ -96,7 +95,7 @@ def make_ecs_field_ids(ecs_fields):
             all_parts.append(subpart)
 
     return { part: idx for idx, part in enumerate(all_parts)}
-    
+
 
 ecs_field_ids = make_ecs_field_ids(ecs_fields_raw)
 

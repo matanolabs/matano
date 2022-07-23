@@ -26,10 +26,11 @@ export async function onEvent(event: AWSCDKAsyncCustomResource.OnEventRequest) {
       return createTopic(admin, event, physicalResourceId);
 
     case "Update":
-      return {
-        PhysicalResourceId: physicalResourceId,
-        Data: event.OldResourceProperties,
-        } as AWSCDKAsyncCustomResource.OnEventResponse;
+      throw new Error("Update is not supported for kafka topic.")
+      // return {
+      //   PhysicalResourceId: physicalResourceId,
+      //   Data: event.OldResourceProperties,
+      //   } as AWSCDKAsyncCustomResource.OnEventResponse;
     case "Delete":
       return deleteTopic(admin, event);
   }
@@ -62,15 +63,15 @@ export async function createTopic(
     },
   ];
 
-  // console.debug("Connecting to kafka admin...");
-  // await admin.connect();
-  // console.debug(
-  //   `Creating topic: ${topicName} (p: ${numPartitions}, rf: ${replicationFactor})...`
-  // );
+  console.log("Connecting to kafka admin...");
+  await admin.connect();
+  console.log(
+    `Creating topic: ${topicName} (p: ${numPartitions}, rf: ${replicationFactor})...`
+  );
 
-  // const result = await admin.createTopics({ topics });
-  // console.debug(`Topic created`);
-  // await admin.disconnect();
+  const result = await admin.createTopics({ topics });
+  console.log(`Topic created`);
+  await admin.disconnect();
 
   return {
     PhysicalResourceId: physicalResourceId,
