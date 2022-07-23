@@ -63,15 +63,15 @@ export async function createTopic(
     },
   ];
 
-  console.log("Connecting to kafka admin...");
-  await admin.connect();
-  console.log(
-    `Creating topic: ${topicName} (p: ${numPartitions}, rf: ${replicationFactor})...`
-  );
+  // console.log("Connecting to kafka admin...");
+  // await admin.connect();
+  // console.log(
+  //   `Creating topic: ${topicName} (p: ${numPartitions}, rf: ${replicationFactor})...`
+  // );
 
-  const result = await admin.createTopics({ topics });
-  console.log(`Topic created`);
-  await admin.disconnect();
+  // const result = await admin.createTopics({ topics });
+  // console.log(`Topic created`);
+  // await admin.disconnect();
 
   return {
     PhysicalResourceId: physicalResourceId,
