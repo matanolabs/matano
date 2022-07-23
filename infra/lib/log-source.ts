@@ -112,7 +112,7 @@ export class MatanoLogSource extends Construct {
             {
               parameterName: 'MetadataExtractionQuery',
               // This is is a dummy query that will always return {"dummy": "data"}. See above for why.
-              parameterValue: '{dummy: (select("@timestamp") | map_values("data") | ."@timestamp")}',
+              parameterValue: '{dummy: (select("ts") | map_values("data") | .ts)}',
             },
             {
               parameterName: 'JsonParsingEngine',

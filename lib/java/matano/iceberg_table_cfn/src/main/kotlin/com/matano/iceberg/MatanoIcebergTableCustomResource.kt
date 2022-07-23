@@ -124,7 +124,7 @@ class MatanoIcebergTableCustomResource {
     companion object {
         private val ECS_ICEBERG_SCHEMA_JSON_TEXT = this::class.java.classLoader.getResource("ecs_iceberg_schema.json")!!.readText()
         private const val MATANO_NAMESPACE = "matano"
-        private const val TIMESTAMP_COLUMN_NAME = "@timestamp"
+        private const val TIMESTAMP_COLUMN_NAME = "ts"
         val icebergProperties = mapOf(
                 "catalog-name" to "iceberg",
                 "catalog-impl" to "org.apache.iceberg.aws.glue.GlueCatalog",

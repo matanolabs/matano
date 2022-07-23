@@ -117,7 +117,7 @@ class IcebergMetadataWriter {
 
     companion object {
         private const val MATANO_NAMESPACE = "matano"
-        private const val TIMESTAMP_COLUMN_NAME = "@timestamp"
+        private const val TIMESTAMP_COLUMN_NAME = "ts"
         private val WAREHOUSE_PATH = "s3://${System.getenv("MATANO_ICEBERG_BUCKET")}/lake"
         val icebergProperties = mapOf(
                 "catalog-name" to "iceberg",
