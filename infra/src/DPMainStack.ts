@@ -51,9 +51,9 @@ export class DPMainStack extends MatanoStack {
       outputBucket: props.outputEventsBucket,
     });
 
-    // new MatanoDetections(this, "MatanoDetections", {
-    //   rawEventsBucket: props.rawEventsBucket.bucket,
-    // });
+    new MatanoDetections(this, "MatanoDetections", {
+      rawEventsBucket: props.rawEventsBucket.bucket,
+    });
 
     // const transformerLambda = new NodejsFunction(this, "TransformerLambda", {
     //   functionName: "MatanoTransformerLambdaFunction",
