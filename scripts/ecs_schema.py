@@ -109,6 +109,13 @@ def get_field_val(dic, path):
         ret = find_arr(access_obj, lambda f: f["name"] == part)
     return ret
 
+def get_iceberg_field_name(ecs_field_name):
+    # Athena doesn't support `@` in field names
+    if ecs_field_name == "@timestamp":
+        return "ts"
+    else:
+        return ecs_field_name
+
 def add_struct(obj, path, ecs_field, is_leaf):
     copy = obj
 
@@ -124,7 +131,7 @@ def add_struct(obj, path, ecs_field, is_leaf):
     if is_leaf:
         append_obj.append({
             "id": ecs_field_id(colname),
-            "name": path[-1],
+            "name": get_iceberg_field_name(path[-1]),
             "type": map_ecs_iceberg_type(ecs_field["Type"]),
             "required": False,
             "doc": ecs_field["Description"],
@@ -132,7 +139,7 @@ def add_struct(obj, path, ecs_field, is_leaf):
     else:
         append_obj.append({
             "id": ecs_field_id(colname),
-            "name": path[-1],
+            "name": get_iceberg_field_name(path[-1]),
             "type": {
                 "type": "struct",
                 "fields": [],
