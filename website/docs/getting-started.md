@@ -1,16 +1,7 @@
 ---
-sidebar_position: 2
+sidebar_position: 3
 title: Getting started
 ---
-
-## Installation
-
-### From source
-
-```bash
-git clone https://github.com/matanolabs/matano.git
-make install
-```
 
 ## Bootstrapping
 
