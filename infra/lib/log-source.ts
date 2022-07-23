@@ -141,5 +141,13 @@ export class MatanoLogSource extends Construct {
         }
     });
 
+    new KafkaTopic(this, `KafkaTopic-${logSourceName}-output`, {
+      topicName: `${logSourceName}-output`,
+      cluster: props.kafkaCluster,
+      topicConfig: {
+          numPartitions: 1,
+          replicationFactor: 1,
+      }
+    });
   }
 }

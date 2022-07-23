@@ -9,12 +9,14 @@ import { MatanoStack, MatanoStackProps } from "../lib/MatanoStack";
 import { getDirectories } from "../lib/utils";
 import { ManagedKafkaEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
 import { readDetectionConfig } from "./utils";
+import { KafkaCluster } from "./KafkaCluster";
 
 interface DetectionProps {
   matanoUserDirectory: string;
   detectionName: string;
   detectionsLayer: lambda.LayerVersion;
   rawEventsBucket: s3.Bucket;
+  kafkaCluster: KafkaCluster;
 }
 
 class Detection extends Construct {
@@ -45,18 +47,19 @@ class Detection extends Construct {
       throw "Must have at least one log source configured for a detection.";
     }
     for (const logSource of logSources) {
-      // const eventSource = new ManagedKafkaEventSource({
-      //   topic: logSource,
-      //   startingPosition: lambda.StartingPosition.LATEST,
-      //   clusterArn: "",
-      // });
-      // lambdaFunction.addEventSource(eventSource);
+      const eventSource = new ManagedKafkaEventSource({
+        topic: `${logSource}-output`,
+        startingPosition: lambda.StartingPosition.LATEST,
+        clusterArn: props.kafkaCluster.clusterArn,
+      });
+      lambdaFunction.addEventSource(eventSource);
     }
   }
 }
 
 export interface MatanoDetectionsProps {
   rawEventsBucket: s3.Bucket;
+  kafkaCluster: KafkaCluster;
 }
 
 export class MatanoDetections extends Construct {
@@ -79,6 +82,7 @@ export class MatanoDetections extends Construct {
         detectionsLayer,
         matanoUserDirectory: matanoUserDirectory,
         rawEventsBucket: props.rawEventsBucket,
+        kafkaCluster: props.kafkaCluster,
       });
     }
   }

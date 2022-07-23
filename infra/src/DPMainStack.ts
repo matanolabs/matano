@@ -53,6 +53,7 @@ export class DPMainStack extends MatanoStack {
 
     new MatanoDetections(this, "MatanoDetections", {
       rawEventsBucket: props.rawEventsBucket.bucket,
+      kafkaCluster: props.kafkaCluster,
     });
 
     // const transformerLambda = new NodejsFunction(this, "TransformerLambda", {
