@@ -30,6 +30,6 @@
     "@aws-sdk/signature-v4": "^3.20.0",
     "@matano/msk-authenticator": "1.0.0",
     "cfn-response": "1.0.1",
-    "kafkajs": "markgaylard/kafkajs#pluggable-auth"
+    "kafkajs": "^2.2.0-beta.0"
   }
 }

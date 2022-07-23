@@ -3,5 +3,4 @@ target
 **/.DS_Store
 npm-debug.log*
 vector
-!ts/functions.d.ts
-ts/functions.node
+src

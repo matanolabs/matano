@@ -30,8 +30,21 @@ export function tagResources(
   })
 }
 
-interface MatanoConfig {
-  kafka_cluster_type: "msk" | "msk-serverless";
+export interface MatanoConfiguration {
+}
+type MatanoKafkaConfig = {
+  cluster_type: "msk" | "msk-serverless";
+} | {
+  cluster_type: "self-managed";
+  bootstrap_servers: string[];
+  sasl_scram_secret_arn: string;
+}
+export type MatanoConfig = MatanoConfiguration & {kafka: MatanoKafkaConfig};
+export class MatanoConfiguration {
+  static of(scope: Construct) {
+    const stack = (scope instanceof cdk.Stack ? scope : cdk.Stack.of(scope)) as MatanoStack;
+    return stack.matanoConfig; 
+  } 
 }
 
 export interface MatanoStackProps extends cdk.StackProps {}
@@ -60,6 +73,6 @@ export class MatanoStack extends cdk.Stack {
   }
 
   get matanoContext() {
-    return this.node.tryGetContext("matanoContext");
+    return JSON.parse(this.node.tryGetContext("matanoContext"));
   }
 }

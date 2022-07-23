@@ -20,7 +20,7 @@
     "printWidth": 120
   },
   "dependencies": {
-    "kafkajs": "markgaylard/kafkajs#pluggable-auth",
+    "kafkajs": "^2.2.0-beta.0",
     "@aws-sdk/client-sts": "^3.21.0",
     "@aws-sdk/credential-provider-node": "^3.21.0",
     "@aws-sdk/hash-node": "^3.20.0",

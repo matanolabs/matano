@@ -44,7 +44,7 @@ pub fn vrl(mut cx: FunctionContext) -> JsResult<JsValue> {
 
     // TODO return warnings too
     let (program, _warnings) =
-        match vrl::compile_with_state(&program, &vrl_stdlib::all(), &mut state) {
+        match vrl::compile_with_external(&program, &vrl_stdlib::all(), &mut state) {
             Ok(program) => program,
             Err(diagnostics) => {
                 let msg = Formatter::new(&program, diagnostics).to_string();

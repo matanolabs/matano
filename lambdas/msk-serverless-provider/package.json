@@ -27,6 +27,6 @@
     "aws-sdk": "^2.1161.0",
     "cfn-response": "1.0.1",
     "dayjs": "1.10.4",
-    "kafkajs": "1.15.0"
+    "kafkajs": "^2.2.0-beta.0"
   }
 }

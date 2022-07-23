@@ -95,22 +95,25 @@ class KafkaTopicProvider extends Construct {
   private constructor(scope: Construct, id: string, props: KafkaTopicProviderProps) {
     super(scope, id);
 
-    const vpcProps: Partial<NodejsFunctionProps> = {
-      vpc: props.vpc,
-      vpcSubnets: {
-        subnets: props.vpc.publicSubnets,
-      },
-      securityGroups: [props.cluster.securityGroup],
-    }
+    const lambdaVpcProps: Partial<NodejsFunctionProps> =
+      props.cluster.clusterType != "self-managed"
+        ? {
+            vpc: props.vpc,
+            vpcSubnets: {
+              subnets: props.vpc.publicSubnets,
+            },
+            securityGroups: [props.cluster.securityGroup],
+          }
+        : {};
 
     // Lambda function to support cloudformation custom resource to create kafka topics.
     const kafkaTopicHandler = new NodejsFunction(this, "KafkaTopicHandler", {
       functionName: "KafkaTopicHandler",
       entry: "../lambdas/kafka-topic-provider/kafka-topic-handler.ts",
-      depsLockFilePath: "../lambdas/kafka-topic-provider/package-lock.json",
+      depsLockFilePath: "../lambdas/package-lock.json",
       handler: "onEvent",
       runtime: lambda.Runtime.NODEJS_14_X,
-      ...vpcProps,
+      ...lambdaVpcProps,
       allowPublicSubnet: true,
       // securityGroups: [vpcStack.lambdaSecurityGroup],
       timeout: cdk.Duration.minutes(5),

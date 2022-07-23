@@ -7,16 +7,20 @@ import * as lambda from "aws-cdk-lib/aws-lambda";
 import { PythonFunction, PythonLayerVersion } from "@aws-cdk/aws-lambda-python-alpha";
 import { MatanoStack, MatanoStackProps } from "../lib/MatanoStack";
 import { getDirectories } from "../lib/utils";
-import { ManagedKafkaEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
+import {
+  AuthenticationMethod,
+  ManagedKafkaEventSource,
+  SelfManagedKafkaEventSource,
+} from "aws-cdk-lib/aws-lambda-event-sources";
 import { readDetectionConfig } from "./utils";
-import { KafkaCluster } from "./KafkaCluster";
+import { IKafkaCluster } from "./KafkaCluster";
 
 interface DetectionProps {
   matanoUserDirectory: string;
   detectionName: string;
   detectionsLayer: lambda.LayerVersion;
   rawEventsBucket: s3.Bucket;
-  kafkaCluster: KafkaCluster;
+  kafkaCluster: IKafkaCluster;
 }
 
 class Detection extends Construct {
@@ -47,11 +51,23 @@ class Detection extends Construct {
       throw "Must have at least one log source configured for a detection.";
     }
     for (const logSource of logSources) {
-      const eventSource = new ManagedKafkaEventSource({
+      const kafkaSourceProps = {
         topic: `${logSource}-output`,
-        startingPosition: lambda.StartingPosition.LATEST,
-        clusterArn: props.kafkaCluster.clusterArn,
-      });
+        batchSize: 10_000, // TODO
+        startingPosition: lambda.StartingPosition.LATEST, // TODO
+      };
+      const eventSource =
+        props.kafkaCluster.clusterType === "self-managed"
+          ? new SelfManagedKafkaEventSource({
+              ...kafkaSourceProps,
+              authenticationMethod: AuthenticationMethod.SASL_SCRAM_256_AUTH,
+              bootstrapServers: props.kafkaCluster.bootstrapAddress.split(","),
+              secret: props.kafkaCluster.secret,
+            })
+          : new ManagedKafkaEventSource({
+              ...kafkaSourceProps,
+              clusterArn: props.kafkaCluster.clusterArn,
+            });
       lambdaFunction.addEventSource(eventSource);
     }
   }
@@ -59,7 +75,7 @@ class Detection extends Construct {
 
 export interface MatanoDetectionsProps {
   rawEventsBucket: s3.Bucket;
-  kafkaCluster: KafkaCluster;
+  kafkaCluster: IKafkaCluster;
 }
 
 export class MatanoDetections extends Construct {

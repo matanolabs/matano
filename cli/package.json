@@ -16,32 +16,33 @@
     "/oclif.manifest.json"
   ],
   "dependencies": {
+    "@aws-cdk/cx-api": "*",
     "@oclif/core": "^1.9.5",
     "@oclif/plugin-autocomplete": "*",
     "@oclif/plugin-help": "^5",
     "@oclif/plugin-plugins": "^2.0.1",
-    "enquirer": "^2.3",
-    "execa": "^5",
-    "ora": "^4",
-    "chalk": "^4",
-    "yaml": "^2.1.1",
-    "@aws-cdk/cx-api": "*",
     "aws-cdk": "^2.28",
     "aws-sdk": "^2.1093",
+    "chalk": "^4",
+    "enquirer": "^2.3",
+    "execa": "^5",
     "fs-extra": "^10.1.0",
-    "promptly": "^3.2.0"
+    "ora": "^4",
+    "promptly": "^3.2.0",
+    "yaml": "^2.1.1"
   },
   "devDependencies": {
     "@oclif/test": "^2",
+    "@types/fs-extra": "^9.0.13",
     "@types/node": "^16.9.4",
+    "@types/yaml": "^1.9.7",
     "globby": "^11",
     "mocha": "^9",
     "oclif": "^3",
     "shx": "^0.3.3",
     "ts-node": "^10.2.1",
     "tslib": "^2.3.1",
-    "typescript": "^4.7",
-    "@types/yaml": "^1.9.7"
+    "typescript": "^4.7"
   },
   "oclif": {
     "bin": "matano",

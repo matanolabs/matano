@@ -10,7 +10,7 @@ import { CustomResource, Stack } from "aws-cdk-lib";
 import { Construct, Node } from "constructs";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
 
-export type MskClusterType  = "msk" | "msk-serverless";
+export type MskClusterType = "msk" | "msk-serverless";
 export type ClusterType = MskClusterType | "self-managed";
 interface KafkaClusterBaseProps {
   clusterType: ClusterType;
@@ -20,8 +20,12 @@ export type IKafkaCluster = {
   bootstrapAddress: string;
 } & (
   | (KafkaCluster & {
-      clusterType: "msk" | "msk-serverless";
+      clusterType: MskClusterType;
     })
+  | {
+      clusterType: "self-managed";
+      secret: ISecret;
+    }
 );
 
 interface SelfManagedKafkaAttributes {
@@ -53,7 +57,7 @@ type ClusterInfo =
     };
 export class KafkaCluster extends KafkaClusterBase {
   info: ClusterInfo;
-  clusterType: "msk" | "msk-serverless";
+  clusterType: MskClusterType;
   _clusterBootstrapBrokers: cr.AwsCustomResource;
   vpc: IVpc;
   securityGroup: SecurityGroup;
@@ -68,18 +72,15 @@ export class KafkaCluster extends KafkaClusterBase {
       vpc: this.vpc,
     });
     this.securityGroup.connections.allowFrom(this.securityGroup, Port.allTcp(), "Allow all TCP within SecurityGroup");
-    
-    console.log({
-      SubnetIds: this.vpc.publicSubnets.map((subnet) => subnet.subnetId),
-      securityGroup: this.securityGroup.securityGroupId,
-    });
+
+    const subnets = this.vpc.publicSubnets;
     const parameters = {
       ClusterName: props.clusterName,
       Serverless: JSON.stringify({
         VpcConfigs: [
           {
             SecurityGroupIds: [this.securityGroup.securityGroupId],
-            SubnetIds: this.vpc.publicSubnets.map((subnet) => subnet.subnetId),
+            SubnetIds: subnets.map(s => s.subnetId),
           },
         ],
         ClientAuthentication: {
@@ -89,7 +90,7 @@ export class KafkaCluster extends KafkaClusterBase {
             },
           },
         },
-      },)
+      }),
     };
 
     const clusterProvider =
@@ -117,9 +118,13 @@ export class KafkaCluster extends KafkaClusterBase {
             clusterType: "msk",
             cluster: new msk.Cluster(this, "Cluster", {
               vpc: this.vpc,
+              securityGroups: [this.securityGroup],
+              vpcSubnets: {
+                subnets: subnets.slice(0, 3), // msk only supports 2- 3 subnets: https://docs.aws.amazon.com/msk/latest/developerguide/msk-create-cluster.html
+              },
               clusterName: props.clusterName,
               kafkaVersion: msk.KafkaVersion.V2_8_1,
-              clientAuthentication: msk.ClientAuthentication.sasl({iam: true,}),
+              clientAuthentication: msk.ClientAuthentication.sasl({ iam: true }),
               instanceType: new ec2.InstanceType("t3.small"),
             }),
           };
@@ -156,23 +161,23 @@ export class KafkaCluster extends KafkaClusterBase {
   /**
    * Imports a self-managed kafka cluster by (ssm) secret name & bootstrap servers.
    */
-  // public static fromSelfManagedAttributes(
-  //   scope: Construct,
-  //   id: string,
-  //   props: SelfManagedKafkaAttributes
-  // ): IKafkaCluster {
-  //   return new (class extends KafkaClusterBase {
-  //     secret: ISecret;
-  //     clusterType: "self-managed";
-  //     constructor(scope: Construct, id: string) {
-  //       super(scope, id, {
-  //         clusterType: "self-managed",
-  //       });
-  //       this.secret = Secret.fromSecretCompleteArn(scope, id, props.secretArn);
-  //       this.bootstrapAddress = props.bootstrapAddress;
-  //     }
-  //   })(scope, id);
-  // }
+  public static fromSelfManagedAttributes(
+    scope: Construct,
+    id: string,
+    props: SelfManagedKafkaAttributes
+  ): IKafkaCluster {
+    return new (class extends KafkaClusterBase {
+      secret: ISecret;
+      clusterType: "self-managed";
+      constructor(scope: Construct, id: string) {
+        super(scope, id, {
+          clusterType: "self-managed",
+        });
+        this.secret = Secret.fromSecretCompleteArn(scope, id, props.secretArn);
+        this.bootstrapAddress = props.bootstrapAddress;
+      }
+    })(scope, id);
+  }
 }
 
 class MskServerlessProvider extends Construct {
@@ -198,7 +203,7 @@ class MskServerlessProvider extends Construct {
     const mskServerlessHandler = new NodejsFunction(this, "MskServerlessHandler", {
       functionName: "MskServerlessHandler",
       entry: "../lambdas/msk-serverless-provider/msk-serverless-handler.ts",
-      depsLockFilePath: "../lambdas/msk-serverless-provider/package-lock.json",
+      depsLockFilePath: "../lambdas/package-lock.json",
       handler: "onEvent",
       runtime: lambda.Runtime.NODEJS_14_X,
       // vpc: vpcStack.vpc,

@@ -25,6 +25,6 @@
   "dependencies": {
     "@matano/msk-authenticator": "1.0.0",
     "@matano/vrl-transform-bindings": "1.0.0",
-    "kafkajs": "markgaylard/kafkajs#pluggable-auth"
+    "kafkajs": "^2.2.0-beta.0"
   }
 }

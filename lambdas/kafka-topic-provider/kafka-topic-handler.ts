@@ -1,17 +1,17 @@
 import * as response from "cfn-response";
 import { Admin, Kafka, ITopicConfig } from "kafkajs";
-import { mskIamAuthenticator } from "@matano/msk-authenticator";
+import { awsIamAuthenticator } from "@matano/msk-authenticator";
 
 export async function onEvent(event: AWSCDKAsyncCustomResource.OnEventRequest) {
   const bootstrapServers = event.ResourceProperties.BootstrapAddress.split(",");
-
+  const authProvider = awsIamAuthenticator(process.env.AWS_REGION!!, "900");
   const kafka = new Kafka({
     clientId: `${(event.RequestType as string).toLowerCase()}-topic-handler`,
     brokers: bootstrapServers,
     ssl: true,
     sasl: {
       mechanism: "AWS_MSK_IAM",
-      authenticationProvider: mskIamAuthenticator(process.env.AWS_REGION!!),
+      authenticationProvider: authProvider,
     }
   });
   const admin = kafka.admin();
@@ -63,15 +63,15 @@ export async function createTopic(
     },
   ];
 
-  // console.log("Connecting to kafka admin...");
-  // await admin.connect();
-  // console.log(
-  //   `Creating topic: ${topicName} (p: ${numPartitions}, rf: ${replicationFactor})...`
-  // );
+  console.debug("Connecting to kafka admin...");
+  await admin.connect();
+  console.debug(
+    `Creating topic: ${topicName} (p: ${numPartitions}, rf: ${replicationFactor})...`
+  );
 
-  // const result = await admin.createTopics({ topics });
-  // console.log(`Topic created`);
-  // await admin.disconnect();
+  const result = await admin.createTopics({ topics });
+  console.debug(`Topic created`);
+  await admin.disconnect();
 
   return {
     PhysicalResourceId: physicalResourceId,
@@ -94,13 +94,13 @@ export async function deleteTopic(
     throw new Error('"TopicName" is required');
   }
 
-  // console.debug("Connecting to kafka admin...");
-  // await admin.connect();
+  console.debug("Connecting to kafka admin...");
+  await admin.connect();
 
-  // console.debug(`Deleting topic: ${topicName}...`);
-  // await admin.deleteTopics({ topics: [topicName] });
+  console.debug(`Deleting topic: ${topicName}...`);
+  await admin.deleteTopics({ topics: [topicName] });
 
-  // console.debug("Topic deleted");
-  // await admin.disconnect();
+  console.debug("Topic deleted");
+  await admin.disconnect();
   return;
 }

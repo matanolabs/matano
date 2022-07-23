@@ -9,6 +9,7 @@
       "esModuleInterop": true,
       "forceConsistentCasingInFileNames": true
     },
+    "outDir": "ts",
     "$schema": "https://json.schemastore.org/tsconfig",
     "display": "Recommended",
 }
