@@ -71,6 +71,7 @@ def map_ecs_iceberg_type(ecs_type, path=None):
     elif ecs_type == "nested":
         return {
             "type": "list",
+            "element-required": False,
             "element-id": ecs_field_id(colname),
             "element": "string",
         }
