@@ -43,13 +43,17 @@ const config = {
           editUrl: 'https://github.com/matanolabs/matano/tree/main/website/',
         },
         theme: {
-          customCss: require.resolve('./src/css/custom.css'),
+          customCss: [
+            require.resolve('./src/css/custom.css'),
+            require.resolve('./src/css/styles.scss'),
+          ]
         },
       }),
     ],
   ],
 
   plugins: [
+    'docusaurus-plugin-sass',
     async function tailwindPlugin(context, options) {
       return {
         name: "docusaurus-tailwindcss",
