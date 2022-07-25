@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import clsx from 'clsx';
 import Link from '@docusaurus/Link';
 import Head from '@docusaurus/Head';
@@ -6,8 +6,6 @@ import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import Layout from '@theme/Layout';
 import CodeBlock from '@theme/CodeBlock';
 import HomepageFeatures from '@site/src/components/HomepageFeatures';
-
-import styles from './index.module.css';
 
 
 // h-screen
@@ -32,19 +30,6 @@ function HomepageHeader() {
             Explore Docs
           </a>
         </div>
-
-        {/* <div className="flex items-center justify-center gap-5 mt-5">
-          <Link
-            className="button button--secondary button--lg"
-            to="/docs/intro">
-            Learn more
-          </Link>
-          <Link
-            className="button button--primary button--lg"
-            href="https://github.com/matanolabs/matano#--">
-            Get started
-          </Link>
-        </div> */}
       </div>
     </header>
   );
@@ -53,8 +38,9 @@ function HomepageHeader() {
 export default function Home(): JSX.Element {
   const { siteConfig } = useDocusaurusContext();
   return (
-    <Layout wrapperClassName='mtn-homepage'>
+    <Layout wrapperClassName=''>
         <Head>
+          <html className="mtn-homepage"/>
           <title>Matano | Open source security lake for AWS</title>
         </Head>
         <div className=''>

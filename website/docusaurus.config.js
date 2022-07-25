@@ -78,6 +78,7 @@ const config = {
       },
       navbar: {
         // title: 'Matano',
+        hideOnScroll: true,
         logo: {
           alt: 'Matano',
           src: 'matano-logo/vector/default-monochrome-black.svg',
