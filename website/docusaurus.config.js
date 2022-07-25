@@ -69,6 +69,13 @@ const config = {
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
+      announcementBar: {
+        id: 'mtn-announcement',
+        content: '<div id="mtn-announcement">We are looking to revamp our docs, please fill <a target="_blank" rel="noopener noreferrer" href="#">this survey</a></div>',
+        backgroundColor: 'var(--ifm-color-primary-light)',
+        textColor: '#ffffff',
+        isCloseable: false,
+      },
       navbar: {
         // title: 'Matano',
         logo: {
