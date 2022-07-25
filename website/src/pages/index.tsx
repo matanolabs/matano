@@ -12,7 +12,7 @@ import HomepageFeatures from '@site/src/components/HomepageFeatures';
 function HomepageHeader() {
   const {siteConfig} = useDocusaurusContext();
   return (
-    <header className="hero-bg flex px-12 sm:px-24 py-12 sm:py-20 shadow-md">
+    <header className="hero-bg flex-1 flex px-12 sm:px-24 py-12 sm:py-20 shadow-md">
       <div className="max-w-5xl">
         <h1 className="pt-0 subpixel-antialiased mx-auto font-display sm:text-6xl text-5xl font-semibold tracking-tight text-slate-900" 
         style={{
@@ -38,17 +38,17 @@ function HomepageHeader() {
 export default function Home(): JSX.Element {
   const { siteConfig } = useDocusaurusContext();
   return (
-    <Layout wrapperClassName=''>
+    <Layout wrapperClassName='flex flex-column'>
         <Head>
           <html className="mtn-homepage"/>
           <title>Matano | Open source security lake for AWS</title>
         </Head>
-        <div className=''>
+        <div className='flex-1 flex'>
           <HomepageHeader />
         </div> 
-        <main style={{backgroundColor: undefined}}>
+        {/* <main style={{backgroundColor: undefined}}>
           <HomepageFeatures />
-        </main>
+        </main> */}
     </Layout>
   );
 }
