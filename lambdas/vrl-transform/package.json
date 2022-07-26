@@ -2,7 +2,7 @@
   "name": "@matano/vrl-transform",
   "version": "1.0.0",
   "scripts": {
-    "build": "rm -rf dist && mkdir -p dist && concurrently 'esbuild transform.ts --platform=node --external:@matano/vrl-transform-bindings --outfile=dist/output.js --bundle --loader:.ts=ts' 'tsc --noEmit'",
+    "build": "rm -rf dist && mkdir -p dist && concurrently 'esbuild transform.ts --platform=node --external:@matano/vrl-transform-bindings --external:aws-sdk --outfile=dist/output.js --bundle --loader:.ts=ts' 'tsc --noEmit'",
     "watch": "tsc -w",
     "test": "jest"
   },
@@ -22,6 +22,7 @@
   "prettier": {
     "printWidth": 120
   },
+  "type": "module",
   "dependencies": {
     "@matano/msk-authenticator": "1.0.0",
     "@matano/vrl-transform-bindings": "1.0.0",

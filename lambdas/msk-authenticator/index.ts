@@ -160,7 +160,7 @@ class Sha256HashConstructor {
 export const awsIamAuthenticator: (
   region: string,
   ttl?: string,
-) => Mechanism["authenticationProvider"] = (region, ttl) => (host, port, logger, saslAuthenticate) => {
+) => Mechanism["authenticationProvider"] = (region, ttl) => ({host, port, logger, saslAuthenticate}) => {
   const INT32_SIZE = 4
 
   const requester = (payload: { version: string; 'user-agent': string; host: string; action: string; 'x-amz-credential': string; 'x-amz-algorithm': string; 'x-amz-date': string; 'x-amz-security-token': string | undefined; 'x-amz-signedheaders': string; 'x-amz-expires': string; 'x-amz-signature': string; }) => ({
@@ -194,13 +194,13 @@ export const awsIamAuthenticator: (
         const payload = await payloadFactory.create({ brokerHost: host })
         const request = requester(payload);
         const authenticateResponse: any = await saslAuthenticate({request, response} as any)
-        logger.info('Authentication response', { authenticateResponse })
+        // logger.info('Authentication response', { authenticateResponse })
 
         if (!authenticateResponse.version || !authenticateResponse) {
           throw new Error('Invalid response from broker')
         }
 
-        logger.info('SASL Simon authentication successful', { broker })
+        // logger.info('SASL Simon authentication successful', { broker })
       } catch (error: any) {
         logger.error(error.message, { broker })
         throw error

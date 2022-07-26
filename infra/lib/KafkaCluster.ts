@@ -72,6 +72,12 @@ export class KafkaCluster extends KafkaClusterBase {
       vpc: this.vpc,
     });
     this.securityGroup.connections.allowFrom(this.securityGroup, Port.allTcp(), "Allow all TCP within SecurityGroup");
+    const s3GatewayEndpoint = this.vpc.addGatewayEndpoint("S3Endpoint", {
+      service: ec2.GatewayVpcEndpointAwsService.S3,
+    });
+    const ddbGatewayEndpoint = this.vpc.addGatewayEndpoint("DynamoDBEndpoint", {
+      service: ec2.GatewayVpcEndpointAwsService.DYNAMODB,
+    });
 
     const subnets = this.vpc.publicSubnets;
     const parameters = {
@@ -80,7 +86,7 @@ export class KafkaCluster extends KafkaClusterBase {
         VpcConfigs: [
           {
             SecurityGroupIds: [this.securityGroup.securityGroupId],
-            SubnetIds: subnets.map(s => s.subnetId),
+            SubnetIds: subnets.map((s) => s.subnetId),
           },
         ],
         ClientAuthentication: {

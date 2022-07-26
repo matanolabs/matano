@@ -79,22 +79,22 @@ export class DPMainStack extends MatanoStack {
             "-c",
             "npm install && mkdir -p /asset-output/nodejs/node_modules/@matano/vrl-transform-bindings/ts/ && cp -a ts/* /asset-output/nodejs/node_modules/@matano/vrl-transform-bindings/ts/",
           ],
-          local: {
-            tryBundle(outputDir, options) {
-              execSync(
-                `cd ${vrlBindingsPath} && npm install && mkdir -p ${outputDir}/nodejs/node_modules/@matano/vrl-transform-bindings/ts/ && cp -a ts/*  ${outputDir}/nodejs/node_modules/@matano/vrl-transform-bindings/ts/ && cd -`,
-                { stdio: "pipe" }
-              );
-              return true;
-            },
-          },
+          // local: {
+          //   tryBundle(outputDir, options) {
+          //     execSync(
+          //       `cd ${vrlBindingsPath} && npm install && mkdir -p ${outputDir}/nodejs/node_modules/@matano/vrl-transform-bindings/ts/ && cp -a ts/*  ${outputDir}/nodejs/node_modules/@matano/vrl-transform-bindings/ts/ && cd -`,
+          //       { stdio: "pipe" }
+          //     );
+          //     return true;
+          //   },
+          // },
         },
       }),
       compatibleRuntimes: [lambda.Runtime.NODEJS_14_X],
       license: "Apache-2.0",
       description: "A layer for NodeJS bindings to VRL.",
     });
-
+    
     const transformerLambda = new NodejsFunction(this, "TransformerLambda", {
       functionName: "MatanoTransformerLambdaFunction",
       entry: "../lambdas/vrl-transform/transform.ts",
@@ -104,7 +104,7 @@ export class DPMainStack extends MatanoStack {
       ...lambdaVpcProps,
       allowPublicSubnet: true,
       bundling: {
-        forceDockerBundling: true,
+        // forceDockerBundling: true,
         externalModules: ["aws-sdk", "@matano/vrl-transform-bindings"],
       },
       environment: {
@@ -138,7 +138,7 @@ export class DPMainStack extends MatanoStack {
       ...lambdaVpcProps,
       allowPublicSubnet: true,
       bundling: {
-        forceDockerBundling: true,
+        // forceDockerBundling: true,
         externalModules: ["aws-sdk", "@matano/vrl-transform-bindings"],
       },
       environment: {
