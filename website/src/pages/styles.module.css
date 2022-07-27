@@ -1,0 +1,3 @@
+.heroSub {
+    @apply text-lg sm:text-2xl sm:leading-9;
+}

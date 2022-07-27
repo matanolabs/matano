@@ -25,7 +25,8 @@
 }
 
 .footer--dark {
-  --ifm-footer-background-color: #04152f;
+
+  --ifm-footer-background-color:#0e1111;
 }
 
 [data-theme='light'] {
