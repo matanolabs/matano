@@ -9,8 +9,9 @@ import path from "path";
 import * as YAML from "yaml";
 import { PROJ_ROOT_DIR } from "..";
 import { readConfig } from "../util";
+import BaseCommand from "./base";
 
-export default class Deploy extends Command {
+export default class Deploy extends BaseCommand {
   static description = "Deploys matano.";
 
   static examples = ["matano deploy --profile prod --region eu-central-1 --account 12345678901"];
@@ -40,12 +41,7 @@ export default class Deploy extends Command {
     const { args, flags } = await this.parse(Deploy);
 
     const { profile: awsProfile, region: awsRegion, account: awsAccountId } = flags;
-
-    const defaultUserDir = path.join(process.cwd(), ".matano");
-    if (!fs.existsSync(defaultUserDir) && !flags["user-directory"]) {
-      this.error("No Matano user directory found.", { suggestions: ["Specify a directory using `--user-directory`."] });
-    }
-
+    const matanoUserDirectory = this.validateGetMatanoDir(flags);
     const spinner = ora("Deploying Matano...").start();
 
     const cdkArgs = ["deploy", "*", "--require-approval", "never"];
@@ -53,7 +49,6 @@ export default class Deploy extends Command {
       cdkArgs.push("--profile", awsProfile);
     }
 
-    const matanoUserDirectory = path.resolve(flags["user-directory"]!!) ?? defaultUserDir;
     const matanoConf = readConfig(matanoUserDirectory, "matano.config.yml");
     const matanoContext = JSON.parse(fs.readFileSync(path.resolve(matanoUserDirectory, "matano.context.json"), "utf8"));
 
