@@ -57,7 +57,7 @@
       "@oclif/plugin-help",
       "@oclif/plugin-autocomplete"
     ],
-    "repositoryPrefix": "'<%- repo %>/blob/main/cli/<%- commandPath.replace(\"dist\", \"src\") %>'",
+    "repositoryPrefix": "<%- repo %>/blob/main/cli/<%- commandPath.replace(\"dist\", \"src\") %>",
     "topicSeparator": ":",
     "topics": {
       "generate": {

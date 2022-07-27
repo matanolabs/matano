@@ -13,7 +13,7 @@ matano generate:matano-dir
 
 This will create a directory with sample detections and log sources.
 
-## Bootstrap your AWS account.
+## Bootstrap your AWS account
 
 Initialize your AWS environment before deployment by running `matano bootstrap`. This will create the necessary resources in your AWS account before deploying Matano.
 

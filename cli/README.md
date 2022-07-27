@@ -1,27 +1,4 @@
-matano
-=================
-
-matano CLI
-
-<!-- toc -->
-* [Usage](#usage)
-* [Commands](#commands)
-<!-- tocstop -->
-# Usage
-<!-- usage -->
-```sh-session
-$ npm install -g matano
-$ matano COMMAND
-running command...
-$ matano (--version)
-matano/0.0.0 linux-x64 node-v18.4.0
-$ matano --help [COMMAND]
-USAGE
-  $ matano COMMAND
-...
-```
-<!-- usagestop -->
-# Commands
+## Commands
 <!-- commands -->
 * [`matano autocomplete [SHELL]`](#matano-autocomplete-shell)
 * [`matano bootstrap`](#matano-bootstrap)
@@ -79,7 +56,7 @@ EXAMPLES
   $ matano bootstrap --profile prod
 ```
 
-_See code: [dist/commands/bootstrap.ts]('https://github.com/matanolabs/matano/blob/main/cli/src/commands/bootstrap.ts')_
+_See code: [dist/commands/bootstrap.ts](https://github.com/matanolabs/matano/blob/main/cli/src/commands/bootstrap.ts)_
 
 ## `matano deploy`
 
@@ -102,7 +79,7 @@ EXAMPLES
   $ matano deploy --profile prod --region eu-central-1 --account 12345678901
 ```
 
-_See code: [dist/commands/deploy.ts]('https://github.com/matanolabs/matano/blob/main/cli/src/commands/deploy.ts')_
+_See code: [dist/commands/deploy.ts](https://github.com/matanolabs/matano/blob/main/cli/src/commands/deploy.ts)_
 
 ## `matano generate:matano-dir DIRECTORY-NAME`
 
@@ -122,7 +99,7 @@ EXAMPLES
   $ matano generate:matano-dir
 ```
 
-_See code: [dist/commands/generate/matano-dir.ts]('https://github.com/matanolabs/matano/blob/main/cli/src/commands/generate/matano-dir.ts')_
+_See code: [dist/commands/generate/matano-dir.ts](https://github.com/matanolabs/matano/blob/main/cli/src/commands/generate/matano-dir.ts)_
 
 ## `matano help [COMMAND]`
 
@@ -165,5 +142,5 @@ EXAMPLES
   $ matano refresh-context --profile prod --region eu-central-1 --account 12345678901
 ```
 
-_See code: [dist/commands/refresh-context.ts]('https://github.com/matanolabs/matano/blob/main/cli/src/commands/refresh-context.ts')_
+_See code: [dist/commands/refresh-context.ts](https://github.com/matanolabs/matano/blob/main/cli/src/commands/refresh-context.ts)_
 <!-- commandsstop -->
