@@ -9,7 +9,7 @@ import path from "path";
 import * as YAML from "yaml";
 import { PROJ_ROOT_DIR } from "..";
 import { readConfig } from "../util";
-import BaseCommand from "./base";
+import BaseCommand from "../base";
 
 export default class Deploy extends BaseCommand {
   static description = "Deploys matano.";

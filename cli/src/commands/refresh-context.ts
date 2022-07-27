@@ -10,7 +10,7 @@ import * as AWS from "aws-sdk";
 import { VpcNetworkContextProviderPlugin } from "aws-cdk/lib/context-providers/vpcs";
 import { SdkProvider } from "aws-cdk/lib/api/aws-auth/sdk-provider";
 import { readConfig } from "../util";
-import BaseCommand from "./base";
+import BaseCommand from "../base";
 
 
 

@@ -6,7 +6,11 @@
   "bin": {
     "matano": "./bin/run"
   },
-  "homepage": "https://github.com/matanolabs/matano",
+  "homepage": "https://matano.dev",
+  "repository": {
+    "directory": "cli",
+    "url": "https://github.com/matanolabs/matano"
+  },
   "license": "MIT",
   "main": "dist/index.js",
   "files": [
@@ -53,6 +57,7 @@
       "@oclif/plugin-help",
       "@oclif/plugin-autocomplete"
     ],
+    "repositoryPrefix": "'<%- repo %>/blob/main/cli/<%- commandPath.replace(\"dist\", \"src\") %>'",
     "topicSeparator": ":",
     "topics": {
       "generate": {

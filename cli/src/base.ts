@@ -1,6 +1,6 @@
 import path from "path";
 import { Command, Flags } from "@oclif/core";
-import { isMatanoDirectory } from "../util";
+import { isMatanoDirectory } from "./util";
 
 export default abstract class BaseCommand extends Command {
   validateGetMatanoDir(flags: any): string {

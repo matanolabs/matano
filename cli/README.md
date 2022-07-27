@@ -28,6 +28,7 @@ USAGE
 * [`matano deploy`](#matano-deploy)
 * [`matano generate:matano-dir DIRECTORY-NAME`](#matano-generatematano-dir-directory-name)
 * [`matano help [COMMAND]`](#matano-help-command)
+* [`matano refresh-context`](#matano-refresh-context)
 
 ## `matano autocomplete [SHELL]`
 
@@ -78,7 +79,7 @@ EXAMPLES
   $ matano bootstrap --profile prod
 ```
 
-_See code: [dist/commands/bootstrap.ts](https://github.com/matano/hello-world/blob/v0.0.0/dist/commands/bootstrap.ts)_
+_See code: [dist/commands/bootstrap.ts]('https://github.com/matanolabs/matano/blob/main/cli/src/commands/bootstrap.ts')_
 
 ## `matano deploy`
 
@@ -101,7 +102,7 @@ EXAMPLES
   $ matano deploy --profile prod --region eu-central-1 --account 12345678901
 ```
 
-_See code: [dist/commands/deploy.ts](https://github.com/matano/hello-world/blob/v0.0.0/dist/commands/deploy.ts)_
+_See code: [dist/commands/deploy.ts]('https://github.com/matanolabs/matano/blob/main/cli/src/commands/deploy.ts')_
 
 ## `matano generate:matano-dir DIRECTORY-NAME`
 
@@ -121,7 +122,7 @@ EXAMPLES
   $ matano generate:matano-dir
 ```
 
-_See code: [dist/commands/generate/matano-dir.ts](https://github.com/matano/hello-world/blob/v0.0.0/dist/commands/generate/matano-dir.ts)_
+_See code: [dist/commands/generate/matano-dir.ts]('https://github.com/matanolabs/matano/blob/main/cli/src/commands/generate/matano-dir.ts')_
 
 ## `matano help [COMMAND]`
 
@@ -142,4 +143,27 @@ DESCRIPTION
 ```
 
 _See code: [@oclif/plugin-help](https://github.com/oclif/plugin-help/blob/v5.1.12/src/commands/help.ts)_
+
+## `matano refresh-context`
+
+Refreshes Matano context.
+
+```
+USAGE
+  $ matano refresh-context -a <value> -r <value> [-p <value>] [--user-directory <value>]
+
+FLAGS
+  -a, --account=<value>     (required) AWS Account to deploy to.
+  -p, --profile=<value>     AWS Profile to use for credentials.
+  -r, --region=<value>      (required) AWS Region to deploy to.
+  --user-directory=<value>  Matano user directory to use.
+
+DESCRIPTION
+  Refreshes Matano context.
+
+EXAMPLES
+  $ matano refresh-context --profile prod --region eu-central-1 --account 12345678901
+```
+
+_See code: [dist/commands/refresh-context.ts]('https://github.com/matanolabs/matano/blob/main/cli/src/commands/refresh-context.ts')_
 <!-- commandsstop -->
