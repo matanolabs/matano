@@ -2,7 +2,7 @@
 # passed as build arg. The default allows to do `docker build .` when testing.
 ARG IMAGE=public.ecr.aws/sam/build-nodejs14.x
 FROM $IMAGE
-# -nightly --platform=arm64
+# -nightlyesbui
 ARG rust_version=nightly
 
 # Install typescript

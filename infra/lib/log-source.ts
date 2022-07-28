@@ -20,8 +20,18 @@ import {
 
 export const MATANO_DATABASE_NAME = "matano";
 
+export interface LogSourceConfig {
+  name: string;
+  schema?: Record<string, any>;
+  s3_source?: {
+    bucket_name?: string;
+    key_prefix?: string;
+  };
+}
+
 interface MatanoLogSourceProps {
-  logSourceDirectory: string;
+  config: LogSourceConfig;
+  defaultSourceBucket: s3.Bucket;
   outputBucket: s3.Bucket;
   firehoseRole: iam.Role;
   transformLambda: NodejsFunction;
@@ -33,8 +43,11 @@ export class MatanoLogSource extends Construct {
     super(scope, id);
 
     const cluster = props.kafkaCluster;
-    const config = readConfig(props.logSourceDirectory, "log_source.yml");
-    const { name: logSourceName, schema } = config;
+    const { name: logSourceName, schema, s3_source: s3SourceConfig } = props.config;
+    // const sourceBucket =
+    //   s3SourceConfig == null
+    //     ? props.defaultSourceBucket
+    //     : s3.Bucket.fromBucketName(this, "SourceBucket", s3SourceConfig.bucket_name);
 
     const matanoIcebergTable = new MatanoIcebergTable(this, "MatanoIcebergTable", {
       logSourceName,

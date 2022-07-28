@@ -22,7 +22,6 @@
   "prettier": {
     "printWidth": 120
   },
-  "type": "module",
   "dependencies": {
     "@matano/msk-authenticator": "1.0.0",
     "@matano/vrl-transform-bindings": "1.0.0",

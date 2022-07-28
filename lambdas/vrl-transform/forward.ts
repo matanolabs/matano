@@ -1,33 +1,49 @@
 import { Admin, Kafka, ITopicConfig, CompressionTypes, TopicMessages } from "kafkajs";
 import { awsIamAuthenticator } from "@matano/msk-authenticator";
-import { vrl, Outcome } from "@matano/vrl-transform-bindings/ts";
+import { vrl, Outcome } from "@matano/vrl-transform-bindings/ts/index.js";
 import { S3EventRecord, SQSHandler } from "aws-lambda";
 import * as AWS from "aws-sdk";
 
 import * as fs from "fs";
 import * as zlib from "zlib";
 import * as readline from "readline";
+import path = require("path");
 
-const logSourcesMetatdata: Record<string, Record<string, { vrl: string }>> = {
-  "matanodpcommonstack-raweventsbucket024cde12-1oynz3pfccqum": {
-    coredns: {
-      vrl: `
-      # parse the log event.
-      # ts = .timestamp
-      log, err = parse_regex(.message,r'\\[(?P<level>[^]]+)]\\s(?P<server_addr>[^:]+):(?P<server_port>\\S+)\\s+-\\s+(?P<id>\\S+)\\s+"(?P<type>\\S+)\\s+(?P<class>\\S+)\\s+(?P<name>\\S+)\\s+(?P<proto>\\S+)\\s+(?P<size>\\S+)\\s+(?P<do>\\S+)\\s+(?P<bufsize>[^"]+)"\\s+(?P<rcode>\\S+)\\s+(?P<rflags>\\S+)\\s+(?P<rsize>\\S+)\\s+(?P<duration>[\\d\\.]+).*')
-      if err != null {
-        # capture the error log. If the error log also fails to get parsed, the log event is dropped.
-        log = parse_regex!(.message,r'\\[(?P<level>ERROR)]\\s+(?P<component>plugin/errors):\\s+(?P<code>\\S)+\\s+(?P<name>\\S+)\\s+(?P<type>[^:]*):\\s+(?P<error_msg>.*)')
-      }
-      . = log
-      # add timestamp
-      # .timestamp = ts
-      # remove fields we don't care about
-      del(.do)
-      `,
-    },
-  },
-};
+// declare const logSourcesConfiguration: Record<string, any>[];
+const logSourcesConfiguration: Record<string, any>[] = JSON.parse(fs.readFileSync(path.join("/opt/log_sources_configuration.json"), "utf8"));
+const logSourcesMetatdata: Record<string, Record<string, { vrl: string }>> = logSourcesConfiguration.reduce(
+  (acc, logSourceConfig) => {
+    const bucketName = logSourceConfig.s3_source?.bucket_name ?? process.env.RAW_EVENTS_BUCKET_NAME;
+    const keyPrefix = logSourceConfig.s3_source?.key_prefix ?? logSourceConfig.name;
+    acc[bucketName] = {
+      [keyPrefix]: {
+      vrl: logSourceConfig.vrl,
+      },
+      ...(acc[bucketName] ?? {}),
+    };
+    return acc;
+  }
+)
+// {
+//   "matanodpcommonstack-raweventsbucket024cde12-1oynz3pfccqum": {
+//     coredns: {
+//       vrl: `
+//       # parse the log event.
+//       # ts = .timestamp
+//       log, err = parse_regex(.message,r'\\[(?P<level>[^]]+)]\\s(?P<server_addr>[^:]+):(?P<server_port>\\S+)\\s+-\\s+(?P<id>\\S+)\\s+"(?P<type>\\S+)\\s+(?P<class>\\S+)\\s+(?P<name>\\S+)\\s+(?P<proto>\\S+)\\s+(?P<size>\\S+)\\s+(?P<do>\\S+)\\s+(?P<bufsize>[^"]+)"\\s+(?P<rcode>\\S+)\\s+(?P<rflags>\\S+)\\s+(?P<rsize>\\S+)\\s+(?P<duration>[\\d\\.]+).*')
+//       if err != null {
+//         # capture the error log. If the error log also fails to get parsed, the log event is dropped.
+//         log = parse_regex!(.message,r'\\[(?P<level>ERROR)]\\s+(?P<component>plugin/errors):\\s+(?P<code>\\S)+\\s+(?P<name>\\S+)\\s+(?P<type>[^:]*):\\s+(?P<error_msg>.*)')
+//       }
+//       . = log
+//       # add timestamp
+//       # .timestamp = ts
+//       # remove fields we don't care about
+//       del(.do)
+//       `,
+//     },
+//   },
+// };
 
 function readFile(stream: NodeJS.ReadableStream, isGzip: boolean) {
   if (isGzip) {
@@ -87,7 +103,6 @@ const kafka = new Kafka({
   },
 });
 const producer = kafka.producer();
-await producer.connect();
 
 export const handler: SQSHandler = async (sqsEvent, context) => {
   console.log("start");
@@ -146,6 +161,7 @@ export const handler: SQSHandler = async (sqsEvent, context) => {
     messages: [{ value: JSON.stringify(d.data.success!!.result) }],
   }));
   console.log(JSON.stringify(topicMessages));
+  await producer.connect();
   await producer.sendBatch({
     timeout: 5000,
     compression: CompressionTypes.GZIP,

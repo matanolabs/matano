@@ -12,7 +12,7 @@ import { SqsEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
 
 interface MatanoIcebergTableProps {
   logSourceName: string;
-  schema: Record<string, any>;
+  schema?: Record<string, any>;
   icebergS3BucketName: string;
 }
 

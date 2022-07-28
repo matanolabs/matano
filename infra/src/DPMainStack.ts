@@ -1,20 +1,22 @@
 import * as path from "path";
+import * as fs from "fs";
 import { Construct } from "constructs";
 import * as cdk from "aws-cdk-lib";
 import { MatanoStack, MatanoStackProps } from "../lib/MatanoStack";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import { IcebergMetadata } from "../lib/iceberg";
-import { getDirectories } from "../lib/utils";
+import { getDirectories, readConfig } from "../lib/utils";
 import { IKafkaCluster } from "../lib/KafkaCluster";
 import { S3BucketWithNotifications } from "../lib/s3-bucket-notifs";
-import { MatanoLogSource } from "../lib/log-source";
+import { MatanoLogSource, LogSourceConfig } from "../lib/log-source";
 import { MatanoDetections } from "../lib/detections";
 import { NodejsFunction, NodejsFunctionProps } from "aws-cdk-lib/aws-lambda-nodejs";
 import { DockerImage } from "aws-cdk-lib";
 import { SqsEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
 import { execSync } from "child_process";
 import { SecurityGroup } from "aws-cdk-lib/aws-ec2";
+import { Bucket } from "aws-cdk-lib/aws-s3";
 
 interface DPMainStackProps extends MatanoStackProps {
   rawEventsBucket: S3BucketWithNotifications;
@@ -35,7 +37,10 @@ export class DPMainStack extends MatanoStack {
     });
 
     const logSourcesDirectory = path.join(this.matanoUserDirectory, "log_sources");
-    const logSources = getDirectories(logSourcesDirectory);
+    const logSourceConfigs = getDirectories(logSourcesDirectory)
+      .map((d) => path.join(logSourcesDirectory, d))
+      .map((p) => readConfig(p, "log_source.yml") as LogSourceConfig);
+    
     const kafkaCluster = props.kafkaCluster;
 
     new IcebergMetadata(this, "IcebergMetadata", {
@@ -94,7 +99,7 @@ export class DPMainStack extends MatanoStack {
       license: "Apache-2.0",
       description: "A layer for NodeJS bindings to VRL.",
     });
-    
+
     const transformerLambda = new NodejsFunction(this, "TransformerLambda", {
       functionName: "MatanoTransformerLambdaFunction",
       entry: "../lambdas/vrl-transform/transform.ts",
@@ -104,10 +109,13 @@ export class DPMainStack extends MatanoStack {
       ...lambdaVpcProps,
       allowPublicSubnet: true,
       bundling: {
+        // target: "node14.8",
         // forceDockerBundling: true,
         externalModules: ["aws-sdk", "@matano/vrl-transform-bindings"],
       },
       environment: {
+        RAW_EVENTS_BUCKET_NAME: props.rawEventsBucket.bucket.bucketName,
+        KAFKAJS_NO_PARTITIONER_WARNING: "1",
         BOOTSTRAP_ADDRESS: kafkaCluster.bootstrapAddress,
       },
       timeout: cdk.Duration.seconds(30),
@@ -119,9 +127,10 @@ export class DPMainStack extends MatanoStack {
       ],
     });
 
-    for (const logSource of logSources) {
-      new MatanoLogSource(this, `MatanoLogSource${logSource}`, {
-        logSourceDirectory: path.join(logSourcesDirectory, logSource),
+    for (const logSourceConfig of logSourceConfigs) {
+      new MatanoLogSource(this, `MatanoLogSource${logSourceConfig.name}`, {
+        config: logSourceConfig,
+        defaultSourceBucket: props.rawEventsBucket.bucket,
         outputBucket: props.outputEventsBucket.bucket,
         transformLambda: transformerLambda,
         firehoseRole,
@@ -129,19 +138,46 @@ export class DPMainStack extends MatanoStack {
       });
     }
 
+
+    const logSourcesConfigurationPath = path.resolve(path.join("../lambdas/log_sources_configuration.json"));
+    fs.writeFileSync(logSourcesConfigurationPath, JSON.stringify(logSourceConfigs, null, 2));
+    const logSourcesConfigurationLayer = new lambda.LayerVersion(this, "LogSourcesConfigurationLayer", {
+      code: lambda.Code.fromAsset("../lambdas", {
+        assetHashType: cdk.AssetHashType.OUTPUT,
+        bundling: {
+          volumes: [
+            {
+              hostPath: logSourcesConfigurationPath,
+              containerPath: "/asset-input/log_sources_configuration.json",
+            },
+          ],
+          image: DockerImage.fromBuild(vrlBindingsPath),
+          command: [
+            "bash",
+            "-c",
+            "cp /asset-input/log_sources_configuration.json /asset-output/log_sources_configuration.json",
+          ],
+        },
+      }),
+      description: "A layer for Matano Log Source Configurations.",
+    });
+
     const forwarderLambda = new NodejsFunction(this, "ForwarderLambda", {
       functionName: "MatanoForwarderLambdaFunction",
       entry: "../lambdas/vrl-transform/forward.ts",
       depsLockFilePath: "../lambdas/package-lock.json",
       runtime: lambda.Runtime.NODEJS_14_X,
-      layers: [vrlBindingsLayer],
+      layers: [vrlBindingsLayer, logSourcesConfigurationLayer],
       ...lambdaVpcProps,
       allowPublicSubnet: true,
       bundling: {
+        // target: "node14.8",
         // forceDockerBundling: true,
         externalModules: ["aws-sdk", "@matano/vrl-transform-bindings"],
       },
       environment: {
+        RAW_EVENTS_BUCKET_NAME: props.rawEventsBucket.bucket.bucketName,
+        KAFKAJS_NO_PARTITIONER_WARNING: "1",
         BOOTSTRAP_ADDRESS: kafkaCluster.bootstrapAddress,
       },
       timeout: cdk.Duration.seconds(30),
