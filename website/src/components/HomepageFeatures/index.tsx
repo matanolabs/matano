@@ -10,32 +10,56 @@ type FeatureItem = {
 
 const FeatureList: FeatureItem[] = [
   {
-    title: 'Easy to Use',
+    title: 'Collect data from all your sources',
     Svg: require('@site/static/img/undraw_docusaurus_mountain.svg').default,
     description: (
       <>
-        Docusaurus was designed from the ground up to be easily installed and
-        used to get your website up and running quickly.
+        Matano lets you collect log data from sources using S3 or Kafka based ingestion.
       </>
     ),
   },
   {
-    title: 'Focus on What Matters',
+    title: 'Ingest, transform, normalize log data',
     Svg: require('@site/static/img/undraw_docusaurus_tree.svg').default,
     description: (
       <>
-        Docusaurus lets you focus on your docs, and we&apos;ll do the chores. Go
-        ahead and move your docs into the <code>docs</code> directory.
+        Matano normalizes and transforms your data using VRL. Matano works with the Elastic Common Schema by default and you can define your own schema.
       </>
     ),
   },
   {
-    title: 'Powered by React',
+    title: 'Store data in S3 object storage',
     Svg: require('@site/static/img/undraw_docusaurus_react.svg').default,
     description: (
       <>
-        Extend or customize your website layout by reusing React. Docusaurus can
-        be extended while reusing the same header and footer.
+        Log data is always stored in S3 object storage, for cost effective, long term, durable storage.
+      </>
+    ),
+  },
+  {
+    title: 'Apache Iceberg Data lake',
+    Svg: require('@site/static/img/undraw_docusaurus_react.svg').default,
+    description: (
+      <>
+        All data is ingested into an Apache Iceberg based data lake, allowing you to perform ACID transactions, time travel, and more on all your log data.      
+      </>
+    ),
+  },
+  {
+    title: 'Serverless',
+    Svg: require('@site/static/img/undraw_docusaurus_react.svg').default,
+    description: (
+      <>
+        Matano is a fully serverless platform, designed for zero-ops and unlimited elastic horizontal scaling.
+      </>
+    ),
+  },
+  {
+    title: 'Detections as code',
+    Svg: require('@site/static/img/undraw_docusaurus_react.svg').default,
+    description: (
+      <>
+        Write Python detections to implement realtime alerting on your log data.
       </>
     ),
   },

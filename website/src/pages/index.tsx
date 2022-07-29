@@ -37,7 +37,7 @@ function HomepageHeader() {
 export default function Home(): JSX.Element {
   const { siteConfig } = useDocusaurusContext();
   return (
-    <Layout wrapperClassName='flex flex-row'>
+    <Layout wrapperClassName=' flex-row'>
         <Head>
           <html className="mtn-homepage"/>
           <title>Matano | Open source security lake for AWS</title>
@@ -45,9 +45,9 @@ export default function Home(): JSX.Element {
         <div className='flex-1 flex'>
           <HomepageHeader />
         </div> 
-        {/* <main style={{backgroundColor: undefined}}>
+        <main style={{backgroundColor: undefined}}>
           <HomepageFeatures />
-        </main> */}
+        </main>
     </Layout>
   );
 }
