@@ -8,12 +8,15 @@ tasks:
   - name: cli
     before: cd cli
     init: |
-      npm install
+      npm install -g && npm run build && npm install -g esbuild   
   - name: jvm
     before: cd lib/java/matano 
     init: |
       gradle build
-
+  - name: vector
+    before: cd lambdas/vrl-transform-bindings
+    init: |
+      git clone https://github.com/vectordotdev/vector.git
 image:
   file: .gitpod.Dockerfile
 
