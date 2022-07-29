@@ -4,7 +4,7 @@ title: Matano directory
 ---
 
 
-To specify configuration and data for Matano, create a 'Matano directory`. This directory has the following structure:
+To specify configuration and data for Matano, create a *Matano directory*. This directory has the following structure:
 
 ```
 my-directory

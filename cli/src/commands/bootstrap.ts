@@ -3,8 +3,10 @@ import { prompt } from "enquirer";
 import execa from "execa";
 
 import ora from "ora";
+import BaseCommand from "../base";
+import RefreshContext from "./refresh-context";
 
-export default class Bootstrap extends Command {
+export default class Bootstrap extends BaseCommand {
   static description = "Creates initial resources for Matano deployment.";
 
   static examples = [`matano bootstrap`, "matano bootstrap --profile prod"];
@@ -14,12 +16,17 @@ export default class Bootstrap extends Command {
       char: "p",
       description: "AWS Profile to use for credentials.",
     }),
+    "user-directory": Flags.string({
+      required: false,
+      description: "Matano user directory to use.",
+    }),
   };
 
   async run(): Promise<void> {
     const { args, flags } = await this.parse(Bootstrap);
 
     const { profile: awsProfile } = flags;
+    const matanoUserDirectory = this.validateGetMatanoDir(flags);
     const regionPrompt = prompt<any>({
       type: "input",
       name: "awsRegion",
@@ -62,7 +69,11 @@ export default class Bootstrap extends Command {
       cdkArgs.push("--profile", awsProfile);
     }
 
-    await execa("cdk", cdkArgs);
+    const cdkSubprocess = execa("cdk", cdkArgs);
+    const refreshContextPromise = RefreshContext.refreshMatanoContext(
+      matanoUserDirectory, awsAccountId, awsRegion, awsProfile,
+    );
+    await Promise.all([cdkSubprocess, refreshContextPromise]);
 
     spinner.succeed("Successfully bootstrapped.");
   }

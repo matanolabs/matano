@@ -5,8 +5,6 @@ import { isMatanoDirectory } from "./util";
 export default abstract class BaseCommand extends Command {
   validateGetMatanoDir(flags: any): string {
     const defaultUserDir = process.cwd();
-    console.log(flags);
-    console.log(defaultUserDir);
     const userDir = flags["user-directory"] as any;
     if (userDir && !isMatanoDirectory(userDir)) {
       this.error(`Invalid matano directory: ${path.resolve(userDir)}.`, {
