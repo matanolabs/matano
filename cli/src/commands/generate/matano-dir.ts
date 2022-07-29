@@ -6,6 +6,17 @@ import execa from "execa";
 import ora from "ora";
 
 const autogenerateNote = ``;
+const sampleMatanoConfigYml = `# Use this file for Matano configuration.
+
+# aws_account: "12345678901" # Specify the AWS account to deploy to.
+# aws_region: "us-east-1" # Specify the AWS region to deploy to.
+
+kafka:
+  cluster_type: "msk" # Specify the Kafka cluster type to use ("msk" | "serverless").
+
+# vpc:
+#   id: vpc-0ea06dd2385eeb53c # Specify the VPC id to use, will use the default VPC if not specified.
+`;
 const sampleDetectionPy = `# ${autogenerateNote}
 
 def detect(record):
@@ -44,6 +55,8 @@ export default class GenerateMatanoDir extends Command {
     const { args, flags } = await this.parse(GenerateMatanoDir);
     const dirName = args["directory-name"];
 
+    fs.mkdirSync(path.resolve(dirName), { recursive: true });
+    fs.writeFileSync(path.join(dirName, "matano.config.yml" ), sampleMatanoConfigYml);
     fs.mkdirSync(path.join(dirName, "detections/my_detection"), { recursive: true });
     fs.mkdirSync(path.join(dirName, "log_sources/my_log_source"), { recursive: true });
     fs.writeFileSync(path.join(dirName, "detections/my_detection/detect.py"), sampleDetectionPy);

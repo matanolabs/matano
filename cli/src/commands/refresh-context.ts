@@ -17,7 +17,12 @@ import BaseCommand from "../base";
 export default class RefreshContext extends BaseCommand {
   static description = "Refreshes Matano context.";
 
-  static examples = [`matano refresh-context --profile prod --region eu-central-1 --account 12345678901`];
+  static examples = [
+    `matano refresh-context`,
+    `matano refresh-context --profile prod`,
+    `matano refresh-context --profile prod --user-directory my-matano-directory`,
+    `matano refresh-context --profile prod --region eu-central-1 --account 12345678901`,
+  ];
 
   static flags = {
     profile: Flags.string({
@@ -27,12 +32,10 @@ export default class RefreshContext extends BaseCommand {
     account: Flags.string({
       char: "a",
       description: "AWS Account to deploy to.",
-      required: true,
     }),
     region: Flags.string({
       char: "r",
       description: "AWS Region to deploy to.",
-      required: true,
     }),
     "user-directory": Flags.string({
       required: false,
@@ -76,13 +79,15 @@ export default class RefreshContext extends BaseCommand {
 
   async run(): Promise<void> {
     const { args, flags } = await this.parse(RefreshContext);
-    const spinner = ora("Refreshing context...").start();
-    const { account, region, profile } = flags;
-
+    const { profile } = flags;
     const userDirectory = this.validateGetMatanoDir(flags);
+    const {awsAccountId, awsRegion} = this.validateGetAwsRegionAccount(flags, userDirectory);
+
     this.debug(userDirectory);
 
-    await RefreshContext.refreshMatanoContext(userDirectory, account, region, profile);
+    const spinner = ora("Refreshing context...").start();
+
+    await RefreshContext.refreshMatanoContext(userDirectory, awsAccountId, awsRegion, profile);
 
     spinner.succeed("Successfully refreshed.");
   }

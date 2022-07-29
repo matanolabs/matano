@@ -14,7 +14,12 @@ import BaseCommand from "../base";
 export default class Deploy extends BaseCommand {
   static description = "Deploys matano.";
 
-  static examples = ["matano deploy --profile prod --region eu-central-1 --account 12345678901"];
+  static examples = [
+    "matano deploy",
+    "matano deploy --profile prod",
+    "matano deploy --profile prod --user-directory matano-directory",
+    "matano deploy --profile prod --region eu-central-1 --account 12345678901",
+  ];
 
   static flags = {
     profile: Flags.string({
@@ -24,12 +29,10 @@ export default class Deploy extends BaseCommand {
     account: Flags.string({
       char: "a",
       description: "AWS Account to deploy to.",
-      required: true,
     }),
     region: Flags.string({
       char: "r",
       description: "AWS Region to deploy to.",
-      required: true,
     }),
     "user-directory": Flags.string({
       required: false,
@@ -40,8 +43,9 @@ export default class Deploy extends BaseCommand {
   async run(): Promise<void> {
     const { args, flags } = await this.parse(Deploy);
 
-    const { profile: awsProfile, region: awsRegion, account: awsAccountId } = flags;
+    const { profile: awsProfile } = flags;
     const matanoUserDirectory = this.validateGetMatanoDir(flags);
+    const { awsAccountId, awsRegion } = this.validateGetAwsRegionAccount(flags, matanoUserDirectory);
     const spinner = ora("Deploying Matano...").start();
 
     const cdkArgs = ["deploy", "*", "--require-approval", "never"];

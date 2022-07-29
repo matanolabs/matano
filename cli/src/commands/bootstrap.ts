@@ -9,7 +9,11 @@ import RefreshContext from "./refresh-context";
 export default class Bootstrap extends BaseCommand {
   static description = "Creates initial resources for Matano deployment.";
 
-  static examples = [`matano bootstrap`, "matano bootstrap --profile prod"];
+  static examples = [
+    `matano bootstrap`,
+    "matano bootstrap --profile prod",
+    `matano bootstrap --profile prod --user-directory my-matano-directory`,
+  ];
 
   static flags = {
     profile: Flags.string({
