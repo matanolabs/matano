@@ -1,7 +1,5 @@
 .features {
-  display: flex;
-  align-items: center;
-  padding: 2rem 0;
+  @apply flex items-center py-20;
   width: 100%;
 }
 

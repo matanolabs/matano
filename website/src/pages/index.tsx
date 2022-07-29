@@ -6,7 +6,6 @@ import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import Layout from '@theme/Layout';
 import CodeBlock from '@theme/CodeBlock';
 import HomepageFeatures from '@site/src/components/HomepageFeatures';
-import styles from "./styles.module.css";
 import imageUrl from "@site/src/assets/diagram.png"
 
 
@@ -21,8 +20,8 @@ function HomepageHeader() {
           lineHeight: 1.1,
         }}
         >The Open Source<br/><span className="" style={{color: "var(--ifm-color-primary-dark)"}}>Security Lake Platform</span> for AWS</h1>
-        <p className={styles.heroSub}>
-          Fast distributed SQL query engine for big data analytics that helps you explore your data universe.
+        <p className="font-normal text-lg sm:text-2xl sm:leading-9">
+          Serverless, high scale, low cost, zero-ops security log analytics <span className='underline decoration-pink-500'>in your AWS account</span>.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-4 mt-4">
           <a className="my-btn text-white hover:text-white text-lg bg-blue-600 border-blue-600 hover:bg-blue-700 w-full mb-2 sm:w-auto" href="/docs/intro">Get started</a>
@@ -48,7 +47,7 @@ export default function Home(): JSX.Element {
           <HomepageHeader />
         </div> 
         <main className="flex flex-col items-center">
-          <div className="shadow-2xl shadow-blue-400 -mt-16">
+          <div className="mx-16 shadow-2xl shadow-blue-400 -mt-16">
             <img src={imageUrl} />
           </div>
           <HomepageFeatures />
