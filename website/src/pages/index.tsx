@@ -12,7 +12,7 @@ import imageUrl from "@site/src/assets/diagram.png"
 function HomepageHeader() {
   const {siteConfig} = useDocusaurusContext();
   return (
-    <header className="hero-bg flex-1 flex px-12 sm:px-24 pt-12 pb-20 sm:pt-20 sm:pb-40 shadow-md">
+    <header className="hero-bg flex-1 flex px-12 sm:px-24 pt-24 pb-20 sm:pt-32 sm:pb-40 shadow-md">
       <div className="max-w-5xl">
         <h1 className="pt-0 subpixel-antialiased mx-auto font-display sm:text-6xl text-4xl font-semibold tracking-tight text-slate-900" 
         style={{
@@ -21,7 +21,7 @@ function HomepageHeader() {
         }}
         >The Open Source<br/><span className="" style={{color: "var(--ifm-color-primary-dark)"}}>Security Lake Platform</span> for AWS</h1>
         <p className="font-normal text-lg sm:text-2xl sm:leading-9">
-          Serverless, high scale, low cost, zero-ops security log analytics <span className='underline decoration-pink-500'>in your AWS account</span>.
+          Serverless, high scale, low cost, zero-ops security log analytics <span className=' decoration-pink-500'>in your AWS account</span>.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-4 mt-4">
           <a className="my-btn text-white hover:text-white text-lg bg-blue-600 border-blue-600 hover:bg-blue-700 w-full mb-2 sm:w-auto" href="/docs/intro">Get started</a>
@@ -47,7 +47,7 @@ export default function Home(): JSX.Element {
           <HomepageHeader />
         </div> 
         <main className="flex flex-col items-center">
-          <div className="mx-4 sm:mx-16 shadow-xl sm:shadow-2xl !shadow-blue-400 -mt-4 sm:-mt-16">
+          <div className="mx-4 sm:mx-16 shadow-xl sm:shadow-2xl !shadow-blue-400 -mt-8 sm:-mt-16">
             <img src={imageUrl} />
           </div>
           <HomepageFeatures />
