@@ -21,7 +21,7 @@ function HomepageHeader() {
         }}
         >The Open Source<br/><span className="" style={{color: "var(--ifm-color-primary-dark)"}}>Security Lake Platform</span> for AWS</h1>
         <p className="font-normal text-lg sm:text-2xl sm:leading-9">
-          Serverless, high scale, low cost, zero-ops security log analytics <span className=' decoration-pink-500'>in your AWS account</span>.
+          Serverless, high scale, low cost, zero-ops security log analytics <span className='underline decoration-pink-500'>in your AWS account</span>.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-4 mt-4">
           <a className="my-btn text-white hover:text-white text-lg bg-blue-600 border-blue-600 hover:bg-blue-700 w-full mb-2 sm:w-auto" href="/docs/intro">Get started</a>
