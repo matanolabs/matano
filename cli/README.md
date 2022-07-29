@@ -42,10 +42,11 @@ Creates initial resources for Matano deployment.
 
 ```
 USAGE
-  $ matano bootstrap [-p <value>]
+  $ matano bootstrap [-p <value>] [--user-directory <value>]
 
 FLAGS
-  -p, --profile=<value>  AWS Profile to use for credentials.
+  -p, --profile=<value>     AWS Profile to use for credentials.
+  --user-directory=<value>  Matano user directory to use.
 
 DESCRIPTION
   Creates initial resources for Matano deployment.
@@ -54,6 +55,8 @@ EXAMPLES
   $ matano bootstrap
 
   $ matano bootstrap --profile prod
+
+  $ matano bootstrap --profile prod --user-directory my-matano-directory
 ```
 
 _See code: [dist/commands/bootstrap.ts](https://github.com/matanolabs/matano/blob/main/cli/src/commands/bootstrap.ts)_
@@ -64,18 +67,24 @@ Deploys matano.
 
 ```
 USAGE
-  $ matano deploy -a <value> -r <value> [-p <value>] [--user-directory <value>]
+  $ matano deploy [-p <value>] [-a <value>] [-r <value>] [--user-directory <value>]
 
 FLAGS
-  -a, --account=<value>     (required) AWS Account to deploy to.
+  -a, --account=<value>     AWS Account to deploy to.
   -p, --profile=<value>     AWS Profile to use for credentials.
-  -r, --region=<value>      (required) AWS Region to deploy to.
+  -r, --region=<value>      AWS Region to deploy to.
   --user-directory=<value>  Matano user directory to use.
 
 DESCRIPTION
   Deploys matano.
 
 EXAMPLES
+  $ matano deploy
+
+  $ matano deploy --profile prod
+
+  $ matano deploy --profile prod --user-directory matano-directory
+
   $ matano deploy --profile prod --region eu-central-1 --account 12345678901
 ```
 
@@ -127,18 +136,24 @@ Refreshes Matano context.
 
 ```
 USAGE
-  $ matano refresh-context -a <value> -r <value> [-p <value>] [--user-directory <value>]
+  $ matano refresh-context [-p <value>] [-a <value>] [-r <value>] [--user-directory <value>]
 
 FLAGS
-  -a, --account=<value>     (required) AWS Account to deploy to.
+  -a, --account=<value>     AWS Account to deploy to.
   -p, --profile=<value>     AWS Profile to use for credentials.
-  -r, --region=<value>      (required) AWS Region to deploy to.
+  -r, --region=<value>      AWS Region to deploy to.
   --user-directory=<value>  Matano user directory to use.
 
 DESCRIPTION
   Refreshes Matano context.
 
 EXAMPLES
+  $ matano refresh-context
+
+  $ matano refresh-context --profile prod
+
+  $ matano refresh-context --profile prod --user-directory my-matano-directory
+
   $ matano refresh-context --profile prod --region eu-central-1 --account 12345678901
 ```
 

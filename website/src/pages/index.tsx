@@ -7,11 +7,13 @@ import Layout from '@theme/Layout';
 import CodeBlock from '@theme/CodeBlock';
 import HomepageFeatures from '@site/src/components/HomepageFeatures';
 import styles from "./styles.module.css";
+import imageUrl from "@site/src/assets/diagram.png"
+
 
 function HomepageHeader() {
   const {siteConfig} = useDocusaurusContext();
   return (
-    <header className="hero-bg flex-1 flex px-12 sm:px-24 py-12 sm:py-20 shadow-md">
+    <header className="hero-bg flex-1 flex px-12 sm:px-24 pt-12 pb-24 sm:pt-20 sm:pb-32 shadow-md">
       <div className="max-w-5xl">
         <h1 className="pt-0 subpixel-antialiased mx-auto font-display sm:text-6xl text-4xl font-semibold tracking-tight text-slate-900" 
         style={{
@@ -37,7 +39,7 @@ function HomepageHeader() {
 export default function Home(): JSX.Element {
   const { siteConfig } = useDocusaurusContext();
   return (
-    <Layout wrapperClassName=' flex-row'>
+    <Layout wrapperClassName=''>
         <Head>
           <html className="mtn-homepage"/>
           <title>Matano | Open source security lake for AWS</title>
@@ -45,7 +47,10 @@ export default function Home(): JSX.Element {
         <div className='flex-1 flex'>
           <HomepageHeader />
         </div> 
-        <main style={{backgroundColor: undefined}}>
+        <main className="flex flex-col items-center">
+          <div className="shadow-2xl shadow-blue-400 -mt-16">
+            <img src={imageUrl} />
+          </div>
           <HomepageFeatures />
         </main>
     </Layout>
