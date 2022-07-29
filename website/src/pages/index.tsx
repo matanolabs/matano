@@ -12,7 +12,7 @@ import imageUrl from "@site/src/assets/diagram.png"
 function HomepageHeader() {
   const {siteConfig} = useDocusaurusContext();
   return (
-    <header className="hero-bg flex-1 flex px-12 sm:px-24 pt-24 pb-20 sm:pt-32 sm:pb-40 shadow-md">
+    <header className="hero-bg flex-1 flex px-12 sm:px-24 pt-24 pb-20 sm:pt-32 sm:pb-48 shadow-md">
       <div className="max-w-5xl">
         <h1 className="pt-0 subpixel-antialiased mx-auto font-display sm:text-6xl text-4xl font-semibold tracking-tight text-slate-900" 
         style={{
@@ -48,7 +48,7 @@ export default function Home(): JSX.Element {
         </div> 
         <main className="flex flex-col items-center">
           <div className="rounded-xl sm:rounded-2xl mx-4 sm:mx-16 shadow-xl sm:shadow-2xl !shadow-blue-400 -mt-8 sm:-mt-16">
-            <img className="rounded-xl sm:rounded-2xl" src={imageUrl} />
+            <img className="rounded-xl sm:rounded-2xl" src={imageUrl} loading="lazy" />
           </div>
           <HomepageFeatures />
         </main>
