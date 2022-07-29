@@ -1,5 +1,5 @@
 .features {
-  @apply flex items-center py-20;
+  @apply flex flex-col items-center py-20;
   width: 100%;
 }
 

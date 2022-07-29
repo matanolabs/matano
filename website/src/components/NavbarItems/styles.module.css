@@ -3,3 +3,11 @@
     margin-top: 0.25rem;
     margin-left: var(--ifm-menu-link-padding-horizontal);
 }
+
+
+/* TODO: maybe fix */
+@media (max-width: 996px) {
+    .ghButton {
+        display: none;
+    }
+}

@@ -82,7 +82,10 @@ function Feature({title, Svg, description}: FeatureItem) {
 export default function HomepageFeatures(): JSX.Element {
   return (
     <section className={styles.features}>
-      <div className="container">
+      <div className="container flex flex-col items-center">
+        <h2 style={{ fontFamily: "Lexend" }} className="!text-4xl text-center py-8 px-8">
+            No more dedicated servers
+        </h2>
         <div className="row">
           {FeatureList.map((props, idx) => (
             <Feature key={idx} {...props} />
