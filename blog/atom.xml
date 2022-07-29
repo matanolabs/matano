@@ -2,19 +2,15 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://matano.dev/blog</id>
     <title>Matano Blog</title>
-    <updated>2019-05-28T00:00:00.000Z</updated>
+    <updated>2022-07-28T00:00:00.000Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://matano.dev/blog"/>
     <subtitle>Matano Blog</subtitle>
     <icon>https://matano.dev/img/favicon.svg</icon>
     <entry>
-        <title type="html"><![CDATA[First Blog Post]]></title>
-        <id>first-blog-post</id>
-        <link href="https://matano.dev/blog/first-blog-post"/>
-        <updated>2019-05-28T00:00:00.000Z</updated>
-        <summary type="html"><![CDATA[Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque elementum dignissim ultricies. Fusce rhoncus ipsum tempor eros aliquam consequat. Lorem ipsum dolor sit amet]]></summary>
-        <content type="html"><![CDATA[<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque elementum dignissim ultricies. Fusce rhoncus ipsum tempor eros aliquam consequat. Lorem ipsum dolor sit amet</p>]]></content>
-        <category label="hola" term="hola"/>
-        <category label="docusaurus" term="docusaurus"/>
+        <title type="html"><![CDATA[Placeholder]]></title>
+        <id>/2022/07/28/placeholder</id>
+        <link href="https://matano.dev/blog/2022/07/28/placeholder"/>
+        <updated>2022-07-28T00:00:00.000Z</updated>
     </entry>
 </feed>
