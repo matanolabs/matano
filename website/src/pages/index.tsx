@@ -47,8 +47,8 @@ export default function Home(): JSX.Element {
           <HomepageHeader />
         </div> 
         <main className="flex flex-col items-center">
-          <div className="mx-4 sm:mx-16 shadow-xl sm:shadow-2xl !shadow-blue-400 -mt-8 sm:-mt-16">
-            <img src={imageUrl} />
+          <div className="rounded-xl sm:rounded-2xl mx-4 sm:mx-16 shadow-xl sm:shadow-2xl !shadow-blue-400 -mt-8 sm:-mt-16">
+            <img className="rounded-xl sm:rounded-2xl" src={imageUrl} />
           </div>
           <HomepageFeatures />
         </main>
