@@ -10,20 +10,22 @@ import * as readline from "readline";
 import path = require("path");
 
 // declare const logSourcesConfiguration: Record<string, any>[];
-const logSourcesConfiguration: Record<string, any>[] = JSON.parse(fs.readFileSync(path.join("/opt/log_sources_configuration.json"), "utf8"));
+const logSourcesConfiguration: Record<string, any>[] = JSON.parse(
+  fs.readFileSync(path.join("/opt/log_sources_configuration.json"), "utf8")
+);
 const logSourcesMetatdata: Record<string, Record<string, { vrl: string }>> = logSourcesConfiguration.reduce(
   (acc, logSourceConfig) => {
     const bucketName = logSourceConfig.s3_source?.bucket_name ?? process.env.RAW_EVENTS_BUCKET_NAME;
     const keyPrefix = logSourceConfig.s3_source?.key_prefix ?? logSourceConfig.name;
     acc[bucketName] = {
       [keyPrefix]: {
-      vrl: logSourceConfig.vrl,
+        vrl: logSourceConfig.vrl,
       },
       ...(acc[bucketName] ?? {}),
     };
     return acc;
-  }
-)
+  }, {}
+);
 // {
 //   "matanodpcommonstack-raweventsbucket024cde12-1oynz3pfccqum": {
 //     coredns: {
@@ -108,10 +110,10 @@ export const handler: SQSHandler = async (sqsEvent, context) => {
   console.log("start");
   const s3ObjectRecords = sqsEvent.Records.map(
     (sqsRecord) =>
-      ({
-        ...JSON.parse(sqsRecord.body).Records.shift(),
-        receiptHandle: sqsRecord.receiptHandle,
-      } as S3EventRecord & { receiptHandle: string })
+    ({
+      ...JSON.parse(sqsRecord.body).Records.shift(),
+      receiptHandle: sqsRecord.receiptHandle,
+    } as S3EventRecord & { receiptHandle: string })
   );
 
   const [s3DownloadBatch, ...s3DownloadBatchesToRequeue] = chunkedBy(s3ObjectRecords, {
@@ -151,7 +153,13 @@ export const handler: SQSHandler = async (sqsEvent, context) => {
     })
   );
   console.log("middle");
-  // const failures = results.filter((result) => result.status !== "fulfilled") as PromiseRejectedResult[];
+  const failures = results.flatMap((result) =>
+    result.status !== "fulfilled"
+      ? [result.reason.message]
+      : result.value.filter((v) => v.data.error != null).map((v) => v.data.error!!)
+  );
+  if (failures.length) console.warn(`Failures: ${JSON.stringify(failures)}`);
+
   const outputData = results.flatMap((result) =>
     result.status === "fulfilled" ? result.value.filter((v) => v.data.error == null) : []
   );
@@ -161,11 +169,14 @@ export const handler: SQSHandler = async (sqsEvent, context) => {
     messages: [{ value: JSON.stringify(d.data.success!!.result) }],
   }));
   console.log(JSON.stringify(topicMessages));
-  await producer.connect();
-  await producer.sendBatch({
-    timeout: 5000,
-    compression: CompressionTypes.GZIP,
-    topicMessages,
-  });
+
+  if (topicMessages.length) {
+    await producer.connect();
+    await producer.sendBatch({
+      timeout: 5000,
+      compression: CompressionTypes.GZIP,
+      topicMessages,
+    });
+  }
   console.log("end");
 };
