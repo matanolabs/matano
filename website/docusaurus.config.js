@@ -61,6 +61,14 @@ const config = {
         },
       };
     },
+    [
+      '@docusaurus/plugin-content-blog',
+      {
+        id: 'blog-archive',
+        routeBasePath: 'blog-archive',
+        path: './blog-archive',
+      },
+    ],
   ],
 
   themeConfig:
