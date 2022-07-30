@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunk_matano_website=self.webpackChunk_matano_website||[]).push([[178],{51263:e=>{e.exports=JSON.parse('{"name":"docusaurus-plugin-content-blog","id":"blog-archive"}')}}]);
