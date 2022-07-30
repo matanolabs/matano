@@ -8,8 +8,6 @@ import CodeBlock from '@theme/CodeBlock';
 import HomepageFeatures from '@site/src/components/HomepageFeatures';
 import diagramPng from "@site/src/assets/diagram.png";
 import diagramWebp from "@site/src/assets/diagram.webp";
-import useBaseUrl from '@docusaurus/useBaseUrl';
-
 
 function HomepageHeader() {
   const {siteConfig} = useDocusaurusContext();

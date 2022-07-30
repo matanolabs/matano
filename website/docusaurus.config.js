@@ -25,7 +25,15 @@ const config = {
     defaultLocale: 'en',
     locales: ['en'],
   },
-
+  stylesheets: [
+    { rel: "preconnect", href: "https://fonts.googleapis.com" },
+    {
+      rel: "preconnect",
+      href: "https://fonts.gstatic.com",
+      crossorigin: true,
+    },
+    "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Lexend:wght@400;500;600&display=swap",
+  ],
   presets: [
     [
       'classic',
@@ -72,6 +80,13 @@ const config = {
         path: './blog-archive',
       },
     ],
+    // [
+    //   '@docusaurus/plugin-ideal-image',
+    //   {
+    //     quality: 100,
+    //     disableInDev: false,
+    //   },
+    // ],
   ],
 
   themeConfig:

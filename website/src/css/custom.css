@@ -4,7 +4,6 @@
  * work well for content-centric websites.
  */
 
-@import url('https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600&family=Inter:wght@400;500;600&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -25,7 +24,6 @@
 }
 
 .footer--dark {
-
   --ifm-footer-background-color:#0e1111;
 }
 
