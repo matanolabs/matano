@@ -4,6 +4,8 @@
 
 <!-- <h1 align="center">Matano</h1> -->
 
+<img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=03c989f6-90f5-4982-b002-a48635f10b5d" />
+
 <div align="center">
   <h3>The open-source security lake platform for AWS.</h3>
 </div>
