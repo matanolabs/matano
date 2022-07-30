@@ -82,6 +82,49 @@ git clone https://github.com/matanolabs/matano.git
 make install
 ```
 
+## Getting started
+[**Read the complete docs on getting started**](https://matano.dev/docs/getting-started).
+
+### Create a Matano Directory
+
+A [Matano directory](https://matano.dev/docs/matano-directory) lets you specify data and configuration values for Matano. Run the following to generate a sample directory to get started:
+
+```bash
+matano generate:matano-dir
+```
+
+This will create a directory with sample detections and log sources.
+
+Fill in your AWS account ID and desired AWS region in the generated `matano.config.yml` file.
+
+```yml
+# replace these values
+aws_account_id: "012345678901"
+aws_region: "us-east-1"
+```
+
+The following commands requires valid AWS credentials, either from the environment or the `--profile` flag.
+
+### Bootstrap your AWS account
+
+Initialize your AWS environment before deployment by running `matano bootstrap`. This will create the necessary resources in your AWS account before deploying Matano.
+
+```bash
+matano bootstrap [--profile AWS_CLI_PROFILE]
+```
+
+Follow the CLI prompts to ensure your AWS account is ready for deployment.
+
+### Deploy Matano
+
+You can now deploy Matano to your AWS account. Run the following command from your Matano directory:
+
+```bash
+matano deploy [--profile AWS_CLI_PROFILE]
+```
+
+Deployment can take up to 15 minutes.
+
 ## License
 
 * [Apache-2.0 License](LICENSE)
