@@ -16,13 +16,12 @@ function HomepageHeader() {
   return (
     <header className="hero-bg flex-1 flex px-12 sm:px-24 pt-24 pb-20 sm:pt-32 sm:pb-48 shadow-md">
       <div className="max-w-5xl">
-        <h1 className="pt-0 subpixel-antialiased mx-auto font-display sm:text-6xl text-4xl font-semibold tracking-tight text-slate-900" 
+        <h1 className="pt-0 subpixel-antialiased mx-auto font-display sm:text-6xl text-4xl font-[Lexend,sans-serif] font-semibold tracking-tight text-slate-900" 
         style={{
-          fontFamily: "Lexend",
           lineHeight: 1.1,
         }}
         >The Open Source<br/><span className="" style={{color: "var(--ifm-color-primary-dark)"}}>Security Lake Platform</span> for AWS</h1>
-        <p className="font-normal text-lg sm:text-2xl sm:leading-9">
+        <p className="font-sans font-normal text-lg sm:text-2xl sm:leading-9">
           Serverless, high scale, low cost, zero-ops security log analytics <span className='underline decoration-pink-500'>in your AWS account</span>.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-4 mt-4">
