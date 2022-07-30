@@ -6,7 +6,9 @@ import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import Layout from '@theme/Layout';
 import CodeBlock from '@theme/CodeBlock';
 import HomepageFeatures from '@site/src/components/HomepageFeatures';
-import imageUrl from "@site/src/assets/diagram.png"
+import diagramPng from "@site/src/assets/diagram.png";
+import diagramWebp from "@site/src/assets/diagram.webp";
+import useBaseUrl from '@docusaurus/useBaseUrl';
 
 
 function HomepageHeader() {
@@ -48,7 +50,11 @@ export default function Home(): JSX.Element {
         </div> 
         <main className="flex flex-col items-center">
           <div className="rounded-xl sm:rounded-2xl mx-4 sm:mx-16 shadow-xl sm:shadow-2xl !shadow-blue-400 -mt-8 sm:-mt-16">
-            <img className="rounded-xl sm:rounded-2xl" src={imageUrl} loading="lazy" />
+            <picture>
+              <source type="image/webp" srcSet={diagramWebp}/>
+              <source type="image/png" srcSet={diagramPng}/>
+              <img className="rounded-xl sm:rounded-2xl" src={diagramPng} loading="lazy" />
+            </picture>
           </div>
           <HomepageFeatures />
         </main>
