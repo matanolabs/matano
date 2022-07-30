@@ -1,1 +1,0 @@
-"use strict";(self.webpackChunk_matano_website=self.webpackChunk_matano_website||[]).push([[419],{16680:e=>{e.exports=JSON.parse('[{"label":"engineering","permalink":"/blog-archive/tags/engineering","count":2},{"label":"general","permalink":"/blog-archive/tags/general","count":2}]')}}]);

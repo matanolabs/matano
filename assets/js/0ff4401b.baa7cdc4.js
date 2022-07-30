@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunk_matano_website=self.webpackChunk_matano_website||[]).push([[7595],{85075:e=>{e.exports=JSON.parse('{"permalink":"/blog-archive","page":1,"postsPerPage":10,"totalPages":1,"totalCount":4,"blogDescription":"Blog","blogTitle":"Blog"}')}}]);
