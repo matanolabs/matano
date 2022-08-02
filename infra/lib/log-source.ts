@@ -23,10 +23,16 @@ export const MATANO_DATABASE_NAME = "matano";
 export interface LogSourceConfig {
   name: string;
   schema?: Record<string, any>;
-  s3_source?: {
-    bucket_name?: string;
-    key_prefix?: string;
-  };
+  ingest?: {
+    s3_source?: {
+      bucket_name?: string;
+      key_prefix?: string;
+      expand_records_from_object?: string;
+    };
+  }
+  transform?: {
+    vrl?: string
+  }
 }
 
 interface MatanoLogSourceProps {
@@ -43,7 +49,8 @@ export class MatanoLogSource extends Construct {
     super(scope, id);
 
     const cluster = props.kafkaCluster;
-    const { name: logSourceName, schema, s3_source: s3SourceConfig } = props.config;
+    const { name: logSourceName, schema, ingest: ingestConfig } = props.config;
+    const s3SourceConfig = ingestConfig?.s3_source;
     // const sourceBucket =
     //   s3SourceConfig == null
     //     ? props.defaultSourceBucket
@@ -78,8 +85,7 @@ export class MatanoLogSource extends Construct {
       new iam.PolicyStatement({
         actions: ["glue:GetTable", "glue:GetTableVersion", "glue:GetTableVersions"],
         resources: [
-          `arn:aws:glue:${cdk.Stack.of(this).region}:${
-            cdk.Stack.of(this).account
+          `arn:aws:glue:${cdk.Stack.of(this).region}:${cdk.Stack.of(this).account
           }:table/${MATANO_GLUE_DATABASE_NAME}/${logSourceName}`,
           `arn:aws:glue:${cdk.Stack.of(this).region}:${cdk.Stack.of(this).account}:catalog`,
           "*",
@@ -184,15 +190,15 @@ export class MatanoLogSource extends Construct {
       const kafkaSource =
         cluster.clusterType === "self-managed"
           ? new SelfManagedKafkaEventSource({
-              ...kafkaSourceProps,
-              authenticationMethod: AuthenticationMethod.SASL_SCRAM_256_AUTH,
-              bootstrapServers: cluster.bootstrapAddress.split(","),
-              secret: cluster.secret,
-            })
+            ...kafkaSourceProps,
+            authenticationMethod: AuthenticationMethod.SASL_SCRAM_256_AUTH,
+            bootstrapServers: cluster.bootstrapAddress.split(","),
+            secret: cluster.secret,
+          })
           : new ManagedKafkaEventSource({
-              ...kafkaSourceProps,
-              clusterArn: cluster.clusterArn,
-            });
+            ...kafkaSourceProps,
+            clusterArn: cluster.clusterArn,
+          });
 
       props.transformLambda.addEventSource(kafkaSource);
     });

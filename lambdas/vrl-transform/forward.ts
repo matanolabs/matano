@@ -13,14 +13,12 @@ import path = require("path");
 const logSourcesConfiguration: Record<string, any>[] = JSON.parse(
   fs.readFileSync(path.join("/opt/log_sources_configuration.json"), "utf8")
 );
-const logSourcesMetatdata: Record<string, Record<string, { vrl: string }>> = logSourcesConfiguration.reduce(
+const logSourcesMetatdata: Record<string, Record<string, Record<string, any>>> = logSourcesConfiguration.reduce(
   (acc, logSourceConfig) => {
-    const bucketName = logSourceConfig.s3_source?.bucket_name ?? process.env.RAW_EVENTS_BUCKET_NAME;
-    const keyPrefix = logSourceConfig.s3_source?.key_prefix ?? logSourceConfig.name;
+    const bucketName = logSourceConfig.ingest?.s3_source?.bucket_name ?? process.env.RAW_EVENTS_BUCKET_NAME;
+    const keyPrefix = logSourceConfig.ingest?.s3_source?.key_prefix ?? logSourceConfig.name;
     acc[bucketName] = {
-      [keyPrefix]: {
-        vrl: logSourceConfig.vrl,
-      },
+      [keyPrefix]: logSourceConfig,
       ...(acc[bucketName] ?? {}),
     };
     return acc;
@@ -106,6 +104,119 @@ const kafka = new Kafka({
 });
 const producer = kafka.producer();
 
+type ErrType<E> = { ok: false, error: E | undefined };
+type OkType<T> = { ok: true, value: T };
+type Result<T, E = undefined> = OkType<T> | ErrType<E>;
+
+const Ok = <T>(data: T): OkType<T> => {
+  return { ok: true, value: data };
+};
+const Err = <E>(error?: E): ErrType<E> => {
+  return { ok: false, error };
+};
+const to_res = (v: Outcome, extract: "result" | "output" = "output"): Result<string, string> => {
+  if (v.error != null) return Err(v.error);
+  const d = v.success!![extract];
+  if (typeof d !== 'string') return Err(`Incorrect type returned by VRL transform: '${typeof d}', expected 'string'`);
+  return Ok(d)
+}
+
+// if ends_with(.__key, ".csv") || ends_with(.__key, ".csv.gz") {
+//   headers = if ${Boolean(csvHeaderSettings)} {
+//     assert(length(result) >= 1, "Missing csv header.")
+//     h = result[0]
+//     result = result.slice(1)
+//     parse_csv!(h)
+//   }
+//   result = map_values(result) -> |i| {
+//     item = {}
+//     line_values = parse_csv!(i)
+//     for_each(v -> |_i, v| { 
+//       key = if headers && headers.length > _i { headers[_i] } else { "_"+_i }
+//       item[key] = line_values[i] 
+//     }
+//     item
+//   }
+// }
+
+async function* getLinesByFormat(bucketName: string, objectKey: string, logSourceMetadata: Record<string, any>): AsyncGenerator<Result<string, string>> {
+  const csvHeaderSettings = logSourceMetadata.ingest?.s3_source?.csv?.header;
+  const expandRecordsFromObjectVrl = logSourceMetadata.ingest?.s3_source?.expand_records_from_object;
+  const isCsv = objectKey.endsWith(".csv") || objectKey.endsWith(".csv.gz");
+  const isJson = objectKey.endsWith(".json") || objectKey.endsWith(".json.gz")
+  let lineIterator: AsyncIterableIterator<string> | undefined;
+
+  if (expandRecordsFromObjectVrl != null) {
+    const s3Response = await s3
+      .getObject({
+        Bucket: bucketName,
+        Key: objectKey,
+      })
+      .promise();
+    const objectDataString = /\.gz$/i.test(objectKey) ? s3Response.Body?.toString() : zlib.gunzipSync(s3Response.Body as any).toString();
+    if (objectDataString == null) return [];
+    const result = vrl(`result = {
+      ${expandRecordsFromObjectVrl}
+    }
+    assert(result == null || is_array(result), "The expand_records_from_object VRL expression must return the expanded records from the .__raw object string as an array, or return null to skip expansion.")
+    if result != null {
+      result = map_values(result) -> |v| {
+        obj = if is_object(v) { v } else { {"message": to_string(v)} }
+        encode_json(obj)
+      }
+    } 
+    . = result`, {
+      __raw: objectDataString,
+      __key: objectKey,
+    });
+    if (result.error != null) yield Err(result.error);
+    else {
+      const output = result.success?.result as string[] | null;
+      if (output == null) {
+        async function* genLines() {
+          for (const line of objectDataString!!.split("\n")) {
+            yield line;
+          }
+        }
+        lineIterator = genLines();
+      } else {
+        for (const line of output) yield Ok(line);
+      }
+    }
+  } else {
+    const s3Response = s3
+      .getObject({
+        Bucket: bucketName,
+        Key: objectKey,
+      })
+      .createReadStream();
+    lineIterator = readFile(s3Response, /\.gz$/i.test(objectKey))[Symbol.asyncIterator]();
+  }
+  if (lineIterator == null) return;
+  let parsedHeaderFields: string[] | undefined;
+  if (isCsv && Boolean(csvHeaderSettings)) {
+    let header = lineIterator.next();
+    parsedHeaderFields = vrl(`parse_csv!(.message),`, { message: header }).success?.output as string[] | undefined;
+  }
+  for await (const line of lineIterator) {
+    if (isCsv) {
+      yield to_res(vrl(`
+          item = {}
+          line_values = parse_csv!(.message)
+          for_each(v -> |_i, v| { 
+            key = if .headers && .headers.length > _i { .headers[_i] } else { "_"+_i }
+            item[key] = line_values[i] 
+          }
+          encode_json(item)
+        `, { message: line, headers: parsedHeaderFields }));
+    } else if (isJson) {
+      yield to_res(vrl(`encode_json(parse_json!(.message)),`, { message: line })); // Ok(line)? can i even skip parsing?
+    } else {
+      yield Ok(JSON.stringify({ message: line }));
+    }
+  }
+}
+
 export const handler: SQSHandler = async (sqsEvent, context) => {
   console.log("start");
   const s3ObjectRecords = sqsEvent.Records.map(
@@ -124,30 +235,18 @@ export const handler: SQSHandler = async (sqsEvent, context) => {
 
   const results = await Promise.allSettled(
     s3DownloadBatch.map(async (s3Download) => {
-      const s3Response = s3
-        .getObject({
-          Bucket: s3Download.s3.bucket.name,
-          Key: s3Download.s3.object.key,
-        })
-        .createReadStream();
-      const bucketName = s3Download.s3.bucket.name;
-      const logSourceName = s3Download.s3.object.key.split("/").shift()!!;
+      const [bucketName, objectKey] = [s3Download.s3.bucket.name, s3Download.s3.object.key];
+      const logSourceName = objectKey.split("/").shift()!!;
       const metadata = logSourcesMetatdata[bucketName][logSourceName];
-      const lineReader = readFile(s3Response, /\.gz$/i.test(s3Download.s3.object.key));
       let results: {
         topic: string;
-        data: Outcome;
+        data: Result<string, string>;
       }[] = [];
-
-      for await (const line of lineReader) {
-        const output = vrl(metadata.vrl, {
-          message: line,
+      for await (const res of getLinesByFormat(bucketName, objectKey, metadata)) {
+        results.push({
+          topic: `raw.${logSourceName}`,
+          data: res
         });
-        const res = {
-          topic: logSourceName,
-          data: output,
-        };
-        results.push(res);
       }
       return results;
     })
@@ -155,20 +254,25 @@ export const handler: SQSHandler = async (sqsEvent, context) => {
   console.log("middle");
   const failures = results.flatMap((result) =>
     result.status !== "fulfilled"
-      ? [result.reason.message]
-      : result.value.filter((v) => v.data.error != null).map((v) => v.data.error!!)
+      ? [String(result.reason.message)]
+      : result.value.flatMap((v) => !v.data.ok ? [v.data.error!!] : [])
   );
   if (failures.length) console.warn(`Failures: ${JSON.stringify(failures)}`);
 
-  const outputData = results.flatMap((result) =>
-    result.status === "fulfilled" ? result.value.filter((v) => v.data.error == null) : []
-  );
+  const topicToMessages = results.reduce((acc, result) => {
+    const data = result.status === "fulfilled" ? result.value.flatMap((v) => v.data.ok ? [[v.topic, v.data.value] as [string, string]] : []) : [];
+    for (const [topic, message] of data) {
+      acc[topic] = {
+        topic,
+        messages: [...(acc[topic]?.messages ?? []), { value: JSON.stringify(message) }],
+      }
+    }
+    return acc;
+  }, {} as Record<string, TopicMessages>);
 
-  const topicMessages: TopicMessages[] = outputData.map((d) => ({
-    topic: d.topic,
-    messages: [{ value: JSON.stringify(d.data.success!!.result) }],
-  }));
-  console.log(JSON.stringify(topicMessages));
+  console.log(JSON.stringify(topicToMessages));
+
+  const topicMessages = Object.values(topicToMessages).flatMap(m => m);
 
   if (topicMessages.length) {
     await producer.connect();

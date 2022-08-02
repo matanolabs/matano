@@ -1,0 +1,48 @@
+name: "cloudtrail"
+
+ingest:
+  s3_source:
+      # bucket_name: my_org_cloudtrail_bucket
+      # key_prefix: my_org_cloudtrail_bucket
+      expand_records_from_object: parse_json!(.__raw).Records
+      # |
+      #   if ends_with(.__key, r'.json.gz') {
+      #     parse_json!(.__raw).Records
+      #   }
+transform:
+  vrl: |
+    .ts = del(.eventTime)
+    .aws.cloudtrail.additional_eventdata = del(.additionalEventdata)
+    .aws.cloudtrail.additional_eventdata = del(.additionalEventdata)
+    .aws.cloudtrail.api_version = del(.apiVersion)
+    .cloud.region = del(.awsRegion)
+    .aws.cloudtrail.error_code = del(.errorCode)
+    .aws.cloudtrail.error_message = del(.errorMessage)
+    .event.id = del(.eventID)
+    .event.action = del(.eventName)
+    .event.provider = del(.eventSource)
+    .aws.cloudtrail.event_type = del(.eventType)
+    .aws.cloudtrail.event_version = del(.eventVersion)
+    .aws.cloudtrail.management_event = del(.managementEvent)
+    .aws.cloudtrail.read_only = del(.readOnly)
+    .aws.cloudtrail.request_id = del(.requestID)
+    .aws.cloudtrail.request_parameters = del(.requestParameters)
+    .aws.cloudtrail.resources.account_id = del(.resources.accountId)
+    .aws.cloudtrail.resources.arn = del(.resources.ARN)
+    .aws.cloudtrail.resources.type = del(.resources.type)
+    .aws.cloudtrail.response_elements = del(.responseElements)
+    .aws.cloudtrail.service_event_details = del(.serviceEventDetails)
+    .aws.cloudtrail.shared_event_id = del(.sharedEventId)
+    .source.address = del(.sourceIPAddress)
+    .user_agent = del(.userAgent)
+    .aws.cloudtrail.user_identity.access_key_id = del(.userIdentity.accessKeyId)
+    .cloud.account.id = del(.userIdentity.accountId)
+    .aws.cloudtrail.user_identity.arn = del(.userIdentity.arn)
+    .aws.cloudtrail.user_identity.invoked_by = del(.userIdentity.invokedBy)
+    .user.id = del(.userIdentity.principalId)
+    .aws.cloudtrail.user_identity.session_context.creation_date = del(.userIdentity.sessionContext.attributes.creationDate)
+    .aws.cloudtrail.user_identity.session_context.mfa_authenticated = del(.userIdentity.sessionContext.attributes.mfaAuthenticated)
+    .role.name = del(.userIdentity.sessionContext.sessionIssuer.userName)
+    .aws.cloudtrail.user_identity.type = del(.userIdentity.type)
+    .user.name = del(.userIdentity.userName)
+    .aws.cloudtrail.vpc_endpoint_id = del(.vpcEndpointId)

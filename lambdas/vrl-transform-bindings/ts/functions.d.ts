@@ -1,6 +1,6 @@
 export type Outcome = {
   success?: {
-    output: string;
+    output?: any;
     result: any;
   };
 } & { error?: string };
