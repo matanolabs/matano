@@ -23,7 +23,7 @@
     <h3 align="center">
         <a href="https://www.matano.dev">Website</a>
         <span> | </span>
-        <a href="https://matano.dev/docs/intro">Docs</a>
+        <a href="https://matano.dev/docs">Docs</a>
         <span> | </span>
         <a href="https://discord.gg/YSYfHMbfZQ">Community</a>
     </h3>
