@@ -45,7 +45,7 @@ export default function Home(): JSX.Element {
         <div className='flex-1 flex'>
           <HomepageHeader />
         </div> 
-        <main className="flex flex-col items-center">
+        <main className="flex flex-col items-center pb-28">
           <div className="rounded-xl sm:rounded-2xl mx-4 sm:mx-16 shadow-xl sm:shadow-2xl !shadow-blue-400 -mt-8 sm:-mt-16">
             <picture>
               <source type="image/webp" srcSet={diagramWebp}/>

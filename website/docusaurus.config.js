@@ -173,7 +173,7 @@ const config = {
             ],
           },
         ],
-        copyright: `Copyright © ${new Date().getFullYear()} Matano Inc.`,
+        copyright: `Copyright © ${new Date().getFullYear()} Matano Inc.<br/><span>Matano is open source software licensed under the <a href="https://github.com/matanolabs/matano/blob/main/LICENSE">Apache License 2.0</a></span>`,
       },
       prism: {
         theme: lightCodeTheme,

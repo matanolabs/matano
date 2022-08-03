@@ -68,12 +68,12 @@ const FeatureList: FeatureItem[] = [
 function Feature({title, Svg, description}: FeatureItem) {
   return (
     <div className={clsx('col col--4')}>
-      <div className="text--center">
+      {/* <div className="text--center">
         <Svg className={styles.featureSvg} role="img" />
-      </div>
-      <div className="text--center padding-horiz--md">
-        <h3 style={{ fontFamily: "Lexend" }}>{title}</h3>
-        <p>{description}</p>
+      </div> */}
+      <div className="text--center padding-horiz--md padding-vert--md">
+        <h3 className='text-2xl' style={{ fontFamily: "Lexend" }}>{title}</h3>
+        <p className="text-lg">{description}</p>
       </div>
     </div>
   );
@@ -84,7 +84,7 @@ export default function HomepageFeatures(): JSX.Element {
     <section className={styles.features}>
       <div className="container flex flex-col items-center">
         <h2 style={{ fontFamily: "Lexend" }} className="!text-4xl text-center py-8 px-8">
-            No more dedicated servers
+            Why Matano?
         </h2>
         <div className="row">
           {FeatureList.map((props, idx) => (

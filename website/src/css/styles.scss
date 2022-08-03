@@ -98,3 +98,11 @@ div[role="banner"] {
     font-family: Inter;
     border: 0;
 }
+
+.footer__copyright > span {
+  @apply text-slate-300;
+  &> a {
+    @apply underline hover:text-blue-600;
+    color: unset;
+  }
+}
