@@ -8,7 +8,7 @@ tasks:
   - name: cli
     before: cd cli
     init: |
-      npm install -g && npm run build && npm install -g esbuild   
+      npm install -g
   - name: jvm
     before: cd lib/java/matano 
     init: |
