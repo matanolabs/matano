@@ -16,7 +16,7 @@
     <a href="/LICENSE" target="_blank"><img src="https://img.shields.io/github/license/matanolabs/matano?style=flat"/></a>
     <!-- <img src="https://img.shields.io/github/v/release/matanolabs/matano?style=flat-square"/> -->
     <a href="https://discord.gg/YSYfHMbfZQ" target="_blank"><img src="https://img.shields.io/discord/996484553290022973?logo=discord&style=flat-square"/></a>
-    <a href="http://twitter.com/intent/tweet?url=https%3A%2F%2Fgithub.com%2Fmatanolabs%2Fmatano" target="_blank"><img src="https://img.shields.io/twitter/url?style=social&url=https%3A%2F%2Fgithub.com%2Fmatanolabs%2Fmatano" alt="Twitter"/></a>
+    <a href="https://twitter.com/intent/follow?screen_name=matanolabs" target="_blank"><img src="https://img.shields.io/twitter/follow/matanolabs?style=social" alt="Twitter Follow"/></a>
 </div>
 
 <div align="center">
