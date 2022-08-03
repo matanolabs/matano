@@ -127,6 +127,10 @@ matano deploy [--profile AWS_CLI_PROFILE]
 
 Deployment can take up to 15 minutes.
 
+## Documentation
+
+[**View our complete documentation.**](https://matano.dev/docs)
+
 ## License
 
 * [Apache-2.0 License](LICENSE)
