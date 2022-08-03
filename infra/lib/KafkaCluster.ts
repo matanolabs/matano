@@ -79,6 +79,17 @@ export class KafkaCluster extends KafkaClusterBase {
       service: ec2.GatewayVpcEndpointAwsService.DYNAMODB,
     });
 
+    // Lambda Msk Trigger needs: Lamdbda + STS + Secretsmanager Interface Endpoints
+    const lambdaEndpoint = this.vpc.addInterfaceEndpoint("LambdaEndpoint", {
+      service: ec2.InterfaceVpcEndpointAwsService.LAMBDA,
+    });
+    const stsEndpoint = this.vpc.addInterfaceEndpoint("StsEndpoint", {
+      service: ec2.InterfaceVpcEndpointAwsService.STS,
+    });
+    const secretsManagerEndpoint = this.vpc.addInterfaceEndpoint("SecretsManagerEndpoint", {
+      service: ec2.InterfaceVpcEndpointAwsService.SECRETS_MANAGER,
+    });
+
     const subnets = this.vpc.publicSubnets;
     const parameters = {
       ClusterName: props.clusterName,

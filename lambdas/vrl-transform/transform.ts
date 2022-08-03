@@ -1,12 +1,11 @@
-import { Admin, Kafka, ITopicConfig, CompressionTypes, TopicMessages } from "kafkajs";
+import { Kafka, CompressionTypes, TopicMessages } from "kafkajs";
 import { awsIamAuthenticator } from "@matano/msk-authenticator";
-import { vrl, Outcome } from "@matano/vrl-transform-bindings/ts/index.js";
+import { vrl } from "@matano/vrl-transform-bindings/ts/index.js";
 import { MSKHandler } from "aws-lambda";
-import * as AWS from "aws-sdk";
 
 import * as fs from "fs";
 import path = require("path");
-
+import { to_res } from "./utils";
 
 
 // declare const logSourcesConfiguration: Record<string, any>[];
@@ -34,7 +33,7 @@ const producer = kafka.producer();
 
 export const handler: MSKHandler = async (mskEvent, context) => {
   console.log("start");
-  const logSourceToEvents: Record<string, any[]> = Object.fromEntries(Object.values(mskEvent.records).flatMap(_ => _).map(r => {
+  const logSourceToEvents = Object.values(mskEvent.records).flatMap(_ => _).map(r => {
     if (!r.topic.startsWith("raw.")) {
       throw new Error("Invalid topic name.")
     }
@@ -42,19 +41,24 @@ export const handler: MSKHandler = async (mskEvent, context) => {
       r.topic.slice(4),
       JSON.parse(Buffer.from(r.value, 'base64').toString())
     ]
-  }));
+  }).reduce((acc, [logSource, event]) => ({ ...acc, [logSource]: [...(acc[logSource] ?? []), event] }), {} as Record<string, any[]>);
 
   let topicToMessages: Record<string, TopicMessages> = {};
   for (const logSourceName in logSourceToEvents) {
-    const transformed = logSourceToEvents[logSourceName].map(e => vrl(
+    const transformedResults = logSourceToEvents[logSourceName].map(e => to_res(vrl(
       logSourcesMetatdata[logSourceName].transform?.vrl,
       e
-    ));
+    ), "result"));
+    const failures = transformedResults.flatMap((v) => !v.ok ? [v.error!!] : []);
+    if (failures.length) console.warn(`Failures: ${JSON.stringify(failures)}`);
+
+    const transformedMessages = transformedResults.flatMap((v) => v.ok ? [v.value] : []);
     topicToMessages[logSourceName] = {
       topic: logSourceName,
-      messages: transformed.map(m => ({ value: JSON.stringify(m) }))
+      messages: transformedMessages.map(m => ({ value: JSON.stringify(m) }))
     };
   }
+  console.log(JSON.stringify(topicToMessages));
   const topicMessages = Object.values(topicToMessages).flatMap(m => m);
   console.log("middle");
 

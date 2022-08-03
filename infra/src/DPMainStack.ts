@@ -161,6 +161,7 @@ export class DPMainStack extends MatanoStack {
       }),
       description: "A layer for Matano Log Source Configurations.",
     });
+    transformerLambda.addLayers(logSourcesConfigurationLayer);
 
     const forwarderLambda = new NodejsFunction(this, "ForwarderLambda", {
       functionName: "MatanoForwarderLambdaFunction",

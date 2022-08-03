@@ -4,13 +4,11 @@ import * as firehose from "@aws-cdk/aws-kinesisfirehose-alpha";
 import * as kinesisDestinations from "@aws-cdk/aws-kinesisfirehose-destinations-alpha";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as s3 from "aws-cdk-lib/aws-s3";
-import * as glue from "aws-cdk-lib/aws-glue";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import { MatanoIcebergTable } from "../lib/iceberg";
-import { readConfig } from "../lib/utils";
 import { CfnDeliveryStream } from "aws-cdk-lib/aws-kinesisfirehose";
 import { KafkaTopic } from "../lib/KafkaTopic";
-import { IKafkaCluster, KafkaCluster } from "../lib/KafkaCluster";
+import { IKafkaCluster } from "../lib/KafkaCluster";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
 import {
   AuthenticationMethod,
@@ -176,13 +174,14 @@ export class MatanoLogSource extends Construct {
         replicationFactor: 2,
       },
     });
+    [rawTopic, outputTopic].forEach((topic) => topic.node.addDependency(cluster));
 
-    [rawTopic, outputTopic].forEach((topic) => {
-      topic.node.addDependency(cluster);
+    [rawTopic].forEach((topic) => {
       props.transformLambda.node.addDependency(topic);
 
       const kafkaSourceProps = {
         topic: topic.topicName,
+        maxBatchingWindow: cdk.Duration.seconds(1),
         batchSize: 10_000, // TODO
         startingPosition: lambda.StartingPosition.LATEST, // TODO
       };

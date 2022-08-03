@@ -1,13 +1,16 @@
-import { Admin, Kafka, ITopicConfig, CompressionTypes, TopicMessages } from "kafkajs";
+import { Kafka, CompressionTypes, TopicMessages } from "kafkajs";
 import { awsIamAuthenticator } from "@matano/msk-authenticator";
-import { vrl, Outcome } from "@matano/vrl-transform-bindings/ts/index.js";
+import { vrl } from "@matano/vrl-transform-bindings/ts/index.js";
 import { S3EventRecord, SQSHandler } from "aws-lambda";
 import * as AWS from "aws-sdk";
+import { Ok, Err, Result, to_res, chunkedBy, readFile } from "./utils";
 
 import * as fs from "fs";
 import * as zlib from "zlib";
-import * as readline from "readline";
 import path = require("path");
+
+const s3 = new AWS.S3();
+
 
 // declare const logSourcesConfiguration: Record<string, any>[];
 const logSourcesConfiguration: Record<string, any>[] = JSON.parse(
@@ -24,73 +27,6 @@ const logSourcesMetatdata: Record<string, Record<string, Record<string, any>>> =
     return acc;
   }, {}
 );
-// {
-//   "matanodpcommonstack-raweventsbucket024cde12-1oynz3pfccqum": {
-//     coredns: {
-//       vrl: `
-//       # parse the log event.
-//       # ts = .timestamp
-//       log, err = parse_regex(.message,r'\\[(?P<level>[^]]+)]\\s(?P<server_addr>[^:]+):(?P<server_port>\\S+)\\s+-\\s+(?P<id>\\S+)\\s+"(?P<type>\\S+)\\s+(?P<class>\\S+)\\s+(?P<name>\\S+)\\s+(?P<proto>\\S+)\\s+(?P<size>\\S+)\\s+(?P<do>\\S+)\\s+(?P<bufsize>[^"]+)"\\s+(?P<rcode>\\S+)\\s+(?P<rflags>\\S+)\\s+(?P<rsize>\\S+)\\s+(?P<duration>[\\d\\.]+).*')
-//       if err != null {
-//         # capture the error log. If the error log also fails to get parsed, the log event is dropped.
-//         log = parse_regex!(.message,r'\\[(?P<level>ERROR)]\\s+(?P<component>plugin/errors):\\s+(?P<code>\\S)+\\s+(?P<name>\\S+)\\s+(?P<type>[^:]*):\\s+(?P<error_msg>.*)')
-//       }
-//       . = log
-//       # add timestamp
-//       # .timestamp = ts
-//       # remove fields we don't care about
-//       del(.do)
-//       `,
-//     },
-//   },
-// };
-
-function readFile(stream: NodeJS.ReadableStream, isGzip: boolean) {
-  if (isGzip) {
-    stream = stream.pipe(zlib.createGunzip());
-  }
-
-  return readline.createInterface({
-    input: stream,
-    crlfDelay: Infinity,
-  });
-}
-
-const s3 = new AWS.S3();
-
-interface ChunkingProps<T> {
-  maxLength?: number;
-  maxSize?: number;
-  sizeFn?: (item: T) => number;
-}
-
-export const chunkedBy = <T>(arr: T[], { maxLength, maxSize, sizeFn }: ChunkingProps<T>): T[][] => {
-  if ((maxSize == null) != (sizeFn == null)) {
-    throw new Error("maxSize and sizeFn must be specified together.");
-  }
-
-  let result: T[][] = [];
-  let sublist: T[] = [];
-  let sublistSize = 0;
-  for (const item of arr) {
-    let startNewArray = false;
-    if (maxLength && sublist.length >= maxLength) {
-      startNewArray = true;
-    }
-    if (maxSize && sizeFn && sublistSize + sizeFn(item) > maxSize) {
-      startNewArray = true;
-    }
-    if (startNewArray) {
-      result.push(sublist);
-      sublist = [];
-      sublistSize = 0;
-    }
-    sublist.push(item);
-    if (sizeFn) sublistSize += sizeFn(item);
-  }
-  if (sublist.length > 0) result.push(sublist);
-  return result;
-};
 
 const bootstrapServers = process.env.BOOTSTRAP_ADDRESS!!.split(",");
 const kafka = new Kafka({
@@ -103,41 +39,6 @@ const kafka = new Kafka({
   },
 });
 const producer = kafka.producer();
-
-type ErrType<E> = { ok: false, error: E | undefined };
-type OkType<T> = { ok: true, value: T };
-type Result<T, E = undefined> = OkType<T> | ErrType<E>;
-
-const Ok = <T>(data: T): OkType<T> => {
-  return { ok: true, value: data };
-};
-const Err = <E>(error?: E): ErrType<E> => {
-  return { ok: false, error };
-};
-const to_res = (v: Outcome, extract: "result" | "output" = "output"): Result<string, string> => {
-  if (v.error != null) return Err(v.error);
-  const d = v.success!![extract];
-  if (typeof d !== 'string') return Err(`Incorrect type returned by VRL transform: '${typeof d}', expected 'string'`);
-  return Ok(d)
-}
-
-// if ends_with(.__key, ".csv") || ends_with(.__key, ".csv.gz") {
-//   headers = if ${Boolean(csvHeaderSettings)} {
-//     assert(length(result) >= 1, "Missing csv header.")
-//     h = result[0]
-//     result = result.slice(1)
-//     parse_csv!(h)
-//   }
-//   result = map_values(result) -> |i| {
-//     item = {}
-//     line_values = parse_csv!(i)
-//     for_each(v -> |_i, v| { 
-//       key = if headers && headers.length > _i { headers[_i] } else { "_"+_i }
-//       item[key] = line_values[i] 
-//     }
-//     item
-//   }
-// }
 
 async function* getLinesByFormat(bucketName: string, objectKey: string, logSourceMetadata: Record<string, any>): AsyncGenerator<Result<string, string>> {
   const csvHeaderSettings = logSourceMetadata.ingest?.s3_source?.csv?.header;
@@ -153,15 +54,15 @@ async function* getLinesByFormat(bucketName: string, objectKey: string, logSourc
         Key: objectKey,
       })
       .promise();
-    const objectDataString = /\.gz$/i.test(objectKey) ? s3Response.Body?.toString() : zlib.gunzipSync(s3Response.Body as any).toString();
+    const objectDataString = /\.gz$/i.test(objectKey) ? zlib.gunzipSync(s3Response.Body as any).toString() : s3Response.Body?.toString();
     if (objectDataString == null) return [];
     const result = vrl(`result = {
       ${expandRecordsFromObjectVrl}
     }
-    assert(result == null || is_array(result), "The expand_records_from_object VRL expression must return the expanded records from the .__raw object string as an array, or return null to skip expansion.")
+    assert!(result == null || is_array(result), "The expand_records_from_object VRL expression must return the expanded records from the .__raw object string as an array, or return null to skip expansion.")
     if result != null {
-      result = map_values(result) -> |v| {
-        obj = if is_object(v) { v } else { {"message": to_string(v)} }
+      result = map_values(array!(result)) -> |v| {
+        obj = if is_object(v) { v } else { {"message": to_string!(v)} }
         encode_json(obj)
       }
     } 
@@ -264,7 +165,7 @@ export const handler: SQSHandler = async (sqsEvent, context) => {
     for (const [topic, message] of data) {
       acc[topic] = {
         topic,
-        messages: [...(acc[topic]?.messages ?? []), { value: JSON.stringify(message) }],
+        messages: [...(acc[topic]?.messages ?? []), { value: message }],
       }
     }
     return acc;
