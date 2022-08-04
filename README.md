@@ -105,7 +105,7 @@ aws_account_id: "012345678901"
 aws_region: "us-east-1"
 ```
 
-The following commands requires valid AWS credentials, either from the environment or the `--profile` flag.
+The following commands require valid AWS credentials, either from the environment or the `--profile` flag.
 
 ### Bootstrap your AWS account
 
