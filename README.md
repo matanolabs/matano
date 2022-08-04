@@ -125,7 +125,7 @@ You can now deploy Matano to your AWS account. Run the following command from yo
 matano deploy [--profile AWS_CLI_PROFILE]
 ```
 
-Deployment can take up to 15 minutes.
+The first deployment can take up to 15 minutes.
 
 ## Documentation
 
