@@ -33,7 +33,7 @@ export const handler: MSKHandler = async (mskEvent) => {
     });
 
     return recordsBatches.map(recordsBatch => {
-      const firehoseRecords = recordsBatch.map(r => ({ Data: Buffer.from(r) }));
+      const firehoseRecords = recordsBatch.map(r => ({ Data: r }));
       return firehose.putRecordBatch({
         DeliveryStreamName: `${logSourceName}-lake-firehose`,
         Records: firehoseRecords,

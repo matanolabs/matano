@@ -45,12 +45,22 @@ export const handler: MSKHandler = async (mskEvent, context) => {
 
   let topicToMessages: Record<string, TopicMessages> = {};
   for (const logSourceName in logSourceToEvents) {
+    const prog = `
+.related.user = []
+.related.hash = []
+.related.ip = []
+${logSourcesMetatdata[logSourceName].transform?.vrl}
+del(.json)
+    `;
+    console.log(prog);
     const transformedResults = logSourceToEvents[logSourceName].map(e => to_res(vrl(
-      logSourcesMetatdata[logSourceName].transform?.vrl,
-      e
+      prog,
+      {
+        json: e
+      }
     ), "result"));
     const failures = transformedResults.flatMap((v) => !v.ok ? [v.error!!] : []);
-    if (failures.length) console.warn(`Failures: ${JSON.stringify(failures)}`);
+    if (failures.length) console.warn(`Failures: ${failures[0]}`);
 
     const transformedMessages = transformedResults.flatMap((v) => v.ok ? [{ value: v.value }] : []);
     topicToMessages[logSourceName] = {
@@ -58,11 +68,11 @@ export const handler: MSKHandler = async (mskEvent, context) => {
       messages: transformedMessages,
     };
   }
-  console.log(JSON.stringify(topicToMessages));
   const topicMessages = Object.values(topicToMessages).flatMap(m => m);
   console.log("middle");
 
   if (topicMessages.length) {
+    console.log(JSON.stringify(topicToMessages));
     await producer.connect();
     await producer.sendBatch({
       timeout: 5000,

@@ -5,40 +5,119 @@ ingest:
       # bucket_name: my_org_cloudtrail_bucket
       # key_prefix: my_org_cloudtrail_bucket
       expand_records_from_object: parse_json!(.__raw).Records
-transform:
+transform: # TODO: ts handling...
   vrl: |
-    .ts = del(.eventTime)
-    .aws.cloudtrail.additional_eventdata = del(.additionalEventdata)
-    .aws.cloudtrail.additional_eventdata = del(.additionalEventdata)
-    .aws.cloudtrail.api_version = del(.apiVersion)
-    .cloud.region = del(.awsRegion)
-    .aws.cloudtrail.error_code = del(.errorCode)
-    .aws.cloudtrail.error_message = del(.errorMessage)
-    .event.id = del(.eventID)
-    .event.action = del(.eventName)
-    .event.provider = del(.eventSource)
-    .aws.cloudtrail.event_type = del(.eventType)
-    .aws.cloudtrail.event_version = del(.eventVersion)
-    .aws.cloudtrail.management_event = del(.managementEvent)
-    .aws.cloudtrail.read_only = del(.readOnly)
-    .aws.cloudtrail.request_id = del(.requestID)
-    .aws.cloudtrail.request_parameters = del(.requestParameters)
-    .aws.cloudtrail.resources.account_id = del(.resources.accountId)
-    .aws.cloudtrail.resources.arn = del(.resources.ARN)
-    .aws.cloudtrail.resources.type = del(.resources.type)
-    .aws.cloudtrail.response_elements = del(.responseElements)
-    .aws.cloudtrail.service_event_details = del(.serviceEventDetails)
-    .aws.cloudtrail.shared_event_id = del(.sharedEventId)
-    .source.address = del(.sourceIPAddress)
-    .user_agent = del(.userAgent)
-    .aws.cloudtrail.user_identity.access_key_id = del(.userIdentity.accessKeyId)
-    .cloud.account.id = del(.userIdentity.accountId)
-    .aws.cloudtrail.user_identity.arn = del(.userIdentity.arn)
-    .aws.cloudtrail.user_identity.invoked_by = del(.userIdentity.invokedBy)
-    .user.id = del(.userIdentity.principalId)
-    .aws.cloudtrail.user_identity.session_context.creation_date = del(.userIdentity.sessionContext.attributes.creationDate)
-    .aws.cloudtrail.user_identity.session_context.mfa_authenticated = del(.userIdentity.sessionContext.attributes.mfaAuthenticated)
-    .role.name = del(.userIdentity.sessionContext.sessionIssuer.userName)
-    .aws.cloudtrail.user_identity.type = del(.userIdentity.type)
-    .user.name = del(.userIdentity.userName)
-    .aws.cloudtrail.vpc_endpoint_id = del(.vpcEndpointId)
+    _date, err = to_timestamp(.json.eventTime)
+    if err == null {
+        .ts = to_unix_timestamp(_date, "milliseconds")
+    }
+
+    .aws.cloudtrail.event_version = del(.json.eventVersion)
+    .aws.cloudtrail.user_identity.type = del(.json.userIdentity.type)
+    if .json.userIdentity.userName != null {
+        .related.user = push(.related.user, .json.userIdentity.userName)
+    }
+    .user.name = del(.json.userIdentity.userName)
+    .user.id = del(.json.userIdentity.principalId)
+    .aws.cloudtrail.user_identity.arn = del(.json.userIdentity.arn)
+    .cloud.account.id = del(.json.userIdentity.accountId)
+    .aws.cloudtrail.user_identity.access_key_id = del(.json.userIdentity.accessKeyId)
+    .aws.cloudtrail.user_identity.session_context.mfa_authenticated = del(.json.userIdentity.sessionContext.attributes.mfaAuthenticated)
+
+    _date, err = to_timestamp(.json.userIdentity.sessionContext.attributes.creationDate)
+    if err == null {
+        .aws.cloudtrail.user_identity.session_context.creation_date = to_unix_timestamp(_date, "milliseconds")
+    }
+    .aws.cloudtrail.user_identity.session_context.session_issuer.type = del(.json.userIdentity.sessionContext.sessionIssuer.type)
+    .user.name = del(.json.userIdentity.sessionContext.sessionIssuer.userName)
+    .aws.cloudtrail.user_identity.session_context.session_issuer.principal_id = del(.json.userIdentity.sessionContext.sessionIssuer.principalId)
+    .aws.cloudtrail.user_identity.session_context.session_issuer.arn = del(.json.userIdentity.sessionContext.sessionIssuer.arn)
+    .aws.cloudtrail.user_identity.session_context.session_issuer.account_id = del(.json.userIdentity.sessionContext.sessionIssuer.accountId)
+    .aws.cloudtrail.user_identity.invoked_by = del(.json.userIdentity.invokedBy)
+    .event.provider = del(.json.eventSource)
+    .event.action = .json.eventName
+    .aws.cloudtrail.event_category = del(.json.eventCategory)
+    .cloud.region = del(.json.awsRegion)
+    .source.address = del(.json.sourceIPAddress)
+
+    _grokked, err = parse_groks(.source.address, ["^%{IP:source.ip}$"])
+    if err == null {
+        . |= _grokked
+        .related.user = array!(.related.user)
+        .related.ip = array!(.related.ip)
+        .related.hash = array!(.related.hash)
+    }
+    .source.as.number = del(.source.as.asn)
+    .source.as.organization.name = del(.source.as.organization_name)
+    .user_agent = del(.json.userAgent)
+    .aws.cloudtrail.error_code = del(.json.errorCode)
+    .aws.cloudtrail.error_message = del(.json.errorMessage)
+    .aws.cloudtrail.request_id = del(.json.requestId)
+    .event.id = del(.json.eventID)
+    .aws.cloudtrail.event_type = del(.json.eventType)
+    .aws.cloudtrail.api_version = del(.json.apiVersion)
+    .aws.cloudtrail.management_event = del(.json.managementEvent)
+    .aws.cloudtrail.read_only = del(.json.readOnly)
+    .aws.cloudtrail.resources.arn = del(.json.resources.ARN)
+    .aws.cloudtrail.resources.account_id = del(.json.resources.accountId)
+    .aws.cloudtrail.resources.type = del(.json.resources.type)
+    .aws.cloudtrail.recipient_account_id = del(.json.recipientAccountId)
+    .aws.cloudtrail.shared_event_id = del(.json.sharedEventId)
+    .aws.cloudtrail.vpc_endpoint_id = del(.json.vpcEndpointId)
+    if .aws.cloudtrail.flattened.request_parameters.userName != null {
+        .related.user = push(.related.user, .aws.cloudtrail.flattened.request_parameters.userName)
+    }
+    if .aws.cloudtrail.flattened.request_parameters.newUserName != null {
+        .related.user = push(.related.user, .aws.cloudtrail.flattened.request_parameters.newUserName)
+    }
+    .file.path = del(.json.previousDigestS3Object)
+    .file.hash.sha256 = del(.json.previousDigestSignature)
+    if .file.hash.sha256 != null {
+        push(.related.hash, .file.hash.sha256)
+    }
+    .aws.cloudtrail.digest.log_files = del(.json.logFiles)
+
+    _date, err = to_timestamp(.json.digestStartTime)
+    if err == null {
+        .aws.cloudtrail.digest.start_time = to_unix_timestamp(_date, "milliseconds")
+    }
+
+    _date, err = to_timestamp(.json.digestEndTime)
+    if err == null {
+        .ts = to_unix_timestamp(_date, "milliseconds")
+    }
+
+    _date, err = to_timestamp(.json.digestEndTime)
+    if err == null {
+        .aws.cloudtrail.digest.end_time = to_unix_timestamp(_date, "milliseconds")
+    }
+    .aws.cloudtrail.digest.s3_bucket = del(.json.digestS3Bucket)
+
+    _date, err = to_timestamp(.json.newestEventTime)
+    if err == null {
+        .aws.cloudtrail.digest.newest_event_time = to_unix_timestamp(_date, "milliseconds")
+    }
+
+    _date, err = to_timestamp(.json.oldestEventTime)
+    if err == null {
+        .aws.cloudtrail.digest.oldest_event_time = to_unix_timestamp(_date, "milliseconds")
+    }
+    .aws.cloudtrail.digest.previous_s3_bucket = del(.json.previousDigestS3Bucket)
+    .aws.cloudtrail.digest.previous_hash_algorithm = del(.json.previousDigestHashAlgorithm)
+    .aws.cloudtrail.digest.public_key_fingerprint = del(.json.publicKeyFingerprint)
+    .aws.cloudtrail.digest.signature_algorithm = del(.json.digestSignatureAlgorithm)
+    .aws.cloudtrail.insight_details = del(.json.insightDetails)
+    .group.id = .aws.cloudtrail.flattened.response_elements.group.groupId
+    .user.target.id = .aws.cloudtrail.flattened.response_elements.user.userId
+    .user.changes.name = .aws.cloudtrail.flattened.request_parameters.newUserName
+    .group.name = .aws.cloudtrail.flattened.request_parameters.groupName
+    .user.target.name = .aws.cloudtrail.flattened.request_parameters.userName
+    .aws.cloudtrail.flattened.digest = del(.aws.cloudtrail.digest)
+    .aws.cloudtrail.flattened.insight_details = del(.aws.cloudtrail.insight_details)
+
+    del(.aws)
+    cloud = .cloud
+    event = .event
+    del(.)
+    .cloud = cloud
+    .event = event
