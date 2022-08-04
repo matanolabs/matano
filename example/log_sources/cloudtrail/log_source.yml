@@ -5,10 +5,6 @@ ingest:
       # bucket_name: my_org_cloudtrail_bucket
       # key_prefix: my_org_cloudtrail_bucket
       expand_records_from_object: parse_json!(.__raw).Records
-      # |
-      #   if ends_with(.__key, r'.json.gz') {
-      #     parse_json!(.__raw).Records
-      #   }
 transform:
   vrl: |
     .ts = del(.eventTime)

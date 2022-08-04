@@ -52,10 +52,10 @@ export const handler: MSKHandler = async (mskEvent, context) => {
     const failures = transformedResults.flatMap((v) => !v.ok ? [v.error!!] : []);
     if (failures.length) console.warn(`Failures: ${JSON.stringify(failures)}`);
 
-    const transformedMessages = transformedResults.flatMap((v) => v.ok ? [v.value] : []);
+    const transformedMessages = transformedResults.flatMap((v) => v.ok ? [{ value: v.value }] : []);
     topicToMessages[logSourceName] = {
       topic: logSourceName,
-      messages: transformedMessages.map(m => ({ value: JSON.stringify(m) }))
+      messages: transformedMessages,
     };
   }
   console.log(JSON.stringify(topicToMessages));

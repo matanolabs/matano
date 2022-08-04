@@ -89,6 +89,9 @@ export class KafkaCluster extends KafkaClusterBase {
     const secretsManagerEndpoint = this.vpc.addInterfaceEndpoint("SecretsManagerEndpoint", {
       service: ec2.InterfaceVpcEndpointAwsService.SECRETS_MANAGER,
     });
+    const firehoseEndpoint = this.vpc.addInterfaceEndpoint("FirehoseEndpoint", {
+      service: ec2.InterfaceVpcEndpointAwsService.KINESIS_FIREHOSE,
+    });
 
     const subnets = this.vpc.publicSubnets;
     const parameters = {

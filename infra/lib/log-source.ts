@@ -39,6 +39,7 @@ interface MatanoLogSourceProps {
   outputBucket: s3.Bucket;
   firehoseRole: iam.Role;
   transformLambda: NodejsFunction;
+  firehoseWriterLambda: NodejsFunction;
   kafkaCluster: IKafkaCluster;
 }
 const MATANO_GLUE_DATABASE_NAME = "matano";
@@ -72,7 +73,8 @@ export class MatanoLogSource extends Construct {
       dataOutputPrefix: `lake/${logSourceName}/!{partitionKeyFromQuery:dummy}/`,
       errorOutputPrefix: `lake/${logSourceName}/error/year=!{timestamp:yyyy}/month=!{timestamp:MM}/day=!{timestamp:dd}/hour=!{timestamp:HH}/!{firehose:error-output-type}/`,
     });
-    const firehoseStream = new firehose.DeliveryStream(this, "MatanoOutputFirehoseStream", {
+    const firehoseStream = new firehose.DeliveryStream(this, "MatanoOutputFirehoseDStream", {
+      deliveryStreamName: `${logSourceName}-lake-firehose`,
       destinations: [firehoseDestination],
       role: props.firehoseRole,
     });
@@ -176,30 +178,50 @@ export class MatanoLogSource extends Construct {
     });
     [rawTopic, outputTopic].forEach((topic) => topic.node.addDependency(cluster));
 
+    const kafkaSourceProps = {
+      maxBatchingWindow: cdk.Duration.seconds(1),
+      batchSize: 10_000, // TODO
+      startingPosition: lambda.StartingPosition.LATEST, // TODO
+    };
+
     [rawTopic].forEach((topic) => {
       props.transformLambda.node.addDependency(topic);
-
-      const kafkaSourceProps = {
-        topic: topic.topicName,
-        maxBatchingWindow: cdk.Duration.seconds(1),
-        batchSize: 10_000, // TODO
-        startingPosition: lambda.StartingPosition.LATEST, // TODO
-      };
-
       const kafkaSource =
         cluster.clusterType === "self-managed"
           ? new SelfManagedKafkaEventSource({
             ...kafkaSourceProps,
+            topic: topic.topicName,
             authenticationMethod: AuthenticationMethod.SASL_SCRAM_256_AUTH,
             bootstrapServers: cluster.bootstrapAddress.split(","),
             secret: cluster.secret,
           })
           : new ManagedKafkaEventSource({
             ...kafkaSourceProps,
+            topic: topic.topicName,
             clusterArn: cluster.clusterArn,
           });
-
       props.transformLambda.addEventSource(kafkaSource);
+    });
+
+    [outputTopic].forEach((topic) => {
+      props.firehoseWriterLambda.node.addDependency(topic);
+      props.firehoseWriterLambda.node.addDependency(firehoseStream);
+
+      const kafkaSource =
+        cluster.clusterType === "self-managed"
+          ? new SelfManagedKafkaEventSource({
+            ...kafkaSourceProps,
+            topic: topic.topicName,
+            authenticationMethod: AuthenticationMethod.SASL_SCRAM_256_AUTH,
+            bootstrapServers: cluster.bootstrapAddress.split(","),
+            secret: cluster.secret,
+          })
+          : new ManagedKafkaEventSource({
+            ...kafkaSourceProps,
+            topic: topic.topicName,
+            clusterArn: cluster.clusterArn,
+          });
+      props.firehoseWriterLambda.addEventSource(kafkaSource);
     });
   }
 }

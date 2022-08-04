@@ -127,12 +127,40 @@ export class DPMainStack extends MatanoStack {
       ],
     });
 
+    const firehoseWriterLambda = new NodejsFunction(this, "FirehoseWriterLambda", {
+      functionName: "MatanoFirehoseLambdaFunction",
+      entry: "../lambdas/vrl-transform/writer.ts",
+      depsLockFilePath: "../lambdas/package-lock.json",
+      runtime: lambda.Runtime.NODEJS_14_X,
+      layers: [vrlBindingsLayer],
+      ...lambdaVpcProps,
+      allowPublicSubnet: true,
+      bundling: {
+        // target: "node14.8",
+        // forceDockerBundling: true,
+        externalModules: ["aws-sdk", "@matano/vrl-transform-bindings"],
+      },
+      environment: {
+        RAW_EVENTS_BUCKET_NAME: props.rawEventsBucket.bucket.bucketName,
+        KAFKAJS_NO_PARTITIONER_WARNING: "1",
+        BOOTSTRAP_ADDRESS: kafkaCluster.bootstrapAddress,
+      },
+      timeout: cdk.Duration.seconds(30),
+      initialPolicy: [
+        new iam.PolicyStatement({
+          actions: ["secretsmanager:*", "kafka:*", "kafka-cluster:*", "dynamodb:*", "s3:*", "athena:*", "glue:*", "firehose:*"],
+          resources: ["*"],
+        }),
+      ],
+    });
+
     for (const logSourceConfig of logSourceConfigs) {
       new MatanoLogSource(this, `MatanoLogSource${logSourceConfig.name}`, {
         config: logSourceConfig,
         defaultSourceBucket: props.rawEventsBucket.bucket,
         outputBucket: props.outputEventsBucket.bucket,
         transformLambda: transformerLambda,
+        firehoseWriterLambda,
         firehoseRole,
         kafkaCluster: props.kafkaCluster,
       });
@@ -162,6 +190,8 @@ export class DPMainStack extends MatanoStack {
       description: "A layer for Matano Log Source Configurations.",
     });
     transformerLambda.addLayers(logSourcesConfigurationLayer);
+    firehoseWriterLambda.addLayers(logSourcesConfigurationLayer);
+
 
     const forwarderLambda = new NodejsFunction(this, "ForwarderLambda", {
       functionName: "MatanoForwarderLambdaFunction",
