@@ -5,7 +5,7 @@ ingest:
       # bucket_name: my_org_cloudtrail_bucket
       # key_prefix: my_org_cloudtrail_bucket
       expand_records_from_object: parse_json!(.__raw).Records
-transform: # TODO: ts handling...
+transform: # TODO: ts handling... file, source...
   vrl: |
     _date, err = to_timestamp(.json.eventTime)
     if err == null {
@@ -118,6 +118,8 @@ transform: # TODO: ts handling...
     del(.aws)
     cloud = .cloud
     event = .event
+    ts = .ts
     del(.)
     .cloud = cloud
     .event = event
+    .ts = ts

@@ -52,7 +52,7 @@ export const handler: MSKHandler = async (mskEvent, context) => {
 ${logSourcesMetatdata[logSourceName].transform?.vrl}
 del(.json)
     `;
-    console.log(prog);
+    // console.log(prog);
     const transformedResults = logSourceToEvents[logSourceName].map(e => to_res(vrl(
       prog,
       {
