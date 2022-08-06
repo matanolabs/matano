@@ -4,3 +4,4 @@ target
 npm-debug.log*
 vector
 ts/functions.node
+!ts/*.d.ts
