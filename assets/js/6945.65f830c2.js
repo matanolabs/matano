@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunk_matano_website=self.webpackChunk_matano_website||[]).push([[6945],{46945:(e,s,a)=>{a.r(s)}}]);
