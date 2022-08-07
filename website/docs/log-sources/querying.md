@@ -10,7 +10,7 @@ Matano log sources are stored in AWS Glue database named **matano**, with the Ic
 
 ## Querying a log source
 
-**See more on [Querying Iceberg tables](https://docs.aws.amazon.com/athena/latest/ug/querying-iceberg.html) in Athena.**
+**See more on [Querying Iceberg tables](https://docs.aws.amazon.com/athena/latest/ug/querying-iceberg-table-data.html) in Athena.**
 
 You can query a log source from Athena using the following syntax:
 
