@@ -15,7 +15,7 @@ const config = {
   favicon: 'img/favicon.svg',
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
-  organizationName: 'matanolab', // Usually your GitHub org/user name.
+  organizationName: 'matanolabs', // Usually your GitHub org/user name.
   projectName: 'matano', // Usually your repo name.
   trailingSlash: false,
 
@@ -92,6 +92,13 @@ const config = {
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
+      algolia: {
+        // The application ID provided by Algolia
+        appId: 'VHU6P09Z0T',
+        // Public API key: it is safe to commit it
+        apiKey: '869b802311067306e65a90b0383f3dc1',
+        indexName: 'matano',
+      },
       announcementBar: {
         id: 'mtn-announcement',
         content: `<div id="mtn-announcement" class="flex items-center justify-center" style="gap: 7px;">
