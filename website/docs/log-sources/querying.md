@@ -1,5 +1,6 @@
 ---
 title: Querying log sources
+sidebar_position: 3
 ---
 
 All Matano log sources are stored as Iceberg tables, with data stored in Parquet files on S3. You can query and interact with these like any other Iceberg table, using Athena, Spark, or any other technology supporting Iceberg. This ensures your data is free from vendor lock-in and open to a variety of data tooling.
