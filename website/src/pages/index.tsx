@@ -34,13 +34,21 @@ function HomepageHeader() {
   );
 }
 
+const Usecases = () => {
+  return (<section>
+    <h2 className="!text-4xl font-[Lexend] text-center py-8 px-8">
+      Usecases
+    </h2>
+  </section>);
+}
+
 export default function Home(): JSX.Element {
   const { siteConfig } = useDocusaurusContext();
   return (
     <Layout wrapperClassName=''>
         <Head>
           <html className="mtn-homepage"/>
-          <title>Matano | Open source security lake for AWS</title>
+          <title>Matano | Open source security lake platform for AWS</title>
         </Head>
         <div className='flex-1 flex'>
           <HomepageHeader />
@@ -54,6 +62,7 @@ export default function Home(): JSX.Element {
             </picture>
           </div>
           <HomepageFeatures />
+          {/* <Usecases /> */}
         </main>
     </Layout>
   );

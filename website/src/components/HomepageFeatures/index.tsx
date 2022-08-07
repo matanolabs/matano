@@ -72,7 +72,7 @@ function Feature({title, Svg, description}: FeatureItem) {
         <Svg className={styles.featureSvg} role="img" />
       </div> */}
       <div className="text--center padding-horiz--md padding-vert--md">
-        <h3 className='text-2xl' style={{ fontFamily: "Lexend" }}>{title}</h3>
+        <h3 className='text-2xl leading-4 font-[Lexend]'>{title}</h3>
         <p className="text-lg">{description}</p>
       </div>
     </div>
@@ -83,7 +83,7 @@ export default function HomepageFeatures(): JSX.Element {
   return (
     <section className={styles.features}>
       <div className="container flex flex-col items-center">
-        <h2 style={{ fontFamily: "Lexend" }} className="!text-4xl text-center py-8 px-8">
+        <h2 className="!text-4xl font-[Lexend] text-center py-8 px-8">
             Why Matano?
         </h2>
         <div className="row">
