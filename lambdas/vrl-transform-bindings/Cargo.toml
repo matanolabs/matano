@@ -10,6 +10,8 @@ exclude = ["index.node"]
 crate-type = ["cdylib"]
 
 [dependencies]
+uuid = "1.1.2"
+lazy_static = "1.4.0"
 base64 = "0.13.0"
 thiserror = "1.0.30"
 http = "0.2.8"
@@ -32,6 +34,6 @@ lookup = { path = "./vector/lib/lookup" }
 
 
 [dependencies.neon]
-version = "0.10"
+version = "1.0.0-alpha.1"
 default-features = false
 features = ["napi-6"]

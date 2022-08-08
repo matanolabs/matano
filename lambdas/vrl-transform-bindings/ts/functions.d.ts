@@ -5,4 +5,5 @@ export type Outcome = {
   };
 } & { error?: string };
 export function vrl_function_info(): null;
-export function _vrl(program: string, event: any, tz: any): Outcome;
+export function _vrl(prog_id: string, event: any, tz: any): Outcome;
+export function compile_vrl_program(program: string): Outcome;
