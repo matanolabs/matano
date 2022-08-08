@@ -8,6 +8,7 @@ import { Ok, Err, Result, to_res, chunkedBy, readFile } from "./utils";
 import * as fs from "fs";
 import * as zlib from "zlib";
 import path = require("path");
+import console = require("console");
 
 const s3 = new AWS.S3();
 
@@ -171,9 +172,8 @@ export const handler: SQSHandler = async (sqsEvent, context) => {
     return acc;
   }, {} as Record<string, TopicMessages>);
 
-  console.log(JSON.stringify(topicToMessages));
-
   const topicMessages = Object.values(topicToMessages).flatMap(m => m);
+  console.log(`Messages forwarded: ${topicMessages.length}`);
 
   if (topicMessages.length) {
     await producer.connect();

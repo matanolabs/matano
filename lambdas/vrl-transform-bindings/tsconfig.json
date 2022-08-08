@@ -1,6 +1,7 @@
 {
     "compilerOptions": {
       "lib": [
+        "DOM",
         "ES2018"
       ],
       "target": "ES2018",

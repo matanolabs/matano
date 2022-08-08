@@ -72,7 +72,7 @@ del(.json)
   console.log("middle");
 
   if (topicMessages.length) {
-    console.log(JSON.stringify(topicToMessages));
+    console.log(`Trasnformed messages published: ${topicMessages.length}`);
     await producer.connect();
     await producer.sendBatch({
       timeout: 5000,

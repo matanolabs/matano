@@ -1,12 +1,12 @@
 import { _vrl, Outcome, compile_vrl_program } from "./functions";
 export { Outcome, vrl_function_info, compile_vrl_program } from "./functions";
 
-const compiledProgramCache = new Map<string, string>();
+const compiledProgramCache: Record<string, string> = {};
 
 export function vrl(program: string, event: any): Outcome {
   let progId: string | undefined;
-  if (compiledProgramCache.has(program)) {
-    progId = compiledProgramCache.get(program);
+  if (program in compiledProgramCache) {
+    progId = compiledProgramCache[program];
   } else {
     console.time("compile_vrl_program");
     const output = compile_vrl_program(program);
@@ -15,7 +15,7 @@ export function vrl(program: string, event: any): Outcome {
       return output;
     } else {
       progId = output.success!!.output;
-      compiledProgramCache.set(program, progId!!);
+      compiledProgramCache[program] = progId!!;
     }
   }
   // console.time(`_vrl: ${progId}`);

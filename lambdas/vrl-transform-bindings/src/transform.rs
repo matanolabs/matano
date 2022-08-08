@@ -2,7 +2,6 @@ use crate::{arg, args, helpers::*};
 
 use lazy_static::lazy_static;
 use neon::prelude::*;
-use neon::thread::LocalKey;
 use std::sync::Mutex;
 use uuid::Uuid;
 
@@ -30,7 +29,6 @@ pub fn compile_vrl_program(mut cx: FunctionContext) -> JsResult<JsValue> {
         cx,
         program: String
     }
-    RUNTIME.lock().unwrap();
     let mut state = state::ExternalEnv::default();
     let (program, _warnings) =
         match vrl::compile_with_external(&program, &vrl_stdlib::all(), &mut state) {
