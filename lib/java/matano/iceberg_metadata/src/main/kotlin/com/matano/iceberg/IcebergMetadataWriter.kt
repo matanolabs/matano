@@ -1,4 +1,9 @@
 package com.matano.iceberg
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDB
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder
+import com.amazonaws.services.dynamodbv2.model.AttributeValue
+import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException
+import com.amazonaws.services.dynamodbv2.model.PutItemRequest
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.events.SQSEvent
@@ -100,6 +105,11 @@ class IcebergMetadataWriter {
         val s3Path = "s3://$s3Bucket/$s3ObjectKey"
         println(s3Path)
 
+        if (checkDuplicate(s3Object.sequencer)) {
+            println("Found duplicate SQS message for key: ${s3ObjectKey}. Skipping...")
+            return
+        }
+
         val tableName = getTableNameFromObjectKey(s3ObjectKey)
         val tableObj = tableObjs[tableName]
         val icebergTable = tableObj!!.table
@@ -115,9 +125,27 @@ class IcebergMetadataWriter {
         tableObj.appendFiles.appendFile(dataFile)
     }
 
+    fun checkDuplicate(sequencer: String): Boolean {
+        val expireTime = ((System.currentTimeMillis() / 1000L) + DDB_ITEM_EXPIRE_SECONDS).toString()
+        val attrs = mapOf(
+                "sequencer" to AttributeValue(sequencer),
+                "ttl" to AttributeValue().apply { this.setN(expireTime) }
+        )
+        val req = PutItemRequest(DUPLICATES_DDB_TABLE_NAME, attrs)
+                .apply { this.conditionExpression = "attribute_not_exists(sequencer)" }
+
+        try { ddb.putItem(req) }
+        catch (e: ConditionalCheckFailedException) {
+            return true
+        }
+        return false
+    }
+
     companion object {
         private const val MATANO_NAMESPACE = "matano"
         private const val TIMESTAMP_COLUMN_NAME = "ts"
+        private const val DDB_ITEM_EXPIRE_SECONDS = 1 * 24 * 60 * 60
+        private val DUPLICATES_DDB_TABLE_NAME = System.getenv("DUPLICATES_DDB_TABLE_NAME")
         private val WAREHOUSE_PATH = "s3://${System.getenv("MATANO_ICEBERG_BUCKET")}/lake"
         val icebergProperties = mapOf(
                 "catalog-name" to "iceberg",
@@ -127,5 +155,6 @@ class IcebergMetadataWriter {
                 "fs.s3a.endpoint.region" to "eu-central-1",
                 "fs.s3a.path.style.access" to "true"
         )
+        private val ddb = AmazonDynamoDBClientBuilder.defaultClient()
     }
 }

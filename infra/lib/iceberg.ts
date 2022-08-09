@@ -2,6 +2,7 @@ import * as path from "path";
 import * as crypto from 'crypto';
 import { Construct, Node } from "constructs";
 import * as cdk from "aws-cdk-lib";
+import * as ddb from "aws-cdk-lib/aws-dynamodb";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as cr from "aws-cdk-lib/custom-resources";
@@ -105,12 +106,20 @@ export class IcebergMetadata extends Construct {
 
     const codePath = path.resolve(path.join("../lib/java/matano"));
 
+    const duplicatesTable = new ddb.Table(this, "IcebergMetadataDuplicatesTable", {
+      partitionKey: { name: "sequencer", type: ddb.AttributeType.STRING },
+      timeToLiveAttribute: "ttl",
+    });
+
     const lambdaFunction = new lambda.Function(this, "MatanoIcebergMetadataWriterFunction", {
       description: "This function ingests written input files into an Iceberg table.",
       runtime: lambda.Runtime.JAVA_11,
       memorySize: 512,
       handler: "com.matano.iceberg.IcebergMetadataHandler::handleRequest",
       timeout: cdk.Duration.minutes(3),
+      environment: {
+        DUPLICATES_DDB_TABLE_NAME: duplicatesTable.tableName,
+      },
       code: lambda.Code.fromAsset(codePath, {
         assetHashType: cdk.AssetHashType.OUTPUT,
         bundling: {
@@ -135,6 +144,8 @@ export class IcebergMetadata extends Construct {
         resources: ["*"],
       })],
     });
+
+    duplicatesTable.grantReadWriteData(lambdaFunction);
 
     const eventSource = new SqsEventSource(props.outputBucket.queue, {});
     lambdaFunction.addEventSource(eventSource);
