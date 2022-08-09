@@ -70,29 +70,13 @@ export class DPMainStack extends MatanoStack {
     const vrlBindingsPath = path.resolve(path.join("../lambdas/vrl-transform-bindings"));
     const vrlBindingsLayer = new lambda.LayerVersion(this, "VRLBindingsLayer", {
       code: lambda.Code.fromAsset(vrlBindingsPath, {
-        assetHashType: cdk.AssetHashType.OUTPUT,
         bundling: {
-          volumes: [
-            {
-              hostPath: vrlBindingsPath,
-              containerPath: "/asset-input",
-            },
-          ],
           image: DockerImage.fromBuild(vrlBindingsPath),
           command: [
             "bash",
             "-c",
             "npm install && mkdir -p /asset-output/nodejs/node_modules/@matano/vrl-transform-bindings/ts/ && cp -a ts/* /asset-output/nodejs/node_modules/@matano/vrl-transform-bindings/ts/",
           ],
-          // local: {
-          //   tryBundle(outputDir, options) {
-          //     execSync(
-          //       `cd ${vrlBindingsPath} && npm install && mkdir -p ${outputDir}/nodejs/node_modules/@matano/vrl-transform-bindings/ts/ && cp -a ts/*  ${outputDir}/nodejs/node_modules/@matano/vrl-transform-bindings/ts/ && cd -`,
-          //       { stdio: "pipe" }
-          //     );
-          //     return true;
-          //   },
-          // },
         },
       }),
       compatibleRuntimes: [lambda.Runtime.NODEJS_14_X],
@@ -171,7 +155,6 @@ export class DPMainStack extends MatanoStack {
     fs.writeFileSync(logSourcesConfigurationPath, JSON.stringify(logSourceConfigs, null, 2));
     const logSourcesConfigurationLayer = new lambda.LayerVersion(this, "LogSourcesConfigurationLayer", {
       code: lambda.Code.fromAsset("../lambdas", {
-        assetHashType: cdk.AssetHashType.OUTPUT,
         bundling: {
           volumes: [
             {

@@ -67,12 +67,6 @@ export class IcebergTableProvider extends Construct {
         assetHashType: cdk.AssetHashType.OUTPUT,
         bundling: {
           image: lambda.Runtime.JAVA_11.bundlingImage,
-          volumes: [
-            {
-              hostPath: path.resolve("~/.gradle/caches"),
-              containerPath: "/root/.gradle/caches",
-            },
-          ],
           command: ["./gradlew", ":iceberg_table_cfn:release", ],
           local:  {
             tryBundle(outputDir, options) {
@@ -124,12 +118,6 @@ export class IcebergMetadata extends Construct {
         assetHashType: cdk.AssetHashType.OUTPUT,
         bundling: {
           image: lambda.Runtime.JAVA_11.bundlingImage,
-          volumes: [
-            {
-              hostPath: path.resolve("~/.gradle/caches"),
-              containerPath: "/root/.gradle/caches",
-            },
-          ],
           command: ["./gradlew", ":iceberg_metadata:release",],
           local:  {
             tryBundle(outputDir, options) {
