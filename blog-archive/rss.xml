@@ -2,7 +2,7 @@
 <rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/">
     <channel>
         <title>Matano Blog</title>
-        <link>https://matano.dev/blog-archive</link>
+        <link>https://www.matano.dev/blog-archive</link>
         <description>Matano Blog</description>
         <lastBuildDate>Wed, 09 Mar 2022 00:00:00 GMT</lastBuildDate>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
@@ -10,7 +10,7 @@
         <language>en</language>
         <item>
             <title><![CDATA[How we build a fully regional cloud architecture on AWS]]></title>
-            <link>https://matano.dev/blog-archive/2022/03/09/regional-cloud-architecture</link>
+            <link>https://www.matano.dev/blog-archive/2022/03/09/regional-cloud-architecture</link>
             <guid>/2022/03/09/regional-cloud-architecture</guid>
             <pubDate>Wed, 09 Mar 2022 00:00:00 GMT</pubDate>
             <description><![CDATA[How we've built a fully regional cloud infrastructure on AWS at Apptrail.]]></description>
@@ -20,7 +20,7 @@
         </item>
         <item>
             <title><![CDATA[The difference between internal and customer facing audit logs]]></title>
-            <link>https://matano.dev/blog-archive/2022/03/07/internal-vs-customer-facing-audit-logs</link>
+            <link>https://www.matano.dev/blog-archive/2022/03/07/internal-vs-customer-facing-audit-logs</link>
             <guid>/2022/03/07/internal-vs-customer-facing-audit-logs</guid>
             <pubDate>Mon, 07 Mar 2022 00:00:00 GMT</pubDate>
             <description><![CDATA[A look at the two different types of audit logs and why internally stored and externally surfaced audit logs are different.]]></description>
@@ -30,7 +30,7 @@
         </item>
         <item>
             <title><![CDATA[S3 POST Policy - The hidden S3 feature you haven't heard of]]></title>
-            <link>https://matano.dev/blog-archive/2022/02/14/s3-post-policy</link>
+            <link>https://www.matano.dev/blog-archive/2022/02/14/s3-post-policy</link>
             <guid>/2022/02/14/s3-post-policy</guid>
             <pubDate>Mon, 14 Feb 2022 00:00:00 GMT</pubDate>
             <description><![CDATA[A look at S3 POST Policies and how to use them to create secure, short lived client object upload sessions.]]></description>
@@ -65,7 +65,7 @@ of variable size, without any additional latency besides S3 latency.</p><h3 clas
         </item>
         <item>
             <title><![CDATA[What makes a good audit trail?]]></title>
-            <link>https://matano.dev/blog-archive/2022/02/05/what-makes-a-good-audit-trail</link>
+            <link>https://www.matano.dev/blog-archive/2022/02/05/what-makes-a-good-audit-trail</link>
             <guid>/2022/02/05/what-makes-a-good-audit-trail</guid>
             <pubDate>Sat, 05 Feb 2022 00:00:00 GMT</pubDate>
             <description><![CDATA[At Apptrail, we obsess over audit trails and how to make them most valuable for our customers, so we thought we'd examine some real world examples of audit trails and see what makes some stand out from others.]]></description>

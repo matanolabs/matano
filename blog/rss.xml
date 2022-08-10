@@ -2,7 +2,7 @@
 <rss version="2.0">
     <channel>
         <title>Matano Blog</title>
-        <link>https://matano.dev/blog</link>
+        <link>https://www.matano.dev/blog</link>
         <description>Matano Blog</description>
         <lastBuildDate>Thu, 28 Jul 2022 00:00:00 GMT</lastBuildDate>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
@@ -10,7 +10,7 @@
         <language>en</language>
         <item>
             <title><![CDATA[Placeholder]]></title>
-            <link>https://matano.dev/blog/2022/07/28/placeholder</link>
+            <link>https://www.matano.dev/blog/2022/07/28/placeholder</link>
             <guid>/2022/07/28/placeholder</guid>
             <pubDate>Thu, 28 Jul 2022 00:00:00 GMT</pubDate>
         </item>

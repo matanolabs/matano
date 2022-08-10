@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
-    <id>https://matano.dev/blog</id>
+    <id>https://www.matano.dev/blog</id>
     <title>Matano Blog</title>
     <updated>2022-07-28T00:00:00.000Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
-    <link rel="alternate" href="https://matano.dev/blog"/>
+    <link rel="alternate" href="https://www.matano.dev/blog"/>
     <subtitle>Matano Blog</subtitle>
-    <icon>https://matano.dev/img/favicon.svg</icon>
+    <icon>https://www.matano.dev/img/favicon.svg</icon>
     <entry>
         <title type="html"><![CDATA[Placeholder]]></title>
         <id>/2022/07/28/placeholder</id>
-        <link href="https://matano.dev/blog/2022/07/28/placeholder"/>
+        <link href="https://www.matano.dev/blog/2022/07/28/placeholder"/>
         <updated>2022-07-28T00:00:00.000Z</updated>
     </entry>
 </feed>
