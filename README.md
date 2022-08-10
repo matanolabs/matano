@@ -1,5 +1,5 @@
 <div align="center">
-  <a href="https://matano.dev"><img src="website/src/assets/cover.png" width="500"></a>
+  <a href="https://www.matano.dev"><img src="website/src/assets/cover.png" width="500"></a>
 </div>
 
 <!-- <h1 align="center">Matano</h1> -->
@@ -23,7 +23,7 @@
     <h3 align="center">
         <a href="https://www.matano.dev">Website</a>
         <span> | </span>
-        <a href="https://matano.dev/docs">Docs</a>
+        <a href="https://www.matano.dev/docs">Docs</a>
         <span> | </span>
         <a href="https://discord.gg/YSYfHMbfZQ">Community</a>
     </h3>
@@ -31,7 +31,7 @@
 
 ## What is Matano?
 
-Matano is an open source security lake platform for AWS. It lets you ingest petabytes of security and log data from various sources, store and query them in a data lake, and create Python detections as code for realtime alerting. Matano is *fully serverless* and designed specifically for AWS and focuses on enabling high scale, low cost, and zero-ops. Matano deploys fully into your AWS account.
+Matano is an open source security lake platform for AWS. It lets you ingest petabytes of security and log data from various sources, store and query them in an open Apache Iceberg data lake, and create Python detections as code for realtime alerting. Matano is *fully serverless* and designed specifically for AWS and focuses on enabling high scale, low cost, and zero-ops. Matano deploys fully into your AWS account.
 
 <div align="center">
   <br>
@@ -50,7 +50,7 @@ Matano normalizes and transforms your data using [Vector Remap Language (VRL)](h
 Log data is always stored in S3 object storage, for cost effective, long term, durable storage.
 
 #### Apache Iceberg Data lake
-All data is ingested into an Apache Iceberg based data lake, allowing you to perform ACID transactions, time travel, and more on all your log data.
+All data is ingested into an Apache Iceberg based data lake, allowing you to perform ACID transactions, time travel, and more on all your log data. Apache Iceberg is an open table format, so you always **own your own data**, with no vendor lock-in.
 
 #### Serverless
 Matano is a fully serverless platform, designed for zero-ops and unlimited elastic horizontal scaling.
@@ -85,11 +85,11 @@ make install
 ```
 
 ## Getting started
-[**Read the complete docs on getting started**](https://matano.dev/docs/getting-started).
+[**Read the complete docs on getting started**](https://www.matano.dev/docs/getting-started).
 
 ### Create a Matano Directory
 
-A [Matano directory](https://matano.dev/docs/matano-directory) lets you specify data and configuration values for Matano. Run the following to generate a sample directory to get started:
+A [Matano directory](https://www.matano.dev/docs/matano-directory) lets you specify data and configuration values for Matano. Run the following to generate a sample directory to get started:
 
 ```bash
 matano generate:matano-dir
@@ -129,7 +129,7 @@ The first deployment can take up to 15 minutes.
 
 ## Documentation
 
-[**View our complete documentation.**](https://matano.dev/docs)
+[**View our complete documentation.**](https://www.matano.dev/docs)
 
 ## License
 

@@ -8,7 +8,7 @@ const darkCodeTheme = require('prism-react-renderer/themes/dracula');
 const config = {
   title: 'Matano',
   tagline: 'Open source security lake platform for AWS',
-  url: 'https://matano.dev',
+  url: 'https://www.matano.dev',
   baseUrl: '/',
   onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'warn',
@@ -149,8 +149,25 @@ const config = {
             title: 'Docs',
             items: [
               {
-                label: 'Tutorial',
+                label: 'Guide',
                 to: '/docs',
+              },
+            ],
+          },
+          {
+            title: 'Product',
+            items: [
+              {
+                label: 'Open source Elastic alternative',
+                href: '#',
+              },
+              {
+                label: 'Open source Panther alternative',
+                href: '#',
+              },
+              {
+                label: 'Open source SIEM alternative',
+                href: '#',
               },
             ],
           },
