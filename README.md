@@ -41,7 +41,7 @@ Matano is an open source security lake platform for AWS. It lets you ingest peta
 ## Features
 
 #### Collect data from all your sources
-Matano lets you collect log data from sources using [S3](#) or Kafka based ingestion.
+Matano lets you collect log data from sources using [S3](#) or SQS based ingestion.
 
 #### Ingest, transform, normalize log data
 Matano normalizes and transforms your data using [Vector Remap Language (VRL)](https://vector.dev/docs/reference/vrl/). Matano works with the [Elastic Common Schema (ECS)](https://www.elastic.co/guide/en/ecs/current/index.html) by default and you can define your own schema. 
