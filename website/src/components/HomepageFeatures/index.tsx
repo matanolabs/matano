@@ -14,7 +14,7 @@ const FeatureList: FeatureItem[] = [
     Svg: require('@site/static/img/undraw_docusaurus_mountain.svg').default,
     description: (
       <>
-        Matano lets you collect log data from sources using S3 or Kafka based ingestion.
+        Matano lets you collect log data from sources using S3 or SQS based ingestion.
       </>
     ),
   },
