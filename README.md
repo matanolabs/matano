@@ -31,7 +31,7 @@
 
 <div align="center">
 
-### [**🔔 Read our announcement blog post 🔔**](https://www.matano.dev/blog/announcing-matano?utm_source=ghr)
+### [**🔔 Read our announcement blog post 🔔**](https://www.matano.dev/blog/2022/08/11/announcing-matano?utm_source=ghr)
 
 </div>
 
