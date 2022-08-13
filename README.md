@@ -87,6 +87,7 @@ You can manually install from source.
 
 ```bash
 git clone https://github.com/matanolabs/matano.git
+cd matano
 make install
 ```
 
