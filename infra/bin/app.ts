@@ -23,7 +23,7 @@ const dpMainStack = new DPMainStack(app, "DPMainStack", {
   env,
   rawEventsBucket: dpCommonStack.rawEventsBucketWithNotifications,
   outputEventsBucket: dpCommonStack.outputEventsBucketWithNotifications,
-  kafkaCluster: dpCommonStack.kafkaCluster,
+  // kafkaCluster: dpCommonStack.kafkaCluster,
 });
 
 tagResources(app, () => ({

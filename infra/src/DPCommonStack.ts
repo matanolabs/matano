@@ -13,21 +13,20 @@ export class DPCommonStack extends MatanoStack {
 
   rawEventsBucketWithNotifications: S3BucketWithNotifications;
   outputEventsBucketWithNotifications: S3BucketWithNotifications;
-  kafkaCluster: IKafkaCluster;
 
   constructor(scope: Construct, id: string, props: DPCommonStackProps) {
     super(scope, id, props);
 
-    this.kafkaCluster = this.matanoConfig.kafka.cluster_type === "self-managed"
-    ? KafkaCluster.fromSelfManagedAttributes(this, "Cluster", {
-        bootstrapAddress: this.matanoConfig.kafka.bootstrap_servers.join(","),
-        secretArn: this.matanoConfig.kafka.sasl_scram_secret_arn,
-      })
-    : new KafkaCluster(this, "KafkaCluster", {
-      clusterName: "mata-msk-cluster",
-      clusterType: this.matanoConfig.kafka.cluster_type,
-      vpc: this.matanoVpc,
-    });
+    // this.kafkaCluster = this.matanoConfig.kafka.cluster_type === "self-managed"
+    // ? KafkaCluster.fromSelfManagedAttributes(this, "Cluster", {
+    //     bootstrapAddress: this.matanoConfig.kafka.bootstrap_servers.join(","),
+    //     secretArn: this.matanoConfig.kafka.sasl_scram_secret_arn,
+    //   })
+    // : new KafkaCluster(this, "KafkaCluster", {
+    //   clusterName: "mata-msk-cluster",
+    //   clusterType: this.matanoConfig.kafka.cluster_type,
+    //   vpc: this.matanoVpc,
+    // });
 
     this.rawEventsBucketWithNotifications = new S3BucketWithNotifications(this, "RawEventsBucket", {
       // bucketName: "matano-raw-events",

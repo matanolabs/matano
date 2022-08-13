@@ -21,7 +21,7 @@ import { Bucket } from "aws-cdk-lib/aws-s3";
 interface DPMainStackProps extends MatanoStackProps {
   rawEventsBucket: S3BucketWithNotifications;
   outputEventsBucket: S3BucketWithNotifications;
-  kafkaCluster: IKafkaCluster;
+  // kafkaCluster: IKafkaCluster;
 }
 
 export class DPMainStack extends MatanoStack {
@@ -40,8 +40,6 @@ export class DPMainStack extends MatanoStack {
     const logSourceConfigs = getDirectories(logSourcesDirectory)
       .map((d) => path.join(logSourcesDirectory, d))
       .map((p) => readConfig(p, "log_source.yml") as LogSourceConfig);
-    
-    const kafkaCluster = props.kafkaCluster;
 
     new IcebergMetadata(this, "IcebergMetadata", {
       outputBucket: props.outputEventsBucket,
@@ -49,23 +47,22 @@ export class DPMainStack extends MatanoStack {
 
     new MatanoDetections(this, "MatanoDetections", {
       rawEventsBucket: props.rawEventsBucket.bucket,
-      kafkaCluster: props.kafkaCluster,
     });
 
-    const lambdaVpcProps: Partial<NodejsFunctionProps> | {} =
-      kafkaCluster.clusterType != "self-managed"
-        ? {
-            vpc: kafkaCluster.vpc,
-            vpcSubnets: kafkaCluster.vpc.publicSubnets.map((subnet) => subnet.subnetId),
-            securityGroups: [
-              kafkaCluster.securityGroup,
-              new SecurityGroup(this, "LambdaSG", {
-                vpc: kafkaCluster.vpc,
-                allowAllOutbound: true,
-              }),
-            ],
-          }
-        : {};
+    // const lambdaVpcProps: Partial<NodejsFunctionProps> | {} =
+    //   kafkaCluster.clusterType != "self-managed"
+    //     ? {
+    //         vpc: kafkaCluster.vpc,
+    //         vpcSubnets: kafkaCluster.vpc.publicSubnets.map((subnet) => subnet.subnetId),
+    //         securityGroups: [
+    //           kafkaCluster.securityGroup,
+    //           new SecurityGroup(this, "LambdaSG", {
+    //             vpc: kafkaCluster.vpc,
+    //             allowAllOutbound: true,
+    //           }),
+    //         ],
+    //       }
+    //     : {};
 
     const vrlBindingsPath = path.resolve(path.join("../lambdas/vrl-transform-bindings"));
     const vrlBindingsLayer = new lambda.LayerVersion(this, "VRLBindingsLayer", {
@@ -90,7 +87,7 @@ export class DPMainStack extends MatanoStack {
       depsLockFilePath: "../lambdas/package-lock.json",
       runtime: lambda.Runtime.NODEJS_14_X,
       layers: [vrlBindingsLayer],
-      ...lambdaVpcProps,
+      // ...lambdaVpcProps,
       allowPublicSubnet: true,
       bundling: {
         // target: "node14.8",
@@ -100,7 +97,7 @@ export class DPMainStack extends MatanoStack {
       environment: {
         RAW_EVENTS_BUCKET_NAME: props.rawEventsBucket.bucket.bucketName,
         KAFKAJS_NO_PARTITIONER_WARNING: "1",
-        BOOTSTRAP_ADDRESS: kafkaCluster.bootstrapAddress,
+        // BOOTSTRAP_ADDRESS: kafkaCluster.bootstrapAddress,
       },
       timeout: cdk.Duration.seconds(30),
       initialPolicy: [
@@ -111,32 +108,32 @@ export class DPMainStack extends MatanoStack {
       ],
     });
 
-    const firehoseWriterLambda = new NodejsFunction(this, "FirehoseWriterLambda", {
-      functionName: "MatanoFirehoseLambdaFunction",
-      entry: "../lambdas/vrl-transform/writer.ts",
-      depsLockFilePath: "../lambdas/package-lock.json",
-      runtime: lambda.Runtime.NODEJS_14_X,
-      layers: [vrlBindingsLayer],
-      ...lambdaVpcProps,
-      allowPublicSubnet: true,
-      bundling: {
-        // target: "node14.8",
-        // forceDockerBundling: true,
-        externalModules: ["aws-sdk", "@matano/vrl-transform-bindings"],
-      },
-      environment: {
-        RAW_EVENTS_BUCKET_NAME: props.rawEventsBucket.bucket.bucketName,
-        KAFKAJS_NO_PARTITIONER_WARNING: "1",
-        BOOTSTRAP_ADDRESS: kafkaCluster.bootstrapAddress,
-      },
-      timeout: cdk.Duration.seconds(30),
-      initialPolicy: [
-        new iam.PolicyStatement({
-          actions: ["secretsmanager:*", "kafka:*", "kafka-cluster:*", "dynamodb:*", "s3:*", "athena:*", "glue:*", "firehose:*"],
-          resources: ["*"],
-        }),
-      ],
-    });
+    // const firehoseWriterLambda = new NodejsFunction(this, "FirehoseWriterLambda", {
+    //   functionName: "MatanoFirehoseLambdaFunction",
+    //   entry: "../lambdas/vrl-transform/writer.ts",
+    //   depsLockFilePath: "../lambdas/package-lock.json",
+    //   runtime: lambda.Runtime.NODEJS_14_X,
+    //   layers: [vrlBindingsLayer],
+    //   // ...lambdaVpcProps,
+    //   allowPublicSubnet: true,
+    //   bundling: {
+    //     // target: "node14.8",
+    //     // forceDockerBundling: true,
+    //     externalModules: ["aws-sdk", "@matano/vrl-transform-bindings"],
+    //   },
+    //   environment: {
+    //     RAW_EVENTS_BUCKET_NAME: props.rawEventsBucket.bucket.bucketName,
+    //     KAFKAJS_NO_PARTITIONER_WARNING: "1",
+    //     // BOOTSTRAP_ADDRESS: kafkaCluster.bootstrapAddress,
+    //   },
+    //   timeout: cdk.Duration.seconds(30),
+    //   initialPolicy: [
+    //     new iam.PolicyStatement({
+    //       actions: ["secretsmanager:*", "kafka:*", "kafka-cluster:*", "dynamodb:*", "s3:*", "athena:*", "glue:*", "firehose:*"],
+    //       resources: ["*"],
+    //     }),
+    //   ],
+    // });
 
     for (const logSourceConfig of logSourceConfigs) {
       new MatanoLogSource(this, `MatanoLogSource${logSourceConfig.name}`, {
@@ -144,9 +141,9 @@ export class DPMainStack extends MatanoStack {
         defaultSourceBucket: props.rawEventsBucket.bucket,
         outputBucket: props.outputEventsBucket.bucket,
         transformLambda: transformerLambda,
-        firehoseWriterLambda,
+        // firehoseWriterLambda,
         firehoseRole,
-        kafkaCluster: props.kafkaCluster,
+        // kafkaCluster: props.kafkaCluster,
       });
     }
 
@@ -173,7 +170,7 @@ export class DPMainStack extends MatanoStack {
       description: "A layer for Matano Log Source Configurations.",
     });
     transformerLambda.addLayers(logSourcesConfigurationLayer);
-    firehoseWriterLambda.addLayers(logSourcesConfigurationLayer);
+    // firehoseWriterLambda.addLayers(logSourcesConfigurationLayer);
 
 
     const forwarderLambda = new NodejsFunction(this, "ForwarderLambda", {
@@ -182,7 +179,7 @@ export class DPMainStack extends MatanoStack {
       depsLockFilePath: "../lambdas/package-lock.json",
       runtime: lambda.Runtime.NODEJS_14_X,
       layers: [vrlBindingsLayer, logSourcesConfigurationLayer],
-      ...lambdaVpcProps,
+      // ...lambdaVpcProps,
       allowPublicSubnet: true,
       bundling: {
         // target: "node14.8",
@@ -192,7 +189,7 @@ export class DPMainStack extends MatanoStack {
       environment: {
         RAW_EVENTS_BUCKET_NAME: props.rawEventsBucket.bucket.bucketName,
         KAFKAJS_NO_PARTITIONER_WARNING: "1",
-        BOOTSTRAP_ADDRESS: kafkaCluster.bootstrapAddress,
+        // BOOTSTRAP_ADDRESS: kafkaCluster.bootstrapAddress,
       },
       timeout: cdk.Duration.seconds(30),
       initialPolicy: [
