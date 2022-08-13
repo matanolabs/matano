@@ -11,7 +11,7 @@ ENV RUSTUP_HOME=/usr/local/rustup \
     PATH=/usr/local/cargo/bin:$PATH
 
 # Install typescript
-RUN npm install --global typescript && \
+RUN npm install --global aws-cdk-lib typescript@latest @types/node@* ts-node && \
     npm install --global --unsafe-perm=true esbuild@$ESBUILD_VERSION && \
     # Ensure all users can write to npm cache
     mkdir /tmp/npm-cache && \
@@ -27,4 +27,4 @@ RUN npm install --global typescript && \
     rustup default ${rust_version}-x86_64-unknown-linux-gnu && \
     chmod -R a+w $RUSTUP_HOME $CARGO_HOME;
 
-CMD [ "esbuild" ]
+RUN pip3 install cargo-lambda

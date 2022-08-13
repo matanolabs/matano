@@ -1,0 +1,31 @@
+[package]
+name = "my_lambda1"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+shared = { path = "../shared" }
+tokio = { version="1.17.0", features = ["macros"] }
+serde = "^1"
+serde_json = "^1"
+log = "^0.4"
+time = "0.3.7"
+tracing-subscriber = { version = "0.3.8", features = ["env-filter"] }
+tracing = { version = "0.1.30", features = ["log"] }
+# NOTE: the following crate is not part of the SDK, but it is maintained by AWS.
+lambda_runtime = "0.4.1"
+aws-config = "0.6.0"
+# We are using the Amazon Simple Storage Service (Amazon S3) crate in this example,
+# but you can use any SDK crate in your Lambda code.
+aws-sdk-s3 = "0.6.0"
+
+[features]
+
+# We could choose to enable any project dependencies marked as `optional = true`
+# here, but in this case it simply serves as a config flag that we use in code.
+#
+# See https://stackoverflow.com/a/27634313/10237506 for more info.
+my-dev-feature = []
+my-prod-feature = []

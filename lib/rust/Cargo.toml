@@ -1,0 +1,7 @@
+[workspace]
+members = [
+    "my_lambda1",
+    "my_lambda2",
+    "shared",
+]
+default-members = ["my_lambda1"]

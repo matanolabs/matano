@@ -39,7 +39,7 @@ type MatanoKafkaConfig = {
   bootstrap_servers: string[];
   sasl_scram_secret_arn: string;
 }
-export type MatanoConfig = MatanoConfiguration & {kafka: MatanoKafkaConfig};
+export type MatanoConfig = MatanoConfiguration & {kafka?: MatanoKafkaConfig};
 export class MatanoConfiguration {
   static of(scope: Construct) {
     const stack = (scope instanceof cdk.Stack ? scope : cdk.Stack.of(scope)) as MatanoStack;

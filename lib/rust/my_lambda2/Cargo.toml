@@ -1,0 +1,19 @@
+[package]
+name = "my_lambda2"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+shared = { path = "../shared" }
+tokio = { version="1.17.0", features = ["full"] }
+serde = "^1"
+serde_json = "^1"
+log = "^0.4"
+tracing-subscriber = { version = "0.3.8", features = ["env-filter"] }
+tracing = { version = "0.1.30", features = ["log"] }
+# NOTE: the following crate is not part of the SDK, but it is maintained by AWS.
+lambda_runtime = "0.4.1"
+anyhow = "1.0.53"
+reqwest = { version = "0.11.9", default-features=false, features = ["rustls-tls", "json", "blocking", "stream", "multipart"] }
