@@ -8,7 +8,7 @@ title: Getting started
 A [Matano directory](./matano-directory.md) lets you specify data and configuration values for Matano. Run the following to generate a sample directory to get started:
 
 ```bash
-matano generate:matano-dir
+matano generate:matano-dir my-matano-directory
 ```
 
 This will create a directory with sample detections and log sources.
