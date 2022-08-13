@@ -49,6 +49,7 @@ export class MatanoDetections extends Construct {
     });
 
     const detectionsDirectory = path.join(matanoUserDirectory, "detections");
+    fs.writeFileSync(path.resolve(detectionsDirectory, "index.py"), "");
     const detectionNames = getDirectories(detectionsDirectory);
 
     const detectionFunction = new PythonFunction(this, `MatanoDetectionFunction`, {
@@ -56,13 +57,13 @@ export class MatanoDetections extends Construct {
       description: `Matano managed detections function.`,
       entry: detectionsDirectory,
       runtime: lambda.Runtime.PYTHON_3_9,
-      index: "my_detection/detect.py", // unused
       layers: [detectionsLayer],
       environment: {
         MATANO_RAW_EVENTS_BUCKET: props.rawEventsBucket.bucketName,
       },
     });
     (detectionFunction.node.defaultChild as lambda.CfnFunction).handler = "detection.handler.handler";
+    fs.unlinkSync(path.resolve(detectionsDirectory, "index.py"));
 
     for (const detectionName of detectionNames) {
       new Detection(this, `Detection-${detectionName}`, {
