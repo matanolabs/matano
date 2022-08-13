@@ -51,17 +51,15 @@ export interface MatanoStackProps extends cdk.StackProps {}
 
 export class MatanoStack extends cdk.Stack {
   matanoConfig: MatanoConfig;
+  matanoVpc: ec2.IVpc
   constructor(scope: Construct, id: string, props: MatanoStackProps) {
     super(scope, id, props);
     this.matanoConfig = YAML.parse(fs.readFileSync(path.resolve(this.matanoUserDirectory, "matano.config.yml"), "utf8"));
+    this.matanoVpc = ec2.Vpc.fromVpcAttributes(this, "MATANO_VPC", this.matanoContext["vpc"]);
   }
 
   get matanoUserDirectory(): string {
     return this.node.tryGetContext("matanoUserDirectory");
-  }
-
-  get matanoVpc(): ec2.IVpc {
-    return ec2.Vpc.fromVpcAttributes(this, "MATANO_VPC", this.matanoContext["vpc"]);
   }
 
   get matanoAwsAccountId() {

@@ -7,13 +7,7 @@ import * as lambda from "aws-cdk-lib/aws-lambda";
 import { PythonFunction, PythonLayerVersion } from "@aws-cdk/aws-lambda-python-alpha";
 import { MatanoStack, MatanoStackProps } from "../lib/MatanoStack";
 import { getDirectories } from "../lib/utils";
-import {
-  AuthenticationMethod,
-  ManagedKafkaEventSource,
-  SelfManagedKafkaEventSource,
-} from "aws-cdk-lib/aws-lambda-event-sources";
 import { readDetectionConfig } from "./utils";
-import { IKafkaCluster } from "./KafkaCluster";
 
 interface DetectionProps {
   matanoUserDirectory: string;
@@ -27,22 +21,7 @@ class Detection extends Construct {
   constructor(scope: Construct, id: string, props: DetectionProps) {
     super(scope, id);
     const { detectionName, detectionsLayer } = props;
-
     const detectionDirectory = path.resolve(props.matanoUserDirectory, "detections", detectionName);
-
-    const lambdaFunction = new PythonFunction(this, `MatanoDetection${detectionName}`, {
-      functionName: `matano-detection-${detectionName}`,
-      description: `Matano managed function for detection: ${detectionName}.`,
-      entry: detectionDirectory,
-      runtime: lambda.Runtime.PYTHON_3_9,
-      index: "detect.py", // unused
-      layers: [detectionsLayer],
-      environment: {
-        MATANO_DETECTION_NAME: detectionName,
-        MATANO_RAW_EVENTS_BUCKET: props.rawEventsBucket.bucketName,
-      },
-    });
-
     const config = readDetectionConfig(detectionDirectory);
 
     const logSources = config["log_sources"];
@@ -50,31 +29,12 @@ class Detection extends Construct {
       throw "Must have at least one log source configured for a detection.";
     }
     for (const logSource of logSources) {
-      // const kafkaSourceProps = {
-      //   topic: `${logSource}-output`,
-      //   batchSize: 10_000, // TODO
-      //   startingPosition: lambda.StartingPosition.LATEST, // TODO
-      // };
-      // const eventSource =
-      //   props.kafkaCluster.clusterType === "self-managed"
-      //     ? new SelfManagedKafkaEventSource({
-      //         ...kafkaSourceProps,
-      //         authenticationMethod: AuthenticationMethod.SASL_SCRAM_256_AUTH,
-      //         bootstrapServers: props.kafkaCluster.bootstrapAddress.split(","),
-      //         secret: props.kafkaCluster.secret,
-      //       })
-      //     : new ManagedKafkaEventSource({
-      //         ...kafkaSourceProps,
-      //         clusterArn: props.kafkaCluster.clusterArn,
-      //       });
-      // lambdaFunction.addEventSource(eventSource);
     }
   }
 }
 
 export interface MatanoDetectionsProps {
   rawEventsBucket: s3.Bucket;
-  // kafkaCluster: IKafkaCluster;
 }
 
 export class MatanoDetections extends Construct {
@@ -91,18 +51,18 @@ export class MatanoDetections extends Construct {
     const detectionsDirectory = path.join(matanoUserDirectory, "detections");
     const detectionNames = getDirectories(detectionsDirectory);
 
-    // const detectionFunction = new PythonFunction(this, `MatanoDetectionFunction`, {
-    //   // functionName: `matano-detections`,
-    //   description: `Matano managed detections function.`,
-    //   entry: detectionsDirectory,
-    //   runtime: lambda.Runtime.PYTHON_3_9,
-    //   index: "detect.py", // unused
-    //   layers: [detectionsLayer],
-    //   environment: {
-    //     MATANO_RAW_EVENTS_BUCKET: props.rawEventsBucket.bucketName,
-    //   },
-    // });
-    // (detectionFunction.node.defaultChild as lambda.CfnFunction).handler = "detection.handler.handler";
+    const detectionFunction = new PythonFunction(this, `MatanoDetectionFunction`, {
+      // functionName: `matano-detections`,
+      description: `Matano managed detections function.`,
+      entry: detectionsDirectory,
+      runtime: lambda.Runtime.PYTHON_3_9,
+      index: "my_detection/detect.py", // unused
+      layers: [detectionsLayer],
+      environment: {
+        MATANO_RAW_EVENTS_BUCKET: props.rawEventsBucket.bucketName,
+      },
+    });
+    (detectionFunction.node.defaultChild as lambda.CfnFunction).handler = "detection.handler.handler";
 
     for (const detectionName of detectionNames) {
       new Detection(this, `Detection-${detectionName}`, {
@@ -110,7 +70,6 @@ export class MatanoDetections extends Construct {
         detectionsLayer,
         matanoUserDirectory: matanoUserDirectory,
         rawEventsBucket: props.rawEventsBucket,
-        // kafkaCluster: props.kafkaCluster,
       });
     }
   }

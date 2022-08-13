@@ -5,6 +5,7 @@ import * as cdk from "aws-cdk-lib";
 import { MatanoStack, MatanoStackProps } from "../lib/MatanoStack";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as sqs from "aws-cdk-lib/aws-sqs";
+import * as efs from "aws-cdk-lib/aws-efs";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import { IcebergMetadata } from "../lib/iceberg";
 import { getDirectories, readConfig } from "../lib/utils";
@@ -16,7 +17,7 @@ import { NodejsFunction, NodejsFunctionProps } from "aws-cdk-lib/aws-lambda-node
 import { DockerImage } from "aws-cdk-lib";
 import { SqsEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
 import { execSync } from "child_process";
-import { SecurityGroup } from "aws-cdk-lib/aws-ec2";
+import { SecurityGroup, SubnetType } from "aws-cdk-lib/aws-ec2";
 import { Bucket } from "aws-cdk-lib/aws-s3";
 import { DataBatcher } from "../lib/data-batcher";
 
@@ -43,9 +44,9 @@ export class DPMainStack extends MatanoStack {
     //   outputBucket: props.outputEventsBucket,
     // });
 
-    // new MatanoDetections(this, "MatanoDetections", {
-    //   rawEventsBucket: props.rawEventsBucket.bucket,
-    // });
+    new MatanoDetections(this, "MatanoDetections", {
+      rawEventsBucket: props.rawEventsBucket.bucket,
+    });
 
     // // const lambdaVpcProps: Partial<NodejsFunctionProps> | {} =
     // //   kafkaCluster.clusterType != "self-managed"
