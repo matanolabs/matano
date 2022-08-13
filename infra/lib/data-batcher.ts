@@ -1,4 +1,4 @@
-import * as cdk from "aws-cdk-lib/core";
+import * as cdk from "aws-cdk-lib";
 import { Construct } from "constructs";
 import * as sqs from "aws-cdk-lib/aws-sqs";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
@@ -9,21 +9,23 @@ import { SqsEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
 
 interface DataBatcherProps {
     s3Bucket: S3BucketWithNotifications;
-    outputQueue: sqs.Queue;
 }
 
 export class DataBatcher extends Construct {
+    outputQueue: sqs.Queue;
     constructor(scope: Construct, id: string, props: DataBatcherProps) {
         super(scope, id);
 
+        this.outputQueue = new sqs.Queue(this, "DataBatcherOutputQueue")
+
         const lambdaFunc = new NodejsFunction(this, "DataBatcherProcessorFunction", {
-            entry: "../lambdas/data-batcher/index.ts",
+            entry: "../lambdas/data-batcher-processor/index.ts",
             depsLockFilePath: "../lambdas/package-lock.json",
             runtime: lambda.Runtime.NODEJS_16_X,
             timeout: cdk.Duration.seconds(10),
             environment: {
-                OUTPUT_QUEUE_URL: props.outputQueue.queueUrl,
-            }
+                OUTPUT_QUEUE_URL: this.outputQueue.queueUrl,
+            },
         });
 
         const sqsEventSource = new SqsEventSource(props.s3Bucket.queue, {
@@ -32,6 +34,7 @@ export class DataBatcher extends Construct {
             reportBatchItemFailures: true,
         });
         lambdaFunc.addEventSource(sqsEventSource);
+        this.outputQueue.grantSendMessages(lambdaFunc);
 
     }
 }
