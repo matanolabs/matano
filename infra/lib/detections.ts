@@ -3,11 +3,14 @@ import * as path from "path";
 import { Construct } from "constructs";
 import * as cdk from "aws-cdk-lib";
 import * as s3 from "aws-cdk-lib/aws-s3";
+import * as sqs from "aws-cdk-lib/aws-sqs";
+import * as iam from "aws-cdk-lib/aws-iam";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import { PythonFunction, PythonLayerVersion } from "@aws-cdk/aws-lambda-python-alpha";
 import { MatanoStack, MatanoStackProps } from "../lib/MatanoStack";
 import { getDirectories } from "../lib/utils";
 import { readDetectionConfig } from "./utils";
+import { SqsEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
 
 interface DetectionProps {
   matanoUserDirectory: string;
@@ -61,17 +64,40 @@ export class MatanoDetections extends Construct {
       environment: {
         MATANO_RAW_EVENTS_BUCKET: props.rawEventsBucket.bucketName,
       },
+      initialPolicy: [
+        new iam.PolicyStatement({actions: ["s3:*"], resources: ["*"]}),
+      ],
     });
-    (detectionFunction.node.defaultChild as lambda.CfnFunction).handler = "detection.handler.handler";
+    (detectionFunction.node.defaultChild as lambda.CfnFunction).handler = "detection.common.handler";
     fs.unlinkSync(path.resolve(detectionsDirectory, "index.py"));
 
+    const detectionsQueue = new sqs.Queue(this, "DetectionsQueue");
+    const sqsEventSource = new SqsEventSource(detectionsQueue, {
+      batchSize: 1,
+    });
+    detectionFunction.addEventSource(sqsEventSource);
+
+    const detectionConfigs: any = {}
     for (const detectionName of detectionNames) {
-      new Detection(this, `Detection-${detectionName}`, {
-        detectionName,
-        detectionsLayer,
-        matanoUserDirectory: matanoUserDirectory,
-        rawEventsBucket: props.rawEventsBucket,
-      });
+      const detectionDirectory = path.resolve(matanoUserDirectory, "detections", detectionName);
+      const config = readDetectionConfig(detectionDirectory);
+      const logSources = config["log_sources"];
+      for (const logSource of logSources) {
+        if (!detectionConfigs[logSource]) {
+          detectionConfigs[logSource] = []
+        }
+        detectionConfigs[logSource].push({ 
+          name: detectionName,
+          import_path: `${detectionName}.detect`,
+        });
+      }
+      // new Detection(this, `Detection-${detectionName}`, {
+      //   detectionName,
+      //   detectionsLayer,
+      //   matanoUserDirectory: matanoUserDirectory,
+      //   rawEventsBucket: props.rawEventsBucket,
+      // });
     }
+    detectionFunction.addEnvironment("DETECTION_CONFIGS", JSON.stringify(detectionConfigs));
   }
 }

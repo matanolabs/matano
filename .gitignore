@@ -17,3 +17,4 @@ cdk.out
 /tmp
 oclif.manifest.json
 test
+__pycache__
