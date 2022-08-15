@@ -17,7 +17,6 @@ interface DetectionProps {
   detectionName: string;
   detectionsLayer: lambda.LayerVersion;
   rawEventsBucket: s3.Bucket;
-  // kafkaCluster: IKafkaCluster;
 }
 
 class Detection extends Construct {
@@ -61,6 +60,7 @@ export class MatanoDetections extends Construct {
       entry: detectionsDirectory,
       runtime: lambda.Runtime.PYTHON_3_9,
       layers: [detectionsLayer],
+      memorySize: 1800,
       environment: {
         MATANO_RAW_EVENTS_BUCKET: props.rawEventsBucket.bucketName,
       },
