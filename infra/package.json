@@ -17,6 +17,7 @@
     "@types/prettier": "^2.6.3",
     "@types/yaml": "^1.9.7",
     "jest": "^26.4.2",
+    "toml": "^3.0.0",
     "ts-jest": "^26.2.0"
   },
   "dependencies": {
