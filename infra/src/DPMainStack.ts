@@ -44,7 +44,7 @@ export class DPMainStack extends MatanoStack {
     //   outputBucket: props.outputEventsBucket,
     // });
 
-    new MatanoDetections(this, "MatanoDetections", {
+    const detections = new MatanoDetections(this, "MatanoDetections", {
       rawEventsBucket: props.rawEventsBucket.bucket,
     });
 

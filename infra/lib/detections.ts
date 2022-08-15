@@ -40,6 +40,7 @@ export interface MatanoDetectionsProps {
 }
 
 export class MatanoDetections extends Construct {
+  detectionsQueue: sqs.Queue;
   constructor(scope: Construct, id: string, props: MatanoDetectionsProps) {
     super(scope, id);
 
@@ -71,8 +72,8 @@ export class MatanoDetections extends Construct {
     (detectionFunction.node.defaultChild as lambda.CfnFunction).handler = "detection.common.handler";
     fs.unlinkSync(path.resolve(detectionsDirectory, "index.py"));
 
-    const detectionsQueue = new sqs.Queue(this, "DetectionsQueue");
-    const sqsEventSource = new SqsEventSource(detectionsQueue, {
+    this.detectionsQueue = new sqs.Queue(this, "DetectionsQueue");
+    const sqsEventSource = new SqsEventSource(this.detectionsQueue, {
       batchSize: 1,
     });
     detectionFunction.addEventSource(sqsEventSource);
