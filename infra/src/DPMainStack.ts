@@ -24,6 +24,7 @@ import { Bucket } from "aws-cdk-lib/aws-s3";
 import { DataBatcher } from "../lib/data-batcher";
 import { RustFunctionLayer } from '../lib/rust-function-layer';
 import { LayerVersion } from "aws-cdk-lib/aws-lambda";
+import { LakeIngestion } from "../lib/lake-ingestion";
 
 interface DPMainStackProps extends MatanoStackProps {
   rawEventsBucket: S3BucketWithNotifications;
@@ -44,50 +45,7 @@ export class DPMainStack extends MatanoStack {
       s3Bucket: props.rawEventsBucket,
     });
 
-    const bucket = new s3.Bucket(this, 'RustWorkspacesBucket', {
-      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
-      publicReadAccess: false,
-    });
-
-    const myLambda1Layer = new RustFunctionLayer(this, 'MyRustLambda1', {
-      package: 'my_lambda1',
-      // Useful so library logs show up in CloudWatch
-      setupLogging: true,
-    });
-    const logSourcesConfigurationPath = path.resolve(path.join("../lambdas/log_sources_configuration.json"));
-    fs.writeFileSync(logSourcesConfigurationPath, JSON.stringify(logSourceConfigs, null, 2));
-    const myLambda1 = new lambda.Function(this, 'MyLambda1', {
-      code: lambda.Code.fromAsset("../lambdas", {
-            bundling: {
-              volumes: [
-                {
-                  hostPath: logSourcesConfigurationPath,
-                  containerPath: "/asset-input/log_sources_configuration.json",
-                },
-              ],
-              image: myLambda1Layer.image,
-              command: [
-                "bash",
-                "-c",
-                "cp /asset-input/log_sources_configuration.json /asset-output/log_sources_configuration.json",
-              ],
-            },
-          }),
-      handler: 'main',
-      runtime: lambda.Runtime.PROVIDED_AL2,
-      environment: {
-        BUCKET_NAME: bucket.bucketName,
-        ...myLambda1Layer.environmentVariables
-      },
-      layers: [myLambda1Layer.layer],
-      timeout: cdk.Duration.seconds(5),
-      initialPolicy: [
-        new iam.PolicyStatement({
-          actions: ["secretsmanager:*", "kafka:*", "kafka-cluster:*", "dynamodb:*", "s3:*", "athena:*", "glue:*"],
-          resources: ["*"],
-        }),
-      ],
-    });
+    new LakeIngestion(this, "LakeIngestion", {});
 
     // new IcebergMetadata(this, "IcebergMetadata", {
     //   outputBucket: props.outputEventsBucket,

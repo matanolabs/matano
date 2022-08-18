@@ -11,7 +11,7 @@ ENV RUSTUP_HOME=/usr/local/rustup \
     PATH=/usr/local/cargo/bin:$PATH
 
 # Install typescript
-RUN npm install --global aws-cdk-lib typescript@latest @types/node@* ts-node && \
+RUN npm install --global typescript@latest @types/node@* ts-node && \
     npm install --global --unsafe-perm=true esbuild@$ESBUILD_VERSION && \
     # Ensure all users can write to npm cache
     mkdir /tmp/npm-cache && \

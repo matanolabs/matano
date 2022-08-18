@@ -50,52 +50,33 @@ use tokio_stream::{wrappers::LinesStream, StreamMap};
 
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
-const ECS_PARQUET: &[u8] = include_bytes!("../../../../data/ecs_parquet_metadata.parquet");
+// const ECS_PARQUET: &[u8] = include_bytes!("../../../../data/ecs_parquet_metadata.parquet");
 
-lazy_static! {
-    static ref ECS_SCHEMA: Schema = {
-        let rr1 = SerializedFileReader::new(Bytes::from(ECS_PARQUET)).unwrap();
-        let rr1_ref = Arc::new(rr1);
-        let mut rr2 = ParquetFileArrowReader::new(rr1_ref);
-        rr2.get_schema().unwrap()
-    };
-}
+// lazy_static! {
+//     static ref ECS_SCHEMA: Schema = {
+//         let rr1 = SerializedFileReader::new(Bytes::from(ECS_PARQUET)).unwrap();
+//         let rr1_ref = Arc::new(rr1);
+//         let mut rr2 = ParquetFileArrowReader::new(rr1_ref);
+//         rr2.get_schema().unwrap()
+//     };
+// }
 
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() -> Result<(), LambdaError> {
     setup_logging();
     let start = Instant::now();
 
-    let ev11: SqsEvent = serde_json::from_reader(File::open(
-        "/home/samrose/workplace/matano/lib/rust/garbage2.json",
-    )?)?;
+    // let ev11: SqsEvent = serde_json::from_reader(File::open(
+    //     "/home/samrose/workplace/matano/lib/rust/garbage2.json",
+    // )?)?;
 
-    // let func = handler_fn(my_handler);
-    // lambda_runtime::run(func).await?;
-
-    my_handler(ev11).await?;
+    let func = handler_fn(my_handler);
+    lambda_runtime::run(func).await?;
 
     info!("Call lambda took {:.2?}", start.elapsed());
 
     Ok(())
 }
-
-// match obj_res {
-//     Ok(obj) => {
-//         println!("JER....");
-//         let q = q_ref.lock().await;
-//         let mut lines = tokio::io::BufReader::new(obj.body.into_async_read()).lines();
-//         let mut lls = LinesStream::new(lines);
-//         let mut lls2 = lls.map(|x| x.expect("inner emmpy??"));
-//         let mut cc = lls2.chunks(1024*1024);
-
-//         let mut zz = cc.next().await.expect("no chunky");
-//         q.push(zz)?;
-//         sss.lock().await.swap(true, Ordering::SeqCst);
-//         Ok(())
-//     }
-//     Err(e) => Err(anyhow!(e))
-// }
 
 // fn getit<T>(v: Arc<Mutex<T>>) -> MutexGuard<'static, T> {
 //     let ret = v.clone();
@@ -105,7 +86,7 @@ async fn main() -> Result<()> {
 
 // async fn process_message()
 // ctx: LambdaContext
-pub(crate) async fn my_handler(event: SqsEvent) -> Result<()> {
+pub(crate) async fn my_handler(event: SqsEvent, _ctx: LambdaContext) -> Result<()> {
     info!("Request: {:?}", event);
 
     let downloads = event
@@ -354,7 +335,7 @@ fn get_arrow_writer(schema_ref: Arc<Schema>) -> Result<ArrowWriter<File>> {
         .build();
 
     let uuid = Uuid::new_v4().to_string();
-    let outpath = format!("/home/samrose/workplace/matano/lib/rust/garbage/{uuid}.parquet");
+    let outpath = format!("/tmp/{uuid}.parquet");
     println!("Writing to: {}", outpath);
 
     let output = File::create(outpath.clone())?;
@@ -372,7 +353,6 @@ fn get_arrow_json_reader(lines: Vec<String>) -> Result<arrow::json::Reader<Curso
     let json_reader = builder.build(mycursor)?;
     Ok(json_reader)
 }
-
 
 const JSON_READ_BATCH_SIZE: usize = 1024 * 100; 
 

@@ -4,7 +4,6 @@ import { spawnSync } from 'child_process';
 import * as fs from 'fs';
 import { performance } from 'perf_hooks';
 
-import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as path from 'path';
 
 export function logTime(start: number, message: string) {
@@ -144,12 +143,6 @@ export const Settings = {
 // Set the base Cargo workspace directory
 Settings.WORKSPACE_DIR = 'my_lambdas';
 
-// Enable optional features and env variables at build (compile) time.
-Settings.FEATURES = [
-    'my-dev-feature',
-    // uncomment to see how the lambda output changes!
-    // 'my-prod-feature',
-];
 Settings.BUILD_ENVIRONMENT = {
     LEARN_RUST_URL: 'https://doc.rust-lang.org',
 };
