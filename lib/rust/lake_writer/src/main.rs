@@ -1,54 +1,62 @@
+use async_compat::CompatExt;
 use aws_sdk_s3::types::ByteStream;
 use concurrent_queue::ConcurrentQueue;
 use futures::future::join_all;
-use parquet::arrow::{arrow_writer, ArrowReader, ParquetFileArrowReader};
-use parquet::file::serialized_reader::SerializedFileReader;
 use serde::{Deserialize, Serialize};
 use shared::*;
 use tokio::runtime::Handle;
 use tokio_util::codec::{FramedRead, LinesCodec};
-use tokio_util::io::StreamReader;
+use tokio_util::io::{ReaderStream, StreamReader};
 use uuid::Uuid;
 
 use bytes::Bytes;
 use std::fs::File;
 use std::rc::Rc;
-use std::sync::{Mutex, Condvar};
 use std::sync::{Arc, MutexGuard};
+use std::sync::{Condvar, Mutex};
 use std::thread::{self, JoinHandle, ScopedJoinHandle};
 use std::{time::Instant, vec};
 
 use aws_lambda_events::event::sqs::SqsEvent;
 use lambda_runtime::{handler_fn, Context as LambdaContext, Error as LambdaError};
 use log::{debug, error, info};
-use parquet::file::reader::FileReader;
 use threadpool::ThreadPool;
 
 use std::io::Write;
 
-use arrow::json::ReaderBuilder;
-use parquet::{
-    arrow::ArrowWriter,
-    basic::{Compression, Encoding},
-    errors::ParquetError,
-    file::properties::{EnabledStatistics, WriterProperties},
-};
-
 use std::io::{BufRead, BufReader, Seek};
 use std::io::{Cursor, Read};
-use tokio::io::AsyncBufReadExt;
+use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncReadExt};
 
 use lazy_static::{__Deref, lazy_static};
 
 use anyhow::{anyhow, Error, Result};
-use arrow::datatypes::Schema;
 
 use aws_sdk_s3::Region;
-use futures::{Future, StreamExt, stream};
+use futures::{stream, Future, TryFutureExt, TryStreamExt};
+// use tokio_stream::StreamExt;
+use futures::StreamExt;
 
 use tokio_stream::{wrappers::LinesStream, StreamMap};
 
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+
+use arrow2::io::avro::avro_schema::file::{Block, CompressedBlock, FileMetadata};
+use arrow2::io::avro::avro_schema::read_async::{block_stream, decompress_block, read_metadata};
+use arrow2::io::avro::read::{deserialize, infer_schema};
+use arrow2::io::parquet::read as parquet_read;
+use arrow2::{
+    chunk::Chunk,
+    datatypes::{Field, Schema},
+    error::Error as ArrowError,
+    error::Result as ArrowResult,
+    io::parquet::write::{
+        transverse, CompressionOptions, Encoding, FileWriter, RowGroupIterator, Version,
+        WriteOptions,
+    },
+};
+use futures::pin_mut;
+use tokio_util::compat::TokioAsyncReadCompatExt;
 
 // const ECS_PARQUET: &[u8] = include_bytes!("../../../../data/ecs_parquet_metadata.parquet");
 
@@ -70,6 +78,8 @@ async fn main() -> Result<(), LambdaError> {
     //     "/home/samrose/workplace/matano/lib/rust/garbage2.json",
     // )?)?;
 
+    // my_handler(ev11).await.unwrap();
+
     let func = handler_fn(my_handler);
     lambda_runtime::run(func).await?;
 
@@ -84,8 +94,21 @@ async fn main() -> Result<(), LambdaError> {
 //     ret
 // }
 
-// async fn process_message()
-// ctx: LambdaContext
+#[derive(Debug, Clone)]
+pub(crate) struct MyConfig {
+    schema: Schema,
+    metadata: Arc<FileMetadata>,
+}
+
+impl MyConfig {
+    fn new(schema: Schema, metadata: FileMetadata) -> MyConfig {
+        MyConfig {
+            schema,
+            metadata: Arc::new(metadata),
+        }
+    }
+}
+
 pub(crate) async fn my_handler(event: SqsEvent, _ctx: LambdaContext) -> Result<()> {
     info!("Request: {:?}", event);
 
@@ -111,22 +134,31 @@ pub(crate) async fn my_handler(event: SqsEvent, _ctx: LambdaContext) -> Result<(
     let config = aws_config::load_from_env().await;
     let s3 = aws_sdk_s3::Client::new(&config);
 
-
-    let myq: ConcurrentQueue<Vec<String>> = ConcurrentQueue::unbounded();
-    let myq_ref = Arc::new(std::sync::Mutex::new(myq));
-
     println!("GOT HERE???");
 
-    let mut schema: Option<Arc<Schema>> = None;
+    let start = Instant::now();
+
+    let options = WriteOptions {
+        write_statistics: true,
+        compression: CompressionOptions::Uncompressed,
+        version: Version::V2,
+    };
+
+    let pool = ThreadPool::new(4);
+    let pool_ref = Arc::new(pool);
+    let mut all_row_groups: Vec<
+        RowGroupIterator<
+            Box<dyn arrow2::array::Array>,
+            std::vec::IntoIter<Result<Chunk<Box<dyn arrow2::array::Array>>, ArrowError>>,
+        >,
+    > = vec![];
+    let mut all_row_groups_ref = Arc::new(Mutex::new(all_row_groups));
 
     let tasks = downloads
         .into_iter()
         .map(|r| {
             let s3 = &s3;
-            println!("Inside task map()");
             let ret = (async move {
-                println!("inside move...");
-
                 let obj_res = s3
                     .get_object()
                     .bucket(r.bucket)
@@ -137,265 +169,147 @@ pub(crate) async fn my_handler(event: SqsEvent, _ctx: LambdaContext) -> Result<(
                         error!("Error downloading {} from S3: {}", r.key, e);
                         e
                     });
-                let mut obj = obj_res.unwrap();
+                let obj = obj_res.unwrap();
                 println!("Got object...");
 
-
-                // let first = obj.body.next().await.unwrap();
-                // let first_bytes = first.as_ref().unwrap().clone();
-                // let newschema = Some(get_arrow_json_reader(first_bytes).unwrap().schema().clone());
-                // schema_ref = newschema;
-                // // (FramedRead::new(tokio::io::empty(), LinesCodec::new()).boxed());
-            
-                // let reader = tokio::io::BufReader::new(
-                //     StreamReader::new(stream::iter(Some(first)).chain(obj.body)), // ).map_err(|e| ??)
-                // );
-
-                let reader = obj.body.into_async_read();
-                let mut lines = tokio::io::BufReader::new(reader).lines();
-                let lls = LinesStream::new(lines);
-                lls
+                let stream = obj.body;
+                let reader = TokioAsyncReadCompatExt::compat(stream.into_async_read());
+                reader
             });
             ret
         })
         .collect::<Vec<_>>();
-    let result = join_all(tasks).await;
-    let res = result.into_iter().map(|lines| lines).collect::<Vec<_>>();
 
-    let mut map = StreamMap::new();
+    let mut result = join_all(tasks).await;
 
+    let mut schema_holder: Option<Schema> = None;
+    let mut schema_holder_ref = Arc::new(Mutex::new(schema_holder));
 
-    let mut first_stream: Option<_> = None;
-    for (i, x) in res.into_iter().enumerate() {
-        dbg!(i);
-        if i == 1 {
-            first_stream = Some(Box::pin(x));
-        } else {
-            map.insert(format!("{}", i), Box::pin(x));
-        }
-    }
-
-    let num_lines_per_chunk = 1024 * 1024 * 50;
-
-    let mut schema_holder: Option<Arc<Schema>> = None;
-
-    let pair = Arc::new((Mutex::new(schema_holder), Condvar::new()));
-    let pair2 = pair.clone();
-
-    let stream_map = map.filter_map(|x| async move { x.1.ok() });
-
-    let s3_chunks = stream_map.chunks(num_lines_per_chunk);
-
-    let s3_tasks = s3_chunks
-        .for_each_concurrent(100, |lines| {
-            let q_ref = myq_ref.clone();
-
-            async move {
-                let q = q_ref.lock().unwrap();
-                q.push(lines).unwrap();
-            }
-        });
-
-    
-    first_stream.unwrap()
-    .filter_map(|x| async move { x.ok() })
-    .chunks(num_lines_per_chunk).for_each(|lines| {
-        let q_ref = myq_ref.clone();
-
-        let newschema = get_arrow_json_reader(lines.clone()).unwrap().schema();
-        schema = Some(newschema);
-
+    let work_futures = result.iter_mut().map(|mut reader| {
+        let all_row_groups_ref = all_row_groups_ref.clone();
+        let pool_ref = pool_ref.clone();
+        // let schema_holder_ref = schema_holder_ref.clone();
         async move {
-            let q = q_ref.lock().unwrap();
-            q.push(lines).unwrap();
-        }
-    }).await;
+            // let mut schema_holder = schema_holder_ref.lock().unwrap();
+            let metadata = read_metadata(reader).await.unwrap();
+            let schema = infer_schema(&metadata.record).unwrap();
+            let schema_copy = schema.clone();
+            // let schema = match &mut *schema_holder {
+            //     Some(x) => x.clone(),
+            //     None => {
+            //         let ret = infer_schema(&metadata.record).unwrap();
+            //         *schema_holder = Some(ret.clone());
+            //         ret
+            //     },
+            // };
 
-    let schema_ref = schema.unwrap();
+            // // TODO move out
+            let projection = Arc::new(schema.fields.iter().map(|_| true).collect::<Vec<_>>());
+            let encodings: Vec<Vec<Encoding>> = schema
+                .clone()
+                .fields
+                .iter()
+                .map(|f| transverse(&f.data_type, |_| Encoding::Plain))
+                .collect();
 
-    let mut arrow_writer: ArrowWriter<File> = get_arrow_writer(schema_ref)?;
-    let mut arrow_writer_ref = Arc::new(std::sync::Mutex::new(arrow_writer));
+            let blocks = block_stream(reader, metadata.marker).await;
 
-    let pool = ThreadPool::new(4);
-    let pool_ref = Arc::new(Mutex::new(pool));
-
-    println!("THRS:::");
-
-    let please_stop = Arc::new(AtomicBool::new(false));
-
-    thread::scope(|s| {
-        let handle = s.spawn(|| {
-            loop {
-                let should_i_stop = please_stop.clone();
-                let should_stop = should_i_stop.load(Ordering::SeqCst);
-                if should_stop {
-                    println!("I was told to stop, STOPPING..........");
-                    break;
-                }
-
+            let fut = blocks.for_each_concurrent(1000000, move |block| {
+                println!("Getting block....");
+                let mut block = block.unwrap();
+                println!("GOT block");
+                let schema = schema.clone();
+                let metadata = metadata.clone();
+                let projection = projection.clone();
+                let encodings = encodings.clone();
+                dbg!(block.number_of_rows);
+                let all_row_groups_ref = all_row_groups_ref.clone();
                 let pool = pool_ref.clone();
-                let pool = pool.lock().unwrap();
 
-                let q_ref = myq_ref.clone();
-                let q = q_ref.lock().unwrap();
+                async move {
+                    // the content here is CPU-bounded. It should run on a dedicated thread pool
+                    pool.execute(move || {
+                        let st1 = Instant::now();
+                        let mut decompressed = Block::new(0, vec![]);
 
-                let mut lines_batch = q.pop();
-                match lines_batch {
-                    Ok(lines) => {
-                        let mut writer = arrow_writer_ref.clone();
-                        println!("Firing to pool...");
-                        pool.execute(move || {
-                            let mut writer = writer.lock().unwrap();
-                            write_rows(lines, writer).unwrap();
-                        });
+                        decompress_block(&mut block, &mut decompressed, metadata.compression)
+                            .unwrap();
 
-                    },
-                    Err(e) => ()
-                };
-                
-            }
-        });
+                        let chunk = deserialize(
+                            &decompressed,
+                            &schema.fields,
+                            &metadata.record.fields,
+                            &projection,
+                        )
+                        .unwrap();
+                        let iter = vec![Ok(chunk)];
+                        let row_groups = RowGroupIterator::try_new(
+                            iter.into_iter(),
+                            &schema,
+                            options,
+                            encodings,
+                        )
+                        .unwrap();
+                        let mut all_row_groups = all_row_groups_ref.lock().unwrap();
+                        all_row_groups.push(row_groups);
+                        println!(
+                            "$$$$$$$$$$$$$$$$$$$$$$$$$$$$  THREAD Call took {:.2?}",
+                            st1.elapsed()
+                        );
+                        ()
+                    });
+                }
+            });
 
-        println!("spawn1###");
-
-        let st1 = Instant::now();
-
-        // Await s3 task, all files downloaded
-        let handle2 = s.spawn(|| {
-            println!("IN THREAD: TOKIO RUNTIME BLOCK ON");
-            let runtime = tokio::runtime::Builder::new_current_thread()
-                .enable_all()
-                .build()
-                .unwrap();
-            println!("TRY: block on s3tasks");
-            runtime.block_on(s3_tasks);
-            println!("FIN: block on s3tasks");
-        });
-        println!("GOT handle2");
-        handle2.join().unwrap();
-
-        info!("await took: {:.2?}", st1.elapsed());
-        println!("JOINED TASKS");
-
-        // Now shut the thread
-        println!("GoNNA stop the thread....");
-        please_stop.store(true, Ordering::SeqCst);
-        println!("TOLD THREAAD to stop");
-
-        println!("Trying to lock pool");
-        let pool = pool_ref.clone();
-        let pool = pool.lock().unwrap();
-        println!("Got pool lock!");
-
-
-        println!("TRY: Joining handle...");
-        handle.join().unwrap();
-        println!("FIN: Joining handle...");
-
-
-        println!("TRY: Joining pool");
-        pool.join();
-        println!("FIN: pool JOIN");
+            fut.await;
+            schema_copy.clone()
+        }
     });
 
-    println!("EXITED LOOP");
+    let res = join_all(work_futures).await;
 
-    // let st1 = Instant::now();
-    // s3_tasks.await;
-    // info!("await took: {:.2?}", st1.elapsed());
-    // println!("JOINED TASKS");
+    let pool = pool_ref.clone();
+    pool.join();
 
-    // let q_ref = myq_ref.clone();
-    // let q = q_ref.lock().unwrap();
+    let mut all_row_groups_ref =
+        Arc::try_unwrap(all_row_groups_ref).map_err(|e| anyhow!("fail get rowgroups"))?;
+    let mut all_row_groups = Mutex::into_inner(all_row_groups_ref)?;
+    dbg!(all_row_groups.len());
 
-    // println!("QLEN: {}", q.len());
-    // q.close();
+    let schema = res.first().unwrap().clone();
 
-    // let pool = pool_ref.clone();
-    // let pool = pool.lock().unwrap();
+    println!("Writing...");
+    let mut buf = vec![];
+    let mut writer = FileWriter::try_new(buf, schema.clone(), options)?;
 
-    // pool.join();
-    // println!("FIN POOL JOIN");
-
-    // write to S3..
-    println!("CLOSING WRITER");
-
-    let arrow_writer =
-        Arc::try_unwrap(arrow_writer_ref).map_err(|_| anyhow!("FAIL to unwrap writer."))?;
-    let arrow_writer = Mutex::into_inner(arrow_writer)?;
-    arrow_writer.close()?;
-
-    Ok(())
-}
-
-fn get_arrow_writer(schema_ref: Arc<Schema>) -> Result<ArrowWriter<File>> {
-    let writer_props = WriterProperties::builder()
-        .set_statistics_enabled(EnabledStatistics::Chunk)
-        .set_created_by("matano".to_string())
-        .build();
-
-    let uuid = Uuid::new_v4().to_string();
-    let outpath = format!("/tmp/{uuid}.parquet");
-    println!("Writing to: {}", outpath);
-
-    let output = File::create(outpath.clone())?;
-
-    let mut writer = ArrowWriter::try_new(output, schema_ref, Some(writer_props))?;
-    Ok(writer)
-}
-
-fn get_arrow_json_reader(lines: Vec<String>) -> Result<arrow::json::Reader<Cursor<String>>> {
-    let mycursor = Cursor::new(lines.join("\n"));
-    let builder = ReaderBuilder::new()
-        // .with_schema(schema_ref.clone())
-        .infer_schema(Some(3))
-        .with_batch_size(JSON_READ_BATCH_SIZE);
-    let json_reader = builder.build(mycursor)?;
-    Ok(json_reader)
-}
-
-const JSON_READ_BATCH_SIZE: usize = 1024 * 100; 
-
-fn write_rows(lines: Vec<String>, mut writer: MutexGuard<ArrowWriter<File>>) -> Result<()> {
-    println!("I came to convert_parquet");
-    // if 9 == 9 {
-    //     // let mut f = File::create("/home/samrose/workplace/matano/lib/rust/simpy/oil.json")?;
-    //     // f.write_all(lines.join("\n").as_bytes())?;
-    //     return Ok(());
-    // }
-    println!("THE LENGTH IS: {:?}", lines.len());
-    let rem = lines.get(0).unwrap();
-    println!("&&&&&&&&&&&&&&&&&&&&&& JSON &&&&&&&&&&&&&&&&&&");
-    println!("{:?}", rem);
-    println!("&&&&&&&&&&&&&&&&&&&&&& JSON &&&&&&&&&&&&&&&&&&");
-    // let schema_ref: Arc<Schema> = Arc::new(ECS_SCHEMA.to_owned());
-
-    let mycursor = Cursor::new(lines.join("\n"));
-    let builder = ReaderBuilder::new()
-        // .with_schema(schema_ref.clone())
-        .infer_schema(Some(3))
-        .with_batch_size(JSON_READ_BATCH_SIZE);
-    let json_reader = builder.build(mycursor)?;
-
-    // let schema_ref = json_reader.schema();
-
-    println!("----------------ABOUT TO READ..........");
-
-    for batch in json_reader {
-        println!("Writing batch...");
-        let b = batch?;
-        println!("{}", b.num_rows());
-        writer.write(&b)?;
+    for groups in all_row_groups {
+        for group in groups {
+            writer.write(group?).unwrap();
+        }
     }
 
-    // println!("############## Now read.....");
+    let filesize = writer.end(None)?;
+    println!("Parquet file size: {}", filesize);
 
-    // let mut par2 = ParquetFileArrowReader::new(Arc::new(SerializedFileReader::new(File::open(
-    //     outpath.clone(),
-    // )?)?));
-    // let sc11 = par2.get_schema()?;
+    let bytestream = ByteStream::from(writer.into_inner());
 
-    println!("Finished!");
+    let bucket = std::env::var("OUT_BUCKET_NAME")?;
+    let key_prefix = std::env::var("OUT_KEY_PREFIX")?;
+    let key = format!("{}/{}.parquet", key_prefix, Uuid::new_v4());
+    println!("Writing to: {}", key);
+
+    println!("Starting upload...");
+    let ws1 = Instant::now();
+    let _upload_res = &s3
+        .put_object()
+        .bucket(bucket)
+        .key(key)
+        .body(bytestream)
+        .send()
+        .await?;
+    println!("Upload took: {:.2?}", ws1.elapsed());
+
+    println!("----------------  Call took {:.2?}", start.elapsed());
 
     Ok(())
 }

@@ -20,9 +20,12 @@ export class LakeIngestion extends Construct {
     const lakeIngestionLambda = new lambda.Function(this, "LakeIngestionLambda", {
       code: lambda.Code.fromAsset("./src"),
       handler: "main",
+      memorySize: 1800,
       runtime: lambda.Runtime.PROVIDED_AL2,
       environment: {
         ...layer.environmentVariables,
+        OUT_BUCKET_NAME: "matanodpcommonstack-raweventsbucket024cde12-1x4x1mvqkuk5d",
+        OUT_KEY_PREFIX: "lake" ,
       },
       layers: [layer.layer],
       timeout: cdk.Duration.seconds(5),

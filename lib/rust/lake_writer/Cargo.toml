@@ -17,8 +17,7 @@ tracing = { version = "0.1.30", features = ["log"] }
 # NOTE: the following crate is not part of the SDK, but it is maintained by AWS.
 lambda_runtime = "0.4.1"
 aws-config = "0.47.0"
-parquet = "20.0.0"
-arrow = "20.0.0"
+
 aws_lambda_events = "0.6.3"
 aws-sdk-s3 = "0.17.0"
 futures = "0.3"
@@ -33,3 +32,19 @@ tokio-stream = { version = "0.1.9", features = ["io-util"] }
 concurrent-queue = "1.2.4"
 rayon = "1.5.3"
 threadpool = "1.8.1"
+async-compat="0.2.1"
+
+arrow2 = {git = "https://github.com/jorgecarleitao/arrow2", features = ["io_avro", "io_avro_async","io_avro_compression","io_parquet_compression", "io_parquet" ] }
+# avro-schema = {version = "0.3.0", features = ["full"]}
+# avro-rs = "0.13.0"
+# parquet2= {git = "https://github.com/jorgecarleitao/parquet2",rev="de6039b", features = ["full"]}
+async-stream = { version = "0.3.3" } # NEED THIS or parquet2 fails compile
+
+[patch.crates-io]
+parquet2={git = "https://github.com/jorgecarleitao/parquet2", rev="de6039b", features = ["full"]}
+
+# [patch.'https://github.com/jorgecarleitao/arrow2']
+# parquet2="0.14.0"
+
+# [replace]
+# "parquet2:0.16.0" = { version = "0.14.0"}
