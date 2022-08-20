@@ -138,7 +138,7 @@ pub(crate) async fn my_handler(event: SqsEvent, _ctx: LambdaContext) -> Result<(
 
     let options = WriteOptions {
         write_statistics: true,
-        compression: CompressionOptions::Uncompressed,
+        compression: CompressionOptions::Zstd(None),
         version: Version::V2,
     };
 
