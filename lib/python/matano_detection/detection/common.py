@@ -8,11 +8,10 @@ from uuid import uuid4
 from io import BytesIO
 from datetime import datetime, timezone
 import cysimdjson
+import fastavro
 
 s3 = boto3.resource("s3")
 DETECTION_CONFIGS = None
-json_parser = cysimdjson.JSONParser()
-
 
 def handler(event, context):
     processtime = {"t": 0}
@@ -26,10 +25,13 @@ def handler(event, context):
 
     alert_responses = []
     i1 = 0
+    st = time.time()
     for record in get_records(event, processtime):
         i1 += 1
         for response in run_detections(record, processtime):
             alert_responses.append(response)
+    elt = time.time() - st
+    processtime["t"] += elt
     print(f"DET: I took {processtime['t']} seconds to process {i1} records for an average time of {processtime['t']/i1} seconds per record")
     process_responses(alert_responses)
 
@@ -45,15 +47,12 @@ def get_records(event, processtime):
         obj_body = s3.Object(s3_bucket, s3_key).get()["Body"].read()
         print(f"END: Downloading from s3://{s3_bucket}/{s3_key}")
         print("Time taken: ", time.time() - st)
+        processtime["t"] -= time.time() - st
 
-        for line in obj_body.splitlines():
-            st2 = time.time()
+        reader = fastavro.reader(obj_body)
 
-            ret = json_parser.parse(line)
-
-            et2 = time.time() - st2
-            processtime["t"] += et2
-            yield ret
+        for record in reader:
+            yield record
 
 def run_detections(record, processtime):
     log_source = record["log_source"]
