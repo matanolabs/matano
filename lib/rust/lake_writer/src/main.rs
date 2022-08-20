@@ -129,8 +129,6 @@ pub(crate) async fn my_handler(event: SqsEvent, _ctx: LambdaContext) -> Result<(
 
     info!("Starting {} downloads from S3", downloads.len());
 
-    let start = Instant::now();
-
     let config = aws_config::load_from_env().await;
     let s3 = aws_sdk_s3::Client::new(&config);
 
@@ -146,13 +144,8 @@ pub(crate) async fn my_handler(event: SqsEvent, _ctx: LambdaContext) -> Result<(
 
     let pool = ThreadPool::new(4);
     let pool_ref = Arc::new(pool);
-    let mut all_row_groups: Vec<
-        RowGroupIterator<
-            Box<dyn arrow2::array::Array>,
-            std::vec::IntoIter<Result<Chunk<Box<dyn arrow2::array::Array>>, ArrowError>>,
-        >,
-    > = vec![];
-    let mut all_row_groups_ref = Arc::new(Mutex::new(all_row_groups));
+    let chunks = vec![];
+    let chunks_ref = Arc::new(Mutex::new(chunks));
 
     let tasks = downloads
         .into_iter()
@@ -182,35 +175,18 @@ pub(crate) async fn my_handler(event: SqsEvent, _ctx: LambdaContext) -> Result<(
 
     let mut result = join_all(tasks).await;
 
-    let mut schema_holder: Option<Schema> = None;
-    let mut schema_holder_ref = Arc::new(Mutex::new(schema_holder));
-
-    let work_futures = result.iter_mut().map(|mut reader| {
-        let all_row_groups_ref = all_row_groups_ref.clone();
+    let work_futures = result.iter_mut().map(|reader| {
+        let chunks_ref = chunks_ref.clone();
         let pool_ref = pool_ref.clone();
-        // let schema_holder_ref = schema_holder_ref.clone();
+
         async move {
             // let mut schema_holder = schema_holder_ref.lock().unwrap();
             let metadata = read_metadata(reader).await.unwrap();
             let schema = infer_schema(&metadata.record).unwrap();
             let schema_copy = schema.clone();
-            // let schema = match &mut *schema_holder {
-            //     Some(x) => x.clone(),
-            //     None => {
-            //         let ret = infer_schema(&metadata.record).unwrap();
-            //         *schema_holder = Some(ret.clone());
-            //         ret
-            //     },
-            // };
 
             // // TODO move out
             let projection = Arc::new(schema.fields.iter().map(|_| true).collect::<Vec<_>>());
-            let encodings: Vec<Vec<Encoding>> = schema
-                .clone()
-                .fields
-                .iter()
-                .map(|f| transverse(&f.data_type, |_| Encoding::Plain))
-                .collect();
 
             let blocks = block_stream(reader, metadata.marker).await;
 
@@ -221,9 +197,8 @@ pub(crate) async fn my_handler(event: SqsEvent, _ctx: LambdaContext) -> Result<(
                 let schema = schema.clone();
                 let metadata = metadata.clone();
                 let projection = projection.clone();
-                let encodings = encodings.clone();
                 dbg!(block.number_of_rows);
-                let all_row_groups_ref = all_row_groups_ref.clone();
+                let chunks_ref = chunks_ref.clone();
                 let pool = pool_ref.clone();
 
                 async move {
@@ -242,16 +217,9 @@ pub(crate) async fn my_handler(event: SqsEvent, _ctx: LambdaContext) -> Result<(
                             &projection,
                         )
                         .unwrap();
-                        let iter = vec![Ok(chunk)];
-                        let row_groups = RowGroupIterator::try_new(
-                            iter.into_iter(),
-                            &schema,
-                            options,
-                            encodings,
-                        )
-                        .unwrap();
-                        let mut all_row_groups = all_row_groups_ref.lock().unwrap();
-                        all_row_groups.push(row_groups);
+
+                        let mut chunks = chunks_ref.lock().unwrap();
+                        chunks.push(chunk);
                         println!(
                             "$$$$$$$$$$$$$$$$$$$$$$$$$$$$  THREAD Call took {:.2?}",
                             st1.elapsed()
@@ -271,21 +239,28 @@ pub(crate) async fn my_handler(event: SqsEvent, _ctx: LambdaContext) -> Result<(
     let pool = pool_ref.clone();
     pool.join();
 
-    let mut all_row_groups_ref =
-        Arc::try_unwrap(all_row_groups_ref).map_err(|e| anyhow!("fail get rowgroups"))?;
-    let mut all_row_groups = Mutex::into_inner(all_row_groups_ref)?;
-    dbg!(all_row_groups.len());
+    let chunks_ref =
+        Arc::try_unwrap(chunks_ref).map_err(|e| anyhow!("fail get rowgroups"))?;
+    let chunks = Mutex::into_inner(chunks_ref)?;
+    dbg!(chunks.len());
 
     let schema = res.first().unwrap().clone();
+    let encodings: Vec<Vec<Encoding>> = schema
+        .clone()
+        .fields
+        .iter()
+        .map(|f| transverse(&f.data_type, |_| Encoding::Plain))
+        .collect();
 
     println!("Writing...");
-    let mut buf = vec![];
+    let buf = vec![];
     let mut writer = FileWriter::try_new(buf, schema.clone(), options)?;
 
-    for groups in all_row_groups {
-        for group in groups {
-            writer.write(group?).unwrap();
-        }
+    let argi = chunks.into_iter().map(|x| Ok(x));
+    let row_groups = RowGroupIterator::try_new(argi, &schema, options, encodings).unwrap();
+
+    for row_group in row_groups {
+        writer.write(row_group?)?;
     }
 
     let filesize = writer.end(None)?;
