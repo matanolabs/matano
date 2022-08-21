@@ -11,7 +11,6 @@ import * as sns from "aws-cdk-lib/aws-sns";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import { IcebergMetadata } from "../lib/iceberg";
 import { getDirectories, readConfig } from "../lib/utils";
-import { IKafkaCluster } from "../lib/KafkaCluster";
 import { S3BucketWithNotifications } from "../lib/s3-bucket-notifs";
 import { MatanoLogSource, LogSourceConfig } from "../lib/log-source";
 import { MatanoDetections } from "../lib/detections";
@@ -54,7 +53,10 @@ export class DPMainStack extends MatanoStack {
       rawEventsBucket: props.rawEventsBucket.bucket,
     });
 
-    const lakeIngestion = new LakeIngestion(this, "LakeIngestion", {});
+    const lakeIngestion = new LakeIngestion(this, "LakeIngestion", {
+      outputBucketName: props.outputEventsBucket.bucket.bucketName,
+      outputObjectPrefix: "lake",
+    });
 
     for (const logSourceConfig of logSourceConfigs) {
       new MatanoLogSource(this, `MatanoLogSource${logSourceConfig.name}`, {

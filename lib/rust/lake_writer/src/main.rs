@@ -127,6 +127,9 @@ pub(crate) async fn my_handler(event: SqsEvent, _ctx: LambdaContext) -> Result<(
         return Ok(());
     }
 
+    let log_source = downloads.first().map(|m| m.log_source.clone()).unwrap();
+    info!("Processing for log_source: {}", log_source);
+
     info!("Starting {} downloads from S3", downloads.len());
 
     let config = aws_config::load_from_env().await;
@@ -270,7 +273,9 @@ pub(crate) async fn my_handler(event: SqsEvent, _ctx: LambdaContext) -> Result<(
 
     let bucket = std::env::var("OUT_BUCKET_NAME")?;
     let key_prefix = std::env::var("OUT_KEY_PREFIX")?;
-    let key = format!("{}/{}.parquet", key_prefix, Uuid::new_v4());
+    // lake/TABLE_NAME/data/partition_day=2022-07-05/<file>.parquet
+    let table_name = log_source;
+    let key = format!("{}/{}/data/{}.parquet", key_prefix, table_name, Uuid::new_v4());
     println!("Writing to: {}", key);
 
     println!("Starting upload...");
@@ -291,6 +296,7 @@ pub(crate) async fn my_handler(event: SqsEvent, _ctx: LambdaContext) -> Result<(
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub(crate) struct S3SQSMessage {
+    pub log_source: String,
     pub bucket: String,
     pub key: String,
 }

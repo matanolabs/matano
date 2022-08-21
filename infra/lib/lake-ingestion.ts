@@ -5,7 +5,10 @@ import * as iam from "aws-cdk-lib/aws-iam";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import { RustFunctionLayer } from "./rust-function-layer";
 
-interface LakeIngestionProps {}
+interface LakeIngestionProps {
+  outputBucketName: string;
+  outputObjectPrefix: string;
+}
 
 export class LakeIngestion extends Construct {
   lakeIngestionLambda: lambda.Function;
@@ -25,8 +28,8 @@ export class LakeIngestion extends Construct {
       runtime: lambda.Runtime.PROVIDED_AL2,
       environment: {
         ...layer.environmentVariables,
-        OUT_BUCKET_NAME: "matanodpcommonstack-raweventsbucket024cde12-1x4x1mvqkuk5d",
-        OUT_KEY_PREFIX: "lake" ,
+        OUT_BUCKET_NAME: props.outputBucketName, // "matanodpcommonstack-raweventsbucket024cde12-1x4x1mvqkuk5d",
+        OUT_KEY_PREFIX:  props.outputObjectPrefix// "lake" ,
       },
       layers: [layer.layer],
       timeout: cdk.Duration.seconds(5),
