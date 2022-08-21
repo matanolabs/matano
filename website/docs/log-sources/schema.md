@@ -5,7 +5,7 @@ sidebar_position: 2
 
 You define the shape of your log source's data by defining a *schema*.
 
-## Common schema (default)
+## Common schema
 
 By default, a log source will use the [**Elastic Common Schema (ECS)**](https://www.elastic.co/guide/en/ecs/current/ecs-reference.html). ECS is a popular format that defines a common set of fields to be used when storing log data. 
 
@@ -15,7 +15,25 @@ Matano can ingest from sources that use already use ECS, like Beats processors, 
 
 Matano currently supports ECS version **8.3.1**.
 
-## Extending the common schema
+## Using a Matano managed log source
+
+If your log source is supported by Matano, you should use a Matano managed log source. Matano will take care of specifying the schema for your log source.
+
+## Defining a custom schema
+
+If you aren't using a Matano [managed log source](#), you must provide the schema for your log source.
+
+## Specifying ECS fields
+
+You can specify the subset of ECS fields to include in your schema by using the `ecs_field_names` key in your `log_source.yml` file.
+
+```yml
+schema:
+  ecs_field_names: ["dns", "agent"]
+```
+
+
+## Extending ECS with custom fields
 
 ECS is a permissive schema, that encourages you to add columns using custom field names for data that doesn't completely map to ECS. 
 
@@ -23,6 +41,7 @@ To add custom fields to ECS for a Matano log source, you can define the fields i
 
 ```yml
 schema:
+  ecs_field_names: ["dns", "agent"]
   fields:
     - name: "my_additional_field"
       type: "string"
