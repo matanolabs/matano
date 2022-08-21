@@ -13,8 +13,7 @@ import { SqsEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
 
 interface MatanoIcebergTableProps {
   logSourceName: string;
-  schema?: Record<string, any>;
-  icebergS3BucketName: string;
+  schema: Record<string, any>;
 }
 
 export class MatanoIcebergTable extends Construct {
@@ -22,7 +21,7 @@ export class MatanoIcebergTable extends Construct {
     super(scope, id);
 
     const resource = new CustomResource(this, "Resource", {
-      serviceToken: IcebergTableProvider.getOrCreate(this, { icebergS3BucketName: props.icebergS3BucketName }),
+      serviceToken: IcebergTableProvider.getOrCreate(this, {}),
       resourceType: "Custom::MatanoIcebergTable",
       properties: {
         logSourceName: props.logSourceName,
@@ -35,7 +34,6 @@ export class MatanoIcebergTable extends Construct {
 const md5 = (s: string) => crypto.createHash('md5').update(s).digest("hex");
 
 interface IcebergTableProviderProps {
-  icebergS3BucketName: string;
 }
 
 export class IcebergTableProvider extends Construct {
@@ -61,7 +59,6 @@ export class IcebergTableProvider extends Construct {
       memorySize: 1024,
       timeout: cdk.Duration.minutes(5),
       environment: {
-        MATANO_ICEBERG_BUCKET: props.icebergS3BucketName,
       },
       code: lambda.Code.fromAsset(codePath, {
         assetHashType: cdk.AssetHashType.OUTPUT,
@@ -107,6 +104,7 @@ export class IcebergMetadata extends Construct {
       timeout: cdk.Duration.minutes(3),
       environment: {
         DUPLICATES_DDB_TABLE_NAME: duplicatesTable.tableName,
+        MATANO_ICEBERG_BUCKET: props.outputBucket.bucket.bucketName,
       },
       code: lambda.Code.fromAsset(codePath, {
         assetHashType: cdk.AssetHashType.OUTPUT,

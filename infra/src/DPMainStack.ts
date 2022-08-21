@@ -7,7 +7,7 @@ import * as iam from "aws-cdk-lib/aws-iam";
 import * as sqs from "aws-cdk-lib/aws-sqs";
 import * as s3 from "aws-cdk-lib/aws-s3";
 
-import * as efs from "aws-cdk-lib/aws-efs";
+import * as sns from "aws-cdk-lib/aws-sns";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import { IcebergMetadata } from "../lib/iceberg";
 import { getDirectories, readConfig } from "../lib/utils";
@@ -25,11 +25,11 @@ import { DataBatcher } from "../lib/data-batcher";
 import { RustFunctionLayer } from '../lib/rust-function-layer';
 import { LayerVersion } from "aws-cdk-lib/aws-lambda";
 import { LakeIngestion } from "../lib/lake-ingestion";
+import { SqsSubscription } from "aws-cdk-lib/aws-sns-subscriptions";
 
 interface DPMainStackProps extends MatanoStackProps {
   rawEventsBucket: S3BucketWithNotifications;
   outputEventsBucket: S3BucketWithNotifications;
-  // kafkaCluster: IKafkaCluster;
 }
 
 export class DPMainStack extends MatanoStack {
@@ -45,14 +45,28 @@ export class DPMainStack extends MatanoStack {
       s3Bucket: props.rawEventsBucket,
     });
 
-    new LakeIngestion(this, "LakeIngestion", {});
-
-    // new IcebergMetadata(this, "IcebergMetadata", {
-    //   outputBucket: props.outputEventsBucket,
-    // });
+    const realtimeBucket = new s3.Bucket(this, "MatanoRealtimeBucket");
+    const realtimeBucketTopic = new sns.Topic(this, "MatanoRealtimeBucketNotifications", {
+      displayName: "MatanoRealtimeBucketNotifications"
+    });
 
     const detections = new MatanoDetections(this, "MatanoDetections", {
       rawEventsBucket: props.rawEventsBucket.bucket,
+    });
+
+    const lakeIngestion = new LakeIngestion(this, "LakeIngestion", {});
+
+    for (const logSourceConfig of logSourceConfigs) {
+      new MatanoLogSource(this, `MatanoLogSource${logSourceConfig.name}`, {
+        config: logSourceConfig,
+        defaultSourceBucket: props.rawEventsBucket.bucket,
+        realtimeTopic: realtimeBucketTopic,
+        lakeIngestionLambda: lakeIngestion.lakeIngestionLambda,
+      });
+    }
+
+    new IcebergMetadata(this, "IcebergMetadata", {
+      outputBucket: props.outputEventsBucket,
     });
 
     // const vrlBindingsPath = path.resolve(path.join("../lambdas/vrl-transform-bindings"));
@@ -125,14 +139,6 @@ export class DPMainStack extends MatanoStack {
     // //     }),
     // //   ],
     // // });
-
-    for (const logSourceConfig of logSourceConfigs) {
-      new MatanoLogSource(this, `MatanoLogSource${logSourceConfig.name}`, {
-        config: logSourceConfig,
-        defaultSourceBucket: props.rawEventsBucket.bucket,
-        outputBucket: props.outputEventsBucket.bucket,
-      });
-    }
 
 
     // const logSourcesConfigurationPath = path.resolve(path.join("../lambdas/log_sources_configuration.json"));

@@ -8,7 +8,7 @@ import { RustFunctionLayer } from "./rust-function-layer";
 interface LakeIngestionProps {}
 
 export class LakeIngestion extends Construct {
-  outputQueue: sqs.Queue;
+  lakeIngestionLambda: lambda.Function;
   constructor(scope: Construct, id: string, props: LakeIngestionProps) {
     super(scope, id);
 
@@ -17,7 +17,8 @@ export class LakeIngestion extends Construct {
       // Useful so library logs show up in CloudWatch
       setupLogging: true,
     });
-    const lakeIngestionLambda = new lambda.Function(this, "LakeIngestionLambda", {
+
+    this.lakeIngestionLambda = new lambda.Function(this, "LakeIngestionLambda", {
       code: lambda.Code.fromAsset("./src"),
       handler: "main",
       memorySize: 1800,

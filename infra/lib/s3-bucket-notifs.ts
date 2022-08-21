@@ -7,7 +7,7 @@ import * as sqs from "aws-cdk-lib/aws-sqs";
 import * as sns from "aws-cdk-lib/aws-sns";
 import { SqsSubscription } from "aws-cdk-lib/aws-sns-subscriptions";
 
-interface S3BucketWithNotificationsProps extends s3.BucketProps {
+interface S3BucketWithNotificationsProps {
   bucketProps?: s3.BucketProps;
   maxReceiveCount?: number;
   eventType?: s3.EventType;
@@ -24,14 +24,16 @@ export class S3BucketWithNotifications extends Construct {
 
     this.bucket = new s3.Bucket(this, "Bucket", props.bucketProps);
 
+    const bucketName = props?.bucketProps?.bucketName;
+
     this.dlq = new sqs.Queue(this, "DLQ", {
-      queueName: props.bucketName ? `${props.bucketName}-dlq` : undefined,
+      queueName: bucketName ? `${bucketName}-dlq` : undefined,
       removalPolicy: cdk.RemovalPolicy.RETAIN,
     });
 
     this.queue = new sqs.Queue(this, "Queue", {
       ...props.queueProps,
-      queueName: props.bucketName ? `${props.bucketName}-queue` : undefined,
+      queueName: bucketName ? `${bucketName}-queue` : undefined,
       deadLetterQueue: {
         queue: this.dlq,
         maxReceiveCount: props.maxReceiveCount ?? 3,
@@ -39,7 +41,7 @@ export class S3BucketWithNotifications extends Construct {
       removalPolicy: cdk.RemovalPolicy.RETAIN,
     });
     this.topic = new sns.Topic(this, "Topic", {
-      topicName: props.bucketName ? `${props.bucketName}-topic` : undefined,
+      topicName: bucketName ? `${bucketName}-topic` : undefined,
     });
 
     this.topic.addSubscription(

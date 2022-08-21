@@ -144,7 +144,6 @@ export const Settings = {
 Settings.WORKSPACE_DIR = 'my_lambdas';
 
 Settings.BUILD_ENVIRONMENT = {
-    LEARN_RUST_URL: 'https://doc.rust-lang.org',
 };
 
 // Uncomment if you want to build (e.g. cross-compile) each target, or

@@ -32,7 +32,6 @@ schema:
   ecs_field_names: ["dns", "agent"]
 ```
 
-
 ## Extending ECS with custom fields
 
 ECS is a permissive schema, that encourages you to add columns using custom field names for data that doesn't completely map to ECS. 
