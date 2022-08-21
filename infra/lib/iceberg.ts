@@ -68,12 +68,6 @@ export class IcebergTableProvider extends Construct {
         bundling: {
           image: lambda.Runtime.JAVA_11.bundlingImage,
           command: ["./gradlew", ":iceberg_table_cfn:release", ],
-          local:  {
-            tryBundle(outputDir, options) {
-              execSync(`gradle -p ${codePath} :iceberg_table_cfn:release && cp ../lib/java/matano/iceberg_table_cfn/build/libs/output.jar ${outputDir}/output.jar`)
-              return true;
-            },
-          }
         },
       }),
       initialPolicy: [
@@ -119,12 +113,6 @@ export class IcebergMetadata extends Construct {
         bundling: {
           image: lambda.Runtime.JAVA_11.bundlingImage,
           command: ["./gradlew", ":iceberg_metadata:release",],
-          local:  {
-            tryBundle(outputDir, options) {
-              execSync(`gradle -p ${codePath} :iceberg_metadata:release && cp ../lib/java/matano/iceberg_metadata/build/libs/output.jar ${outputDir}/output.jar`)
-              return true;
-            },
-          }
         },
       }),
       initialPolicy: [new iam.PolicyStatement({

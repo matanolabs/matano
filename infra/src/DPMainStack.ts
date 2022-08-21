@@ -55,21 +55,6 @@ export class DPMainStack extends MatanoStack {
       rawEventsBucket: props.rawEventsBucket.bucket,
     });
 
-    // // const lambdaVpcProps: Partial<NodejsFunctionProps> | {} =
-    // //   kafkaCluster.clusterType != "self-managed"
-    // //     ? {
-    // //         vpc: kafkaCluster.vpc,
-    // //         vpcSubnets: kafkaCluster.vpc.publicSubnets.map((subnet) => subnet.subnetId),
-    // //         securityGroups: [
-    // //           kafkaCluster.securityGroup,
-    // //           new SecurityGroup(this, "LambdaSG", {
-    // //             vpc: kafkaCluster.vpc,
-    // //             allowAllOutbound: true,
-    // //           }),
-    // //         ],
-    // //       }
-    // //     : {};
-
     // const vrlBindingsPath = path.resolve(path.join("../lambdas/vrl-transform-bindings"));
     // const vrlBindingsLayer = new lambda.LayerVersion(this, "VRLBindingsLayer", {
     //   code: lambda.Code.fromAsset(vrlBindingsPath, {
@@ -141,17 +126,13 @@ export class DPMainStack extends MatanoStack {
     // //   ],
     // // });
 
-    // for (const logSourceConfig of logSourceConfigs) {
-    //   new MatanoLogSource(this, `MatanoLogSource${logSourceConfig.name}`, {
-    //     config: logSourceConfig,
-    //     defaultSourceBucket: props.rawEventsBucket.bucket,
-    //     outputBucket: props.outputEventsBucket.bucket,
-    //     transformLambda: transformerLambda,
-    //     // firehoseWriterLambda,
-    //     firehoseRole,
-    //     // kafkaCluster: props.kafkaCluster,
-    //   });
-    // }
+    for (const logSourceConfig of logSourceConfigs) {
+      new MatanoLogSource(this, `MatanoLogSource${logSourceConfig.name}`, {
+        config: logSourceConfig,
+        defaultSourceBucket: props.rawEventsBucket.bucket,
+        outputBucket: props.outputEventsBucket.bucket,
+      });
+    }
 
 
     // const logSourcesConfigurationPath = path.resolve(path.join("../lambdas/log_sources_configuration.json"));

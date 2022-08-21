@@ -1,3 +1,4 @@
+import org.gradle.kotlin.dsl.support.zipTo
 import java.nio.file.Paths
 
 plugins {
@@ -71,6 +72,12 @@ tasks.register("release") {
     outputs.files(project.buildDir)
     dependsOn("shadowJar")
     if (File("/asset-output").exists()) {
+        // val jarfile = File("${project.buildDir}/libs/output.jar")
+//        archiveFileName.set("output.zip")
+//        destinationDirectory.set(File("/asset-output"))
+
+        // from(layout.buildDirectory.dir("toArchive"))
+        // zipTo(File("/asset-output/output.zip"), File("${project.buildDir}/libs"))
         copy {
             from("${project.buildDir}/libs/output.jar")
             into("/asset-output")

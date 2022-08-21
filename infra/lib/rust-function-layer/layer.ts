@@ -1,4 +1,4 @@
-import { DockerImage, FileSystem } from 'aws-cdk-lib';
+import { AssetHashType, DockerImage, FileSystem } from 'aws-cdk-lib';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { FunctionOptions, ILayerVersion, LayerVersion, Runtime } from 'aws-cdk-lib/aws-lambda';
 import { Construct } from 'constructs';
@@ -95,6 +95,7 @@ export class RustFunctionLayer extends Construct {
                 ...props,
                 compatibleArchitectures: [arch],
                 code: lambda.Code.fromAsset(lambdasDir, {
+                    assetHashType: AssetHashType.OUTPUT,
                     bundling: {
                         image: this.image,
                         volumes: [

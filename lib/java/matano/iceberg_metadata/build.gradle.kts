@@ -35,6 +35,7 @@ dependencies {
 
     implementation("org.apache.hadoop:hadoop-mapreduce-client-core:3.3.3")
     implementation("org.apache.parquet:parquet-hadoop-bundle:1.12.3")
+    implementation("org.apache.parquet:parquet-avro:1.12.3")
     implementation("software.amazon.awssdk:glue:2.17.131") {
         exclude("software.amazon.awssdk", "apache-client")
         exclude("software.amazon.awssdk", "netty-nio-client")

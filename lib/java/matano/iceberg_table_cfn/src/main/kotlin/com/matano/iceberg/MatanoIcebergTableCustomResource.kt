@@ -2,15 +2,26 @@ package com.matano.iceberg
 
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.events.CloudFormationCustomResourceEvent
-import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.core.JsonParser
+import com.fasterxml.jackson.databind.DeserializationContext
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.PropertyNamingStrategies
 import com.fasterxml.jackson.databind.annotation.JsonNaming
+import com.fasterxml.jackson.databind.deser.std.StdDeserializer
+import com.fasterxml.jackson.databind.module.SimpleModule
+import com.fasterxml.jackson.databind.node.BooleanNode
+import com.fasterxml.jackson.databind.node.IntNode
+import com.fasterxml.jackson.databind.node.ObjectNode
+import com.fasterxml.jackson.databind.node.TreeTraversingParser
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.apache.iceberg.PartitionSpec
 import org.apache.iceberg.SchemaParser
 import org.apache.iceberg.aws.glue.GlueCatalog
 import org.apache.iceberg.catalog.Namespace
 import org.apache.iceberg.catalog.TableIdentifier
+import java.io.IOException
+
 
 fun main() {
     val stuff = MatanoIcebergTableCustomResource::class.java.classLoader.getResource("ecs_iceberg_schema.json")!!.readText()
@@ -27,28 +38,39 @@ fun main() {
 //    )
 }
 
-// Cloudformation stringifies all values in properties!
-data class IcebergField(
-        val name: String,
-        val type: String,
-        @JsonProperty(access=JsonProperty.Access.READ_ONLY) var id: Int,
-        @JsonProperty(access=JsonProperty.Access.READ_ONLY) val required: Boolean = false
-)
-data class IcebergSchema(
-        @JsonProperty(access=JsonProperty.Access.READ_ONLY) val type: String = "struct",
-        val fields: List<IcebergField>
-) {
-    fun parsed(): IcebergSchema {
-        return IcebergSchema(fields = fields.mapIndexed { idx, f -> f.copy(id=idx) })
-    }
-}
-
 @JsonNaming(PropertyNamingStrategies.UpperCamelCaseStrategy::class)
 data class CfnResponse(
         val PhysicalResourceId: String? = null,
         val Data: Map<String, String>? = null,
         val NoEcho: Boolean = false,
 )
+
+// Cloudformation stringifies all values in properties!
+private fun processCfnNode(path: String, node: JsonNode, parent: ObjectNode) {
+    if (node.isObject) {
+        val fields = node.fields()
+        fields.forEachRemaining { (k,v) -> processCfnNode(k,v, node as ObjectNode) }
+    } else if (node.isArray) {
+        val elems = node.elements()
+        while (elems.hasNext()) {
+            processCfnNode(path, elems.next(), parent)
+        }
+    } else { // value node
+        if (node.isTextual and node.asText().equals("true") || node.asText().equals("false")) {
+            parent.replace(path, BooleanNode.valueOf(node.asText().toBoolean()))
+        } else if (node.isTextual) {
+            val maybeNum = node.asText().toIntOrNull()
+            if (maybeNum != null) {
+                parent.replace(path, IntNode.valueOf(maybeNum))
+            }
+        }
+    }
+}
+
+fun convertCfnSchema(node: JsonNode) {
+    processCfnNode("", node, node as ObjectNode)
+}
+
 
 class MatanoIcebergTableCustomResource {
     val icebergCatalog = createIcebergCatalog()
@@ -68,18 +90,17 @@ class MatanoIcebergTableCustomResource {
         return if (res == null) null else mapper.convertValue(res, Map::class.java)
     }
 
+    private fun readCfnSchema(rawValue: Any): JsonNode {
+        return mapper.valueToTree<JsonNode>(rawValue).apply { convertCfnSchema(this) }
+    }
+
     fun create(event: CloudFormationCustomResourceEvent, context: Context): CfnResponse? {
+        println("1")
         val logSourceName = event.resourceProperties["logSourceName"] as String
+        val schemaRaw = event.resourceProperties["schema"] ?: throw RuntimeException("`schema` cannot be null.")
+        val inputSchema = readCfnSchema(schemaRaw)
+        val icebergSchema = SchemaParser.fromJson(inputSchema)
 
-        val inputSchemaStr: String = if (event.resourceProperties["schema"] != null) {
-            val schemaRaw = mapper.convertValue(event.resourceProperties["schema"], IcebergSchema::class.java)
-            println(mapper.writeValueAsString(schemaRaw))
-            val parsedSchema = schemaRaw.parsed()
-            println(mapper.writeValueAsString(parsedSchema))
-            mapper.writeValueAsString(parsedSchema)
-        } else ECS_ICEBERG_SCHEMA_JSON_TEXT
-
-        val icebergSchema = SchemaParser.fromJson(inputSchemaStr)
         val tableId = TableIdentifier.of(Namespace.of(MATANO_NAMESPACE), logSourceName)
         val partition = PartitionSpec.builderFor(icebergSchema).day(TIMESTAMP_COLUMN_NAME).build()
         val table = icebergCatalog.createTable(tableId, icebergSchema, partition, mapOf(
@@ -92,11 +113,10 @@ class MatanoIcebergTableCustomResource {
     fun update(event: CloudFormationCustomResourceEvent, context: Context): CfnResponse? {
         println("updating")
         val logSourceName = event.resourceProperties["logSourceName"] as String
-        val schemaRaw = mapper.convertValue(event.resourceProperties["schema"], IcebergSchema::class.java)
-        println(mapper.writeValueAsString(schemaRaw))
-        val parsedSchema = schemaRaw.parsed()
-        println(mapper.writeValueAsString(parsedSchema))
-        val requestIcebergSchema = SchemaParser.fromJson(mapper.writeValueAsString(parsedSchema))
+        val schemaRaw = event.resourceProperties["schema"] ?: throw RuntimeException("`schema` cannot be null.")
+        val inputSchema = readCfnSchema(schemaRaw)
+        val requestIcebergSchema = SchemaParser.fromJson(inputSchema)
+
         val tableId = TableIdentifier.of(Namespace.of(MATANO_NAMESPACE), logSourceName)
         val table = icebergCatalog.loadTable(tableId)
         val updateSchemaReq = table.updateSchema()
@@ -122,7 +142,6 @@ class MatanoIcebergTableCustomResource {
     }
 
     companion object {
-        private val ECS_ICEBERG_SCHEMA_JSON_TEXT = this::class.java.classLoader.getResource("ecs_iceberg_schema.json")!!.readText()
         private const val MATANO_NAMESPACE = "matano"
         private const val TIMESTAMP_COLUMN_NAME = "ts"
         val icebergProperties = mapOf(
