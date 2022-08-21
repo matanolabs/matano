@@ -94,21 +94,6 @@ async fn main() -> Result<(), LambdaError> {
 //     ret
 // }
 
-#[derive(Debug, Clone)]
-pub(crate) struct MyConfig {
-    schema: Schema,
-    metadata: Arc<FileMetadata>,
-}
-
-impl MyConfig {
-    fn new(schema: Schema, metadata: FileMetadata) -> MyConfig {
-        MyConfig {
-            schema,
-            metadata: Arc::new(metadata),
-        }
-    }
-}
-
 pub(crate) async fn my_handler(event: SqsEvent, _ctx: LambdaContext) -> Result<()> {
     info!("Request: {:?}", event);
 
@@ -204,32 +189,30 @@ pub(crate) async fn my_handler(event: SqsEvent, _ctx: LambdaContext) -> Result<(
                 let chunks_ref = chunks_ref.clone();
                 let pool = pool_ref.clone();
 
-                async move {
-                    // the content here is CPU-bounded. It should run on a dedicated thread pool
-                    pool.execute(move || {
-                        let st1 = Instant::now();
-                        let mut decompressed = Block::new(0, vec![]);
+                // the content here is CPU-bounded. It should run on a dedicated thread pool
+                pool.execute(move || {
+                    let st1 = Instant::now();
+                    let mut decompressed = Block::new(0, vec![]);
 
-                        decompress_block(&mut block, &mut decompressed, metadata.compression)
-                            .unwrap();
+                    decompress_block(&mut block, &mut decompressed, metadata.compression).unwrap();
 
-                        let chunk = deserialize(
-                            &decompressed,
-                            &schema.fields,
-                            &metadata.record.fields,
-                            &projection,
-                        )
-                        .unwrap();
+                    let chunk = deserialize(
+                        &decompressed,
+                        &schema.fields,
+                        &metadata.record.fields,
+                        &projection,
+                    )
+                    .unwrap();
 
-                        let mut chunks = chunks_ref.lock().unwrap();
-                        chunks.push(chunk);
-                        println!(
-                            "$$$$$$$$$$$$$$$$$$$$$$$$$$$$  THREAD Call took {:.2?}",
-                            st1.elapsed()
-                        );
-                        ()
-                    });
-                }
+                    let mut chunks = chunks_ref.lock().unwrap();
+                    chunks.push(chunk);
+                    println!(
+                        "$$$$$$$$$$$$$$$$$$$$$$$$$$$$  THREAD Call took {:.2?}",
+                        st1.elapsed()
+                    );
+                    ()
+                });
+                async {}
             });
 
             fut.await;
@@ -242,8 +225,7 @@ pub(crate) async fn my_handler(event: SqsEvent, _ctx: LambdaContext) -> Result<(
     let pool = pool_ref.clone();
     pool.join();
 
-    let chunks_ref =
-        Arc::try_unwrap(chunks_ref).map_err(|e| anyhow!("fail get rowgroups"))?;
+    let chunks_ref = Arc::try_unwrap(chunks_ref).map_err(|e| anyhow!("fail get rowgroups"))?;
     let chunks = Mutex::into_inner(chunks_ref)?;
     dbg!(chunks.len());
 
@@ -275,7 +257,12 @@ pub(crate) async fn my_handler(event: SqsEvent, _ctx: LambdaContext) -> Result<(
     let key_prefix = std::env::var("OUT_KEY_PREFIX")?;
     // lake/TABLE_NAME/data/partition_day=2022-07-05/<file>.parquet
     let table_name = log_source;
-    let key = format!("{}/{}/data/{}.parquet", key_prefix, table_name, Uuid::new_v4());
+    let key = format!(
+        "{}/{}/data/{}.parquet",
+        key_prefix,
+        table_name,
+        Uuid::new_v4()
+    );
     println!("Writing to: {}", key);
 
     println!("Starting upload...");
