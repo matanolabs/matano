@@ -103,8 +103,6 @@ export class DPMainStack extends MatanoStack {
     //   },
     //   environment: {
     //     RAW_EVENTS_BUCKET_NAME: props.rawEventsBucket.bucket.bucketName,
-    //     KAFKAJS_NO_PARTITIONER_WARNING: "1",
-    //     // BOOTSTRAP_ADDRESS: kafkaCluster.bootstrapAddress,
     //   },
     //   timeout: cdk.Duration.seconds(30),
     //   initialPolicy: [
@@ -130,8 +128,6 @@ export class DPMainStack extends MatanoStack {
     // //   },
     // //   environment: {
     // //     RAW_EVENTS_BUCKET_NAME: props.rawEventsBucket.bucket.bucketName,
-    // //     KAFKAJS_NO_PARTITIONER_WARNING: "1",
-    // //     // BOOTSTRAP_ADDRESS: kafkaCluster.bootstrapAddress,
     // //   },
     // //   timeout: cdk.Duration.seconds(30),
     // //   initialPolicy: [

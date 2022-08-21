@@ -1,11 +1,5 @@
 aws_account: "946413832404"
 aws_region: "us-west-2"
 
-kafka:
-    cluster_type: msk
-    # cluster_type: self-managed
-    # bootstrap_servers: 
-    #     - present-tadpole-14955-us1-kafka.upstash.io:9092
-    # sasl_scram_secret_arn: arn:aws:secretsmanager:us-west-2:903370141120:secret:apptrail-security-lake-test-kafka-secret-FCNzLo
 vpc:
     id: vpc-05175918865d89771 # vpc-0ea06dd2385eeb53c

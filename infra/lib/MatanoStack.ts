@@ -32,14 +32,8 @@ export function tagResources(
 
 export interface MatanoConfiguration {
 }
-type MatanoKafkaConfig = {
-  cluster_type: "msk" | "msk-serverless";
-} | {
-  cluster_type: "self-managed";
-  bootstrap_servers: string[];
-  sasl_scram_secret_arn: string;
-}
-export type MatanoConfig = MatanoConfiguration & {kafka?: MatanoKafkaConfig};
+
+export type MatanoConfig = MatanoConfiguration;
 export class MatanoConfiguration {
   static of(scope: Construct) {
     const stack = (scope instanceof cdk.Stack ? scope : cdk.Stack.of(scope)) as MatanoStack;

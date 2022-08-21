@@ -11,9 +11,6 @@ const sampleMatanoConfigYml = `# Use this file for Matano configuration.
 # aws_account: "12345678901" # Specify the AWS account to deploy to.
 # aws_region: "us-east-1" # Specify the AWS region to deploy to.
 
-kafka:
-  cluster_type: "msk" # Specify the Kafka cluster type to use ("msk" | "serverless").
-
 # vpc:
 #   id: vpc-0ea06dd2385eeb53c # Specify the VPC id to use, will use the default VPC if not specified.
 `;
