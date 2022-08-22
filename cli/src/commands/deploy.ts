@@ -68,9 +68,6 @@ export default class Deploy extends BaseCommand {
     }
     if (process.env.DEBUG) cdkArgs.push(`-vvv`);
 
-    this.log(path.resolve(PROJ_ROOT_DIR, "infra"));
-    this.log(path.resolve(PROJ_ROOT_DIR, "infra", "node_modules/.bin/cdk"));
-    
     fse.removeSync(path.resolve(PROJ_ROOT_DIR, "infra", "cdk.out"));
     const subprocess = execa(path.resolve(PROJ_ROOT_DIR, "infra", "node_modules/.bin/cdk"), cdkArgs, {
       cwd: path.resolve(PROJ_ROOT_DIR, "infra"),

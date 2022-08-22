@@ -1,10 +1,12 @@
 import { Command, Flags } from "@oclif/core";
 import { prompt } from "enquirer";
+import path from "path";
 import execa from "execa";
 
 import ora from "ora";
 import BaseCommand from "../base";
 import RefreshContext from "./refresh-context";
+import { PROJ_ROOT_DIR } from "..";
 
 export default class Bootstrap extends BaseCommand {
   static description = "Creates initial resources for Matano deployment.";
@@ -73,7 +75,9 @@ export default class Bootstrap extends BaseCommand {
       cdkArgs.push("--profile", awsProfile);
     }
 
-    const cdkSubprocess = execa("cdk", cdkArgs);
+    const cdkSubprocess = execa(path.resolve(PROJ_ROOT_DIR, "infra", "node_modules/.bin/cdk"), cdkArgs, {
+      cwd: path.resolve(PROJ_ROOT_DIR, "infra"),
+    });
     const refreshContextPromise = RefreshContext.refreshMatanoContext(
       matanoUserDirectory, awsAccountId, awsRegion, awsProfile,
     );
