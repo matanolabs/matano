@@ -6,11 +6,12 @@ import { MatanoStack, MatanoStackProps } from "../lib/MatanoStack";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as sqs from "aws-cdk-lib/aws-sqs";
 import * as s3 from "aws-cdk-lib/aws-s3";
+import * as os from "os";
 
 import * as sns from "aws-cdk-lib/aws-sns";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import { IcebergMetadata } from "../lib/iceberg";
-import { getDirectories, readConfig } from "../lib/utils";
+import { getDirectories, MATANO_USED_RUNTIMES, readConfig } from "../lib/utils";
 import { S3BucketWithNotifications } from "../lib/s3-bucket-notifs";
 import { MatanoLogSource, LogSourceConfig } from "../lib/log-source";
 import { MatanoDetections } from "../lib/detections";
@@ -25,6 +26,7 @@ import { RustFunctionLayer } from '../lib/rust-function-layer';
 import { LayerVersion } from "aws-cdk-lib/aws-lambda";
 import { LakeIngestion } from "../lib/lake-ingestion";
 import { SqsSubscription } from "aws-cdk-lib/aws-sns-subscriptions";
+
 
 interface DPMainStackProps extends MatanoStackProps {
   rawEventsBucket: S3BucketWithNotifications;
@@ -58,14 +60,36 @@ export class DPMainStack extends MatanoStack {
       outputObjectPrefix: "lake",
     });
 
+    const logSources = [];
+    const tempSchemasDir = fs.mkdtempSync(path.join(os.tmpdir(), "matano-schemas") );
+
     for (const logSourceConfig of logSourceConfigs) {
-      new MatanoLogSource(this, `MatanoLogSource${logSourceConfig.name}`, {
+      const logSource = new MatanoLogSource(this, `MatanoLogSource${logSourceConfig.name}`, {
         config: logSourceConfig,
         defaultSourceBucket: props.rawEventsBucket.bucket,
         realtimeTopic: realtimeBucketTopic,
         lakeIngestionLambda: lakeIngestion.lakeIngestionLambda,
       });
+
+      const schemaDir = path.join(tempSchemasDir, logSourceConfig.name);
+      fs.mkdirSync(schemaDir);
+      fs.writeFileSync(path.join(schemaDir, "iceberg_schema.json"), JSON.stringify(logSource.resolvedSchema));
+      logSources.push(logSource);
     }
+
+    const schemasLayer = new lambda.LayerVersion(this, "MatanoSchemasLayer", {
+      compatibleRuntimes: MATANO_USED_RUNTIMES,
+      code: lambda.Code.fromAsset(path.resolve(path.join("../lib/java/matano")), {
+        assetHashType: cdk.AssetHashType.OUTPUT,
+        bundling: {
+          volumes: [
+            { hostPath: tempSchemasDir, containerPath: "/schemas"}
+          ],
+          image: lambda.Runtime.JAVA_11.bundlingImage,
+          command: ["./gradlew", ":scripts:run", "--args", "gen-schemas /schemas",],
+        },
+      }),
+    });
 
     new IcebergMetadata(this, "IcebergMetadata", {
       outputBucket: props.outputEventsBucket,

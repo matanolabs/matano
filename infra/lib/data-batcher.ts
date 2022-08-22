@@ -19,8 +19,8 @@ export class DataBatcher extends Construct {
         this.outputQueue = new sqs.Queue(this, "DataBatcherOutputQueue")
 
         const lambdaFunc = new NodejsFunction(this, "DataBatcherProcessorFunction", {
-            entry: "../lambdas/data-batcher-processor/index.ts",
-            depsLockFilePath: "../lambdas/package-lock.json",
+            entry: "../lib/nodejs/data-batcher-processor/index.ts",
+            depsLockFilePath: "../lib/nodejs/package-lock.json",
             runtime: lambda.Runtime.NODEJS_16_X,
             timeout: cdk.Duration.seconds(10),
             environment: {

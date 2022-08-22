@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as YAML from 'yaml';
+import * as lambda from "aws-cdk-lib/aws-lambda";
 
 export const getDirectories = (source: string) =>
   fs.readdirSync(source, { withFileTypes: true })
@@ -19,3 +20,11 @@ export function readConfig(directory: string, filename: string): Record<string, 
 export function readDetectionConfig(detectionDirectory: string): Record<string, any> {
   return readConfig(detectionDirectory, "detection.yml");
 }
+
+export const MATANO_USED_RUNTIMES = [
+  lambda.Runtime.JAVA_11,
+  lambda.Runtime.PROVIDED,
+  lambda.Runtime.PROVIDED_AL2,
+  lambda.Runtime.PYTHON_3_9,
+  lambda.Runtime.NODEJS_16_X,
+]

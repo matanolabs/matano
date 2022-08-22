@@ -42,6 +42,7 @@ interface MatanoLogSourceProps {
 
 const MATANO_GLUE_DATABASE_NAME = "matano";
 export class MatanoLogSource extends Construct {
+  resolvedSchema: any;
   constructor(scope: Construct, id: string, props: MatanoLogSourceProps) {
     super(scope, id);
 
@@ -54,11 +55,11 @@ export class MatanoLogSource extends Construct {
     //     ? props.defaultSourceBucket
     //     : s3.Bucket.fromBucketName(this, "SourceBucket", s3SourceConfig.bucket_name);
 
-    const resolvedSchema = resolveSchema(schema?.ecs_field_names, schema?.fields);
+    this.resolvedSchema = resolveSchema(schema?.ecs_field_names, schema?.fields);
 
     const matanoIcebergTable = new MatanoIcebergTable(this, "MatanoIcebergTable", {
       logSourceName,
-      schema: resolvedSchema,
+      schema: this.resolvedSchema,
     });
 
     const ingestionDlq = new sqs.Queue(this, "LakeIngestionDLQ", {
