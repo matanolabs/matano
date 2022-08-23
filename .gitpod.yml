@@ -8,11 +8,15 @@ tasks:
   - name: cli
     before: cd cli
     init: |
-      npm install -g
+      npm run full-install
   - name: jvm
     before: cd lib/java/matano 
     init: |
       gradle build
+  - name: rust
+    before: cd lib/java/rust
+    init: |
+      cargo build
 image:
   file: .gitpod.Dockerfile
 
