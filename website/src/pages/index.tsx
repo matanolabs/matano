@@ -42,6 +42,38 @@ const Usecases = () => {
   </section>);
 }
 
+export function CtaFooter() {
+  return (
+    <div className="bg-blue-50 oil123 rounded-2xl">
+      <div className="max-w-7xl mx-auto py-12 px-4 sm:px-12 lg:py-24 lg:px-8 lg:flex lg:items-center lg:justify-between">
+        <h2 className="!text-3xl font-bold tracking-tight text-gray-900 sm:!text-4xl lg:!text-5xl sm:tracking-tight">
+          <span className="block mb-2">High scale. Low cost. Zero ops.</span>
+          <span className="block text-blue-600 underline">Pick three.</span>
+          {/* <span className="block text-indigo-600">Get started today.</span> */}
+        </h2>
+        <div className="mt-8 flex lg:mt-0 lg:flex-shrink-0">
+          <div className="inline-flex rounded-md shadow">
+            <a
+              href="/docs"
+              className="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+            >
+              Get started
+            </a>
+          </div>
+          <div className="ml-3 inline-flex rounded-md shadow">
+            <a
+              href="https://github.com/matanolabs/matano" target="_blank" rel="noopener"
+              className="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-blue-600 bg-white hover:bg-blue-50"
+            >
+              Learn more
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Home(): JSX.Element {
   const { siteConfig } = useDocusaurusContext();
   return (
@@ -53,7 +85,7 @@ export default function Home(): JSX.Element {
         <div className='flex-1 flex'>
           <HomepageHeader />
         </div> 
-        <main className="flex flex-col items-center pb-28">
+        <main className="flex flex-col items-center pb-16">
           <div className="rounded-xl sm:rounded-2xl mx-4 sm:mx-16 shadow-xl sm:shadow-2xl !shadow-blue-400 -mt-8 sm:-mt-16">
             <picture>
               <source type="image/webp" srcSet={diagramWebp}/>
@@ -62,6 +94,9 @@ export default function Home(): JSX.Element {
             </picture>
           </div>
           <HomepageFeatures />
+          <section className="pt-20 px-12" style={{ width: "100%" }}>
+            <CtaFooter />
+          </section>
           {/* <Usecases /> */}
         </main>
     </Layout>
