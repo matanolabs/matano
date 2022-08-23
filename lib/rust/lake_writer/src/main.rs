@@ -1,6 +1,5 @@
 use async_compat::CompatExt;
 use aws_sdk_s3::types::ByteStream;
-use concurrent_queue::ConcurrentQueue;
 use futures::future::join_all;
 use serde::{Deserialize, Serialize};
 use shared::*;
@@ -168,7 +167,6 @@ pub(crate) async fn my_handler(event: SqsEvent, _ctx: LambdaContext) -> Result<(
         let pool_ref = pool_ref.clone();
 
         async move {
-            // let mut schema_holder = schema_holder_ref.lock().unwrap();
             let metadata = read_metadata(reader).await.unwrap();
             let schema = infer_schema(&metadata.record).unwrap();
             let schema_copy = schema.clone();

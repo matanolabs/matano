@@ -36,7 +36,6 @@ class Detection extends Construct {
 }
 
 export interface MatanoDetectionsProps {
-  rawEventsBucket: s3.Bucket;
 }
 
 export class MatanoDetections extends Construct {
@@ -63,7 +62,6 @@ export class MatanoDetections extends Construct {
       layers: [detectionsLayer],
       memorySize: 1800,
       environment: {
-        MATANO_RAW_EVENTS_BUCKET: props.rawEventsBucket.bucketName,
       },
       initialPolicy: [
         new iam.PolicyStatement({actions: ["s3:*"], resources: ["*"]}),

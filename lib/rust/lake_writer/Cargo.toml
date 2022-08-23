@@ -29,8 +29,6 @@ uuid={ version="1.1.2", features = ["v4"]}
 bytes = "1.1.0"
 lazy_static = "1.4.0"
 tokio-stream = { version = "0.1.9", features = ["io-util"] }
-concurrent-queue = "1.2.4"
-rayon = "1.5.3"
 threadpool = "1.8.1"
 async-compat="0.2.1"
 
@@ -43,8 +41,3 @@ async-stream = { version = "0.3.3" } # NEED THIS or parquet2 fails compile
 [patch.crates-io]
 parquet2={git = "https://github.com/jorgecarleitao/parquet2", rev="de6039b", features = ["full"]}
 
-# [patch.'https://github.com/jorgecarleitao/arrow2']
-# parquet2="0.14.0"
-
-# [replace]
-# "parquet2:0.16.0" = { version = "0.14.0"}

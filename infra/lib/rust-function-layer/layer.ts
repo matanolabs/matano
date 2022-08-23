@@ -1,6 +1,7 @@
 import { AssetHashType, DockerImage, FileSystem } from 'aws-cdk-lib';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { FunctionOptions, ILayerVersion, LayerVersion, Runtime } from 'aws-cdk-lib/aws-lambda';
+import { execSync } from 'child_process';
 import { Construct } from 'constructs';
 import * as crypto from 'crypto';
 import * as path from 'path';
@@ -90,12 +91,12 @@ export class RustFunctionLayer extends Construct {
 
         const rustFunctionLayerScriptsPath = path.resolve(path.join('./lib/rust-function-layer'));
         const lambdasDir = path.resolve(path.join("../lib/rust"));
-        this.image = DockerImage.fromBuild(rustFunctionLayerScriptsPath)
+        this.image = DockerImage.fromBuild(rustFunctionLayerScriptsPath);
         this.layer = new LayerVersion(this, id, {
                 ...props,
                 compatibleArchitectures: [arch],
                 code: lambda.Code.fromAsset(lambdasDir, {
-                    assetHashType: AssetHashType.OUTPUT,
+                    assetHashType: AssetHashType.SOURCE,
                     bundling: {
                         image: this.image,
                         volumes: [
@@ -119,6 +120,15 @@ export class RustFunctionLayer extends Construct {
                                 `rm -rf /asset-output/${packageName}`
                             ].join(" && "),
                         ],
+                        local: {
+                            tryBundle(outputDir, options) {
+                                if (!process.env.MATANO_LOCAL_DEV) return false;
+                                execSync(`bash -c "cargo lambda build --release --target x86_64-unknown-linux-gnu --quiet --color always --package ${packageName}" && cp target/lambda/${packageName}/bootstrap ${outputDir}`, {
+                                    cwd: lambdasDir,
+                                });
+                                return true;
+                            },
+                        }
                     },
                 }),
             });

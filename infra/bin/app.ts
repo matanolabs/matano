@@ -23,6 +23,8 @@ const dpMainStack = new DPMainStack(app, "DPMainStack", {
   env,
   rawEventsBucket: dpCommonStack.rawEventsBucketWithNotifications,
   outputEventsBucket: dpCommonStack.outputEventsBucketWithNotifications,
+  matanoSourcesBucket: dpCommonStack.matanoIngestionBucket,
+  lakeStorageBucket: dpCommonStack.matanoLakeStorageBucket,
 });
 
 tagResources(app, () => ({

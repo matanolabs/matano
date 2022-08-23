@@ -12,9 +12,23 @@ export class DPCommonStack extends MatanoStack {
 
   rawEventsBucketWithNotifications: S3BucketWithNotifications;
   outputEventsBucketWithNotifications: S3BucketWithNotifications;
+  matanoIngestionBucket: S3BucketWithNotifications;
+  matanoLakeStorageBucket: S3BucketWithNotifications;
 
   constructor(scope: Construct, id: string, props: DPCommonStackProps) {
     super(scope, id, props);
+
+    this.matanoIngestionBucket = new S3BucketWithNotifications(this, "MatanoIngestionBucket", {
+    });
+
+    this.matanoLakeStorageBucket = new S3BucketWithNotifications(this, "MatanoLakeStorageBucket", {
+      queueProps: {
+        visibilityTimeout: cdk.Duration.seconds(185),
+      },
+      s3Filters: [
+        { prefix: "lake", suffix: "parquet" },
+      ],
+    });
 
     this.rawEventsBucketWithNotifications = new S3BucketWithNotifications(this, "RawEventsBucket", {
       // bucketName: "matano-raw-events",

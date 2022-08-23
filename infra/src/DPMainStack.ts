@@ -31,6 +31,8 @@ import { SqsSubscription } from "aws-cdk-lib/aws-sns-subscriptions";
 interface DPMainStackProps extends MatanoStackProps {
   rawEventsBucket: S3BucketWithNotifications;
   outputEventsBucket: S3BucketWithNotifications;
+  matanoSourcesBucket: S3BucketWithNotifications;
+  lakeStorageBucket: S3BucketWithNotifications;
 }
 
 export class DPMainStack extends MatanoStack {
@@ -43,7 +45,7 @@ export class DPMainStack extends MatanoStack {
       .map((p) => readConfig(p, "log_source.yml") as LogSourceConfig);
 
     const rawEventsBatcher = new DataBatcher(this, "DataBatcher", {
-      s3Bucket: props.rawEventsBucket,
+      s3Bucket: props.matanoSourcesBucket,
     });
 
     const realtimeBucket = new s3.Bucket(this, "MatanoRealtimeBucket");
@@ -52,11 +54,10 @@ export class DPMainStack extends MatanoStack {
     });
 
     const detections = new MatanoDetections(this, "MatanoDetections", {
-      rawEventsBucket: props.rawEventsBucket.bucket,
     });
 
     const lakeIngestion = new LakeIngestion(this, "LakeIngestion", {
-      outputBucketName: props.outputEventsBucket.bucket.bucketName,
+      outputBucketName: props.lakeStorageBucket.bucket.bucketName,
       outputObjectPrefix: "lake",
     });
 
@@ -66,7 +67,7 @@ export class DPMainStack extends MatanoStack {
     for (const logSourceConfig of logSourceConfigs) {
       const logSource = new MatanoLogSource(this, `MatanoLogSource${logSourceConfig.name}`, {
         config: logSourceConfig,
-        defaultSourceBucket: props.rawEventsBucket.bucket,
+        defaultSourceBucket: props.matanoSourcesBucket.bucket,
         realtimeTopic: realtimeBucketTopic,
         lakeIngestionLambda: lakeIngestion.lakeIngestionLambda,
       });
@@ -92,7 +93,7 @@ export class DPMainStack extends MatanoStack {
     });
 
     new IcebergMetadata(this, "IcebergMetadata", {
-      outputBucket: props.outputEventsBucket,
+      lakeStorageBucket: props.lakeStorageBucket,
     });
 
     // const vrlBindingsPath = path.resolve(path.join("../lambdas/vrl-transform-bindings"));

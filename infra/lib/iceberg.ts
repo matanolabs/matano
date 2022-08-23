@@ -83,7 +83,7 @@ export class IcebergTableProvider extends Construct {
 
 
 interface IcebergMetadataProps {
-  outputBucket: S3BucketWithNotifications;
+  lakeStorageBucket: S3BucketWithNotifications;
 }
 export class IcebergMetadata extends Construct {
   constructor(scope: Construct, id: string, props: IcebergMetadataProps) {
@@ -104,7 +104,7 @@ export class IcebergMetadata extends Construct {
       timeout: cdk.Duration.minutes(3),
       environment: {
         DUPLICATES_DDB_TABLE_NAME: duplicatesTable.tableName,
-        MATANO_ICEBERG_BUCKET: props.outputBucket.bucket.bucketName,
+        MATANO_ICEBERG_BUCKET: props.lakeStorageBucket.bucket.bucketName,
       },
       code: lambda.Code.fromAsset(codePath, {
         assetHashType: cdk.AssetHashType.OUTPUT,
@@ -121,7 +121,7 @@ export class IcebergMetadata extends Construct {
 
     duplicatesTable.grantReadWriteData(lambdaFunction);
 
-    const eventSource = new SqsEventSource(props.outputBucket.queue, {});
+    const eventSource = new SqsEventSource(props.lakeStorageBucket.queue, {});
     lambdaFunction.addEventSource(eventSource);
 
   }

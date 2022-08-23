@@ -34,7 +34,6 @@ export default abstract class BaseCommand extends Command {
       this.error("AWS Account ID and/or AWS region not specified.", {
         suggestions: [
           "Specify AWS account/region in matano.config.yml",
-          "Pass AWS account/region using CLI flags."
         ]
       })
     } else {

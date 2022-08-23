@@ -56,6 +56,10 @@ dependencies {
 }
 
 tasks {
+    withType<AbstractArchiveTask>().configureEach {
+        isPreserveFileTimestamps = false
+        isReproducibleFileOrder = true
+    }
     withType<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar> {
 //        minimize {
 //            exclude(dependency("org.slf4j:.*:.*"))
@@ -67,22 +71,19 @@ tasks {
     }
 }
 
+val releaseZip by tasks.registering(Zip::class) {
+    dependsOn("shadowJar")
+    val dDir = if (File("/asset-output").exists()) "/asset-output" else "${project.buildDir}/libs"
+    archiveFileName.set("output.zip")
+    destinationDirectory.set(file(dDir))
+    from("${project.buildDir}/libs/output.jar")
+    into("lib")
+}
+
 tasks.register("release") {
     inputs.files("${project.projectDir}/src")
     outputs.files(project.buildDir)
-    dependsOn("shadowJar")
-    if (File("/asset-output").exists()) {
-        // val jarfile = File("${project.buildDir}/libs/output.jar")
-//        archiveFileName.set("output.zip")
-//        destinationDirectory.set(File("/asset-output"))
-
-        // from(layout.buildDirectory.dir("toArchive"))
-        // zipTo(File("/asset-output/output.zip"), File("${project.buildDir}/libs"))
-        copy {
-            from("${project.buildDir}/libs/output.jar")
-            into("/asset-output")
-        }
-    }
+    dependsOn(releaseZip)
 }
 
 sourceSets.main {
