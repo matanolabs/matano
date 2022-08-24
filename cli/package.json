@@ -25,6 +25,7 @@
     "@oclif/plugin-autocomplete": "*",
     "@oclif/plugin-help": "^5",
     "@oclif/plugin-plugins": "^2.0.1",
+    "ansi-styles": "^5",
     "aws-cdk": "^2.28",
     "aws-sdk": "^2.1093",
     "chalk": "^4",
@@ -68,7 +69,7 @@
   "scripts": {
     "clean": "rm -rf dist && rm -rf node_modules",
     "full-install": "npm ci && npm run build && npm uninstall -g matano && npm install -g .",
-    "build": "rm -rf dist && tsc -b",
+    "build": "tsc",
     "lint": "eslint . --ext .ts --config .eslintrc",
     "postpack": "shx rm -f oclif.manifest.json",
     "posttest": "npm run lint",

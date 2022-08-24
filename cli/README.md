@@ -1,10 +1,10 @@
 ## Commands
 <!-- commands -->
 * [`matano autocomplete [SHELL]`](#matano-autocomplete-shell)
-* [`matano bootstrap`](#matano-bootstrap)
 * [`matano deploy`](#matano-deploy)
 * [`matano generate:matano-dir DIRECTORY-NAME`](#matano-generatematano-dir-directory-name)
 * [`matano help [COMMAND]`](#matano-help-command)
+* [`matano init`](#matano-init)
 * [`matano refresh-context`](#matano-refresh-context)
 
 ## `matano autocomplete [SHELL]`
@@ -35,31 +35,6 @@ EXAMPLES
 ```
 
 _See code: [@oclif/plugin-autocomplete](https://github.com/oclif/plugin-autocomplete/blob/v1.3.0/src/commands/autocomplete/index.ts)_
-
-## `matano bootstrap`
-
-Creates initial resources for Matano deployment.
-
-```
-USAGE
-  $ matano bootstrap [-p <value>] [--user-directory <value>]
-
-FLAGS
-  -p, --profile=<value>     AWS Profile to use for credentials.
-  --user-directory=<value>  Matano user directory to use.
-
-DESCRIPTION
-  Creates initial resources for Matano deployment.
-
-EXAMPLES
-  $ matano bootstrap
-
-  $ matano bootstrap --profile prod
-
-  $ matano bootstrap --profile prod --user-directory my-matano-directory
-```
-
-_See code: [dist/commands/bootstrap.ts](https://github.com/matanolabs/matano/blob/main/cli/src/commands/bootstrap.ts)_
 
 ## `matano deploy`
 
@@ -129,6 +104,28 @@ DESCRIPTION
 ```
 
 _See code: [@oclif/plugin-help](https://github.com/oclif/plugin-help/blob/v5.1.12/src/commands/help.ts)_
+
+## `matano init`
+
+Wizard to get started with Matano. Creates resources, initializes your account, and deploys Matano.
+
+```
+USAGE
+  $ matano init [-p <value>]
+
+FLAGS
+  -p, --profile=<value>  AWS Profile to use for credentials.
+
+DESCRIPTION
+  Wizard to get started with Matano. Creates resources, initializes your account, and deploys Matano.
+
+EXAMPLES
+  $ matano init
+
+  $ matano init --profile prod
+```
+
+_See code: [dist/commands/init.ts](https://github.com/matanolabs/matano/blob/main/cli/src/commands/init.ts)_
 
 ## `matano refresh-context`
 

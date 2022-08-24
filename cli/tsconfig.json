@@ -10,6 +10,7 @@
     "lib": [
       "es2015"
     ],
+    "typeRoots": ["./node_modules/@types",],
     "esModuleInterop": true
   },
   "include": [

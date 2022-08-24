@@ -40,20 +40,12 @@ export default class Deploy extends BaseCommand {
     }),
   };
 
-  async run(): Promise<void> {
-    const { args, flags } = await this.parse(Deploy);
-
-    const { profile: awsProfile } = flags;
-    const matanoUserDirectory = this.validateGetMatanoDir(flags);
-    const { awsAccountId, awsRegion } = this.validateGetAwsRegionAccount(flags, matanoUserDirectory);
-    const spinner = ora("Deploying Matano...").start();
-
+  static deployMatano(matanoUserDirectory: string, awsProfile: string | undefined, awsAccountId: string, awsRegion: string,) {
     const cdkArgs = ["deploy", "*", "--require-approval", "never"];
     if (awsProfile) {
       cdkArgs.push("--profile", awsProfile);
     }
 
-    const matanoConf = readConfig(matanoUserDirectory, "matano.config.yml");
     const matanoContext = JSON.parse(fs.readFileSync(path.resolve(matanoUserDirectory, "matano.context.json"), "utf8"));
 
     const cdkContext: Record<string, any> = {
@@ -76,6 +68,19 @@ export default class Deploy extends BaseCommand {
         MATANO_CDK_REGION: awsRegion,
       },
     });
+
+    return subprocess;
+  }
+
+  async run(): Promise<void> {
+    const { args, flags } = await this.parse(Deploy);
+
+    const { profile: awsProfile } = flags;
+    const matanoUserDirectory = this.validateGetMatanoDir(flags);
+    const { awsAccountId, awsRegion } = this.validateGetAwsRegionAccount(flags, matanoUserDirectory);
+    const spinner = ora("Deploying Matano...").start();
+
+    const subprocess = Deploy.deployMatano(matanoUserDirectory, awsProfile, awsAccountId, awsRegion)
 
     subprocess.stdout?.pipe(process.stdout);
     subprocess.stderr?.pipe(process.stdout);

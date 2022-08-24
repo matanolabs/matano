@@ -3,7 +3,6 @@ sidebar_position: 2
 title: Installation
 ---
 
-
 Matano always runs in your AWS account. You use the Matano CLI to deploy Matano and manage your installation.
 
 See [Deployment](#) for more on deploying Matano.

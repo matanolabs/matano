@@ -48,10 +48,7 @@ export default class GenerateMatanoDir extends Command {
     }
   ];
 
-  async run(): Promise<void> {
-    const { args, flags } = await this.parse(GenerateMatanoDir);
-    const dirName = args["directory-name"];
-
+  static generateMatanoDirectory(dirName: string) {
     fs.mkdirSync(path.resolve(dirName), { recursive: true });
     fs.writeFileSync(path.join(dirName, "matano.config.yml" ), sampleMatanoConfigYml);
     fs.mkdirSync(path.join(dirName, "detections/my_detection"), { recursive: true });
@@ -60,6 +57,13 @@ export default class GenerateMatanoDir extends Command {
     fs.writeFileSync(path.join(dirName, "detections/my_detection/detection.yml"), sampleDetectionYml);
     fs.writeFileSync(path.join(dirName, "detections/my_detection/requirements.txt"), sampleDetectionReqs);
     fs.writeFileSync(path.join(dirName, "log_sources/my_log_source/log_source.yml"), sampleLogSourceYml);
+  }
+
+  async run(): Promise<void> {
+    const { args, flags } = await this.parse(GenerateMatanoDir);
+    const dirName = args["directory-name"];
+
+    GenerateMatanoDir.generateMatanoDirectory(dirName);
 
     this.log(`Generated sample matano directory in ${dirName}.`);
   }
