@@ -16,7 +16,6 @@ interface DetectionProps {
   matanoUserDirectory: string;
   detectionName: string;
   detectionsLayer: lambda.LayerVersion;
-  rawEventsBucket: s3.Bucket;
 }
 
 class Detection extends Construct {
@@ -94,7 +93,6 @@ export class MatanoDetections extends Construct {
       //   detectionName,
       //   detectionsLayer,
       //   matanoUserDirectory: matanoUserDirectory,
-      //   rawEventsBucket: props.rawEventsBucket,
       // });
     }
     detectionFunction.addEnvironment("DETECTION_CONFIGS", JSON.stringify(detectionConfigs));

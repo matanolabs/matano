@@ -19,11 +19,9 @@ fun generateSchemas(args: Array<String>) {
     val dirPath = Path(args[1])
 
     dirPath.toFile().list()!!.forEach { subDirName ->
-        val subpath = dirPath.resolve(subDirName)
-        println(subpath)
+        val subpath = dirPath.resolve(subDirName
         val logSourceName = subDirName
         val icebergSchemaPath = subpath.resolve("iceberg_schema.json")
-        println(icebergSchemaPath)
         val icebergSchema = SchemaParser.fromJson(icebergSchemaPath.readText())
         val avroSchema = AvroSchemaUtil.convert(icebergSchema.asStruct(), logSourceName)
         val avroSchemaPath = subpath.resolve("avro_schema.avsc")

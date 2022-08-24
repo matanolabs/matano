@@ -9,9 +9,6 @@ export const MATANO_DATABASE_NAME = "matano";
 interface DPCommonStackProps extends MatanoStackProps {
 }
 export class DPCommonStack extends MatanoStack {
-
-  rawEventsBucketWithNotifications: S3BucketWithNotifications;
-  outputEventsBucketWithNotifications: S3BucketWithNotifications;
   matanoIngestionBucket: S3BucketWithNotifications;
   matanoLakeStorageBucket: S3BucketWithNotifications;
 
@@ -30,28 +27,11 @@ export class DPCommonStack extends MatanoStack {
       ],
     });
 
-    this.rawEventsBucketWithNotifications = new S3BucketWithNotifications(this, "RawEventsBucket", {
-      // bucketName: "matano-raw-events",
-    });
-
-    this.outputEventsBucketWithNotifications = new S3BucketWithNotifications(this, "OutputEventsBucket", {
-      // bucketName: "matano-output-events",
-      queueProps: {
-        visibilityTimeout: cdk.Duration.seconds(185),
-      },
-      s3Filters: [
-        { prefix: "lake", suffix: "parquet" },
-      ]
-    });
-
-    cdk.Tags.of(this.rawEventsBucketWithNotifications.bucket).add("Name", "matano-raw-events");
-    cdk.Tags.of(this.outputEventsBucketWithNotifications.bucket).add("Name", "matano-output-events");
-
     const matanoDatabase = new glue.CfnDatabase(this, "MatanoDatabase", {
       databaseInput: {
         name: MATANO_DATABASE_NAME,
         description: "Glue database storing Matano Iceberg tables.",
-        locationUri: `s3://${this.outputEventsBucketWithNotifications.bucket.bucketName}/lake`,
+        locationUri: `s3://${this.matanoLakeStorageBucket.bucket.bucketName}/lake`,
       },
       catalogId: cdk.Aws.ACCOUNT_ID,
     });

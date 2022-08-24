@@ -91,8 +91,6 @@ export default class Init extends BaseCommand {
       initial: maybeDefaultAwsAccountId ?? undefined,
     });
 
-     //✔️
-
     const hasExistingMatanoDirectory = await new Confirm({
       name: 'shouldCreateMatanoDirectory',
       message: 'Do you have an existing matano directory?',

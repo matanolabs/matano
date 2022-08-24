@@ -21,8 +21,6 @@ const dpCommonStack = new DPCommonStack(app, "DPCommonStack", {
 const dpMainStack = new DPMainStack(app, "DPMainStack", {
   stackName: "MatanoDPMainStack",
   env,
-  rawEventsBucket: dpCommonStack.rawEventsBucketWithNotifications,
-  outputEventsBucket: dpCommonStack.outputEventsBucketWithNotifications,
   matanoSourcesBucket: dpCommonStack.matanoIngestionBucket,
   lakeStorageBucket: dpCommonStack.matanoLakeStorageBucket,
 });

@@ -29,8 +29,6 @@ import { SqsSubscription } from "aws-cdk-lib/aws-sns-subscriptions";
 
 
 interface DPMainStackProps extends MatanoStackProps {
-  rawEventsBucket: S3BucketWithNotifications;
-  outputEventsBucket: S3BucketWithNotifications;
   matanoSourcesBucket: S3BucketWithNotifications;
   lakeStorageBucket: S3BucketWithNotifications;
 }
@@ -44,7 +42,7 @@ export class DPMainStack extends MatanoStack {
       .map((d) => path.join(logSourcesDirectory, d))
       .map((p) => readConfig(p, "log_source.yml") as LogSourceConfig);
 
-    const rawEventsBatcher = new DataBatcher(this, "DataBatcher", {
+    const rawDataBatcher = new DataBatcher(this, "DataBatcher", {
       s3Bucket: props.matanoSourcesBucket,
     });
 
@@ -127,7 +125,6 @@ export class DPMainStack extends MatanoStack {
     //     externalModules: ["aws-sdk", "@matano/vrl-transform-bindings"],
     //   },
     //   environment: {
-    //     RAW_EVENTS_BUCKET_NAME: props.rawEventsBucket.bucket.bucketName,
     //   },
     //   timeout: cdk.Duration.seconds(30),
     //   initialPolicy: [
@@ -152,7 +149,6 @@ export class DPMainStack extends MatanoStack {
     // //     externalModules: ["aws-sdk", "@matano/vrl-transform-bindings"],
     // //   },
     // //   environment: {
-    // //     RAW_EVENTS_BUCKET_NAME: props.rawEventsBucket.bucket.bucketName,
     // //   },
     // //   timeout: cdk.Duration.seconds(30),
     // //   initialPolicy: [
@@ -203,7 +199,6 @@ export class DPMainStack extends MatanoStack {
     //     externalModules: ["aws-sdk", "@matano/vrl-transform-bindings"],
     //   },
     //   environment: {
-    //     RAW_EVENTS_BUCKET_NAME: props.rawEventsBucket.bucket.bucketName,
     //     KAFKAJS_NO_PARTITIONER_WARNING: "1",
     //     // BOOTSTRAP_ADDRESS: kafkaCluster.bootstrapAddress,
     //   },
@@ -215,11 +210,5 @@ export class DPMainStack extends MatanoStack {
     //     }),
     //   ],
     // });
-    // forwarderLambda.addEventSource(
-    //   new SqsEventSource(props.rawEventsBucket.queue, {
-    //     batchSize: 100,
-    //     maxBatchingWindow: cdk.Duration.seconds(1),
-    //   })
-    // );
   }
 }
