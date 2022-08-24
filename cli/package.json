@@ -34,6 +34,7 @@
     "fs-extra": "^10.1.0",
     "ora": "^4",
     "promptly": "^3.2.0",
+    "proxy-agent": "^5.0.0",
     "yaml": "^2.1.1"
   },
   "devDependencies": {

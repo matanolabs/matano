@@ -51,17 +51,19 @@ export default class RefreshContext extends BaseCommand {
 
     // Needed to make SSO creds loading work.
     process.env.AWS_SDK_LOAD_CONFIG = "1";
-    const defaultProviders = [
-      () => new AWS.EnvironmentCredentials("AWS"),
-      () => new AWS.EnvironmentCredentials("AMAZON"),
-      () => new AWS.SsoCredentials({ profile: awsProfile }),
-      () => new AWS.SharedIniFileCredentials({ profile: awsProfile }),
-      () => new AWS.ECSCredentials(),
-      () => new AWS.ProcessCredentials({ profile: awsProfile }),
-      () => new AWS.EC2MetadataCredentials(),
-    ];
+    // const defaultProviders = [
+    //   () => new AWS.EnvironmentCredentials("AWS"),
+    //   () => new AWS.EnvironmentCredentials("AMAZON"),
+    //   () => new AWS.SsoCredentials({ profile: awsProfile }),
+    //   () => new AWS.SharedIniFileCredentials({ profile: awsProfile }),
+    //   () => new AWS.ECSCredentials(),
+    //   () => new AWS.ProcessCredentials({ profile: awsProfile }),
+    //   () => new AWS.EC2MetadataCredentials(),
+    // ];
 
-    const sdkProvider = new SdkProvider(new AWS.CredentialProviderChain(defaultProviders), awsRegion);
+    // const sdkProvider = new SdkProvider(new AWS.CredentialProviderChain(defaultProviders), awsRegion);
+
+    const sdkProvider = await SdkProvider.withAwsCliCompatibleDefaults({ profile: awsProfile, });
 
     const vpcNetworkContextProviderPlugin = new VpcNetworkContextProviderPlugin(sdkProvider);
 

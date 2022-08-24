@@ -57,7 +57,7 @@ export default class Init extends BaseCommand {
       type: "input",
       name: "awsRegion",
       message: () => chalk.white("Which AWS Region to deploy to?"),
-      initial: process.env.AWS_DEFAULT_REGION ??  "us-east-1" ?? undefined,
+      initial: process.env.AWS_DEFAULT_REGION ?? undefined,
     });
 
     const getAwsAcctId = async (profile?: string) => {
@@ -88,7 +88,7 @@ export default class Init extends BaseCommand {
         return value.length == 12 && !!+value || "Invalid AWS account ID."
       },
       message: "What is the AWS Account ID to deploy to?",
-      initial: maybeDefaultAwsAccountId ?? "123456789012" ?? undefined,
+      initial: maybeDefaultAwsAccountId ?? undefined,
     });
 
      //✔️
