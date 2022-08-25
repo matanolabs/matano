@@ -38,4 +38,31 @@ ingest:
 ```
 
 If you are bringing your own bucket, you need to ensure that you have correctly set up permissions on the bucket for Matano to be able to access it.
- 
+
+## Expanding records
+
+When you send data to Matano, you need to communicate how Matano should split the data into individual records. Matano assumes your data is line delimited by default so if you are using a line delimited format like JSON Lines or CSV, Matano will automatically split your data and you do not need to provide any additional configuration.
+
+If you data is not line delimited, you must tell Matano how to expand your data into records using a VRL expression. Provide the VRL expression under the `ingest.expand_records_from_payload` key in your `log_source.yml`, as follows:
+
+```yml
+ingest:
+    expand_records_from_payload: "parse_json!(.__raw).Records"
+```
+
+Your VRL expression will receive the raw payload as `__raw` and must return an array of records. 
+
+For example, if your data is a JSON document with following format:
+
+```json
+{
+    "Data": [
+        { "name": "john" }
+    ]
+}
+```
+You would use the following VRL expression to expand your data:
+
+```
+parse_json!(.__raw).Data
+```
