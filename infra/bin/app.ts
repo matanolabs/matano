@@ -23,6 +23,8 @@ const dpMainStack = new DPMainStack(app, "DPMainStack", {
   env,
   matanoSourcesBucket: dpCommonStack.matanoIngestionBucket,
   lakeStorageBucket: dpCommonStack.matanoLakeStorageBucket,
+  realtimeBucket: dpCommonStack.realtimeBucket,
+  realtimeBucketTopic: dpCommonStack.realtimeBucketTopic,
 });
 
 tagResources(app, () => ({

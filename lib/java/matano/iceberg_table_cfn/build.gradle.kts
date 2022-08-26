@@ -1,5 +1,6 @@
 import org.gradle.kotlin.dsl.support.zipTo
 import java.nio.file.Paths
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 plugins {
     application
@@ -56,11 +57,7 @@ dependencies {
 }
 
 tasks {
-    withType<AbstractArchiveTask>().configureEach {
-        isPreserveFileTimestamps = false
-        isReproducibleFileOrder = true
-    }
-    withType<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar> {
+    withType<ShadowJar> {
 //        minimize {
 //            exclude(dependency("org.slf4j:.*:.*"))
 //            exclude(dependency("org.apache.logging.log4j:.*:.*"))
@@ -71,19 +68,16 @@ tasks {
     }
 }
 
-val releaseZip by tasks.registering(Zip::class) {
-    dependsOn("shadowJar")
-    val dDir = if (File("/asset-output").exists()) "/asset-output" else "${project.buildDir}/libs"
-    archiveFileName.set("output.zip")
-    destinationDirectory.set(file(dDir))
-    from("${project.buildDir}/libs/output.jar")
-    into("lib")
-}
-
 tasks.register("release") {
     inputs.files("${project.projectDir}/src")
     outputs.files(project.buildDir)
-    dependsOn(releaseZip)
+    dependsOn("shadowJar")
+    if (File("/asset-output").exists()) {
+        copy {
+            from("${project.buildDir}/libs/output.jar")
+            into("/asset-output")
+        }
+    }
 }
 
 sourceSets.main {

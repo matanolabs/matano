@@ -1,6 +1,3 @@
 [workspace]
-members = [
-    "lake_writer",
-    "shared",
-]
-default-members = []
+members = ["transformer", "lake_writer", "shared"]
+default-members = ["transformer"]

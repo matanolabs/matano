@@ -22,15 +22,18 @@ import { execSync } from "child_process";
 import { SecurityGroup, SubnetType } from "aws-cdk-lib/aws-ec2";
 import { Bucket } from "aws-cdk-lib/aws-s3";
 import { DataBatcher } from "../lib/data-batcher";
-import { RustFunctionLayer } from '../lib/rust-function-layer';
+import { RustFunctionLayer } from "../lib/rust-function-layer";
 import { LayerVersion } from "aws-cdk-lib/aws-lambda";
 import { LakeIngestion } from "../lib/lake-ingestion";
-import { SqsSubscription } from "aws-cdk-lib/aws-sns-subscriptions";
+import { Transformer } from "../lib/transformer";
 
+import { SqsSubscription } from "aws-cdk-lib/aws-sns-subscriptions";
 
 interface DPMainStackProps extends MatanoStackProps {
   matanoSourcesBucket: S3BucketWithNotifications;
   lakeStorageBucket: S3BucketWithNotifications;
+  realtimeBucket: Bucket;
+  realtimeBucketTopic: sns.Topic;
 }
 
 export class DPMainStack extends MatanoStack {
@@ -41,32 +44,33 @@ export class DPMainStack extends MatanoStack {
     const logSourceConfigs = getDirectories(logSourcesDirectory)
       .map((d) => path.join(logSourcesDirectory, d))
       .map((p) => readConfig(p, "log_source.yml") as LogSourceConfig);
+    const logSourcesConfigurationPath = path.resolve(path.join("../lib/nodejs/log_sources_configuration.json"));
+    fs.writeFileSync(logSourcesConfigurationPath, JSON.stringify(logSourceConfigs, null, 2));
 
     const rawDataBatcher = new DataBatcher(this, "DataBatcher", {
       s3Bucket: props.matanoSourcesBucket,
     });
 
-    const realtimeBucket = new s3.Bucket(this, "MatanoRealtimeBucket");
-    const realtimeBucketTopic = new sns.Topic(this, "MatanoRealtimeBucketNotifications", {
-      displayName: "MatanoRealtimeBucketNotifications"
-    });
-
-    const detections = new MatanoDetections(this, "MatanoDetections", {
-    });
+    const detections = new MatanoDetections(this, "MatanoDetections", {});
 
     const lakeIngestion = new LakeIngestion(this, "LakeIngestion", {
       outputBucketName: props.lakeStorageBucket.bucket.bucketName,
       outputObjectPrefix: "lake",
     });
 
+    const transformer = new Transformer(this, "Transformer", {
+      realtimeBucketName: props.realtimeBucket.bucketName,
+      logSourcesConfigurationPath,
+    });
+
     const logSources = [];
-    const tempSchemasDir = fs.mkdtempSync(path.join(os.tmpdir(), "matano-schemas") );
+    const tempSchemasDir = fs.mkdtempSync(path.join(os.tmpdir(), "matano-schemas"));
 
     for (const logSourceConfig of logSourceConfigs) {
       const logSource = new MatanoLogSource(this, `MatanoLogSource${logSourceConfig.name}`, {
         config: logSourceConfig,
         defaultSourceBucket: props.matanoSourcesBucket.bucket,
-        realtimeTopic: realtimeBucketTopic,
+        realtimeTopic: props.realtimeBucketTopic,
         lakeIngestionLambda: lakeIngestion.lakeIngestionLambda,
       });
 
@@ -79,13 +83,11 @@ export class DPMainStack extends MatanoStack {
     const schemasLayer = new lambda.LayerVersion(this, "MatanoSchemasLayer", {
       compatibleRuntimes: MATANO_USED_RUNTIMES,
       code: lambda.Code.fromAsset(path.resolve(path.join("../lib/java/matano")), {
-        assetHashType: cdk.AssetHashType.OUTPUT,
+        assetHashType: cdk.AssetHashType.SOURCE,
         bundling: {
-          volumes: [
-            { hostPath: tempSchemasDir, containerPath: "/schemas"}
-          ],
+          volumes: [{ hostPath: tempSchemasDir, containerPath: "/schemas" }],
           image: lambda.Runtime.JAVA_11.bundlingImage,
-          command: ["./gradlew", ":scripts:run", "--args", "gen-schemas /schemas",],
+          command: ["./gradlew", ":scripts:run", "--args", "gen-schemas /schemas"],
         },
       }),
     });
@@ -94,74 +96,6 @@ export class DPMainStack extends MatanoStack {
       lakeStorageBucket: props.lakeStorageBucket,
     });
 
-    // const vrlBindingsPath = path.resolve(path.join("../lambdas/vrl-transform-bindings"));
-    // const vrlBindingsLayer = new lambda.LayerVersion(this, "VRLBindingsLayer", {
-    //   code: lambda.Code.fromAsset(vrlBindingsPath, {
-    //     bundling: {
-    //       image: DockerImage.fromBuild(vrlBindingsPath),
-    //       command: [
-    //         "bash",
-    //         "-c",
-    //         "npm install && mkdir -p /asset-output/nodejs/node_modules/@matano/vrl-transform-bindings/ts/ && cp -a ts/* /asset-output/nodejs/node_modules/@matano/vrl-transform-bindings/ts/",
-    //       ],
-    //     },
-    //   }),
-    //   compatibleRuntimes: [lambda.Runtime.NODEJS_14_X],
-    //   license: "Apache-2.0",
-    //   description: "A layer for NodeJS bindings to VRL.",
-    // });
-
-    // const transformerLambda = new NodejsFunction(this, "TransformerLambda", {
-    //   functionName: "MatanoTransformerLambdaFunction",
-    //   entry: "../lambdas/vrl-transform/transform.ts",
-    //   depsLockFilePath: "../lambdas/package-lock.json",
-    //   runtime: lambda.Runtime.NODEJS_14_X,
-    //   layers: [vrlBindingsLayer],
-    //   // ...lambdaVpcProps,
-    //   allowPublicSubnet: true,
-    //   bundling: {
-    //     // target: "node14.8",
-    //     // forceDockerBundling: true,
-    //     externalModules: ["aws-sdk", "@matano/vrl-transform-bindings"],
-    //   },
-    //   environment: {
-    //   },
-    //   timeout: cdk.Duration.seconds(30),
-    //   initialPolicy: [
-    //     new iam.PolicyStatement({
-    //       actions: ["secretsmanager:*", "kafka:*", "kafka-cluster:*", "dynamodb:*", "s3:*", "athena:*", "glue:*"],
-    //       resources: ["*"],
-    //     }),
-    //   ],
-    // });
-
-    // // const firehoseWriterLambda = new NodejsFunction(this, "FirehoseWriterLambda", {
-    // //   functionName: "MatanoFirehoseLambdaFunction",
-    // //   entry: "../lambdas/vrl-transform/writer.ts",
-    // //   depsLockFilePath: "../lambdas/package-lock.json",
-    // //   runtime: lambda.Runtime.NODEJS_14_X,
-    // //   layers: [vrlBindingsLayer],
-    // //   // ...lambdaVpcProps,
-    // //   allowPublicSubnet: true,
-    // //   bundling: {
-    // //     // target: "node14.8",
-    // //     // forceDockerBundling: true,
-    // //     externalModules: ["aws-sdk", "@matano/vrl-transform-bindings"],
-    // //   },
-    // //   environment: {
-    // //   },
-    // //   timeout: cdk.Duration.seconds(30),
-    // //   initialPolicy: [
-    // //     new iam.PolicyStatement({
-    // //       actions: ["secretsmanager:*", "kafka:*", "kafka-cluster:*", "dynamodb:*", "s3:*", "athena:*", "glue:*", "firehose:*"],
-    // //       resources: ["*"],
-    // //     }),
-    // //   ],
-    // // });
-
-
-    // const logSourcesConfigurationPath = path.resolve(path.join("../lambdas/log_sources_configuration.json"));
-    // fs.writeFileSync(logSourcesConfigurationPath, JSON.stringify(logSourceConfigs, null, 2));
     // const logSourcesConfigurationLayer = new lambda.LayerVersion(this, "LogSourcesConfigurationLayer", {
     //   code: lambda.Code.fromAsset("../lambdas", {
     //     bundling: {
@@ -171,7 +105,7 @@ export class DPMainStack extends MatanoStack {
     //           containerPath: "/asset-input/log_sources_configuration.json",
     //         },
     //       ],
-    //       image: DockerImage.fromBuild(vrlBindingsPath),
+    //       image: transformer.rustFunctionLayer.image,
     //       command: [
     //         "bash",
     //         "-c",
@@ -180,35 +114,6 @@ export class DPMainStack extends MatanoStack {
     //     },
     //   }),
     //   description: "A layer for Matano Log Source Configurations.",
-    // });
-    // transformerLambda.addLayers(logSourcesConfigurationLayer);
-    // // firehoseWriterLambda.addLayers(logSourcesConfigurationLayer);
-
-
-    // const forwarderLambda = new NodejsFunction(this, "ForwarderLambda", {
-    //   functionName: "MatanoForwarderLambdaFunction",
-    //   entry: "../lambdas/vrl-transform/forward.ts",
-    //   depsLockFilePath: "../lambdas/package-lock.json",
-    //   runtime: lambda.Runtime.NODEJS_14_X,
-    //   layers: [vrlBindingsLayer, logSourcesConfigurationLayer],
-    //   // ...lambdaVpcProps,
-    //   allowPublicSubnet: true,
-    //   bundling: {
-    //     // target: "node14.8",
-    //     // forceDockerBundling: true,
-    //     externalModules: ["aws-sdk", "@matano/vrl-transform-bindings"],
-    //   },
-    //   environment: {
-    //     KAFKAJS_NO_PARTITIONER_WARNING: "1",
-    //     // BOOTSTRAP_ADDRESS: kafkaCluster.bootstrapAddress,
-    //   },
-    //   timeout: cdk.Duration.seconds(30),
-    //   initialPolicy: [
-    //     new iam.PolicyStatement({
-    //       actions: ["secretsmanager:*", "kafka:*", "kafka-cluster:*", "dynamodb:*", "s3:*", "athena:*", "glue:*"],
-    //       resources: ["*"],
-    //     }),
-    //   ],
     // });
   }
 }

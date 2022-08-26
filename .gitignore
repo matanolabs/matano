@@ -6,6 +6,7 @@ node_modules
 dist
 .metals
 .vscode
+**/.DS_Store
 .matano
 lib/scripts
 
