@@ -11,7 +11,7 @@ import styles from 'ansi-styles';
 import ora from "ora";
 import BaseCommand from "../base";
 import RefreshContext from "./refresh-context";
-import { PROJ_ROOT_DIR } from "..";
+import { CFN_OUPUTS_PATH, PROJ_ROOT_DIR } from "..";
 import GenerateMatanoDir from "./generate/matano-dir";
 import Deploy from "./deploy";
 
@@ -30,14 +30,34 @@ export default class Init extends BaseCommand {
     }),
   };
 
+  renderOutputsTable() {
+    const cfnOutputs = JSON.parse(fs.readFileSync(CFN_OUPUTS_PATH).toString());
+    const rows = [];
+    for (const [k,v] of Object.entries(cfnOutputs["MatanoDPCommonStack"])) {
+      let name = undefined;
+      if (k.includes("MatanoLakeStorageBucket") && !k.includes("Queue")) name = "Ingestion Bucket"
+      if (name) {
+        rows.push({ name, value: v })
+      }
+    }
+
+    const columns: CliUx.Table.table.Columns<any> = {
+      // where `.name` is a property of a data object
+      name: {},
+      value: {}
+    }
+    CliUx.Table.table(rows, columns, {
+    });
+  }
+
   async run(): Promise<void> {
     const { args, flags } = await this.parse(Init);
-
     const { profile: awsProfile } = flags;
 
-    this.log(
-      chalk.cyanBright("Welcome to the Matano init wizard. This will get you started with Matano.")
-    );
+    this.log(chalk.dim("━━━ ") + chalk.bold.whiteBright("Matano: Get started Wizard") + chalk.dim(" ━━━") + "\n");
+
+    this.log(chalk.bold.cyanBright("Welcome to the Matano init wizard. This will get you started with Matano."));
+    this.log(chalk.dim("Follow the prompts to get started. You can always change these values later."))
     this.log("");
 
     // const prog = CliUx.ux.progress({
@@ -56,7 +76,7 @@ export default class Init extends BaseCommand {
     const regionPrompt = prompt<any>({
       type: "input",
       name: "awsRegion",
-      message: () => chalk.white("Which AWS Region to deploy to?"),
+      message: () => ("Which AWS Region to deploy to?"),
       initial: process.env.AWS_DEFAULT_REGION ?? undefined,
     });
 
@@ -100,7 +120,7 @@ export default class Init extends BaseCommand {
     let matanoUserDirectory: string;
 
     if (!hasExistingMatanoDirectory) {
-      this.log(chalk.magentaBright("I will generate a Matano directory in the current directory."));
+      this.log(chalk.dim("  I will generate a Matano directory in the current directory."));
       const { directoryName } = await prompt<any>({
         type: "input",
         name: "directoryName",
@@ -117,7 +137,7 @@ export default class Init extends BaseCommand {
         message: "What is the path to your existing Matano directory?",
       });
       matanoUserDirectory = directoryPath;
-      this.log(chalk.green('✔') + ` Using Matano directory at ${matanoUserDirectory}.`);
+      this.log(chalk.dim('✔') + chalk.dim(` Using Matano directory at ${matanoUserDirectory}.`));
     }
 
     const spinner1 = ora("Initializing AWS environment... (1/3)").start();
@@ -159,6 +179,9 @@ export default class Init extends BaseCommand {
 
     const spinner2 = ora("Now deploying Matano to your AWS account...").start();
     await Deploy.deployMatano(matanoUserDirectory, awsProfile, awsAccountId, awsRegion);
-    spinner2.succeed("Successfully deployed Matano.");
+    spinner2.succeed(chalk.bold.greenBright("Successfully deployed Matano."));
+
+    // this.log("\n" + chalk.yellowBright("· Here are some useful values to get you started:") + "");
+    // this.renderOutputsTable();
   }
 }

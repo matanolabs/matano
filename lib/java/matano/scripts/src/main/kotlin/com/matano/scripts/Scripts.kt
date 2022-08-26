@@ -19,7 +19,7 @@ fun generateSchemas(args: Array<String>) {
     val dirPath = Path(args[1])
 
     dirPath.toFile().list()!!.forEach { subDirName ->
-        val subpath = dirPath.resolve(subDirName
+        val subpath = dirPath.resolve(subDirName)
         val logSourceName = subDirName
         val icebergSchemaPath = subpath.resolve("iceberg_schema.json")
         val icebergSchema = SchemaParser.fromJson(icebergSchemaPath.readText())

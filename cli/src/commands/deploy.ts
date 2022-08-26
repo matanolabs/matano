@@ -7,7 +7,7 @@ import * as fs from "fs";
 import * as fse from "fs-extra"; 
 import path from "path";
 import * as YAML from "yaml";
-import { PROJ_ROOT_DIR } from "..";
+import { CFN_OUPUTS_PATH, PROJ_ROOT_DIR } from "..";
 import { readConfig } from "../util";
 import BaseCommand from "../base";
 
@@ -40,8 +40,8 @@ export default class Deploy extends BaseCommand {
     }),
   };
 
-  static deployMatano(matanoUserDirectory: string, awsProfile: string | undefined, awsAccountId: string, awsRegion: string,) {
-    const cdkArgs = ["deploy", "*", "--require-approval", "never"];
+  static deployMatano(matanoUserDirectory: string, awsProfile: string | undefined, awsAccountId: string, awsRegion: string) {
+    const cdkArgs = ["deploy", "*", "--require-approval", "never", "--outputs-file", CFN_OUPUTS_PATH];
     if (awsProfile) {
       cdkArgs.push("--profile", awsProfile);
     }
