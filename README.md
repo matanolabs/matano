@@ -7,7 +7,7 @@
   <img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=03c989f6-90f5-4982-b002-a48635f10b5d" />
 </div>
 <div align="center">
-   <h1>The open-source security lake platform for AWS.</h1>
+   <h2>The open-source security lake platform for AWS.</h2>
 </div>
 
 <p align="center">  
