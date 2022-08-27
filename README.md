@@ -1,13 +1,11 @@
-<h4 align="center">
-        <a href="https://www.matano.dev/blog/2022/08/11/announcing-matano?utm_source=ghr">🔔 Read our announcement blog post 🔔</a>
-</h4><br>
+<div align="center">    
+   <a href="https://www.matano.dev/blog/2022/08/11/announcing-matano?utm_source=ghr">🔔 Read our announcement blog post 🔔</a>
+</div>     
+<br/>
 
 <div align="center">
-    <a href="https://www.matano.dev"><img src="website/src/assets/cover.svg"></a>
-  <img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=03c989f6-90f5-4982-b002-a48635f10b5d" />
-</div>
-<div align="center">
-   <h2>The open-source security lake platform for AWS.</h2>
+    <a href="https://www.matano.dev"><img src="website/src/assets/cover.png" width=500></a>
+    <h3>The open-source security lake platform for AWS.</h3>
 </div>
 
 <p align="center">  
@@ -103,3 +101,5 @@ Initial deployment takes a few minutes.
 ## License
 
 * [Apache-2.0 License](LICENSE)
+
+<img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=03c989f6-90f5-4982-b002-a48635f10b5d"/>
