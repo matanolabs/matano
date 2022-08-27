@@ -24,6 +24,7 @@ export class Transformer extends Construct {
 
     this.transformerLambda = new lambda.Function(this, "Lambda", {
       code: lambda.Code.fromAsset("./src", {
+        assetHash: cdk.AssetHashType.OUTPUT,
         bundling: {
           volumes: [
             {
