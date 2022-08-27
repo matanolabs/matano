@@ -1,7 +1,7 @@
 name: "coredns"
 
 transform:
-  vrl: |
+  |
     # parse the log event.
     ts = .timestamp
     log, err = parse_regex(.message,r'\[(?P<level>[^]]+)]\s(?P<server_addr>[^:]+):(?P<server_port>\S+)\s+-\s+(?P<id>\S+)\s+"(?P<type>\S+)\s+(?P<class>\S+)\s+(?P<name>\S+)\s+(?P<proto>\S+)\s+(?P<size>\S+)\s+(?P<do>\S+)\s+(?P<bufsize>[^"]+)"\s+(?P<rcode>\S+)\s+(?P<rflags>\S+)\s+(?P<rsize>\S+)\s+(?P<duration>[\d\.]+).*')

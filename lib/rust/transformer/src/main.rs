@@ -308,13 +308,10 @@ async fn read_lines_s3(
     let expand_records_from_payload_expr = LOG_SOURCES_CONFIG.with(|c| {
         let log_sources_config = c.borrow();
 
-        // println!("{:?}, {}", log_sources_config, log_source);
         (*log_sources_config)
             .get(log_source)
             .unwrap()
             .ingest
-            .as_ref()?
-            .s3_source
             .as_ref()?
             .expand_records_from_payload
             .clone()
@@ -397,7 +394,7 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessRe
                 let raw_lines = read_lines_s3(&s3, &item, None).await.unwrap();
 
                 let transformed_lines_as_json = raw_lines
-                    .chunks(200)
+                    .chunks(1000)
                     .filter_map(move |batch| async move {
                         let transformed_batch = async_rayon::spawn(move || {
                             // CPU bound (VRL transforms)
@@ -582,7 +579,7 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessRe
                 ));
 
                 reader
-                    .chunks(200)
+                    .chunks(1000)
                     .for_each(|chunk| {
                         let schema = inferred_avro_schema.clone();
                         let mut writer = writer.borrow_mut();

@@ -20,12 +20,12 @@ pub struct LogSourceConfiguration {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct IngestConfig {
+    pub expand_records_from_payload: Option<String>,
     pub s3_source: Option<S3SourceConfig>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct S3SourceConfig {
-    pub expand_records_from_payload: Option<String>,
 }
 
 #[derive(Debug, Serialize)]

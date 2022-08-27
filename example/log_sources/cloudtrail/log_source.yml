@@ -6,7 +6,7 @@ ingest:
       # bucket_name: my_org_cloudtrail_bucket
       # key_prefix: my_org_cloudtrail_bucket
 transform: # TODO: ts handling... file, source...
-  vrl: |
+  |
     _date, err = to_timestamp(.json.eventTime)
     if err == null {
         .ts = to_unix_timestamp(_date, "milliseconds")

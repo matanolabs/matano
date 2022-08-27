@@ -89,7 +89,7 @@ export const Settings = {
      * Note: this value is only used when `RustFunctionProps.setupLogging`
      * is enabled.
      */
-    MODULE_LOG_LEVEL: 'debug',
+    MODULE_LOG_LEVEL: 'info',
 
     /**
      * A list of features to activate when compiling Rust code.
