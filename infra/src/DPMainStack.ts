@@ -63,6 +63,10 @@ export class DPMainStack extends MatanoStack {
       logSourcesConfigurationPath,
     });
 
+    transformer.transformerLambda.addEventSource(new SqsEventSource(rawDataBatcher.outputQueue, {
+      batchSize: 1,
+    }));
+
     const logSources = [];
     const tempSchemasDir = fs.mkdtempSync(path.join(os.tmpdir(), "matano-schemas"));
 

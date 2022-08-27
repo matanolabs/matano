@@ -27,7 +27,7 @@ subprojects {
             File("/asset-output/placeholder-for-cdk.txt").createNewFile() // Needed for CDK to prevent odd bugs.
             copy {
                 from("${subproject.buildDir}/libs/output.jar")
-                into("/asset-output")
+                into("/asset-output/lib")
             }
         }
     }
