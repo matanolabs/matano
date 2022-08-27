@@ -28,7 +28,9 @@ arrow2 = { git = "https://github.com/jorgecarleitao/arrow2", features = [
   "io_json",
 ] }
 
-apache-avro = { git = "https://github.com/shaeqahmed/avro.git", branch = "master", features = ["zstandard"] }
+apache-avro = { git = "https://github.com/shaeqahmed/avro.git", branch = "master", features = [
+  "zstandard",
+] }
 
 uuid = "1.1.2"
 async-stream = "0.3.3"
@@ -59,6 +61,8 @@ pest = { version = "2.2.1", default-features = false, features = ["std"] }
 pest_derive = { version = "2.2.1", default-features = false, features = [
   "std",
 ] }
+http = "0.2.8"
+flame = "0.2.2"
 
 [features]
 # We could choose to enable any project dependencies marked as `optional = true`
