@@ -3,6 +3,7 @@
 mod models;
 
 use http::{HeaderMap, HeaderValue};
+use tokio::task::spawn_blocking;
 use std::borrow::Borrow;
 use std::cell::RefCell;
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -622,7 +623,7 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessRe
 
                 let inferred_avro_schema = {
                     let head = head.clone();
-                    async_rayon::spawn(move || {
+                    spawn_blocking(move || {
                         // CPU bound (infer schemas)
                         println!(
                             "infer_thread={}",
@@ -658,7 +659,7 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessRe
                         type_to_schema(&unioned_data_type, false, "root".to_string()).unwrap()
                     })
                 }
-                .await;
+                .await.unwrap();
                 println!("Inferred schema, took {:?}", now.elapsed());
 
 
@@ -679,7 +680,7 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessRe
                         let mut writer = writer.borrow_mut();
 
                         async move {
-                            let avro_values = async_rayon::spawn(move || {
+                            let avro_values = spawn_blocking(move || {
                                 // CPU bound (VRL transform)
                                 chunk
                                     // .par_chunks(2000)
@@ -697,7 +698,7 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessRe
                                     })
                                     .collect::<Vec<_>>()
                             })
-                            .await;
+                            .await.unwrap();
 
                             // avro_values
                             writer.extend_from_slice(&avro_values).unwrap(); // IO (well theoretically)
