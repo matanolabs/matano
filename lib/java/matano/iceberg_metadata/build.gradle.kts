@@ -3,7 +3,6 @@ import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 plugins {
     application
     kotlin("jvm") version "1.7.0"
-    id("com.matano.java-common-conventions")
     id("com.github.johnrengelman.shadow") version "7.1.2"
 }
 configurations.all {
@@ -62,17 +61,5 @@ tasks {
 //            exclude(dependency("org.apache.iceberg:iceberg-core:.*"))
 //        }
         archiveFileName.set("output.jar")
-    }
-}
-
-tasks.register("release") {
-    inputs.files("${project.projectDir}/src")
-    outputs.files(project.buildDir)
-    dependsOn("shadowJar")
-    if (File("/asset-output").exists()) {
-        copy {
-            from("${project.buildDir}/libs/output.jar")
-            into("/asset-output")
-        }
     }
 }

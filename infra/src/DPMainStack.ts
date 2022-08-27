@@ -83,7 +83,7 @@ export class DPMainStack extends MatanoStack {
     const schemasLayer = new lambda.LayerVersion(this, "MatanoSchemasLayer", {
       compatibleRuntimes: MATANO_USED_RUNTIMES,
       code: lambda.Code.fromAsset(path.resolve(path.join("../lib/java/matano")), {
-        assetHashType: cdk.AssetHashType.SOURCE,
+        assetHashType: cdk.AssetHashType.OUTPUT,
         bundling: {
           volumes: [{ hostPath: tempSchemasDir, containerPath: "/schemas" }],
           image: lambda.Runtime.JAVA_11.bundlingImage,

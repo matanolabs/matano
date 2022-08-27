@@ -29,6 +29,7 @@ fun generateSchemas(args: Array<String>) {
     }
     val outf = File("/asset-output")
     if (outf.exists()) {
+        outf.deleteRecursively() // TODO: not sure why this is necessary?
         val outPath = outf.toPath().resolve("schemas")
         outPath.toFile().mkdirs()
         dirPath.toFile().copyRecursively(outPath.toFile())

@@ -1,7 +1,6 @@
 plugins {
     application
     kotlin("jvm") version "1.7.0"
-    id("com.matano.java-common-conventions")
 }
 
 configurations.all {

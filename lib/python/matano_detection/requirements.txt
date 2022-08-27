@@ -1,4 +1,3 @@
 boto3~=1.24.13
 jsonlines==3.0.0
-cysimdjson==21.11
 fastavro[zstandard]==1.6.0
