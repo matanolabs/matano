@@ -1,34 +1,33 @@
+<h4 align="center">
+        <a href="https://www.matano.dev/blog/2022/08/11/announcing-matano?utm_source=ghr">🔔 Read our announcement blog post 🔔</a>
+</h4><br>
 
 <div align="center">
-    <a href="https://www.matano.dev"><img src="website/src/assets/cover.png" width="500"></a>
+    <a href="https://www.matano.dev"><img src="website/src/assets/cover.svg"></a>
   <img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=03c989f6-90f5-4982-b002-a48635f10b5d" />
-  <h3>The open-source security lake platform for AWS.</h3>
+</div>
+<div align="center">
+   <h1>The open-source security lake platform for AWS.</h1>
 </div>
 
-<div align="center">
-    <a href="#"><img src="https://img.shields.io/badge/Deploys%20to-AWS-%23FF9900.svg?style=for-the-badge&logo=amazon-aws&logoColor=white&labelColor=232F3E"/></a>
-    <br>
-    <a href="/LICENSE" target="_blank"><img src="https://img.shields.io/github/license/matanolabs/matano?style=flat"/></a>
-    <!-- <img src="https://img.shields.io/github/v/release/matanolabs/matano?style=flat-square"/> -->
-    <a href="https://discord.gg/YSYfHMbfZQ" target="_blank"><img src="https://img.shields.io/discord/996484553290022973?logo=discord&style=flat-square"/></a>
-    <a href="https://twitter.com/intent/follow?screen_name=matanolabs" target="_blank"><img src="https://img.shields.io/twitter/follow/matanolabs?style=social" alt="Twitter Follow"/></a>
-</div>
+<p align="center">  
+        <a href="#"><img src="https://img.shields.io/badge/Deploys%20to-AWS-%23FF9900.svg?style=for-the-badge&logo=amazon-aws&logoColor=white&labelColor=232F3E"/></a>
+        <a href="#"><img src="https://img.shields.io/badge/rust-%23000000.svg?style=for-the-badge&logo=rust&labelColor=gray&logoColor=B1513E"/></a>
+        <br>
+        <a href="/LICENSE" target="_blank"><img src="https://img.shields.io/github/license/matanolabs/matano?style=flat"/></a>
+        <!-- <img src="https://img.shields.io/github/v/release/matanolabs/matano?style=flat-square"/> -->
+            <a href="https://discord.gg/YSYfHMbfZQ" target="_blank"><img src="https://img.shields.io/discord/996484553290022973?logo=discord&style=flat-square"/></a>
+ <!--       <a href="https://discord.gg/YSYfHMbfZQ" target="_blank"><img src="https://img.shields.io/discord/996484553290022973.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2"/></a>    -->
+        <a href="https://twitter.com/intent/follow?screen_name=matanolabs" target="_blank"><img src="https://img.shields.io/twitter/follow/matanolabs?style=social" alt="Twitter Follow"/></a>
+</p>
 
-<div align="center">
-    <h3 align="center">
+<h3 align="center">
         <a href="https://www.matano.dev">Website</a>
         <span> | </span>
         <a href="https://www.matano.dev/docs">Docs</a>
         <span> | </span>
         <a href="https://discord.gg/YSYfHMbfZQ">Community</a>
-    </h3>
-</div>
-
-<div align="center">
-
-### [**🔔 Read our announcement blog post 🔔**](https://www.matano.dev/blog/2022/08/11/announcing-matano?utm_source=ghr)
-
-</div>
+</h3>
 
 ## What is Matano?
 
