@@ -27,6 +27,7 @@ export class DataBatcher extends Construct {
             runtime: lambda.Runtime.NODEJS_16_X,
             timeout: cdk.Duration.seconds(10),
             bundling: {
+                forceDockerBundling: true,
                 commandHooks: {
                     beforeInstall: (_1,_2) => [],
                     beforeBundling: (_1,_2) => [],
