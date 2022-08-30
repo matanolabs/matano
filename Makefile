@@ -14,7 +14,7 @@ build-infra:
 build-cli:
 	cd cli && npm ci && npm run build
 
-synth-assets:
+synth-assets: build-infra
 	cd infra && ./node_modules/aws-cdk/bin/cdk synth \
 		--app "node dist/bin/app.js" \
 		--context matanoUserDirectory=${CURDIR}/example \
