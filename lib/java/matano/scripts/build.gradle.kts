@@ -1,6 +1,10 @@
+import java.nio.file.Paths
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+
 plugins {
     application
     kotlin("jvm") version "1.7.0"
+    id("com.github.johnrengelman.shadow") version "7.1.2"
 }
 
 configurations.all {
@@ -50,4 +54,28 @@ dependencies {
 
 application {
     mainClass.set("com.matano.scripts.ScriptsKt")
+}
+
+tasks {
+    withType<ShadowJar> {
+//        minimize {
+//            exclude(dependency("org.slf4j:.*:.*"))
+//            exclude(dependency("org.apache.logging.log4j:.*:.*"))
+//            exclude(dependency("software.amazon.awssdk:s3:.*"))
+//            exclude(dependency("org.apache.iceberg:iceberg-core:.*"))
+//        }
+        archiveFileName.set("matano-scripts.jar")
+    }
+}
+
+tasks.register("buildJar") {
+    inputs.files("${project.projectDir}/src")
+    outputs.files(project.buildDir)
+    dependsOn("shadowJar")
+    if (File("/asset-output").exists()) {
+        copy {
+            from("${project.buildDir}/libs/matano-scripts.jar")
+            into("/local-assets/matano-java-scripts")
+        }
+    }
 }

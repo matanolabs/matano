@@ -3,7 +3,7 @@ import { Construct } from "constructs";
 import * as sqs from "aws-cdk-lib/aws-sqs";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as lambda from "aws-cdk-lib/aws-lambda";
-import { RustFunctionLayer } from "./rust-function-layer";
+import { RustFunctionCode, RustFunctionLayer } from "./rust-function-layer";
 
 interface LakeIngestionProps {
   outputBucketName: string;
@@ -15,23 +15,15 @@ export class LakeIngestion extends Construct {
   constructor(scope: Construct, id: string, props: LakeIngestionProps) {
     super(scope, id);
 
-    const layer = new RustFunctionLayer(this, "LakeIngestionLambdaLayer", {
-      package: "lake_writer",
-      // Useful so library logs show up in CloudWatch
-      setupLogging: true,
-    });
-
     this.lakeIngestionLambda = new lambda.Function(this, "LakeIngestionLambda", {
-      code: lambda.Code.fromAsset("./src"),
+      code: RustFunctionCode.assetCode({ package: "lake_writer" }),
       handler: "main",
       memorySize: 1800,
       runtime: lambda.Runtime.PROVIDED_AL2,
       environment: {
-        ...layer.environmentVariables,
         OUT_BUCKET_NAME: props.outputBucketName, // "matanodpcommonstack-raweventsbucket024cde12-1x4x1mvqkuk5d",
         OUT_KEY_PREFIX:  props.outputObjectPrefix// "lake" ,
       },
-      layers: [layer.layer],
       timeout: cdk.Duration.seconds(5),
       initialPolicy: [
         new iam.PolicyStatement({

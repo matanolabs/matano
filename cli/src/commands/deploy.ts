@@ -7,9 +7,10 @@ import * as fs from "fs";
 import * as fse from "fs-extra"; 
 import path from "path";
 import * as YAML from "yaml";
-import { CFN_OUPUTS_PATH, PROJ_ROOT_DIR } from "..";
+import { getCdkOutputDir, getCfnOutputsPath, getMatanoCdkApp, isPkg, PROJ_ROOT_DIR } from "..";
 import { readConfig } from "../util";
 import BaseCommand from "../base";
+import { getCdkExecutable, } from "..";
 
 export default class Deploy extends BaseCommand {
   static description = "Deploys matano.";
@@ -41,7 +42,20 @@ export default class Deploy extends BaseCommand {
   };
 
   static deployMatano(matanoUserDirectory: string, awsProfile: string | undefined, awsAccountId: string, awsRegion: string) {
-    const cdkArgs = ["deploy", "*", "--require-approval", "never", "--outputs-file", CFN_OUPUTS_PATH];
+
+    const cfnOutputsPath = getCfnOutputsPath();
+    const cdkArgs = [
+      "deploy",
+      "DPMainStack",
+      "--require-approval",
+      "never",
+      "--outputs-file",
+      cfnOutputsPath,
+      "--app",
+      getMatanoCdkApp(),
+      "--output",
+      getCdkOutputDir(),
+    ];
     if (awsProfile) {
       cdkArgs.push("--profile", awsProfile);
     }
@@ -60,9 +74,8 @@ export default class Deploy extends BaseCommand {
     }
     if (process.env.DEBUG) cdkArgs.push(`-vvv`);
 
-    fse.removeSync(path.resolve(PROJ_ROOT_DIR, "infra", "cdk.out"));
-    const subprocess = execa(path.resolve(PROJ_ROOT_DIR, "infra", "node_modules/.bin/cdk"), cdkArgs, {
-      cwd: path.resolve(PROJ_ROOT_DIR, "infra"),
+    const subprocess = execa(getCdkExecutable(), cdkArgs, {
+      cwd: isPkg() ? undefined : path.resolve(PROJ_ROOT_DIR, "infra"),
       env: {
         MATANO_CDK_ACCOUNT: awsAccountId,
         MATANO_CDK_REGION: awsRegion,

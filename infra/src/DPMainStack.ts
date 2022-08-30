@@ -11,7 +11,7 @@ import * as os from "os";
 import * as sns from "aws-cdk-lib/aws-sns";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import { IcebergMetadata } from "../lib/iceberg";
-import { getDirectories, MATANO_USED_RUNTIMES, readConfig } from "../lib/utils";
+import { dualAsset, getDirectories, getLocalAssetPath, makeTempDir, MATANO_USED_RUNTIMES, readConfig } from "../lib/utils";
 import { S3BucketWithNotifications } from "../lib/s3-bucket-notifs";
 import { MatanoLogSource, LogSourceConfig } from "../lib/log-source";
 import { MatanoDetections } from "../lib/detections";
@@ -44,7 +44,7 @@ export class DPMainStack extends MatanoStack {
     const logSourceConfigs = getDirectories(logSourcesDirectory)
       .map((d) => path.join(logSourcesDirectory, d))
       .map((p) => readConfig(p, "log_source.yml") as LogSourceConfig);
-    const logSourcesConfigurationPath = path.resolve(path.join("../lib/nodejs/log_sources_configuration.json"));
+    const logSourcesConfigurationPath = path.resolve(path.join(makeTempDir(), "log_sources_configuration.json"));
     fs.writeFileSync(logSourcesConfigurationPath, JSON.stringify(logSourceConfigs, null, 2));
 
     const rawDataBatcher = new DataBatcher(this, "DataBatcher", {
@@ -68,7 +68,7 @@ export class DPMainStack extends MatanoStack {
     }));
 
     const logSources = [];
-    const tempSchemasDir = fs.mkdtempSync(path.join(os.tmpdir(), "matano-schemas"));
+    const tempSchemasDir = makeTempDir("matano-schemas");
 
     for (const logSourceConfig of logSourceConfigs) {
       const logSource = new MatanoLogSource(this, `MatanoLogSource${logSourceConfig.name}`, {
@@ -84,16 +84,32 @@ export class DPMainStack extends MatanoStack {
       logSources.push(logSource);
     }
 
+    // matano-java-scripts
     const schemasLayer = new lambda.LayerVersion(this, "MatanoSchemasLayer", {
       compatibleRuntimes: MATANO_USED_RUNTIMES,
-      code: lambda.Code.fromAsset(path.resolve(path.join("../lib/java/matano")), {
-        assetHashType: cdk.AssetHashType.OUTPUT,
-        bundling: {
-          volumes: [{ hostPath: tempSchemasDir, containerPath: "/schemas" }],
-          image: lambda.Runtime.JAVA_11.bundlingImage,
-          command: ["./gradlew", ":scripts:run", "--args", "gen-schemas /schemas"],
-        },
-      }),
+      code: dualAsset("matano-java-scripts", 
+        () => lambda.Code.fromAsset(path.resolve(path.join("../lib/java/matano")), {
+          assetHashType: cdk.AssetHashType.OUTPUT,
+          bundling: {
+            volumes: [
+              { hostPath: tempSchemasDir, containerPath: "/schemas" },
+              { hostPath: path.resolve("../local-assets"), containerPath: "/local-assets" },
+            ],
+            image: lambda.Runtime.JAVA_11.bundlingImage,
+            command: ["./gradlew", ":scripts:run", "--args", "gen-schemas /schemas", ":scripts:buildJar"],
+          },
+        }),
+        () => lambda.Code.fromAsset(getLocalAssetPath("matano-java-scripts"), {
+          assetHashType: cdk.AssetHashType.OUTPUT,
+          bundling: {
+            volumes: [
+              { hostPath: tempSchemasDir, containerPath: "/schemas" },
+            ],
+            image: lambda.Runtime.JAVA_11.bundlingImage,
+            command: ["bash", "-c", "java -jar /asset-input/matano-scripts.jar gen-schemas /schemas", ],
+          },
+        })
+      ),
     });
 
     new IcebergMetadata(this, "IcebergMetadata", {

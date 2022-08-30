@@ -1,3 +1,5 @@
+import * as fs from "fs";
+import * as fse from "fs-extra";
 import * as cdk from "aws-cdk-lib";
 import { Construct } from "constructs";
 import * as sqs from "aws-cdk-lib/aws-sqs";
@@ -16,17 +18,31 @@ export class DataBatcher extends Construct {
     constructor(scope: Construct, id: string, props: DataBatcherProps) {
         super(scope, id);
 
-        this.outputQueue = new sqs.Queue(this, "DataBatcherOutputQueue")
+        this.outputQueue = new sqs.Queue(this, "DataBatcherOutputQueue");
 
+        // TODO: extract better, deep imports blocked tho..
         const lambdaFunc = new NodejsFunction(this, "DataBatcherProcessorFunction", {
             entry: "../lib/nodejs/data-batcher-processor/index.ts",
             depsLockFilePath: "../lib/nodejs/package-lock.json",
             runtime: lambda.Runtime.NODEJS_16_X,
             timeout: cdk.Duration.seconds(10),
+            bundling: {
+                commandHooks: {
+                    beforeInstall: (_1,_2) => [],
+                    beforeBundling: (_1,_2) => [],
+                    afterBundling(inputDir, outputDir) {
+                        return [`mkdir -p ${inputDir}/build/DataBatcherProcessorFunction && cp -a ${outputDir}/* ${inputDir}/build/DataBatcherProcessorFunction`]
+                    },
+                }
+            },
             environment: {
                 OUTPUT_QUEUE_URL: this.outputQueue.queueUrl,
             },
         });
+
+        if (!(process as any).pkg) {
+            fse.copySync("../lib/nodejs/build", "../local-assets")
+        }
 
         const sqsEventSource = new SqsEventSource(props.s3Bucket.queue, {
             batchSize: 10000,

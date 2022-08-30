@@ -11,7 +11,7 @@ import styles from 'ansi-styles';
 import ora from "ora";
 import BaseCommand from "../base";
 import RefreshContext from "./refresh-context";
-import { CFN_OUPUTS_PATH, PROJ_ROOT_DIR } from "..";
+import { getCdkOutputDir, getMatanoCdkApp, PROJ_ROOT_DIR } from "..";
 import GenerateMatanoDir from "./generate/matano-dir";
 import Deploy from "./deploy";
 
@@ -30,8 +30,8 @@ export default class Init extends BaseCommand {
     }),
   };
 
-  renderOutputsTable() {
-    const cfnOutputs = JSON.parse(fs.readFileSync(CFN_OUPUTS_PATH).toString());
+  renderOutputsTable(cfnOutputs: any) {
+    // const cfnOutputs = JSON.parse(fs.readFileSync(CFN_OUPUTS_PATH).toString());
     const rows = [];
     for (const [k,v] of Object.entries(cfnOutputs["MatanoDPCommonStack"])) {
       let name = undefined;
@@ -149,7 +149,14 @@ export default class Init extends BaseCommand {
 
     const cdkEnvironment = `aws://${awsAccountId}/${awsRegion}`;
 
-    const cdkArgs = ["bootstrap", cdkEnvironment];
+    const cdkArgs = [
+      "bootstrap",
+      cdkEnvironment,
+      "--app",
+      getMatanoCdkApp(),
+      "--output",
+      getCdkOutputDir(),
+    ];
     if (awsProfile) {
       cdkArgs.push("--profile", awsProfile);
     }

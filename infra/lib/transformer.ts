@@ -1,3 +1,4 @@
+import * as path from "path";
 import * as cdk from "aws-cdk-lib";
 import { Construct } from "constructs";
 import * as sqs from "aws-cdk-lib/aws-sqs";
@@ -23,20 +24,14 @@ export class Transformer extends Construct {
     });
 
     this.transformerLambda = new lambda.Function(this, "Lambda", {
-      code: lambda.Code.fromAsset("./src", {
+      code: lambda.Code.fromAsset(path.dirname(props.logSourcesConfigurationPath), {
         assetHash: cdk.AssetHashType.OUTPUT,
         bundling: {
-          volumes: [
-            {
-              hostPath: props.logSourcesConfigurationPath,
-              containerPath: "/asset-input/log_sources_configuration.json",
-            },
-          ],
-          image: this.rustFunctionLayer.image,
+          image: lambda.Runtime.PYTHON_3_9.bundlingImage,
           command: [
             "bash",
             "-c",
-            "cp /asset-input/log_sources_configuration.json /asset-output/log_sources_configuration.json",
+            "cp /asset-input/* /asset-output",
           ],
         },
       }),

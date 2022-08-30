@@ -6,9 +6,9 @@ import * as s3 from "aws-cdk-lib/aws-s3";
 import * as sqs from "aws-cdk-lib/aws-sqs";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as lambda from "aws-cdk-lib/aws-lambda";
-import { PythonFunction, PythonLayerVersion } from "@aws-cdk/aws-lambda-python-alpha";
+
 import { MatanoStack, MatanoStackProps } from "../lib/MatanoStack";
-import { getDirectories } from "../lib/utils";
+import { dualAsset, getDirectories } from "../lib/utils";
 import { readDetectionConfig } from "./utils";
 import { SqsEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
 
@@ -43,21 +43,38 @@ export class MatanoDetections extends Construct {
     super(scope, id);
 
     const matanoUserDirectory = (cdk.Stack.of(this) as MatanoStack).matanoUserDirectory;
+    const detectionsCommonCodeDir = path.resolve("..", "lib/python/matano_detection");
+    const detectionsCommonAssetName = "MatanoDetectionsCommonLayer"
 
-    const detectionsLayer = new PythonLayerVersion(this, "MatanoDetectionsCommonLayer", {
-      entry: path.resolve("..", "lib/python/matano_detection"),
+    const detectionsLayer = new lambda.LayerVersion(this, detectionsCommonAssetName, {
       compatibleRuntimes: [lambda.Runtime.PYTHON_3_9],
+      code: dualAsset(detectionsCommonAssetName, () => lambda.Code.fromAsset(detectionsCommonCodeDir, {
+        exclude: ['*.pyc'],
+        bundling: {
+          volumes: [{hostPath: path.resolve("../local-assets"), containerPath: "/local-assets"}],
+          image: lambda.Runtime.PYTHON_3_9.bundlingImage,
+          command: ["bash", "-c", `python -m pip install -r requirements.txt -t /asset-output/python && cp -rT /asset-input/ /asset-output/python && mkdir -p /local-assets/${detectionsCommonAssetName} && cp -a /asset-output/* /local-assets/${detectionsCommonAssetName}`],
+        },
+      })),
     });
 
     const detectionsDirectory = path.join(matanoUserDirectory, "detections");
     fs.writeFileSync(path.resolve(detectionsDirectory, "index.py"), "");
     const detectionNames = getDirectories(detectionsDirectory);
 
-    const detectionFunction = new PythonFunction(this, `MatanoDetectionFunction`, {
-      // functionName: `matano-detections`,
+    const detectionsFuncAssetName = "MatanoDetectionFunction";
+
+    const detectionFunction = new lambda.Function(this, detectionsFuncAssetName, {
+      handler: "detection.common.handler",
       description: `Matano managed detections function.`,
-      entry: detectionsDirectory,
       runtime: lambda.Runtime.PYTHON_3_9,
+      code: lambda.Code.fromAsset(detectionsDirectory, {
+        exclude: ["*.pyc"],
+        bundling: {
+          image: lambda.Runtime.PYTHON_3_9.bundlingImage,
+          command: ["bash", "-c", `cp -rT /asset-input/ /asset-output`],
+        },
+      }),
       layers: [detectionsLayer],
       memorySize: 1800,
       environment: {
@@ -66,7 +83,6 @@ export class MatanoDetections extends Construct {
         new iam.PolicyStatement({actions: ["s3:*"], resources: ["*"]}),
       ],
     });
-    (detectionFunction.node.defaultChild as lambda.CfnFunction).handler = "detection.common.handler";
     fs.unlinkSync(path.resolve(detectionsDirectory, "index.py"));
 
     this.detectionsQueue = new sqs.Queue(this, "DetectionsQueue");

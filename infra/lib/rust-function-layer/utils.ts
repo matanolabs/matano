@@ -16,14 +16,6 @@ export interface CargoTomlProps {
     };
 }
 
-
-
-export function createDirectory(dir: string) {
-    if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir);
-    }
-}
-
 export function createFile(filePath: string, data: string) {
     if (!fs.existsSync(filePath)) {
         fs.writeFileSync(filePath, data);

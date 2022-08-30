@@ -1,0 +1,32 @@
+name: 'nightly-release'
+
+on:
+  schedule:
+    - cron: '0 12 * * *'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+
+    # Clone repository
+    - uses: actions/checkout@v2
+
+    - uses: actions/setup-node@v3
+      with:
+        node-version: 16
+
+    # Build your application, tool, artifacts, etc.
+    - name: Build
+      run: |
+        make -j package
+
+    - name: "Update nightly release"
+      if: success()
+      uses: pyTooling/Actions/releaser@r0
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        tag: nightly
+        rm: true
+        files: |
+          matano*.sh

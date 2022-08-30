@@ -10,6 +10,7 @@ import { CustomResource } from "aws-cdk-lib";
 import { execSync } from "child_process";
 import { S3BucketWithNotifications } from "./s3-bucket-notifs";
 import { SqsEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
+import { dualAsset } from "./utils";
 
 interface MatanoIcebergTableProps {
   logSourceName: string;
@@ -36,6 +37,27 @@ const md5 = (s: string) => crypto.createHash('md5').update(s).digest("hex");
 interface IcebergTableProviderProps {
 }
 
+export function getAssetCode(codePath: string, options: cdk.aws_s3_assets.AssetOptions, assetName: string) {
+  const existingVols = options?.bundling?.volumes;
+  const newVols = [{hostPath: path.resolve("../local-assets"), containerPath: "/local-assets"}]
+  if (existingVols) options.bundling.volumes.push(...newVols)
+  else (options.bundling!! as any).volumes = newVols;
+
+  const cmd = options?.bundling?.command!!;
+  let origcmd: string;
+  if (cmd[0] === "bash" && cmd[1] === "-c") origcmd = cmd[2]
+  else origcmd = cmd.join(" ");
+
+  const newcmd = ["bash", "-c", `${origcmd} && mkdir -p /local-assets/${assetName} && cp -a /asset-output/* /local-assets/${assetName}`];
+  return dualAsset(assetName, () => lambda.Code.fromAsset(codePath, {
+    ...options,
+    bundling: {
+      ...options.bundling!!,
+      command: newcmd,
+    }
+  }));
+}
+
 export class IcebergTableProvider extends Construct {
   provider: cr.Provider;
 
@@ -60,13 +82,13 @@ export class IcebergTableProvider extends Construct {
       timeout: cdk.Duration.minutes(5),
       environment: {
       },
-      code: lambda.Code.fromAsset(codePath, {
+      code: getAssetCode(codePath, {
         assetHashType: cdk.AssetHashType.OUTPUT,
         bundling: {
           image: lambda.Runtime.JAVA_11.bundlingImage,
           command: ["./gradlew", ":iceberg_table_cfn:release", ],
         },
-      }),
+      }, "MatanoIcebergCRProviderFunc"),
       initialPolicy: [
         new iam.PolicyStatement({
           actions: ["glue:*", "s3:*"],
@@ -106,13 +128,13 @@ export class IcebergMetadata extends Construct {
         DUPLICATES_DDB_TABLE_NAME: duplicatesTable.tableName,
         MATANO_ICEBERG_BUCKET: props.lakeStorageBucket.bucket.bucketName,
       },
-      code: lambda.Code.fromAsset(codePath, {
+      code: getAssetCode(codePath, {
         assetHashType: cdk.AssetHashType.OUTPUT,
         bundling: {
           image: lambda.Runtime.JAVA_11.bundlingImage,
           command: ["./gradlew", ":iceberg_metadata:release",],
         },
-      }),
+      }, "MatanoIcebergMetadataWriterFunction"),
       initialPolicy: [new iam.PolicyStatement({
         actions: ["glue:*", "s3:*",],
         resources: ["*"],

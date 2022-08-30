@@ -20,3 +20,7 @@ cdk.out
 oclif.manifest.json
 test
 __pycache__
+*build*
+local-assets/**
+!scripts/**/*.js
+matano*.sh

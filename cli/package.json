@@ -50,6 +50,12 @@
     "tslib": "^2.3.1",
     "typescript": "^4.7"
   },
+  "pkg": {
+    "scripts": ["./dist/**/*.js", "./bin/**/*.js"],
+    "assets": ["node_modules/vm2/**/*"],
+    "targets": ["node16-linux-x64", "node16-macos-x64"],
+    "outputPath": "build"
+  },
   "oclif": {
     "bin": "matano",
     "dirname": "matano",

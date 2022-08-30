@@ -1,8 +1,8 @@
 {
-  "name": "matano_cdk",
+  "name": "matano-cdk",
   "version": "0.1.0",
   "bin": {
-    "matano_cdk": "dist/bin/app.js"
+    "matano-cdk": "dist/bin/app.js"
   },
   "scripts": {
     "clean": "rm -rf dist && rm -rf node_modules",
@@ -11,7 +11,18 @@
     "test": "jest",
     "cdk": "cdk"
   },
+  "pkg": {
+    "scripts": [
+      "./dist/**/*.js"
+    ],
+    "targets": [
+        "node16-linux-x64",
+        "node16-macos-x64"
+    ],
+    "outputPath": "build"
+  },
   "devDependencies": {
+    "@types/fs-extra": "^9.0.13",
     "@types/jest": "^26.0.10",
     "@types/node": "^12",
     "@types/prettier": "^2.6.3",
@@ -21,11 +32,9 @@
     "ts-jest": "^26.2.0"
   },
   "dependencies": {
-    "@aws-cdk/aws-kinesisfirehose-alpha": "^2.28.0-alpha.0",
-    "@aws-cdk/aws-kinesisfirehose-destinations-alpha": "^2.28.0-alpha.0",
     "@aws-cdk/aws-lambda-python-alpha": "^2.28.0-alpha.0",
-    "@aws-cdk/aws-msk-alpha": "^2.28.0-alpha.0",
     "@aws-cdk/cx-api": "*",
+    "@mrgrain/cdk-esbuild": "^3",
     "aws-cdk": "^2.28",
     "aws-cdk-lib": "^2.28",
     "aws-sdk": "^2.1093",
