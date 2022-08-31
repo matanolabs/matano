@@ -171,7 +171,7 @@ export interface BaseBuildProps {
      *
      * The target defaults to `x86_64-unknown-linux-gnu` if not passed.
      */
-    readonly target?: string;
+    readonly target?: LAMBDA_TARGETS | undefined;
 
     /**
      * A list of features to activate when compiling Rust code.
@@ -217,7 +217,7 @@ export interface BuildOptions extends BaseBuildProps {
     readonly outDir: string;
 
     // Makes this property *required*
-    readonly target: string;
+    readonly target: LAMBDA_TARGETS;
 }
 
 /**

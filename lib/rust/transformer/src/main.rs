@@ -2,16 +2,24 @@
 // { "command": "do something" }
 mod models;
 
+use ::value::value::timestamp_to_string;
 use http::{HeaderMap, HeaderValue};
 use std::borrow::Borrow;
 use std::cell::RefCell;
 use std::collections::{BTreeMap, HashMap, HashSet};
-use std::env::var;
+use std::env::{set_var, var};
+use std::mem::size_of_val;
 use std::path::Path;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
+use std::thread;
 use std::time::Instant;
+use tokio::io::AsyncReadExt;
+use tokio::task::spawn_blocking;
+
+#[global_allocator]
+static ALLOC: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
 use apache_avro::{Codec, Schema, Writer};
 use arrow2::datatypes::*;
@@ -44,12 +52,39 @@ use shared::*;
 
 use anyhow::{anyhow, Result};
 
+use ::value::{Secrets, Value};
 use aws_lambda_events::event::sqs::{SqsEvent, SqsMessage};
 use lambda_runtime::{run, service_fn, Context, Error as LambdaError, LambdaEvent};
 use log::{debug, error, info, warn};
 
-use ::value::{Secrets, Value};
 use vrl::{diagnostic::Formatter, state, value, Program, Runtime, TargetValueRef};
+
+pub trait TryIntoAvro<T>: Sized {
+    /// The type returned in the event of a conversion error.
+    type Error;
+
+    /// Performs the conversion from a generic VRL Value to an Avro Value.
+    fn try_into(self) -> Result<T, Self::Error>;
+}
+impl TryIntoAvro<apache_avro::types::Value> for Value {
+    type Error = apache_avro::Error;
+
+    fn try_into(self) -> Result<apache_avro::types::Value, Self::Error> {
+        match self {
+            Self::Boolean(v) => Ok(apache_avro::types::Value::from(v)),
+            Self::Integer(v) => Ok(apache_avro::types::Value::from(v)),
+            Self::Float(v) => Ok(apache_avro::types::Value::from(v.into_inner())),
+            Self::Bytes(v) => Ok(apache_avro::types::Value::from(
+                String::from_utf8(v.to_vec()).map_err(Self::Error::ConvertToUtf8)?,
+            )),
+            Self::Regex(regex) => Ok(apache_avro::types::Value::from(regex.as_str().to_string())),
+            Self::Object(v) => Ok(apache_avro::to_value(v)?),
+            Self::Array(v) => Ok(apache_avro::to_value(v)?),
+            Self::Null => Ok(apache_avro::types::Value::Null),
+            Self::Timestamp(v) => Ok(apache_avro::types::Value::from(timestamp_to_string(&v))),
+        }
+    }
+}
 
 fn type_to_schema(data_type: &DataType, is_nullable: bool, name: String) -> Result<AvroSchema> {
     Ok(if is_nullable {
@@ -140,57 +175,8 @@ async fn main() -> Result<(), LambdaError> {
     setup_logging();
     let start = Instant::now();
 
-    // let func = service_fn(my_handler);
-    // run(func).await?;
-
-    let mut headers = HeaderMap::new();
-    headers.insert(
-        "lambda-runtime-aws-request-id",
-        HeaderValue::from_static("my-id"),
-    );
-    headers.insert(
-        "lambda-runtime-deadline-ms",
-        HeaderValue::from_static("123"),
-    );
-    let context = Context::try_from(headers).unwrap();
-    let sqs_event = json!(
-        {
-            "Records": [
-              {
-                "messageId": "059f36b4-87a3-44ab-83d2-661975830a7d",
-                "receiptHandle": "AQEBwJnKyrHigUMZj6rYigCgxlaS3SLy0a...",
-                "body": "[{\"bucket\":\"matanodpcommonstack-raweventsbucket024cde12-1oynz3pfccqum\",\"key\": \"cloudtrail/flaws_cloudtrail_logs/flaws_cloudtrail04.json.gz\",\"size\":10000000,\"sequencer\":\"dkdjkfjk\"}]",
-                "attributes": {
-                  "ApproximateReceiveCount": "1",
-                  "SentTimestamp": "1545082649183",
-                  "SenderId": "SSS",
-                  "ApproximateFirstReceiveTimestamp": "1545082649185"
-                },
-                "messageAttributes": {},
-                "md5OfBody": "e4e68fb7bd0e697a0ae8f1bb342846b3",
-                "eventSource": "aws:sqs",
-                "eventSourceARN": "arn:aws:sqs:us-east-2:123456789012:my-queue",
-                "awsRegion": "us-east-1"
-              }
-            ]
-          }
-    );
-    let sqs_event = SqsEvent { records: vec![
-        SqsMessage {
-            attributes:HashMap::new(),
-            message_attributes:HashMap::new(),
-            md5_of_message_attributes:None,
-            md5_of_body:Some("e4e68fb7bd0e697a0ae8f1bb342846b3".to_string()),
-            event_source:Some("aws:sqs".to_string()),
-            event_source_arn:Some("arn:aws:sqs:us-east-2:123456789012:my-queue".to_string()),
-            aws_region:Some("us-east-1".to_string()),
-            body:Some("[{\"bucket\":\"matanodpcommonstack-raweventsbucket024cde12-1oynz3pfccqum\",\"key\": \"cloudtrail/flaws_cloudtrail_logs/flaws_cloudtrail04.json.gz\",\"size\":10000000,\"sequencer\":\"dkdjkfjk\"}]".to_string()),
-            message_id: None, receipt_handle: None
-        }
-    ]
-     };
-    let event = LambdaEvent::new(sqs_event, context);
-    my_handler(event).await?;
+    let func = service_fn(my_handler);
+    run(func).await?;
 
     debug!("Call lambda took {:.2?}", start.elapsed());
     Ok(())
@@ -227,7 +213,10 @@ fn infer_compression(
         })
 }
 
-pub fn vrl<'a>(program: &'a str, value: &'a mut Value) -> Result<(Value, &'a mut Value)> {
+pub fn vrl<'a>(
+    program: &'a str,
+    value: &'a mut ::value::Value,
+) -> Result<(::value::Value, &'a mut ::value::Value)> {
     thread_local!(
         static CACHE: RefCell<LruCache<String, Result<Program, String>>> =
             RefCell::new(LruCache::new(400));
@@ -240,7 +229,7 @@ pub fn vrl<'a>(program: &'a str, value: &'a mut Value) -> Result<(Value, &'a mut
         let start = Instant::now();
         let compiled = match stored_result {
             Some(compiled) => match compiled {
-                Ok(compiled) => Ok(compiled.to_owned()),
+                Ok(compiled) => Ok(compiled),
                 Err(e) => {
                     return Err(anyhow!(e.clone()));
                 }
@@ -248,7 +237,14 @@ pub fn vrl<'a>(program: &'a str, value: &'a mut Value) -> Result<(Value, &'a mut
             None => match vrl::compile(&program, &vrl_stdlib::all()) {
                 Ok(result) => {
                     println!(
-                        "Compiled a vrl program ({}), took {:?}", program.lines().into_iter().skip(1).next().unwrap_or("expansion"), start.elapsed()
+                        "Compiled a vrl program ({}), took {:?}",
+                        program
+                            .lines()
+                            .into_iter()
+                            .skip(1)
+                            .next()
+                            .unwrap_or("expansion"),
+                        start.elapsed()
                     );
                     (*cache_ref).put(program.to_string(), Ok(result.program));
                     if result.warnings.len() > 0 {
@@ -256,7 +252,7 @@ pub fn vrl<'a>(program: &'a str, value: &'a mut Value) -> Result<(Value, &'a mut
                     }
                     match (*cache_ref).get(program) {
                         Some(compiled) => match compiled {
-                            Ok(compiled) => Ok(compiled.to_owned()),
+                            Ok(compiled) => Ok(compiled),
                             Err(e) => {
                                 return Err(anyhow!(e.clone()));
                             }
@@ -272,8 +268,8 @@ pub fn vrl<'a>(program: &'a str, value: &'a mut Value) -> Result<(Value, &'a mut
             },
         }?;
 
-        let mut metadata = Value::Object(BTreeMap::new());
-        let mut secrets = Secrets::new();
+        let mut metadata = ::value::Value::Object(BTreeMap::new());
+        let mut secrets = ::value::Secrets::new();
         let mut target = TargetValueRef {
             value: value,
             metadata: &mut metadata,
@@ -300,14 +296,12 @@ pub fn vrl<'a>(program: &'a str, value: &'a mut Value) -> Result<(Value, &'a mut
     })
 }
 
-async fn read_lines_s3(
+async fn read_lines_s3<'a>(
     s3: &aws_sdk_s3::Client,
     r: &DataBatcherRequestItem,
     compression: Option<Compression>,
-) -> Result<Pin<Box<dyn Stream<Item = Result<serde_json::Value>> + Send>>> {
+) -> Result<Pin<Box<dyn Stream<Item = Result<Value>> + Send>>> {
     println!("Starting download");
-    let start = Instant::now();
-
     let res = s3
         .get_object()
         .bucket(r.bucket.clone())
@@ -320,21 +314,23 @@ async fn read_lines_s3(
         });
     let mut obj = res?;
 
-    let first = if let Some(first) = obj.body.next().await {
-        first
-    } else {
-        return Ok(FramedRead::new(tokio::io::empty(), LinesCodec::new())
-            .map_ok(|line| serde_json::from_str(&line).unwrap())
-            .map_err(|e| anyhow!(e))
-            .boxed());
-    };
-    println!("Finished reading first byte: took {:?}", start.elapsed());
-    let start = Instant::now();
+    let mut reader = tokio::io::BufReader::new(obj.body.into_async_read());
 
+    // let start = Instant::now();
+    // let first = if let Some(first) = reader.next().await {
+    //     println!("First byte: {:#?}", first);
+    //     first
+    // } else {
+    //     return Ok(FramedRead::new(tokio::io::empty(), LinesCodec::new())
+    //         .map_ok(|line|  Value::from(line.as_bytes()))
+    //         .map_err(|e| anyhow!(e))
+    //         .boxed());
+    // };
+    // println!("Finished reading first byte: took {:?}", start.elapsed());
+    // let start = Instant::now();
 
-    let reader = tokio::io::BufReader::new(
-        StreamReader::new(stream::iter(Some(first)).chain(obj.body)), // ).map_err(|e| ??)
-    );
+    // let reader =
+    //     StreamReader::new(stream::iter(Some(first)).chain(reader));
 
     let log_source = &r
         .key
@@ -354,7 +350,7 @@ async fn read_lines_s3(
         _ => compression,
     };
 
-    let reader: Box<dyn tokio::io::AsyncRead + Send + Unpin> = match compression {
+    let mut reader: Box<dyn tokio::io::AsyncRead + Send + Unpin> = match compression {
         Compression::Auto => unreachable!(),
         Compression::None => Box::new(reader),
         Compression::Gzip => Box::new({
@@ -382,35 +378,36 @@ async fn read_lines_s3(
     });
     let lines = match expand_records_from_payload_expr {
         Some(prog) => {
-            let file_bytes = ReaderStream::new(reader)
-                .filter_map(|r| async move { r.ok() })
-                .collect::<Vec<_>>()
-                .await;
-            println!("Finished download/decompressed into memory: took {:?}", start.elapsed());
+            let start = Instant::now();
+            let mut file_string = String::new();
+            let cc = reader.read_to_string(&mut file_string).await?;
+            println!("File read bytes: {}", cc);
+            println!(
+                "Finished download/decompressed into memory: took {:?}",
+                start.elapsed()
+            );
             let start = Instant::now();
 
-            let file_string = String::from_utf8(file_bytes.concat()).unwrap();
             // println!("{}", file_string);
-            let expanded_records = vrl(&prog, &mut value!({ "__raw": file_string }))?
-                .0
-                .as_array()
-                .ok_or(anyhow!("Expanded records must be an array"))?
-                .to_owned();
-            println!("Expanded records from payload: took {:?}, {} records", start.elapsed(), expanded_records.len());
+            let mut value = value!({ "__raw": file_string });
+            let (expanded_records, _) = vrl(&prog, &mut value)?;
+            println!("Expanded records from payload: took {:?}", start.elapsed(),);
+            let expanded_records = match expanded_records {
+                Value::Array(records) => records,
+                _ => return Err(anyhow!("Expanded records must be an array")),
+            };
 
             Box::pin(stream! {
                 for record in expanded_records {
-                    // let line = record.to_string();
-                    //.ok_or(anyhow!("Expanded record must be a string"))?.;
-                    // println!("{}", line);
-                    let record_json: serde_json::Value  = record.try_into().unwrap();
-                    yield Ok(record_json)
+                    yield Ok(record);
                 }
             })
         }
         None => FramedRead::new(reader, LinesCodec::new())
-            .map_ok(|line| serde_json::from_str(&line).unwrap())
-            .map_err(|e| anyhow!(e))
+            .map(|v| match v {
+                Ok(v) => Ok(Value::from(v.as_bytes())),
+                Err(e) => Err(anyhow!(e)),
+            })
             .boxed(),
     };
 
@@ -440,13 +437,9 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessRe
         s3_download_items.iter().map(|d| d.size).sum::<i32>()
     );
 
-
     let config = aws_config::load_from_env().await;
     let s3 = aws_sdk_s3::Client::new(&config);
 
-    let mut total_bytes_processed = 0;
-
-    // let item = s3_download_items.first().unwrap();
     println!("current_num_threads() = {}", rayon::current_num_threads());
 
     let transformed_lines_streams = s3_download_items
@@ -455,116 +448,83 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessRe
             let s3 = &s3;
 
             async move {
-                // let ids: Vec<_> = (0..2)
-                // .into_par_iter()
-                // .map(|_|rayon::current_thread_index().unwrap_or(500))
-                // .collect();
-                // println!("{:?}", ids);
-                let raw_lines = read_lines_s3(&s3, &item, None).await.unwrap();
+                let raw_lines = read_lines_s3(s3, &item, None).await.unwrap();
 
-                let transformed_lines_as_json = raw_lines
-                    .chunks(10000)
-                    .filter_map(move |batch| async move {
-                        let transformed_batch = async_rayon::spawn(move || {
-                            // CPU bound (VRL transforms)
-                            batch
-                                // .par_chunks(2000)
-                                .chunks(2000)
-                                .flat_map(|chunk| {
-                                    debug!(
-                                        "vrl_thread={}",
-                                        rayon::current_thread_index().unwrap_or(500)
-                                    );
-                                    let transform_expr = LOG_SOURCES_CONFIG
-                                        .with(|c| {
-                                            let log_sources_config = c.borrow();
+                let reader = raw_lines;
 
-                                            let log_source = &"cloudtrail".to_string();
-                                            // println!("{:?}, {}", log_sources_config, log_source);
-                                            (*log_sources_config)
-                                                .get(log_source)
-                                                .unwrap()
-                                                .transform
-                                                .clone()
-                                        })
-                                        .unwrap();
+                let transform_expr = LOG_SOURCES_CONFIG
+                    .with(|c| {
+                        let log_sources_config = c.borrow();
 
-                                    let wrapped_transform_expr = format!(
-                                        "
-                                         .related.user = []
-                                         .related.hash = []
-                                         .related.ip = []
-                                         {}
-                                         del(.json)
-                                         ",
-                                        1
-                                    );
+                        let log_source = &item
+                            .key
+                            .split(std::path::MAIN_SEPARATOR)
+                            .next()
+                            .unwrap()
+                            .to_string();
 
-                                    let my = Instant::now();
-                                    let transformed_chunk = chunk
-                                        .into_iter()
-                                        .map(|r| match r {
-                                            Ok(line) => {
-                                                let mut v = value!({"json": line});
+                        (*log_sources_config)
+                            .get(log_source)
+                            .unwrap()
+                            .transform
+                            .clone()
+                    })
+                    .unwrap();
 
-                                                let _ = vrl(&wrapped_transform_expr, &mut v)
-                                                    .map_err(|e| {
-                                                        anyhow!("Failed to transform: {}", e)
-                                                    })?
-                                                    .1;
+                let wrapped_transform_expr = format!(
+                    "
+                    .related.ip = []
+                    .related.hash = []
+                    .related.user = []
+                    {}
+                    del(.json)
+                    ",
+                    transform_expr
+                );
 
-                                                let v_json: serde_json::Value =
-                                                    v.try_into().unwrap();
+                let transformed_lines_as_json = reader
+                    .chunks(400)
+                    .filter_map(move |chunk| {
+                        let wrapped_transform_expr = wrapped_transform_expr.clone(); // hmm
 
-                                                // println!("{:?}", v_json);
-                                                Ok(v_json)
-                                            }
-                                            Err(e) => Err(anyhow!("Malformed line: {}", e)),
-                                        })
-                                        .collect::<Vec<_>>();
-                                    println!("Transformed chunk (from thread_{}): took  {:?}",rayon::current_thread_index().unwrap_or(500), my.elapsed());
-                                    // let transformed_chunk = chunk
-                                    //     .into_iter()
-                                    //     .map(|r| match r {
-                                    //         Ok(line) => {
-                                    //             // let mut v = value!({"message": (line.clone())});
-                                    //             // let _ = vrl(&wrapped_transform_expr, &mut v)
-                                    //             //     .map_err(|e| {
-                                    //             //         anyhow!("Failed to transform: {}", e)
-                                    //             //     })?
-                                    //             //     .1;
+                        async move {
+                            let start = Instant::now();
+                            let transformed_lines = async_rayon::spawn(move || {
+                                let transformed_chunk = chunk
+                                    .into_par_iter()
+                                    .map(|r| match r {
+                                        Ok(line) => {
+                                            let mut v = value!({ "json": line });
+                                            vrl(&wrapped_transform_expr, &mut v).map_err(|e| {
+                                                anyhow!("Failed to transform: {}", e)
+                                            })?;
+                                            Ok(v)
+                                        }
+                                        Err(e) => Err(anyhow!("Malformed line: {}", e)),
+                                    })
+                                    .collect::<Vec<_>>();
+                                transformed_chunk
+                            })
+                            .await;
 
-                                    //             let v_json: serde_json::Value = line.clone();
-
-                                    //             Ok(v_json)
-                                    //         }
-                                    //         Err(e) => Err(anyhow!("Malformed line: {}", e)),
-                                    //     })
-                                    //     .collect::<Vec<_>>();
-                                    transformed_chunk
-                                })
-                                .collect::<Vec<_>>()
-                        })
-                        .await;
-
-                        Some(stream::iter(transformed_batch))
+                            println!("Transformed lines: took {:?}", start.elapsed());
+                            Some(stream::iter(transformed_lines))
+                        }
                     })
                     .flatten();
 
-                let reader = transformed_lines_as_json
-                    .filter_map(|line| async move {
-                        match line {
-                            Ok(line) => Some(line),
-                            Err(e) => {
-                                error!("{}", e);
-                                // Err(std::io::Error::new(std::io::ErrorKind::Other, e))
-                                None
-                            }
+                let stream = transformed_lines_as_json.filter_map(|line| async move {
+                    match line {
+                        Ok(line) => Some(line),
+                        Err(e) => {
+                            error!("{}", e);
+                            // Err(std::io::Error::new(std::io::ErrorKind::Other, e))
+                            None
                         }
-                    })
-                    .boxed();
+                    }
+                });
 
-                (item.key.clone(), reader)
+                (item.key.clone(), stream)
             }
         })
         .collect::<Vec<_>>();
@@ -579,10 +539,8 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessRe
         log_source
     });
 
-    let mut merged: HashMap<
-        String,
-        StreamMap<String, Pin<Box<Pin<Box<dyn Stream<Item = serde_json::Value> + Send>>>>>,
-    > = HashMap::new();
+    let mut merged: HashMap<String, StreamMap<String, Pin<Box<dyn Stream<Item = Value> + Send>>>> =
+        HashMap::new();
     for (log_source, streams) in result.into_iter() {
         for (i, (_object_key, stream)) in streams.enumerate() {
             merged
@@ -590,44 +548,33 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessRe
                 .or_insert(StreamMap::new())
                 .insert(
                     format!("{}", i), // object_key.clone(),
-                    Box::pin(stream), // as Pin<Box<dyn Stream<Item = usize> + Send>>
+                    Box::pin(stream), // as Pin<Box<dyn Stream<Item = usize> + Send>>,
                 );
         }
     }
 
-    let dd = merged
+    let futures = merged
         .into_iter()
         .map(|(log_source, stream)| {
-            // let total_bytes_processed = &mut total_bytes_processed;
             let s3 = &s3;
+            let num_rows_to_infer_schema = 100;
 
             async move {
-                let number_of_rows = 50;
-
                 let mut reader = stream.map(|(_, value)| value);
 
                 let now = Instant::now();
                 let head = reader
                     .by_ref()
-                    .take(number_of_rows)
+                    .take(num_rows_to_infer_schema)
                     .collect::<Vec<_>>()
                     .await;
-
-
-                debug!("io_thread={}", rayon::current_thread_index().unwrap_or(500));
-
-                println!("Read 50 lines from head,  {:?}", now.elapsed());
-
+                println!("Read 100 lines from head,  {:?}", now.elapsed());
                 let now = Instant::now();
 
                 let inferred_avro_schema = {
                     let head = head.clone();
-                    async_rayon::spawn(move || {
+                    spawn_blocking(move || {
                         // CPU bound (infer schemas)
-                        println!(
-                            "infer_thread={}",
-                            rayon::current_thread_index().unwrap_or(500)
-                        );
                         let data_types = head
                             .iter()
                             .flat_map(|v| {
@@ -643,57 +590,46 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessRe
                                 }
                             })
                             .collect::<Vec<_>>();
-                        let data_types: HashSet<DataType> =
-                            HashSet::from_iter(data_types.into_iter());
-                        let unioned_data_type = data_types
-                            .into_iter()
-                            .collect::<Vec<_>>()
-                            .first()
-                            .unwrap()
-                            .to_owned(); // todo: arrow2::io::json::read::coerce_data_type(&data_types);
-                                         // let reader = stream::iter(head).chain(reader.borrow_mut());
-                                         // let ss = reader.next().await;
+                        let data_types = data_types.into_iter().collect::<HashSet<_>>();
+                        let unioned_data_type = data_types.iter().next().unwrap(); // todo: arrow2::io::json::read::coerce_data_type(&data_types);
+                                                                                   // let reader = stream::iter(head).chain(reader.borrow_mut());
+                                                                                   // let ss = reader.next().await;
 
                         // println!("{:#?}", unioned_data_type);
-                        type_to_schema(&unioned_data_type, false, "root".to_string()).unwrap()
+                        type_to_schema(unioned_data_type, false, "root".to_string()).unwrap()
                     })
                 }
-                .await;
+                .await
+                .unwrap();
                 println!("Inferred schema, took {:?}", now.elapsed());
-
 
                 let reader = stream::iter(head).chain(reader); // rewind
 
                 let avro_schema_json_string = serde_json::to_string(&inferred_avro_schema).unwrap();
-                let inferred_avro_schema = Schema::parse_str(&avro_schema_json_string).unwrap();
+                let inferred_avro_schema =
+                    Arc::new(Schema::parse_str(&avro_schema_json_string).unwrap());
+
+                let writer_schema = inferred_avro_schema.clone();
                 let writer = RefCell::new(Writer::with_codec(
-                    &inferred_avro_schema,
+                    &writer_schema,
                     Vec::new(),
                     Codec::Zstandard,
                 ));
 
                 reader
-                    .chunks(10000)
+                    .chunks(400)
                     .for_each(|chunk| {
-                        let schema = inferred_avro_schema.clone();
                         let mut writer = writer.borrow_mut();
+                        let schema = Arc::clone(&inferred_avro_schema);
 
                         async move {
                             let avro_values = async_rayon::spawn(move || {
                                 // CPU bound (VRL transform)
                                 chunk
-                                    // .par_chunks(2000)
-                                    .chunks(2000)
-                                    .flat_map(|values| {
-                                        debug!(
-                                            "avro_thread={}",
-                                            rayon::current_thread_index().unwrap_or(500)
-                                        );
-                                        values.iter().map(|v| {
-                                            let v_avro: apache_avro::types::Value =
-                                                v.clone().clone().try_into().unwrap();
-                                            v_avro.resolve(&schema).unwrap()
-                                        })
+                                    .into_par_iter()
+                                    .map(|v| {
+                                        let v_avro = TryIntoAvro::try_into(v).unwrap();
+                                        v_avro.resolve(schema.as_ref()).unwrap()
                                     })
                                     .collect::<Vec<_>>()
                             })
@@ -707,8 +643,6 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessRe
 
                 let writer = writer.into_inner();
                 let bytes = writer.into_inner().unwrap();
-
-                println!("total bytes processed: {:#?}, this file's bytelength: {}", total_bytes_processed, bytes.len());
 
                 let uuid = Uuid::new_v4();
                 let key = format!("transformed/{}/{}.avro", log_source, uuid);
@@ -729,14 +663,17 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessRe
         })
         .collect::<Vec<_>>();
 
-    let start = Instant::now();
-    let _ = join_all(dd).await;
-    println!("process time (exclud download/decompress): {:?}", start.elapsed());
-
-    println!(
-        "total_bytes_processed={:?}",
-        total_bytes_processed,
-    );
+    let mut start = Instant::now();
+    println!("Starting processing");
+    {
+        let _ = join_all(futures).await;
+        println!(
+            "process + upload time (exclude download/decompress/expand): {:?}",
+            start.elapsed()
+        );
+        start = Instant::now();
+    }
+    println!("time to drop {:?}", start.elapsed());
 
     let resp = SuccessResponse {
         req_id: event.context.request_id,

@@ -28,22 +28,19 @@ export class Transformer extends Construct {
         assetHash: cdk.AssetHashType.OUTPUT,
         bundling: {
           image: lambda.Runtime.PYTHON_3_9.bundlingImage,
-          command: [
-            "bash",
-            "-c",
-            "cp /asset-input/* /asset-output",
-          ],
+          command: ["bash", "-c", "cp /asset-input/* /asset-output"],
         },
       }),
       handler: "main",
-      memorySize: 1800,
+      memorySize: 3008,
       runtime: lambda.Runtime.PROVIDED_AL2,
+      architecture: this.rustFunctionLayer.arch,
       environment: {
         ...this.rustFunctionLayer.environmentVariables,
         MATANO_REALTIME_BUCKET_NAME: props.realtimeBucketName,
       },
       layers: [this.rustFunctionLayer.layer],
-      timeout: cdk.Duration.seconds(5),
+      timeout: cdk.Duration.seconds(30),
       initialPolicy: [
         new iam.PolicyStatement({
           actions: ["secretsmanager:*", "dynamodb:*", "s3:*"],

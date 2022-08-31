@@ -53,6 +53,8 @@ aws-sdk-s3 = "0.17.0"
 aws_lambda_events = "0.6.3"
 anyhow = "1.0.53"
 
+tikv-jemallocator = { version = "0.5.0" }
+
 value = { git = "https://github.com/vectordotdev/vector" }
 vrl = { git = "https://github.com/vectordotdev/vector" }
 vrl-stdlib = { git = "https://github.com/vectordotdev/vector" }
