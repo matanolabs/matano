@@ -58,29 +58,24 @@ Write Python detections to implement realtime alerting on your log data.
 
 ## Installing
 
+[**View the complete installation instructions.**](https://www.matano.dev/docs/installation)
+
 You can install the matano CLI to deploy Matano into your AWS account, and manage your Matano deployment.
 
 ### Requirements
 
-- node>=12 and npm
 - Docker
 
-<!-- ### Installation script
+### Installation
+
+Matano provides [a nightly release](https://github.com/matanolabs/matano/releases/tag/nightly) with the latest prebuilt files to install the Matano CLI on GitHub. You can download and execute these files to install Matano.
+
+For example, to install the Matano CLI for Linux, run:
 
 ```bash
-curl -sS https://raw.githubusercontent.com/matanolabs/matano/main/install.sh | bash
-```
-
-Matano will be installed by default in `"$HOME/.matano"`. You can configure this using the `--install-dir` option. -->
-
-### From source
-
-You can manually install from source.
-
-```bash
-git clone https://github.com/matanolabs/matano.git
-cd matano
-make install
+curl -OL https://github.com/matanolabs/matano/releases/download/nightly/matano-linux-x64.sh
+chmod +x matano-linux-x64.sh
+sudo ./matano-linux-x64.sh
 ```
 
 ## Getting started
