@@ -23,4 +23,5 @@ __pycache__
 *build*
 local-assets/**
 !scripts/**/*.js
+scripts/packaging/package*.json
 matano*.sh

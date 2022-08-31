@@ -94,7 +94,8 @@ export class RustFunctionCode {
                             `ts-node -T -e "import { build } from './scripts/build'; build(JSON.parse(Buffer.from('${Buffer.from(JSON.stringify(baseBuildProps)).toString('base64')}', 'base64').toString('ascii')));"`,
                             `cp -a /asset-output/${packageName}/* /asset-output`,
                             `rm -rf /asset-output/${packageName}`,
-                            `cp -a /asset-output/* /local-assets/`
+                            `mkdir -p /local-assets/${packageName}`,
+                            `cp -a /asset-output/* /local-assets/${packageName}`,
                         ].join(" && "),
                     ],
                     local: {

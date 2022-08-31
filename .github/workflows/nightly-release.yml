@@ -19,6 +19,7 @@ jobs:
 
     # Build your application, tool, artifacts, etc.
     - name: Build
+      shell: bash
       run: |
         make -j package
 

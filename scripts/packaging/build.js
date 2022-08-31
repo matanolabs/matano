@@ -10,7 +10,8 @@ const randStr = (n = 20) => crypto.randomBytes(n).toString("hex");
 const scriptDir = __dirname;
 const projDir = path.resolve(scriptDir, "../..");
 
-const workDir = fs.mkdtempSync(path.join(os.tmpdir(), "mtn"));
+const baseTempDir = process.env.RUNNER_TEMP || os.tmpdir();
+const workDir = fs.mkdtempSync(path.join(baseTempDir, "mtn"));
 
 const workOutputDir = path.resolve(workDir, "build");
 execSync(`mkdir -p ${workOutputDir}`);
@@ -67,12 +68,24 @@ ADDITIONAL OPTIONS:
                               used is: /usr/local/bin
 `;
 function getMSHelp(archiveName) {
-  const fpath = path.join(os.tmpdir(), randStr());
+  const fpath = path.join(baseTempDir, randStr());
   fs.writeFileSync(fpath, MShelp(archiveName));
   return fpath;
 }
 
 async function main() {
+  execSync(`cp -a ${projDir}/local-assets ${workDir}`);
+  const localAssetDir = path.join(workDir, "local-assets");
+  const localAssetSubDirs = await fs.promises.readdir(localAssetDir);
+  localAssetSubDirs.forEach((subdir) => {
+    const subpath = path.join(localAssetDir, subdir);
+    execSync(
+      `zip -r ${subdir}.zip ./* && cp ${subdir}.zip ${localAssetDir} && cd ${localAssetDir} && rm -rf ${subpath}`, {
+        cwd: subpath,
+      }
+    );
+  });
+
   // await exec(["--no-bytecode", "--public", "--public-packages", "*", "-o", "build/matano-cdk", "-c", path.join(projDir, "infra.pkg.json"), path.resolve(projDir, "infra/dist/bin/app.js",)]);
   await exec(["--no-bytecode", "--public", "--public-packages", "*", path.resolve(projDir, "infra")]);
   await exec(["--no-bytecode", "--public", "--public-packages", "*", path.resolve(projDir, "cli")]);
@@ -87,16 +100,6 @@ async function main() {
     cdkPkgConfigPath,
     "node_modules/aws-cdk/bin/cdk",
   ]);
-
-  execSync(`cp -a ${projDir}/local-assets ${workDir}`);
-  const localAssetDir = path.join(workDir, "local-assets");
-  const localAssetSubDirs = await fs.promises.readdir(localAssetDir);
-  localAssetSubDirs.forEach((subdir) => {
-    const subpath = path.join(workDir, "local-assets", subdir);
-    execSync(
-      `cd ${subpath} && zip -r ${subdir}.zip ./* && cp ${subdir}.zip ${localAssetDir} && cd ${localAssetDir} && rm -rf ${subpath}`
-    );
-  });
 
   process.chdir(workDir);
   const makeself = installMakeself();
