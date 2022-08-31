@@ -1,0 +1,20 @@
+version: 0.1
+cli:
+  version: 0.16.1-beta
+lint:
+  enabled:
+    - actionlint@1.6.15
+    - black@22.6.0
+    - clippy@1.58.1
+    - flake8@5.0.4
+    - git-diff-check@SYSTEM
+    - gitleaks@8.10.3
+    - hadolint@2.10.0
+    - isort@5.10.1
+    - markdownlint@0.32.1
+    - prettier@2.7.1
+    - rustfmt@1.58.1
+    - shellcheck@0.8.0
+    - shfmt@3.5.0
+    - svgo@2.8.0
+    - taplo@release-taplo-cli-0.6.8
