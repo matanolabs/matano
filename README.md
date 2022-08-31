@@ -87,6 +87,10 @@ To get started with Matano, run the `matano init` command. Make sure you have AW
 
 The interactive CLI wizard will walk you through getting started by generating an initial [Matano directory](https://www.matano.dev/docs/matano-directory) for you, initializing your AWS account, and deploying Matano into your AWS account.
 
+<div align="center">
+  <img src="website/src/assets/matano-init.gif" width="750">
+</div>
+
 Initial deployment takes a few minutes.
 
 ## Documentation
