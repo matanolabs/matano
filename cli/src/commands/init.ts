@@ -1,6 +1,6 @@
 import { CliUx, Command, Flags } from "@oclif/core";
 
-const { Confirm, Select } = require("enquirer");
+const { Confirm, AutoComplete } = require("enquirer");
 import { prompt } from "enquirer";
 import * as fs from "fs";
 import * as fse from "fs-extra";
@@ -14,6 +14,21 @@ import RefreshContext from "./refresh-context";
 import { getCdkOutputDir, getMatanoCdkApp, PROJ_ROOT_DIR } from "..";
 import GenerateMatanoDir from "./generate/matano-dir";
 import Deploy from "./deploy";
+import { AWS_REGIONS } from "../util";
+
+const getAwsAcctId = async (profile?: string) {
+  try {
+    const { stdout: awsStdout } = await execa(
+      "aws",
+      ["sts", "get-caller-identity"].concat(
+        profile ? ["--profile", profile] : []
+      )
+    );
+    return JSON.parse(awsStdout).Account;
+  } catch (error) {
+    return undefined;
+  }
+};
 
 export default class Init extends BaseCommand {
   static description = "Wizard to get started with Matano. Creates resources, initializes your account, and deploys Matano.";
@@ -73,32 +88,19 @@ export default class Init extends BaseCommand {
     // });
     // prog.start(3, 1);
 
-    const regionPrompt = prompt<any>({
-      type: "input",
-      name: "awsRegion",
-      message: () => ("Which AWS Region to deploy to?"),
+    const regionPrompt = new AutoComplete({
+      name: 'awsRegion',
+      message: 'Which AWS Region to deploy to?',
+      limit: 4,
       initial: process.env.AWS_DEFAULT_REGION ?? undefined,
-    });
-
-    const getAwsAcctId = async (profile?: string) => {
-      try {
-        const { stdout: awsStdout } = await execa(
-          "aws",
-          ["sts", "get-caller-identity"].concat(
-            profile ? ["--profile", profile] : []
-          )
-        );
-        return JSON.parse(awsStdout).Account;
-      } catch (error) {
-        return undefined;
-      }
-    };
-
+      choices: AWS_REGIONS,
+    }).run();
+    const getAwsAcctIdPromise = getAwsAcctId(awsProfile);
     // CliUx.ux.url("Feel free to read about the Matano directory here.", "https://www.matano.dev/docs");
 
     const [{awsRegion}, maybeDefaultAwsAccountId] = await Promise.all([
       regionPrompt,
-      getAwsAcctId(awsProfile),
+      getAwsAcctIdPromise,
     ]);
 
     const { awsAccountId } = await prompt<any>({

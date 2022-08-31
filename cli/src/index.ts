@@ -27,7 +27,7 @@ export function getMatanoCdkApp() {
     if (isPkg()) {
         return path.resolve(path.dirname(process.execPath), "matano-cdk"); 
     } else {
-        return "node " + path.resolve(PROJ_ROOT_DIR, "infra/bin/app.js");
+        return "node " + path.resolve(PROJ_ROOT_DIR, "infra/dist/bin/app.js");
     }
 }
 
