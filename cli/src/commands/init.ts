@@ -16,7 +16,7 @@ import GenerateMatanoDir from "./generate/matano-dir";
 import Deploy from "./deploy";
 import { AWS_REGIONS } from "../util";
 
-const getAwsAcctId = async (profile?: string) {
+const getAwsAcctId = async (profile?: string) => {
   try {
     const { stdout: awsStdout } = await execa(
       "aws",
