@@ -21,7 +21,7 @@ jobs:
     - name: Build
       shell: bash
       run: |
-        make -j package
+        make package
 
     - name: "Update nightly release"
       if: success()
