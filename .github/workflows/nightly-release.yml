@@ -6,7 +6,7 @@ on:
     - cron: '0 12 * * *'
 
 jobs:
-  release:
+  build:
     runs-on: ubuntu-latest
     steps:
 
@@ -22,6 +22,20 @@ jobs:
       shell: bash
       run: |
         make package
+
+    - uses: actions/upload-artifact@v3
+      with:
+        name: build-assets
+        path: matano*.sh
+
+  release:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+
+    - uses: actions/download-artifact@v3
+      with:
+        name: build-assets
 
     - name: "Update nightly release"
       if: success()
