@@ -6,6 +6,7 @@ import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import Layout from '@theme/Layout';
 import CodeBlock from '@theme/CodeBlock';
 import HomepageFeatures from '@site/src/components/HomepageFeatures';
+import coverPng from "@site/src/assets/cover.png";
 import diagramPng from "@site/src/assets/diagram.png";
 import diagramWebp from "@site/src/assets/diagram.webp";
 
@@ -66,10 +67,10 @@ export function CtaFooter() {
 export default function Home(): JSX.Element {
   const { siteConfig } = useDocusaurusContext();
   return (
-    <Layout wrapperClassName=''>
+    <Layout title="Matano | Open source security lake platform for AWS" description="Serverless, high scale, low cost, zero-ops security log analytics in your AWS account. Ingest petabytes of security data and write Python detections as code.">
         <Head>
           <html className="mtn-homepage"/>
-          <title>Matano | Open source security lake platform for AWS</title>
+          <meta property="og:image" content={coverPng}/>
         </Head>
         <div className='flex-1 flex'>
           <HomepageHeader />
