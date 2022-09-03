@@ -67,9 +67,11 @@ export function CtaFooter() {
 export default function Home(): JSX.Element {
   const { siteConfig } = useDocusaurusContext();
   return (
-    <Layout title="Matano | Open source security lake platform for AWS" description="Serverless, high scale, low cost, zero-ops security log analytics in your AWS account. Ingest petabytes of security data and write Python detections as code.">
+    <Layout description="Serverless, high scale, low cost, zero-ops security log analytics in your AWS account. Ingest petabytes of security data and write Python detections as code.">
         <Head>
           <html className="mtn-homepage"/>
+          <title>Matano | Open source security lake platform for AWS</title>
+          <meta property="og:title" content="Matano | Open source security lake platform for AWS"/>
           <meta property="og:image" content={coverPng}/>
         </Head>
         <div className='flex-1 flex'>
