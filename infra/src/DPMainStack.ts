@@ -1,5 +1,6 @@
 import * as path from "path";
 import * as fs from "fs";
+import * as YAML from "yaml";
 import { Construct } from "constructs";
 import * as cdk from "aws-cdk-lib";
 import { MatanoStack, MatanoStackProps } from "../lib/MatanoStack";
@@ -44,8 +45,9 @@ export class DPMainStack extends MatanoStack {
     const logSourceConfigs = getDirectories(logSourcesDirectory)
       .map((d) => path.join(logSourcesDirectory, d))
       .map((p) => readConfig(p, "log_source.yml") as LogSourceConfig);
-    const logSourcesConfigurationPath = path.resolve(path.join(makeTempDir(), "log_sources_configuration.json"));
-    fs.writeFileSync(logSourcesConfigurationPath, JSON.stringify(logSourceConfigs, null, 2));
+      
+    const logSourcesConfigurationPath = path.resolve(path.join(makeTempDir(), "log_sources_configuration.yml"));
+    fs.writeFileSync(logSourcesConfigurationPath, YAML.stringify(logSourceConfigs));
 
     const rawDataBatcher = new DataBatcher(this, "DataBatcher", {
       s3Bucket: props.matanoSourcesBucket,
@@ -122,14 +124,14 @@ export class DPMainStack extends MatanoStack {
     //       volumes: [
     //         {
     //           hostPath: logSourcesConfigurationPath,
-    //           containerPath: "/asset-input/log_sources_configuration.json",
+    //           containerPath: "/asset-input/log_sources_configuration.yml",
     //         },
     //       ],
     //       image: transformer.rustFunctionLayer.image,
     //       command: [
     //         "bash",
     //         "-c",
-    //         "cp /asset-input/log_sources_configuration.json /asset-output/log_sources_configuration.json",
+    //         "cp /asset-input/log_sources_configuration.yml /asset-output/log_sources_configuration.yml",
     //       ],
     //     },
     //   }),

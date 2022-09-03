@@ -1,18 +1,21 @@
 // This example requires the following input to succeed:
 // { "command": "do something" }
 mod models;
-
+mod arrow;
+mod avro;
 use ::value::value::timestamp_to_string;
 use http::{HeaderMap, HeaderValue};
 use std::borrow::Borrow;
-use std::cell::RefCell;
+use std::cell::{RefCell};
+use std::rc::Rc;
+use tokio::fs;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::env::{set_var, var};
 use std::mem::size_of_val;
 use std::path::Path;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc};
 use std::thread;
 use std::time::Instant;
 use tokio::io::AsyncReadExt;
@@ -59,95 +62,16 @@ use log::{debug, error, info, warn};
 
 use vrl::{diagnostic::Formatter, state, value, Program, Runtime, TargetValueRef};
 
-pub trait TryIntoAvro<T>: Sized {
-    /// The type returned in the event of a conversion error.
-    type Error;
-
-    /// Performs the conversion from a generic VRL Value to an Avro Value.
-    fn try_into(self) -> Result<T, Self::Error>;
-}
-impl TryIntoAvro<apache_avro::types::Value> for Value {
-    type Error = apache_avro::Error;
-
-    fn try_into(self) -> Result<apache_avro::types::Value, Self::Error> {
-        match self {
-            Self::Boolean(v) => Ok(apache_avro::types::Value::from(v)),
-            Self::Integer(v) => Ok(apache_avro::types::Value::from(v)),
-            Self::Float(v) => Ok(apache_avro::types::Value::from(v.into_inner())),
-            Self::Bytes(v) => Ok(apache_avro::types::Value::from(
-                String::from_utf8(v.to_vec()).map_err(Self::Error::ConvertToUtf8)?,
-            )),
-            Self::Regex(regex) => Ok(apache_avro::types::Value::from(regex.as_str().to_string())),
-            Self::Object(v) => Ok(apache_avro::to_value(v)?),
-            Self::Array(v) => Ok(apache_avro::to_value(v)?),
-            Self::Null => Ok(apache_avro::types::Value::Null),
-            Self::Timestamp(v) => Ok(apache_avro::types::Value::from(timestamp_to_string(&v))),
-        }
-    }
-}
-
-fn type_to_schema(data_type: &DataType, is_nullable: bool, name: String) -> Result<AvroSchema> {
-    Ok(if is_nullable {
-        AvroSchema::Union(vec![AvroSchema::Null, _type_to_schema(data_type, name)?])
-    } else {
-        _type_to_schema(data_type, name)?
-    })
-}
-
-fn field_to_field(field: &Field) -> Result<AvroField> {
-    let schema = type_to_schema(field.data_type(), true, field.name.clone())?;
-    Ok(AvroField::new(&field.name, schema))
-}
-
-fn _type_to_schema(data_type: &DataType, name: String) -> Result<AvroSchema> {
-    Ok(match data_type.to_logical_type() {
-        DataType::Null => AvroSchema::Null,
-        DataType::Boolean => AvroSchema::Boolean,
-        DataType::Int32 => AvroSchema::Int(None),
-        DataType::Int64 => AvroSchema::Long(None),
-        DataType::Float32 => AvroSchema::Float,
-        DataType::Float64 => AvroSchema::Double,
-        DataType::Binary => AvroSchema::Bytes(None),
-        DataType::LargeBinary => AvroSchema::Bytes(None),
-        DataType::Utf8 => AvroSchema::String(None),
-        DataType::LargeUtf8 => AvroSchema::String(None),
-        DataType::LargeList(inner) | DataType::List(inner) => AvroSchema::Array(Box::new(
-            type_to_schema(&inner.data_type, true, inner.name.clone())?,
-        )),
-        DataType::Struct(fields) => AvroSchema::Record(Record::new(
-            name,
-            fields
-                .iter()
-                .map(field_to_field)
-                .collect::<Result<Vec<_>>>()?,
-        )),
-        DataType::Date32 => AvroSchema::Int(Some(IntLogical::Date)),
-        DataType::Time32(TimeUnit::Millisecond) => AvroSchema::Int(Some(IntLogical::Time)),
-        DataType::Time64(TimeUnit::Microsecond) => AvroSchema::Long(Some(LongLogical::Time)),
-        DataType::Timestamp(TimeUnit::Millisecond, None) => {
-            AvroSchema::Long(Some(LongLogical::LocalTimestampMillis))
-        }
-        DataType::Timestamp(TimeUnit::Microsecond, None) => {
-            AvroSchema::Long(Some(LongLogical::LocalTimestampMicros))
-        }
-        DataType::Interval(IntervalUnit::MonthDayNano) => {
-            let mut fixed = Fixed::new("", 12);
-            fixed.logical = Some(FixedLogical::Duration);
-            AvroSchema::Fixed(fixed)
-        }
-        DataType::FixedSizeBinary(size) => AvroSchema::Fixed(Fixed::new("", *size)),
-        DataType::Decimal(p, s) => AvroSchema::Bytes(Some(BytesLogical::Decimal(*p, *s))),
-        other => return Err(anyhow!("write {:?} to avro", other)),
-    })
-}
+use crate::arrow::{coerce_data_type, type_to_schema};
+use crate::avro::TryIntoAvro;
 
 thread_local! {
     pub static RUNTIME: RefCell<Runtime> = RefCell::new(Runtime::new(state::Runtime::default()));
     pub static LOG_SOURCES_CONFIG: RefCell<BTreeMap<String, LogSourceConfiguration>> = {
-        let log_sources_configuration_path = Path::new(&var("LAMBDA_TASK_ROOT").unwrap().to_string()).join("log_sources_configuration.json");
+        let log_sources_configuration_path = Path::new(&var("LAMBDA_TASK_ROOT").unwrap().to_string()).join("log_sources_configuration.yml");
         let log_sources_configuration_string = std::fs::read_to_string(log_sources_configuration_path).expect("Unable to read file");
 
-        let log_sources_configuration: Vec<LogSourceConfiguration> = serde_json::from_str(&log_sources_configuration_string).expect("Unable to parse log_sources_configuration.json");
+        let log_sources_configuration: Vec<LogSourceConfiguration> = serde_yaml::from_str(&log_sources_configuration_string).expect("Unable to parse log_sources_configuration.yml");
         let mut log_sources_configuration_map = BTreeMap::new();
         for log_source_configuration in log_sources_configuration.iter() {
             log_sources_configuration_map.insert(log_source_configuration.name.clone(), log_source_configuration.clone());
@@ -568,7 +492,7 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessRe
                     .take(num_rows_to_infer_schema)
                     .collect::<Vec<_>>()
                     .await;
-                println!("Read 100 lines from head,  {:?}", now.elapsed());
+                println!("Read 100 lines from head, {:?}", now.elapsed());
                 let now = Instant::now();
 
                 let inferred_avro_schema = {
@@ -591,11 +515,8 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessRe
                             })
                             .collect::<Vec<_>>();
                         let data_types = data_types.into_iter().collect::<HashSet<_>>();
-                        let unioned_data_type = data_types.iter().next().unwrap(); // todo: arrow2::io::json::read::coerce_data_type(&data_types);
-                                                                                   // let reader = stream::iter(head).chain(reader.borrow_mut());
-                                                                                   // let ss = reader.next().await;
+                        let unioned_data_type = &coerce_data_type(&data_types.iter().collect::<Vec<_>>());
 
-                        // println!("{:#?}", unioned_data_type);
                         type_to_schema(unioned_data_type, false, "root".to_string()).unwrap()
                     })
                 }
@@ -605,38 +526,51 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessRe
 
                 let reader = stream::iter(head).chain(reader); // rewind
 
-                let avro_schema_json_string = serde_json::to_string(&inferred_avro_schema).unwrap();
-                let inferred_avro_schema =
-                    Arc::new(Schema::parse_str(&avro_schema_json_string).unwrap());
+                let avro_schema_json_string = serde_json::to_string_pretty(&inferred_avro_schema).unwrap();
+
+                let output_schemas_path = Path::new(&var("LAMBDA_TASK_ROOT").unwrap().to_string()).join("generated_schemas");
+                fs::create_dir_all(&output_schemas_path).await.unwrap();
+                let output_schema_path = output_schemas_path.join(format!("{}.avsc", log_source));
+                fs::write(output_schema_path,&avro_schema_json_string).await.unwrap();
+
+                // let avro_schema_json_string = fs::read_to_string(output_schema_path).await.unwrap();
+
+                let mut inferred_avro_schema = Schema::parse_str(&avro_schema_json_string).unwrap();
+
+                let inferred_avro_schema = Arc::new(inferred_avro_schema);
 
                 let writer_schema = inferred_avro_schema.clone();
                 let writer = RefCell::new(Writer::with_codec(
                     &writer_schema,
                     Vec::new(),
-                    Codec::Zstandard,
+                    Codec::Snappy,
                 ));
 
                 reader
-                    .chunks(400)
+                    .chunks(400) // chunks(8000) (avro block size)
                     .for_each(|chunk| {
+
+                    // .for_each_concurrent(100, |chunk| { // figure out how to make this work (lock writer so that we can write better blocks...)
                         let mut writer = writer.borrow_mut();
                         let schema = Arc::clone(&inferred_avro_schema);
 
                         async move {
-                            let avro_values = async_rayon::spawn(move || {
+                            let avro_values = spawn_blocking(move || {
                                 // CPU bound (VRL transform)
-                                chunk
+                                let avro_values = chunk
                                     .into_par_iter()
                                     .map(|v| {
                                         let v_avro = TryIntoAvro::try_into(v).unwrap();
                                         v_avro.resolve(schema.as_ref()).unwrap()
                                     })
-                                    .collect::<Vec<_>>()
-                            })
-                            .await;
+                                    .collect::<Vec<_>>();
 
-                            // avro_values
-                            writer.extend_from_slice(&avro_values).unwrap(); // IO (well theoretically)
+                                    avro_values
+                            })
+                            .await
+                            .unwrap();
+
+                            writer.extend_from_slice(&avro_values).unwrap(); // IO (well theoretically) TODO: since this actually does non-trivial comptuuation work too (schema validation), we need to figure out a way to prevent this from blocking our main async thread
                         }
                     })
                     .await;
@@ -645,13 +579,15 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessRe
                 let bytes = writer.into_inner().unwrap();
 
                 let uuid = Uuid::new_v4();
-                let key = format!("transformed/{}/{}.avro", log_source, uuid);
+                let key = format!("transformed/{}/{}.snappy.avro", log_source, uuid);
+                // let local_path = output_schemas_path.join(format!("{}.avro", log_source));
+                // fs::write(local_path, bytes).await.unwrap();
                 s3.put_object()
                     .bucket(var("MATANO_REALTIME_BUCKET_NAME").unwrap().to_string())
                     .key(&key)
                     .body(ByteStream::from(bytes))
                     .content_type("application/avro-binary".to_string())
-                    .content_encoding("application/zstd".to_string())
+                    // .content_encoding("application/zstd".to_string())
                     .send()
                     .await
                     .map_err(|e| {
@@ -675,9 +611,10 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessRe
     }
     println!("time to drop {:?}", start.elapsed());
 
+
     let resp = SuccessResponse {
         req_id: event.context.request_id,
-        msg: format!("Hello from Lambda 1! The command was executed."),
+        msg: format!("Hello from Transformer! The command was executed."),
     };
 
     // return `Response` (it will be serialized to JSON automatically by the runtime)

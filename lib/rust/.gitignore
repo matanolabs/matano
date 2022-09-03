@@ -3,5 +3,5 @@ target
 cargo-zigbuild
 zig
 garbage
-log_sources_configuration.json
+log_sources_configuration.*
 **/*/test.json
