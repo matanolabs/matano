@@ -2,9 +2,7 @@ name: "cloudtrail"
 
 ingest:
   expand_records_from_payload: parse_json!(.__raw).Records
-#   s3_source:
-      # bucket_name: my_org_cloudtrail_bucket
-      # key_prefix: my_org_cloudtrail_bucket
+
 transform: # TODO: ts handling... file, source...
   |
     _date, err = to_timestamp(.json.eventTime)
@@ -115,11 +113,215 @@ transform: # TODO: ts handling... file, source...
     .aws.cloudtrail.flattened.digest = del(.aws.cloudtrail.digest)
     .aws.cloudtrail.flattened.insight_details = del(.aws.cloudtrail.insight_details)
 
-    del(.aws)
-    cloud = .cloud
-    event = .event
-    ts = .ts
-    del(.)
-    .cloud = cloud
-    .event = event
-    .ts = ts
+schema:
+  fields:
+    - id: 0
+      name: aws
+      required: false
+      type:
+        type: struct
+        fields:
+          - id: 26
+            name: cloudtrail
+            required: false
+            type:
+              type: struct
+              fields:
+                - id: 18
+                  name: error_code
+                  required: false
+                  type: string
+                - id: 19
+                  name: error_message
+                  required: false
+                  type: string
+                - id: 20
+                  name: event_type
+                  required: false
+                  type: string
+                - id: 21
+                  name: event_version
+                  required: false
+                  type: string
+                - id: 22
+                  name: flattened
+                  required: false
+                  type:
+                    type: struct
+                    fields:
+                      - id: 10
+                        name: digest
+                        required: false
+                        type:
+                          type: struct
+                          fields: []
+                - id: 23
+                  name: recipient_account_id
+                  required: false
+                  type: string
+                - id: 24
+                  name: resources
+                  required: false
+                  type:
+                    type: struct
+                    fields: []
+                - id: 25
+                  name: user_identity
+                  required: false
+                  type:
+                    type: struct
+                    fields:
+                      - id: 14
+                        name: access_key_id
+                        required: false
+                        type: string
+                      - id: 15
+                        name: arn
+                        required: false
+                        type: string
+                      - id: 16
+                        name: session_context
+                        required: false
+                        type:
+                          type: struct
+                          fields:
+                            - id: 11
+                              name: creation_date
+                              required: false
+                              type: long
+                            - id: 12
+                              name: mfa_authenticated
+                              required: false
+                              type: string
+                            - id: 13
+                              name: session_issuer
+                              required: false
+                              type:
+                                type: struct
+                                fields: []
+                      - id: 17
+                        name: type
+                        required: false
+                        type: string
+    - id: 1
+      name: cloud
+      required: false
+      type:
+        type: struct
+        fields:
+          - id: 28
+            name: account
+            required: false
+            type:
+              type: struct
+              fields:
+                - id: 27
+                  name: id
+                  required: false
+                  type: string
+          - id: 29
+            name: region
+            required: false
+            type: string
+    - id: 2
+      name: event
+      required: false
+      type:
+        type: struct
+        fields:
+          - id: 30
+            name: action
+            required: false
+            type: string
+          - id: 31
+            name: id
+            required: false
+            type: string
+          - id: 32
+            name: provider
+            required: false
+            type: string
+    - id: 3
+      name: file
+      required: false
+      type:
+        type: struct
+        fields:
+          - id: 33
+            name: hash
+            required: false
+            type:
+              type: struct
+              fields: []
+    - id: 4
+      name: group
+      required: false
+      type:
+        type: struct
+        fields: []
+    - id: 5
+      name: related
+      required: false
+      type:
+        type: struct
+        fields:
+          - id: 35
+            name: user
+            required: false
+            type:
+              type: list
+              element-id: 34
+              element: string
+              element-required: false
+    - id: 6
+      name: source
+      required: false
+      type:
+        type: struct
+        fields:
+          - id: 37
+            name: as
+            required: false
+            type:
+              type: struct
+              fields:
+                - id: 36
+                  name: organization
+                  required: false
+                  type:
+                    type: struct
+                    fields: []
+          - id: 38
+            name: ip
+            required: false
+            type: string
+    - id: 7
+      name: ts
+      required: false
+      type: long
+    - id: 8
+      name: user
+      required: false
+      type:
+        type: struct
+        fields:
+          - id: 39
+            name: changes
+            required: false
+            type:
+              type: struct
+              fields: []
+          - id: 40
+            name: id
+            required: false
+            type: string
+          - id: 41
+            name: target
+            required: false
+            type:
+              type: struct
+              fields: []
+    - id: 9
+      name: user_agent
+      required: false
+      type: string
