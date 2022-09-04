@@ -15,6 +15,7 @@ build-cli:
 	cd cli && npm ci && npm run build
 
 synth-assets: build-infra
+	rm -rf ${CURDIR}/example/log_sources/cloudtrail
 	cd infra && ./node_modules/aws-cdk/bin/cdk synth \
 		--app "node dist/bin/app.js" \
 		--context matanoUserDirectory=${CURDIR}/example \
