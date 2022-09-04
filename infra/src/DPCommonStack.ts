@@ -18,6 +18,7 @@ export class DPCommonStack extends MatanoStack {
     super(scope, id, props);
 
     this.matanoIngestionBucket = new S3BucketWithNotifications(this, "MatanoIngestionBucket", {});
+    this.exportValue(this.matanoIngestionBucket.bucket.bucketName);
 
     this.matanoLakeStorageBucket = new S3BucketWithNotifications(this, "MatanoLakeStorageBucket", {
       queueProps: {

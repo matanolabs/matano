@@ -13,7 +13,7 @@ use std::fs::File;
 use std::rc::Rc;
 use std::sync::{Arc, MutexGuard};
 use std::sync::{Condvar, Mutex};
-use std::thread::{self, JoinHandle, ScopedJoinHandle};
+use std::thread::{self, JoinHandle};
 use std::{time::Instant, vec};
 
 use aws_lambda_events::event::sqs::SqsEvent;
