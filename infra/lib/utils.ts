@@ -55,3 +55,5 @@ export const randStr = (n=20) => crypto.randomBytes(n).toString('hex');
 export function makeTempDir(prefix?: string) {
   return fs.mkdtempSync(path.join(os.tmpdir(), prefix ?? randStr()));
 }
+
+export const dataDirPath = path.join(__dirname, "../../../data");

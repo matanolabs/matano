@@ -11,16 +11,6 @@
     "test": "jest",
     "cdk": "cdk"
   },
-  "pkg": {
-    "scripts": [
-      "./dist/**/*.js"
-    ],
-    "targets": [
-        "node16-linux-x64",
-        "node16-macos-x64"
-    ],
-    "outputPath": "build"
-  },
   "devDependencies": {
     "@types/fs-extra": "^9.0.13",
     "@types/jest": "^26.0.10",
