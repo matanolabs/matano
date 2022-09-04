@@ -25,7 +25,7 @@ export class Transformer extends Construct {
 
     this.transformerLambda = new lambda.Function(this, "Lambda", {
       code: lambda.Code.fromAsset(path.dirname(props.logSourcesConfigurationPath), {
-        assetHash: cdk.AssetHashType.OUTPUT,
+        assetHash: cdk.AssetHashType.SOURCE,
         bundling: {
           image: lambda.Runtime.PYTHON_3_9.bundlingImage,
           command: ["bash", "-c", "cp /asset-input/* /asset-output"],
