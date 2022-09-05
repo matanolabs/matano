@@ -1,6 +1,7 @@
 ---
 title: Announcing Matano
 authors: "samrose"
+image: /img/cover.png
 ---
 
 I'm excited to announce [Matano](/), a new open source project that lets you run a security lake platform directly in your AWS account. Using Matano, security teams on AWS can ingest, normalize, query and detect realtime threats on petabytes of security logs directly in S3.
