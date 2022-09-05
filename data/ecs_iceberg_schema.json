@@ -206,18 +206,14 @@
                       {
                         "id": 5507,
                         "name": "lon",
-                        "required": true,
-                        "type": "float",
-                        "initial-default": null,
-                        "write-default": null
+                        "required": false,
+                        "type": "float"
                       },
                       {
                         "id": 5508,
                         "name": "lat",
-                        "required": true,
-                        "type": "float",
-                        "initial-default": null,
-                        "write-default": null
+                        "required": false,
+                        "type": "float"
                       }
                     ]
                   },
@@ -1221,18 +1217,14 @@
                       {
                         "id": 5509,
                         "name": "lon",
-                        "required": true,
-                        "type": "float",
-                        "initial-default": null,
-                        "write-default": null
+                        "required": false,
+                        "type": "float"
                       },
                       {
                         "id": 5510,
                         "name": "lat",
-                        "required": true,
-                        "type": "float",
-                        "initial-default": null,
-                        "write-default": null
+                        "required": false,
+                        "type": "float"
                       }
                     ]
                   },
@@ -3146,18 +3138,14 @@
                       {
                         "id": 5511,
                         "name": "lon",
-                        "required": true,
-                        "type": "float",
-                        "initial-default": null,
-                        "write-default": null
+                        "required": false,
+                        "type": "float"
                       },
                       {
                         "id": 5512,
                         "name": "lat",
-                        "required": true,
-                        "type": "float",
-                        "initial-default": null,
-                        "write-default": null
+                        "required": false,
+                        "type": "float"
                       }
                     ]
                   },
@@ -3787,18 +3775,14 @@
                       {
                         "id": 5513,
                         "name": "lon",
-                        "required": true,
-                        "type": "float",
-                        "initial-default": null,
-                        "write-default": null
+                        "required": false,
+                        "type": "float"
                       },
                       {
                         "id": 5514,
                         "name": "lat",
-                        "required": true,
-                        "type": "float",
-                        "initial-default": null,
-                        "write-default": null
+                        "required": false,
+                        "type": "float"
                       }
                     ]
                   },
@@ -6888,18 +6872,14 @@
                       {
                         "id": 5519,
                         "name": "lon",
-                        "required": true,
-                        "type": "float",
-                        "initial-default": null,
-                        "write-default": null
+                        "required": false,
+                        "type": "float"
                       },
                       {
                         "id": 5520,
                         "name": "lat",
-                        "required": true,
-                        "type": "float",
-                        "initial-default": null,
-                        "write-default": null
+                        "required": false,
+                        "type": "float"
                       }
                     ]
                   },
@@ -7506,18 +7486,14 @@
                       {
                         "id": 5521,
                         "name": "lon",
-                        "required": true,
-                        "type": "float",
-                        "initial-default": null,
-                        "write-default": null
+                        "required": false,
+                        "type": "float"
                       },
                       {
                         "id": 5522,
                         "name": "lat",
-                        "required": true,
-                        "type": "float",
-                        "initial-default": null,
-                        "write-default": null
+                        "required": false,
+                        "type": "float"
                       }
                     ]
                   },
@@ -8700,18 +8676,14 @@
                             {
                               "id": 5525,
                               "name": "lon",
-                              "required": true,
-                              "type": "float",
-                              "initial-default": null,
-                              "write-default": null
+                              "required": false,
+                              "type": "float"
                             },
                             {
                               "id": 5526,
                               "name": "lat",
-                              "required": true,
-                              "type": "float",
-                              "initial-default": null,
-                              "write-default": null
+                              "required": false,
+                              "type": "float"
                             }
                           ]
                         },

@@ -53,18 +53,14 @@ def map_ecs_iceberg_type(ecs_type, path=None):
                 {
                     "id": ecs_field_id(colname + ".lon", True),
                     "name": "lon",
-                    "required": True,
+                    "required": False,
                     "type": "float",
-                    "initial-default": None,
-                    "write-default": None,
                 },
                 {
                     "id": ecs_field_id(colname + ".lat", True),
                     "name": "lat",
-                    "required": True,
+                    "required": False,
                     "type": "float",
-                    "initial-default": None,
-                    "write-default": None,
                 }
             ]
         }
