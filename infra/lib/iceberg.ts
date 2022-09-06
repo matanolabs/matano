@@ -86,7 +86,15 @@ export class IcebergTableProvider extends Construct {
         assetHashType: cdk.AssetHashType.OUTPUT,
         bundling: {
           image: lambda.Runtime.JAVA_11.bundlingImage,
-          command: ["./gradlew", ":iceberg_table_cfn:release", ],
+          command: [
+            "bash",
+            "-c",
+            [
+              "./gradlew :iceberg_table_cfn:release",
+              "mkdir -p /asset-output/lib/",
+              "cp /asset-input/iceberg_table_cfn/build/libs/output.jar /asset-output/lib/output.jar",
+            ].join(" && "),
+          ],
         },
       }, "MatanoIcebergCRProviderFunc"),
       initialPolicy: [
@@ -132,7 +140,15 @@ export class IcebergMetadata extends Construct {
         assetHashType: cdk.AssetHashType.OUTPUT,
         bundling: {
           image: lambda.Runtime.JAVA_11.bundlingImage,
-          command: ["./gradlew", ":iceberg_metadata:release",],
+          command: [
+            "bash",
+            "-c",
+            [
+              "./gradlew :iceberg_metadata:release",
+              "mkdir -p /asset-output/lib/",
+              "cp /asset-input/iceberg_metadata/build/libs/output.jar /asset-output/lib/output.jar",
+            ].join(" && "),
+          ],
         },
       }, "MatanoIcebergMetadataWriterFunction"),
       initialPolicy: [new iam.PolicyStatement({

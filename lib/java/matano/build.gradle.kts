@@ -20,15 +20,9 @@ subprojects {
         }
     }
     tasks.register("release") {
-        inputs.files("${subproject.projectDir}/src")
-        outputs.files(subproject.buildDir)
         dependsOn("shadowJar")
         if (File("/asset-output").exists()) {
             File("/asset-output/placeholder-for-cdk.txt").createNewFile() // Needed for CDK to prevent odd bugs.
-            copy {
-                from("${subproject.buildDir}/libs/output.jar")
-                into("/asset-output/lib")
-            }
         }
     }
 }
