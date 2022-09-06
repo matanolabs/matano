@@ -3635,6 +3635,7 @@ name = "transformer"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "anymap",
  "apache-avro",
  "arrow2",
  "async-compression",

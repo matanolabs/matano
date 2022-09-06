@@ -8,6 +8,7 @@ rust-version = "1.63.0"
 
 [dependencies]
 shared = { path = "../shared" }
+anymap = "0.12.1"
 lru = "0.7.8"
 cached = "0.38.0"
 tokio = { version = "1.17.0", features = ["macros"] }
