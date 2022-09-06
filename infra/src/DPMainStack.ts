@@ -29,6 +29,7 @@ import { LakeIngestion } from "../lib/lake-ingestion";
 import { Transformer } from "../lib/transformer";
 
 import { SqsSubscription } from "aws-cdk-lib/aws-sns-subscriptions";
+import { MatanoAlerting } from "../lib/alerting";
 
 interface DPMainStackProps extends MatanoStackProps {
   matanoSourcesBucket: S3BucketWithNotifications;
@@ -53,7 +54,11 @@ export class DPMainStack extends MatanoStack {
       s3Bucket: props.matanoSourcesBucket,
     });
 
-    const detections = new MatanoDetections(this, "MatanoDetections", {});
+    const matanoAlerting = new MatanoAlerting(this, "MatanoAlerting", {});
+
+    const detections = new MatanoDetections(this, "MatanoDetections", {
+      alertingSnsTopic: matanoAlerting.alertingTopic,
+    });
 
     const lakeIngestion = new LakeIngestion(this, "LakeIngestion", {
       outputBucketName: props.lakeStorageBucket.bucket.bucketName,

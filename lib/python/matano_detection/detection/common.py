@@ -7,14 +7,19 @@ import jsonlines
 from uuid import uuid4
 from io import BytesIO
 from datetime import datetime, timezone
-import cysimdjson
 import fastavro
 
 s3 = boto3.resource("s3")
+sns = boto3.client("s3")
 DETECTION_CONFIGS = None
+ALERTING_SNS_TOPIC_ARN = None
+
 
 def handler(event, context):
     processtime = {"t": 0}
+
+    global ALERTING_SNS_TOPIC_ARN
+    ALERTING_SNS_TOPIC_ARN = os.environ["ALERTING_SNS_TOPIC_ARN"]
 
     global DETECTION_CONFIGS
     if DETECTION_CONFIGS is None:
@@ -76,9 +81,7 @@ def run_detections(record, processtime):
     processtime["t"] += et3
 
 def process_responses(alert_responses):
-    alerts_upload_obj = BytesIO()
-    json_writer = jsonlines.Writer(alerts_upload_obj)
-
+    alert_objs = []
     for idx, response in enumerate(alert_responses):
         if not response["alert"]:
             continue
@@ -92,4 +95,20 @@ def process_responses(alert_responses):
             #     f"{topic}#{partition}#{offset}".encode("utf-8")
             # ).decode("utf-8"),
         }
-        # json_writer.write(alert_obj)
+        alert_objs.append(alert_obj)
+
+    alert_objs_chunks = chunks(alert_objs, 10)
+    for alert_objs_chunk in alert_objs_chunks:
+        sns.publish_batch(
+            TopicArn=ALERTING_SNS_TOPIC_ARN,
+            PublishBatchRequestEntries=[
+                { 'Id': obj["id"], 'Message': json.dumps(obj) }
+                for obj in alert_objs_chunk
+            ]
+        )
+        # TODO: ingest sqs for archival
+
+
+def chunks(lst, n):
+    for i in range(0, len(lst), n):
+        yield lst[i:i + n]

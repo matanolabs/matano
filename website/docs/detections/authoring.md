@@ -25,12 +25,10 @@ The `detect` function is the python function that is invoked for your detection.
 
 The function has the following signature:
 
-```
-def detect(record):
+```python
+def detect(record) -> bool | None:
     ...
 ```
-
-Your detection must terminate in **1 second**.
 
 ### Returning values from your detection
 

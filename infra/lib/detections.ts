@@ -3,6 +3,7 @@ import * as path from "path";
 import { Construct } from "constructs";
 import * as cdk from "aws-cdk-lib";
 import * as s3 from "aws-cdk-lib/aws-s3";
+import * as sns from "aws-cdk-lib/aws-sns";
 import * as sqs from "aws-cdk-lib/aws-sqs";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as lambda from "aws-cdk-lib/aws-lambda";
@@ -35,6 +36,7 @@ class Detection extends Construct {
 }
 
 export interface MatanoDetectionsProps {
+  alertingSnsTopic: sns.Topic;
 }
 
 export class MatanoDetections extends Construct {
@@ -59,7 +61,6 @@ export class MatanoDetections extends Construct {
     });
 
     const detectionsDirectory = path.join(matanoUserDirectory, "detections");
-    fs.writeFileSync(path.resolve(detectionsDirectory, "index.py"), "");
     const detectionNames = getDirectories(detectionsDirectory);
 
     const detectionsFuncAssetName = "MatanoDetectionFunction";
@@ -78,12 +79,14 @@ export class MatanoDetections extends Construct {
       layers: [detectionsLayer],
       memorySize: 1800,
       environment: {
+        ALERTING_SNS_TOPIC_ARN: props.alertingSnsTopic.topicArn,
       },
       initialPolicy: [
         new iam.PolicyStatement({actions: ["s3:*"], resources: ["*"]}),
       ],
     });
-    fs.unlinkSync(path.resolve(detectionsDirectory, "index.py"));
+
+    props.alertingSnsTopic.grantPublish(detectionFunction);
 
     this.detectionsQueue = new sqs.Queue(this, "DetectionsQueue");
     const sqsEventSource = new SqsEventSource(this.detectionsQueue, {
@@ -105,11 +108,6 @@ export class MatanoDetections extends Construct {
           import_path: `${detectionName}.detect`,
         });
       }
-      // new Detection(this, `Detection-${detectionName}`, {
-      //   detectionName,
-      //   detectionsLayer,
-      //   matanoUserDirectory: matanoUserDirectory,
-      // });
     }
     detectionFunction.addEnvironment("DETECTION_CONFIGS", JSON.stringify(detectionConfigs));
   }

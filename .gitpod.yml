@@ -14,7 +14,7 @@ tasks:
     init: |
       gradle build
   - name: rust
-    before: cd lib/java/rust
+    before: cd lib/rust
     init: |
       cargo build
 image:
