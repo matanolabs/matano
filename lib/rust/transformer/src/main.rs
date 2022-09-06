@@ -1,23 +1,24 @@
 // This example requires the following input to succeed:
 // { "command": "do something" }
-mod models;
 mod arrow;
 mod avro;
+mod models;
 use ::value::value::timestamp_to_string;
+use aws_sdk_sns::model::MessageAttributeValue;
 use http::{HeaderMap, HeaderValue};
 use std::borrow::Borrow;
-use std::cell::{RefCell};
-use std::rc::Rc;
-use tokio::fs;
+use std::cell::RefCell;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::env::{set_var, var};
 use std::mem::size_of_val;
 use std::path::Path;
 use std::pin::Pin;
+use std::rc::Rc;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc};
+use std::sync::Arc;
 use std::thread;
 use std::time::Instant;
+use tokio::fs;
 use tokio::io::AsyncReadExt;
 use tokio::task::spawn_blocking;
 
@@ -353,6 +354,7 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessRe
             .expect("Could not deserialize SQS message body as list of DataBatcherRequestItems.");
             data_batcher_request_items
         })
+        .filter(|d| d.size > 0)
         .collect::<Vec<_>>();
 
     info!(
@@ -363,6 +365,7 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessRe
 
     let config = aws_config::load_from_env().await;
     let s3 = aws_sdk_s3::Client::new(&config);
+    let sns = aws_sdk_sns::Client::new(&config);
 
     println!("current_num_threads() = {}", rayon::current_num_threads());
 
@@ -481,6 +484,7 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessRe
         .into_iter()
         .map(|(log_source, stream)| {
             let s3 = &s3;
+            let sns = &sns;
             let num_rows_to_infer_schema = 100;
 
             async move {
@@ -515,7 +519,8 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessRe
                             })
                             .collect::<Vec<_>>();
                         let data_types = data_types.into_iter().collect::<HashSet<_>>();
-                        let unioned_data_type = &coerce_data_type(&data_types.iter().collect::<Vec<_>>());
+                        let unioned_data_type =
+                            &coerce_data_type(&data_types.iter().collect::<Vec<_>>());
 
                         type_to_schema(unioned_data_type, false, "root".to_string()).unwrap()
                     })
@@ -526,12 +531,13 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessRe
 
                 let reader = stream::iter(head).chain(reader); // rewind
 
-                let avro_schema_json_string = serde_json::to_string_pretty(&inferred_avro_schema).unwrap();
+                let avro_schema_json_string =
+                    serde_json::to_string_pretty(&inferred_avro_schema).unwrap();
 
-                let output_schemas_path = Path::new(&var("LAMBDA_TASK_ROOT").unwrap().to_string()).join("generated_schemas");
-                fs::create_dir_all(&output_schemas_path).await.unwrap();
-                let output_schema_path = output_schemas_path.join(format!("{}.avsc", log_source));
-                fs::write(output_schema_path,&avro_schema_json_string).await.unwrap();
+                // let output_schemas_path = Path::new(&var("LAMBDA_TASK_ROOT").unwrap().to_string()).join("generated_schemas");
+                // fs::create_dir_all(&output_schemas_path).await.unwrap();
+                // let output_schema_path = output_schemas_path.join(format!("{}.avsc", log_source));
+                // fs::write(output_schema_path,&avro_schema_json_string).await.unwrap();
 
                 // let avro_schema_json_string = fs::read_to_string(output_schema_path).await.unwrap();
 
@@ -549,8 +555,7 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessRe
                 reader
                     .chunks(400) // chunks(8000) (avro block size)
                     .for_each(|chunk| {
-
-                    // .for_each_concurrent(100, |chunk| { // figure out how to make this work (lock writer so that we can write better blocks...)
+                        // .for_each_concurrent(100, |chunk| { // figure out how to make this work (lock writer so that we can write better blocks...)
                         let mut writer = writer.borrow_mut();
                         let schema = Arc::clone(&inferred_avro_schema);
 
@@ -565,7 +570,7 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessRe
                                     })
                                     .collect::<Vec<_>>();
 
-                                    avro_values
+                                avro_values
                             })
                             .await
                             .unwrap();
@@ -579,11 +584,12 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessRe
                 let bytes = writer.into_inner().unwrap();
 
                 let uuid = Uuid::new_v4();
-                let key = format!("transformed/{}/{}.snappy.avro", log_source, uuid);
+                let bucket = var("MATANO_REALTIME_BUCKET_NAME").unwrap().to_string();
+                let key = format!("transformed/{}/{}.snappy.avro", &log_source, uuid);
                 // let local_path = output_schemas_path.join(format!("{}.avro", log_source));
                 // fs::write(local_path, bytes).await.unwrap();
                 s3.put_object()
-                    .bucket(var("MATANO_REALTIME_BUCKET_NAME").unwrap().to_string())
+                    .bucket(&bucket)
                     .key(&key)
                     .body(ByteStream::from(bytes))
                     .content_type("application/avro-binary".to_string())
@@ -592,6 +598,31 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessRe
                     .await
                     .map_err(|e| {
                         error!("Error putting {} to S3: {}", key, e);
+                        e
+                    })
+                    .unwrap();
+
+                sns.publish()
+                    .topic_arn(var("MATANO_REALTIME_TOPIC_ARN").unwrap().to_string())
+                    .message(
+                        json!({
+                            "bucket": &bucket,
+                            "key": &key,
+                            "log_source": log_source
+                        })
+                        .to_string(),
+                    )
+                    .message_attributes(
+                        "log_source",
+                        MessageAttributeValue::builder()
+                            .data_type("String".to_string())
+                            .string_value(log_source)
+                            .build(),
+                    )
+                    .send()
+                    .await
+                    .map_err(|e| {
+                        error!("Error publishing to SNS: {}", e);
                         e
                     })
                     .unwrap();
@@ -610,7 +641,6 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessRe
         start = Instant::now();
     }
     println!("time to drop {:?}", start.elapsed());
-
 
     let resp = SuccessResponse {
         req_id: event.context.request_id,

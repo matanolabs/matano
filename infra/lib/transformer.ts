@@ -1,14 +1,16 @@
 import * as path from "path";
 import * as cdk from "aws-cdk-lib";
 import { Construct } from "constructs";
-import * as sqs from "aws-cdk-lib/aws-sqs";
+import * as sns from "aws-cdk-lib/aws-sns";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import { RustFunctionLayer } from "./rust-function-layer";
 
 interface TransformerProps {
   realtimeBucketName: string;
+  realtimeTopic: sns.Topic;
   logSourcesConfigurationPath: string;
+  schemasLayer: lambda.LayerVersion;
 }
 
 export class Transformer extends Construct {
@@ -38,12 +40,13 @@ export class Transformer extends Construct {
       environment: {
         ...this.rustFunctionLayer.environmentVariables,
         MATANO_REALTIME_BUCKET_NAME: props.realtimeBucketName,
+        MATANO_REALTIME_TOPIC_ARN: props.realtimeTopic.topicArn,
       },
-      layers: [this.rustFunctionLayer.layer],
+      layers: [this.rustFunctionLayer.layer, props.schemasLayer],
       timeout: cdk.Duration.seconds(30),
       initialPolicy: [
         new iam.PolicyStatement({
-          actions: ["secretsmanager:*", "dynamodb:*", "s3:*"],
+          actions: ["secretsmanager:*", "dynamodb:*", "s3:*", "sns:*"],
           resources: ["*"],
         }),
       ],

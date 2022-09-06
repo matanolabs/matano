@@ -1,12 +1,13 @@
+use anyhow::{anyhow, Result};
 use arrow2::datatypes::*;
 use arrow2::io::avro::avro_schema::schema::{
     BytesLogical, Field as AvroField, Fixed, FixedLogical, IntLogical, LongLogical, Record,
     Schema as AvroSchema,
 };
-use std::borrow::Borrow;
 use indexmap::map::IndexMap as HashMap;
 use indexmap::set::IndexSet as HashSet;
-use anyhow::{Result, anyhow};
+use std::borrow::Borrow;
+use log::{debug};
 
 const ITEM_NAME: &str = "item";
 
@@ -16,18 +17,18 @@ const ITEM_NAME: &str = "item";
 /// * Lists and scalars are coerced to a list of a compatible scalar
 /// * Structs contain the union of all fields
 /// * All other types are coerced to `Utf8`
-pub(crate) fn coerce_data_type<A: Borrow<DataType>>(datatypes: &[A]) -> DataType {
+pub(crate) fn coerce_data_type<A: Borrow<DataType> + std::fmt::Debug>(datatypes: &[A]) -> DataType {
     use DataType::*;
 
     if datatypes.is_empty() {
         return DataType::Null;
     }
 
-    let are_all_equal = datatypes.windows(2).all(|w| w[0].borrow() == w[1].borrow());
+    // let are_all_equal = datatypes.windows(2).all(|w| w[0].borrow() == w[1].borrow());
 
-    if are_all_equal {
-        return datatypes[0].borrow().clone();
-    }
+    // if are_all_equal {
+    //     return datatypes[0].borrow().clone();
+    // }
 
     let are_all_structs = datatypes.iter().all(|x| matches!(x.borrow(), Struct(_)));
 
@@ -63,10 +64,21 @@ pub(crate) fn coerce_data_type<A: Borrow<DataType>>(datatypes: &[A]) -> DataType
                 let dts = dts.into_iter().collect::<Vec<_>>();
                 Field::new(name, coerce_data_type(&dts), true)
             })
-            .collect();
-        return Struct(fields);
+            .filter(|f| f.data_type != DataType::Null)
+            .collect::<Vec<_>>();
+
+        let data_type =
+         if fields.iter().filter(|f| f.data_type != DataType::Null).count() > 0 {
+            Struct(fields)
+        } else {
+            debug!("datatypes: {:?} \n\n fields:{:?}",datatypes,fields);
+            DataType::Null
+        };
+        return data_type;
     } else if datatypes.len() > 2 {
         return Utf8;
+    } else if datatypes.len() == 1 {
+        return datatypes[0].borrow().clone();
     }
     let (lhs, rhs) = (datatypes[0].borrow(), datatypes[1].borrow());
 
@@ -92,26 +104,29 @@ pub(crate) fn coerce_data_type<A: Borrow<DataType>>(datatypes: &[A]) -> DataType
     };
 }
 
-pub(crate) fn type_to_schema(data_type: &DataType, is_nullable: bool, name: String) -> Result<AvroSchema> {
-    Ok(if is_nullable {
-        AvroSchema::Union(vec![AvroSchema::Null, _type_to_schema(data_type, name)?])
+pub(crate) fn type_to_schema(
+    data_type: &DataType,
+    is_nullable: bool,
+    name: String,
+) -> Result<AvroSchema> {
+    let schema = _type_to_schema(data_type, name)?;
+    Ok(if is_nullable && schema != AvroSchema::Null {
+        AvroSchema::Union(vec![AvroSchema::Null, schema])
     } else {
-        _type_to_schema(data_type, name)?
+        schema
     })
 }
 
 fn field_to_field(field: &Field) -> Result<AvroField> {
     let schema = type_to_schema(field.data_type(), true, field.name.clone())?;
-    Ok(
-        AvroField {
-            name: (&field.name).into(),
-            doc: None,
-            schema,
-            default: Some(AvroSchema::Null),
-            order: None,
-            aliases: vec![],
-        }
-    )
+    Ok(AvroField {
+        name: (&field.name).into(),
+        doc: None,
+        schema,
+        default: Some(AvroSchema::Null),
+        order: None,
+        aliases: vec![],
+    })
 }
 
 fn _type_to_schema(data_type: &DataType, name: String) -> Result<AvroSchema> {

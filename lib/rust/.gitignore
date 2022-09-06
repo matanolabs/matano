@@ -1,5 +1,6 @@
 target
 .cache
+.cargo
 cargo-zigbuild
 zig
 garbage
