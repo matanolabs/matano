@@ -9,7 +9,7 @@ import * as iam from "aws-cdk-lib/aws-iam";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 
 import { MatanoStack, MatanoStackProps } from "../lib/MatanoStack";
-import { dualAsset, getDirectories } from "../lib/utils";
+import { getDirectories, getLocalAsset } from "../lib/utils";
 import { readDetectionConfig } from "./utils";
 import { SqsEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
 
@@ -50,14 +50,7 @@ export class MatanoDetections extends Construct {
 
     const detectionsLayer = new lambda.LayerVersion(this, detectionsCommonAssetName, {
       compatibleRuntimes: [lambda.Runtime.PYTHON_3_9],
-      code: dualAsset(detectionsCommonAssetName, () => lambda.Code.fromAsset(detectionsCommonCodeDir, {
-        exclude: ['*.pyc'],
-        bundling: {
-          volumes: [{hostPath: path.resolve("../local-assets"), containerPath: "/local-assets"}],
-          image: lambda.Runtime.PYTHON_3_9.bundlingImage,
-          command: ["bash", "-c", `python -m pip install -r requirements.txt -t /asset-output/python && cp -rT /asset-input/ /asset-output/python && mkdir -p /local-assets/${detectionsCommonAssetName} && cp -a /asset-output/* /local-assets/${detectionsCommonAssetName}`],
-        },
-      })),
+      code: getLocalAsset(detectionsCommonAssetName),
     });
 
     const detectionsDirectory = path.join(matanoUserDirectory, "detections");

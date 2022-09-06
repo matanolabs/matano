@@ -40,16 +40,13 @@ export const getLocalAssetsDir = () => {
 }
 
 export function getLocalAssetPath(assetName: string) {
-  return path.join(getLocalAssetsDir(), assetName + ".zip");
+  const ret = path.join(getLocalAssetsDir(), assetName);
+  return isPkg() ? ret + ".zip" : ret;
 }
 
-export function dualAsset(assetName: string, localProducer: () => lambda.Code, pkgProducer?: () => lambda.Code) {
-  if ((process as any).pkg) {
-    return pkgProducer ? pkgProducer() : lambda.AssetCode.fromAsset(getLocalAssetPath(assetName));
-  } else {
-    return localProducer();
-  }
-}
+export function getLocalAsset(assetName: string) {
+  return lambda.AssetCode.fromAsset(getLocalAssetPath(assetName));
+};
 
 export const randStr = (n=20) => crypto.randomBytes(n).toString('hex');
 export function makeTempDir(prefix?: string) {

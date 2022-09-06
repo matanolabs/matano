@@ -1,3 +1,6 @@
+import org.jetbrains.kotlin.incremental.mkdirsOrThrow
+import java.nio.file.Paths
+
 plugins {
     java
     kotlin("jvm") version "1.7.0" apply false
@@ -20,9 +23,19 @@ subprojects {
         }
     }
     tasks.register("release") {
+        inputs.files("${subproject.projectDir}/src")
+//        outputs.files(subproject.buildDir)
         dependsOn("shadowJar")
-        if (File("/asset-output").exists()) {
-            File("/asset-output/placeholder-for-cdk.txt").createNewFile() // Needed for CDK to prevent odd bugs.
+        val assetName = if (subproject.name == "scripts") "matano-java-scripts" else subproject.name
+        val assetDir = Paths.get(project.rootDir.absolutePath, "../../../local-assets/${assetName}").toFile()
+        val assetDirp = assetDir.canonicalPath
+        Paths.get(assetDirp, "lib").toFile().mkdirsOrThrow()
+
+        doLast {
+            File("${assetDirp}/placeholder-for-cdk.txt").createNewFile()
+            exec {
+                commandLine("bash", "-c", "cp -a ${subproject.buildDir}/libs/* ${assetDirp}/lib")
+            }
         }
     }
 }

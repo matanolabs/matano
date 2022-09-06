@@ -6,8 +6,8 @@ import * as sqs from "aws-cdk-lib/aws-sqs";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import { S3BucketWithNotifications } from "./s3-bucket-notifs";
-import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
 import { SqsEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
+import { getLocalAsset, getLocalAssetPath } from "./utils";
 
 interface DataBatcherProps {
     s3Bucket: S3BucketWithNotifications;
@@ -20,30 +20,16 @@ export class DataBatcher extends Construct {
 
         this.outputQueue = new sqs.Queue(this, "DataBatcherOutputQueue");
 
-        // TODO: extract better, deep imports blocked tho..
-        const lambdaFunc = new NodejsFunction(this, "DataBatcherProcessorFunction", {
-            entry: "../lib/nodejs/data-batcher-processor/index.ts",
-            depsLockFilePath: "../lib/nodejs/package-lock.json",
+        const lambdaFunc = new lambda.Function(this, "DataBatcherProcessorFunction", {
+            code: getLocalAsset("DataBatcherProcessorFunction"),
+            handler: "index.handler",
             runtime: lambda.Runtime.NODEJS_16_X,
             timeout: cdk.Duration.seconds(10),
-            bundling: {
-                forceDockerBundling: true,
-                commandHooks: {
-                    beforeInstall: (_1,_2) => [],
-                    beforeBundling: (_1,_2) => [],
-                    afterBundling(inputDir, outputDir) {
-                        return [`mkdir -p ${inputDir}/build/DataBatcherProcessorFunction && cp -a ${outputDir}/* ${inputDir}/build/DataBatcherProcessorFunction`]
-                    },
-                }
-            },
             environment: {
                 OUTPUT_QUEUE_URL: this.outputQueue.queueUrl,
+                AWS_NODEJS_CONNECTION_REUSE_ENABLED: "1",
             },
         });
-
-        if (!(process as any).pkg) {
-            fse.copySync("../lib/nodejs/build", "../local-assets")
-        }
 
         const sqsEventSource = new SqsEventSource(props.s3Bucket.queue, {
             batchSize: 10000,

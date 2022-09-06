@@ -38,6 +38,4 @@ arrow2 = {git = "https://github.com/jorgecarleitao/arrow2", features = ["io_avro
 # parquet2= {git = "https://github.com/jorgecarleitao/parquet2",rev="de6039b", features = ["full"]}
 async-stream = { version = "0.3.3" } # NEED THIS or parquet2 fails compile
 
-[patch.crates-io]
-parquet2={git = "https://github.com/jorgecarleitao/parquet2", rev="de6039b", features = ["full"]}
 

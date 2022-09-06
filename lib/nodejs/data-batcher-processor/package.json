@@ -2,11 +2,15 @@
     "name": "@matano/data-batcher-processor",
     "version": "1.0.0",
     "scripts": {
-        "build": "rm -rf dist && mkdir -p dist && concurrently 'esbuild index.ts --platform=node --outfile=dist/output.js --bundle --loader:.ts=ts' 'tsc --noEmit'",
+        "clean": "rm -rf dist build",
+        "release": "mkdir -p build && esbuild index.ts --platform=node --external:aws-sdk --outfile=build/index.js --bundle --loader:.ts=ts",
+        "postrelease": "OUTDIR=../../../local-assets/DataBatcherProcessorFunction && mkdir -p $OUTDIR && cp -a build/* $OUTDIR",
+        "build": "tsc",
         "watch": "tsc -w",
         "test": "jest"
     },
     "devDependencies": {
+        "aws-sdk": "2.1208.0",
         "@types/aws-lambda": "^8.10.77",
         "@types/node": "^18.7.2",
         "concurrently": "^7.2.2",

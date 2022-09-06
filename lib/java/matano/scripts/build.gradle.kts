@@ -67,15 +67,3 @@ tasks {
         archiveFileName.set("matano-scripts.jar")
     }
 }
-
-tasks.register("buildJar") {
-    inputs.files("${project.projectDir}/src")
-    outputs.files(project.buildDir)
-    dependsOn("shadowJar")
-    if (File("/asset-output").exists()) {
-        copy {
-            from("${project.buildDir}/libs/matano-scripts.jar")
-            into("/local-assets/matano-java-scripts")
-        }
-    }
-}

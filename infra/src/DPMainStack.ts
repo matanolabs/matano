@@ -12,18 +12,10 @@ import * as os from "os";
 import * as sns from "aws-cdk-lib/aws-sns";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import { IcebergMetadata } from "../lib/iceberg";
-import {
-  dualAsset,
-  getDirectories,
-  getLocalAssetPath,
-  makeTempDir,
-  MATANO_USED_RUNTIMES,
-  readConfig,
-} from "../lib/utils";
+import { getDirectories, getLocalAssetPath, makeTempDir, MATANO_USED_RUNTIMES, readConfig } from "../lib/utils";
 import { S3BucketWithNotifications } from "../lib/s3-bucket-notifs";
 import { MatanoLogSource, LogSourceConfig } from "../lib/log-source";
 import { MatanoDetections } from "../lib/detections";
-import { NodejsFunction, NodejsFunctionProps } from "aws-cdk-lib/aws-lambda-nodejs";
 import { DockerImage } from "aws-cdk-lib";
 import { SqsEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
 import { execSync } from "child_process";
@@ -92,30 +84,16 @@ export class DPMainStack extends MatanoStack {
     // matano-java-scripts
     const schemasLayer = new lambda.LayerVersion(this, "MatanoSchemasLayer", {
       compatibleRuntimes: MATANO_USED_RUNTIMES,
-      code: dualAsset(
-        "matano-java-scripts",
-        () =>
-          lambda.Code.fromAsset(path.resolve(path.join("../lib/java/matano")), {
-            assetHashType: cdk.AssetHashType.OUTPUT,
-            bundling: {
-              volumes: [
-                { hostPath: tempSchemasDir, containerPath: "/schemas" },
-                { hostPath: path.resolve("../local-assets"), containerPath: "/local-assets" },
-              ],
-              image: lambda.Runtime.JAVA_11.bundlingImage,
-              command: ["./gradlew", ":scripts:run", "--args", "gen-schemas /schemas", ":scripts:buildJar"],
-            },
-          }),
-        () =>
-          lambda.Code.fromAsset(getLocalAssetPath("matano-java-scripts"), {
-            assetHashType: cdk.AssetHashType.OUTPUT,
-            bundling: {
-              volumes: [{ hostPath: tempSchemasDir, containerPath: "/schemas" }],
-              image: lambda.Runtime.JAVA_11.bundlingImage,
-              command: ["bash", "-c", "java -jar /asset-input/matano-scripts.jar gen-schemas /schemas"],
-            },
-          })
-      ),
+      code: lambda.Code.fromAsset(getLocalAssetPath("matano-java-scripts"), {
+        assetHashType: cdk.AssetHashType.OUTPUT,
+        bundling: {
+          volumes: [
+            { hostPath: tempSchemasDir, containerPath: "/schemas" },
+          ],
+          image: lambda.Runtime.JAVA_11.bundlingImage,
+          command: ["bash", "-c", "java -jar /asset-input/lib/matano-scripts.jar gen-schemas /schemas", ],
+        },
+      }),
     });
 
     const transformer = new Transformer(this, "Transformer", {

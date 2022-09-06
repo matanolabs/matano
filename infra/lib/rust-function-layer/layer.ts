@@ -7,7 +7,7 @@ import * as crypto from "crypto";
 import * as path from "path";
 import { Settings } from ".";
 import { MatanoConfiguration } from "../MatanoStack";
-import { dualAsset } from "../utils";
+import { getLocalAsset } from "../utils";
 import { BaseBuildProps, build, BuildOptions } from "./build";
 import { LAMBDA_TARGETS } from "./build";
 import { getPackageName, lambdaArchitecture } from "./utils";
@@ -60,56 +60,7 @@ export class RustFunctionCode {
       target: target,
       outDir: "/asset-output",
     };
-
-    const code = dualAsset(packageName, () => {
-      const rustFunctionLayerScriptsPath = path.resolve(path.join("./lib/rust-function-layer"));
-      const lambdasDir = path.resolve(path.join("../lib/rust"));
-      return lambda.Code.fromAsset(lambdasDir, {
-        assetHashType: AssetHashType.SOURCE,
-        bundling: {
-          image: DockerImage.fromBuild(rustFunctionLayerScriptsPath),
-          volumes: [
-            {
-              hostPath: path.resolve(path.join("../lib/rust")),
-              containerPath: "/.cache",
-            },
-            {
-              hostPath: rustFunctionLayerScriptsPath,
-              containerPath: "/asset-input/scripts",
-            },
-            { hostPath: path.resolve("../local-assets"), containerPath: "/local-assets" },
-          ],
-          command: [
-            "bash",
-            "-c",
-            [
-              // `mkdir -p /.cache`,
-              `ts-node -T -e "import { build } from './scripts/build'; build(JSON.parse(Buffer.from('${Buffer.from(
-                JSON.stringify(baseBuildProps)
-              ).toString("base64")}', 'base64').toString('ascii')));"`,
-              `cp -a /asset-output/${packageName}/* /asset-output`,
-              `rm -rf /asset-output/${packageName}`,
-              `mkdir -p /local-assets/${packageName}`,
-              `cp -a /asset-output/* /local-assets/${packageName}`,
-            ].join(" && "),
-          ],
-          local: {
-            tryBundle(outputDir, options) {
-              if ((process as any).pkg || !process.env.MATANO_LOCAL_DEV) return false;
-
-              execSync(
-                `bash -c "cargo lambda build --release --target ${target} --quiet --color always --package ${packageName} && cp -a target/lambda/${packageName}/* ${outputDir} && cp -a target/lambda/${packageName} ../../local-assets"`,
-                {
-                  cwd: lambdasDir,
-                }
-              );
-              return true;
-            },
-          },
-        },
-      });
-    });
-    return code;
+    return getLocalAsset(packageName);
   }
 }
 
