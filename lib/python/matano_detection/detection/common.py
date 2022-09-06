@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 import fastavro
 
 s3 = boto3.resource("s3")
-sns = boto3.client("s3")
+sns = boto3.client("sns")
 DETECTION_CONFIGS = None
 ALERTING_SNS_TOPIC_ARN = None
 
@@ -31,9 +31,9 @@ def handler(event, context):
     alert_responses = []
     i1 = 0
     st = time.time()
-    for record in get_records(event, processtime):
+    for log_source, record in get_records(event, processtime):
         i1 += 1
-        for response in run_detections(record, processtime):
+        for response in run_detections(log_source, record, processtime):
             alert_responses.append(response)
     elt = time.time() - st
     processtime["t"] += elt
@@ -49,7 +49,7 @@ def get_records(event, processtime):
 
         st = time.time()
         print(f"START: Downloading from s3://{s3_bucket}/{s3_key}")
-        obj_body = s3.Object(s3_bucket, s3_key).get()["Body"].read()
+        obj_body = s3.Object(s3_bucket, s3_key).get()["Body"]
         print(f"END: Downloading from s3://{s3_bucket}/{s3_key}")
         print("Time taken: ", time.time() - st)
         processtime["t"] -= time.time() - st
@@ -57,10 +57,10 @@ def get_records(event, processtime):
         reader = fastavro.reader(obj_body)
 
         for record in reader:
-            yield record
+            log_source = sqs_record_body["log_source"]
+            yield log_source, record
 
-def run_detections(record, processtime):
-    log_source = record["log_source"]
+def run_detections(log_source, record, processtime):
     configs = DETECTION_CONFIGS[log_source]
 
     st3 = time.time()
@@ -69,7 +69,7 @@ def run_detections(record, processtime):
         # print(f"Running detection: {detection_name} for log_source: {log_source}")
 
         alert_title = log_source
-        alert_response = detection_module.detect(record["data"])
+        alert_response = detection_module.detect(record)
 
         yield {
             "alert": alert_response,

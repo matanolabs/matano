@@ -12,6 +12,7 @@ import { MatanoStack, MatanoStackProps } from "../lib/MatanoStack";
 import { getDirectories, getLocalAsset } from "../lib/utils";
 import { readDetectionConfig } from "./utils";
 import { SqsEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
+import { SqsSubscription } from "aws-cdk-lib/aws-sns-subscriptions";
 
 interface DetectionProps {
   matanoUserDirectory: string;
@@ -36,6 +37,7 @@ class Detection extends Construct {
 }
 
 export interface MatanoDetectionsProps {
+  realtimeTopic: sns.Topic;
   alertingSnsTopic: sns.Topic;
 }
 
@@ -103,5 +105,14 @@ export class MatanoDetections extends Construct {
       }
     }
     detectionFunction.addEnvironment("DETECTION_CONFIGS", JSON.stringify(detectionConfigs));
+
+    props.realtimeTopic.addSubscription(
+      new SqsSubscription(this.detectionsQueue, {
+        rawMessageDelivery: true,
+        filterPolicy: {
+          "log_source": sns.SubscriptionFilter.stringFilter({ allowlist: Object.keys(detectionConfigs) })
+        },
+      }),
+    );
   }
 }

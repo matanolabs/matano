@@ -57,6 +57,7 @@ export class DPMainStack extends MatanoStack {
 
     const detections = new MatanoDetections(this, "MatanoDetections", {
       alertingSnsTopic: matanoAlerting.alertingTopic,
+      realtimeTopic: props.realtimeBucketTopic,
     });
 
     const lakeIngestion = new LakeIngestion(this, "LakeIngestion", {
