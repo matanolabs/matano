@@ -15,7 +15,7 @@ build-cli:
 	cd cli && npm ci && npm run build
 
 build-nodejs:
-	cd lib/nodejs && npm run release -ws
+	cd lib/nodejs && npm ci && npm run release -ws
 
 build-python:
 	cd lib/python/matano_detection && $(MAKE) release
