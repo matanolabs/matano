@@ -72,7 +72,7 @@ transform: | # TODO: ts handling... file, source...
         .related.user = push!(.related.user, .aws.cloudtrail.flattened.request_parameters.userName)
     }
     if .aws.cloudtrail.flattened.request_parameters.newUserName != null {
-        .related.user = push(.related.user, .aws.cloudtrail.flattened.request_parameters.newUserName)
+        .related.user = push!(.related.user, .aws.cloudtrail.flattened.request_parameters.newUserName)
     }
   
     if (.event.action == "ConsoleLogin") {
