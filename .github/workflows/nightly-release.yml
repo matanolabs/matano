@@ -18,8 +18,8 @@ jobs:
         node-version: 16
 
     - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: 1.63
+      with:
+        toolchain: 1.63
 
     - uses: actions/setup-java@v3
       with:
