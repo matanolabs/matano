@@ -26,13 +26,7 @@ export class Transformer extends Construct {
     });
 
     this.transformerLambda = new lambda.Function(this, "Lambda", {
-      code: lambda.Code.fromAsset(path.dirname(props.logSourcesConfigurationPath), {
-        assetHash: cdk.AssetHashType.SOURCE,
-        bundling: {
-          image: lambda.Runtime.PYTHON_3_9.bundlingImage,
-          command: ["bash", "-c", "cp /asset-input/* /asset-output"],
-        },
-      }),
+      code: lambda.Code.fromAsset(path.dirname(props.logSourcesConfigurationPath)),
       handler: "main",
       memorySize: 3008,
       runtime: lambda.Runtime.PROVIDED_AL2,
