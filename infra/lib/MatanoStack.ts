@@ -3,6 +3,7 @@ import * as path from "path";
 import * as YAML from 'yaml';
 import { IConstruct, Construct } from "constructs";
 import * as cdk from "aws-cdk-lib";
+import * as s3 from "aws-cdk-lib/aws-s3";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 
 // from https://github.com/capralifecycle/liflig-cdk/blob/master/src/tags.ts
@@ -46,11 +47,18 @@ export interface MatanoStackProps extends cdk.StackProps {}
 export class MatanoStack extends cdk.Stack {
   matanoConfig: MatanoConfig;
   matanoVpc: ec2.IVpc
+  cdkAssetsBucketName: string;
+  cdkAssetsBucket: s3.IBucket;
   constructor(scope: Construct, id: string, props: MatanoStackProps) {
     super(scope, id, props);
     this.matanoConfig = YAML.parse(fs.readFileSync(path.resolve(this.matanoUserDirectory, "matano.config.yml"), "utf8"));
     this.matanoVpc = ec2.Vpc.fromVpcAttributes(this, "MATANO_VPC", this.matanoContext["vpc"]);
+    this.cdkAssetsBucketName = cdk.Fn.sub(cdk.DefaultStackSynthesizer.DEFAULT_FILE_ASSETS_BUCKET_NAME, {
+      Qualifier: (this.node.tryGetContext(cdk.BOOTSTRAP_QUALIFIER_CONTEXT) as any) ?? cdk.DefaultStackSynthesizer.DEFAULT_QUALIFIER,
+    });
+    this.cdkAssetsBucket = s3.Bucket.fromBucketName(this, "cdkAssetsBucket", this.cdkAssetsBucketName);
   }
+
 
   get matanoUserDirectory(): string {
     return this.node.tryGetContext("matanoUserDirectory");

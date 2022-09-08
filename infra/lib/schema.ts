@@ -4,7 +4,7 @@ import { dataDirPath } from "./utils";
 
 const DEFAULT_ECS_FIELD_NAMES: string[] = ["ts", "labels", "tags"];
 
-export function resolveSchema(ecsFieldNames: string[] | undefined, customFields: any[] | undefined) {
+export function resolveSchema(ecsFieldNames?: string[], customFields?: any[]) {
     const baseSchema = JSON.parse(fs.readFileSync(path.join(dataDirPath, "ecs_iceberg_schema.json")).toString());
 
     const ecsFields = [...DEFAULT_ECS_FIELD_NAMES, ...(ecsFieldNames ?? [])];

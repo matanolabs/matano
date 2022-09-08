@@ -54,3 +54,5 @@ export function makeTempDir(prefix?: string) {
 }
 
 export const dataDirPath = path.join(__dirname, "../../../data");
+
+export const md5Hash = (s: string) => crypto.createHash('md5').update(s).digest('hex');

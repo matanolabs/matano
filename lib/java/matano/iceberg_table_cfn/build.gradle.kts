@@ -51,8 +51,8 @@ dependencies {
         exclude("software.amazon.awssdk", "netty-nio-client")
     }
     implementation("software.amazon.awssdk:url-connection-client:2.17.131")
-    implementation("com.amazonaws:aws-java-sdk-s3:1.11.213")
     implementation("com.amazonaws:aws-lambda-java-events:3.11.0")
+    implementation("net.lingala.zip4j:zip4j:2.11.1")
 }
 
 tasks {

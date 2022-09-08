@@ -38,28 +38,27 @@ interface MatanoLogSourceProps {
   defaultSourceBucket: s3.Bucket;
   realtimeTopic: sns.Topic;
   lakeIngestionLambda: lambda.Function;
+  resolvedSchema: any;
 }
 
 const MATANO_GLUE_DATABASE_NAME = "matano";
 export class MatanoLogSource extends Construct {
-  resolvedSchema: any;
+  name: string;
   constructor(scope: Construct, id: string, props: MatanoLogSourceProps) {
     super(scope, id);
 
-    const stack = cdk.Stack.of(this) as MatanoStack;
-
-    const { name: logSourceName, schema, ingest: ingestConfig } = props.config;
+    const { name: logSourceName, ingest: ingestConfig } = props.config;
     const s3SourceConfig = ingestConfig?.s3_source;
     // const sourceBucket =
     //   s3SourceConfig == null
     //     ? props.defaultSourceBucket
     //     : s3.Bucket.fromBucketName(this, "SourceBucket", s3SourceConfig.bucket_name);
 
-    this.resolvedSchema = resolveSchema(schema?.ecs_field_names, schema?.fields);
+    this.name = logSourceName;
 
     const matanoIcebergTable = new MatanoIcebergTable(this, "MatanoIcebergTable", {
       logSourceName,
-      schema: this.resolvedSchema,
+      schema: props.resolvedSchema,
     });
 
     const ingestionDlq = new sqs.Queue(this, "LakeIngestionDLQ", {

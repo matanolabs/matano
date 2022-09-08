@@ -14,3 +14,6 @@ transform:
     .timestamp = ts
     # remove fields we dont care about
     del(.do)
+
+schema:
+  ecs_field_names: ["dns"]

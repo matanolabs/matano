@@ -140,193 +140,137 @@ schema:
   #   - source
   #   - user
   #   - user_agent
-  # fields:
-  # - name: aws
-  #   required: false
-  #   type:
-  #     type: struct
-  #     fields:
-  #     - name: cloudtrail
-  #       required: false
-  #       type:
-  #         type: struct
   fields:
   - name: error_code
-    id: 100020
-    required: false
     type: string
   - name: error_message
-    id: 100021
-    required: false
     type: string
   - name: event_type
-    id: 100022
-    required: false
     type: string
   - name: event_version
-    id: 100023
-    required: false
     type: string
   - name: recipient_account_id
-    id: 100024
-    required: false
     type: string
   - name: user_identity
-    id: 100025
-    required: false
     type:
       type: struct
       fields:
       - name: access_key_id
-        id: 100026
-        required: false
         type: string
       - name: arn
-        id: 100027
-        required: false
         type: string
       - name: session_context
-        id: 100028
-        required: false
         type:
           type: struct
           fields:
           - name: creation_date
-            id: 100029
-            required: false
             type: timestamp
           - name: mfa_authenticated
-            id: 100030
-            required: false
             type: string
       - name: type
-        id: 100031
-        required: false
         type: string
   - name: flattened
-    required: false
-    id: 100032
     type:
       type: struct
       fields:
       - name: request_parameters
-        required: false
-        id: 100033
         type: 
           type: map
-          key-id: 100034
           key: string
-          value-id: 100035
-          value-required: false
           value: string
       - name: response_parameters
-        required: false
-        id: 100036
         type: 
           type: map
-          key-id: 100037
           key: string
-          value-id: 100038
-          value-required: false
           value: string
       - name: additional_eventdata
-        required: false
-        id: 100039
         type: 
           type: map
-          key-id: 100040
           key: string
-          value-id: 100041
-          value-required: false
           value: string
       - name: service_event_details
-        required: false
-        id: 100042
         type: 
           type: map
-          key-id: 100043
           key: string
-          value-id: 100044
-          value-required: false
           value: string
 
   # - id: 10001
   #   name: cloud
-  #   required: false
+  #
   #   type:
   #     type: struct
   #     fields:
   #     - id: 100022
   #       name: account
-  #       required: false
+  #    
   #       type:
   #         type: struct
   #         fields:
   #         - id: 100021
   #           name: id
-  #           required: false
+  #        
   #           type: string
   #     - id: 100023
   #       name: region
-  #       required: false
+  #    
   #       type: string
   # - id: 10002
   #   name: event
-  #   required: false
+  #
   #   type:
   #     type: struct
   #     fields:
   #     - id: 100024
   #       name: action
-  #       required: false
+  #    
   #       type: string
   #     - id: 100025
   #       name: id
-  #       required: false
+  #    
   #       type: string
   #     - id: 100026
   #       name: provider
-  #       required: false
+  #    
   #       type: string
   # - id: 10003
   #   name: related
-  #   required: false
+  #
   #   type:
   #     type: struct
   #     fields:
   #     - id: 100028
   #       name: user
-  #       required: false
+  #    
   #       type:
   #         type: list
   #         element-id: 100027
   #         element: string
-  #         element-required: false
+  #         eleme
   # - id: 10004
   #   name: source
-  #   required: false
+  #
   #   type:
   #     type: struct
   #     fields:
   #     - id: 100029
   #       name: ip
-  #       required: false
+  #    
   #       type: string
   # - id: 10005
   #   name: ts
-  #   required: false
+  #
   #   type: long
   # - id: 10006
   #   name: user
-  #   required: false
+  #
   #   type:
   #     type: struct
   #     fields:
   #     - id: 100030
   #       name: id
-  #       required: false
+  #    
   #       type: string
   # - id: 10007
   #   name: user_agent
-  #   required: false
+  #
   #   type: string

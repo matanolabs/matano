@@ -1,4 +1,5 @@
 import * as path from "path";
+import * as crypto from "crypto";
 import * as fs from "fs";
 import * as YAML from "yaml";
 import { Construct } from "constructs";
@@ -11,8 +12,8 @@ import * as os from "os";
 
 import * as sns from "aws-cdk-lib/aws-sns";
 import * as lambda from "aws-cdk-lib/aws-lambda";
-import { IcebergMetadata } from "../lib/iceberg";
-import { getDirectories, getLocalAssetPath, makeTempDir, MATANO_USED_RUNTIMES, readConfig } from "../lib/utils";
+import { IcebergMetadata, MatanoSchemas } from "../lib/iceberg";
+import { getDirectories, getLocalAssetPath, makeTempDir, MATANO_USED_RUNTIMES, md5Hash, readConfig } from "../lib/utils";
 import { S3BucketWithNotifications } from "../lib/s3-bucket-notifs";
 import { MatanoLogSource, LogSourceConfig } from "../lib/log-source";
 import { MatanoDetections } from "../lib/detections";
@@ -29,6 +30,7 @@ import { Transformer } from "../lib/transformer";
 
 import { SqsSubscription } from "aws-cdk-lib/aws-sns-subscriptions";
 import { MatanoAlerting } from "../lib/alerting";
+import { resolveSchema } from "../lib/schema";
 
 interface DPMainStackProps extends MatanoStackProps {
   matanoSourcesBucket: S3BucketWithNotifications;
@@ -65,8 +67,12 @@ export class DPMainStack extends MatanoStack {
       outputObjectPrefix: "lake",
     });
 
-    const logSources = [];
-    const tempSchemasDir = makeTempDir("matano-schemas");
+    const logSources: MatanoLogSource[] = [];
+
+    const allResolvedSchemasHashStr = logSourceConfigs
+      .map(lsc => resolveSchema(lsc.schema?.ecs_field_names, lsc.schema?.fields))
+      .reduce((prev, cur) => prev + JSON.stringify(cur), "");
+    const schemasHash = md5Hash(allResolvedSchemasHashStr);
 
     for (const logSourceConfig of logSourceConfigs) {
       const logSource = new MatanoLogSource(this, `MatanoLogSource${logSourceConfig.name}`, {
@@ -74,28 +80,26 @@ export class DPMainStack extends MatanoStack {
         defaultSourceBucket: props.matanoSourcesBucket.bucket,
         realtimeTopic: props.realtimeBucketTopic,
         lakeIngestionLambda: lakeIngestion.lakeIngestionLambda,
+        resolvedSchema: resolveSchema(logSourceConfig.schema?.ecs_field_names, logSourceConfig.schema?.fields),
       });
-
-      const schemaDir = path.join(tempSchemasDir, logSourceConfig.name);
-      fs.mkdirSync(schemaDir);
-      fs.writeFileSync(path.join(schemaDir, "iceberg_schema.json"), JSON.stringify(logSource.resolvedSchema));
       logSources.push(logSource);
     }
 
-    // matano-java-scripts
+    const schemasCR = new MatanoSchemas(this, "MatanoSchemasCustomResource", {
+      schemaOutputPath: schemasHash,
+      logSources: logSources.map(ls => ls.name),
+    });
+
+    for (const logSource of logSources) {
+      schemasCR.node.addDependency(logSource);
+    }
+
     const schemasLayer = new lambda.LayerVersion(this, "MatanoSchemasLayer", {
       compatibleRuntimes: MATANO_USED_RUNTIMES,
-      code: lambda.Code.fromAsset(getLocalAssetPath("matano-java-scripts"), {
-        assetHashType: cdk.AssetHashType.OUTPUT,
-        bundling: {
-          volumes: [
-            { hostPath: tempSchemasDir, containerPath: "/schemas" },
-          ],
-          image: lambda.Runtime.JAVA_11.bundlingImage,
-          command: ["bash", "-c", "java -jar /asset-input/lib/matano-scripts.jar gen-schemas /schemas", ],
-        },
-      }),
+      code: lambda.Code.fromBucket(this.cdkAssetsBucket, schemasHash + ".zip"),
     });
+
+    schemasLayer.node.addDependency(schemasCR);
 
     const transformer = new Transformer(this, "Transformer", {
       realtimeBucketName: props.realtimeBucket.bucketName,

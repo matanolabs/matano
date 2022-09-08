@@ -8,9 +8,7 @@ import kotlin.io.path.readText
 import kotlin.io.path.writeText
 
 fun main(args: Array<String>) {
-    // args.forEach { println(it) }
     when (args.first()) {
-        "gen-schemas" -> generateSchemas(args)
         else -> throw RuntimeException("nonexistent script")
     }
 }
