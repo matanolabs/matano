@@ -125,6 +125,7 @@ transform: | # TODO: ts handling... file, source...
     .aws.cloudtrail.flattened.digest = del(.aws.cloudtrail.digest)
     .aws.cloudtrail.flattened.insight_details = del(.aws.cloudtrail.insight_details)
   
+    del(.aws.cloudtrail.flattened)
     del(.json)
     . |= .aws.cloudtrail
     del(.aws)

@@ -85,7 +85,7 @@ class MatanoSchemasLayerCustomResource {
     }
 
     private fun doWork(logSources: List<String>, outputPath: String) {
-        val tempDir = createTempDirectory()
+        val tempDir = createTempDirectory().resolve("schemas")
         val outFileName = "$outputPath.zip"// UUID.randomUUID().toString() + "zip"
         val outZipFile = ZipFile(tempDir.resolve(outFileName).toFile())
 
@@ -99,8 +99,8 @@ class MatanoSchemasLayerCustomResource {
             logSourceSubDir.toFile().mkdirs()
             logSourceSubDir.resolve("iceberg_schema.json").writeText(SchemaParser.toJson(icebergSchema))
             logSourceSubDir.resolve("avro_schema.avsc").writeText(avroSchema.toString())
-            outZipFile.addFolder(logSourceSubDir.toFile())
         }
+        outZipFile.addFolder(tempDir.toFile())
 
         s3.putObject({ b -> b.bucket(System.getenv("ASSETS_BUCKET_NAME")).key("$outputPath.zip")}, outZipFile.file.toPath())
     }

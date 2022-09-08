@@ -538,8 +538,11 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessRe
                 // fs::create_dir_all(&output_schemas_path).await.unwrap();
                 // let output_schema_path = output_schemas_path.join(format!("{}.avsc", log_source));
                 // fs::write(output_schema_path,&avro_schema_json_string).await.unwrap();
-
                 // let avro_schema_json_string = fs::read_to_string(output_schema_path).await.unwrap();
+
+                let schemas_path = Path::new("/opt/schemas");
+                let schema_path = schemas_path.join(&log_source).join("avro_schema.avsc");
+                let avro_schema_json_string = fs::read_to_string(schema_path).await.unwrap();
 
                 let mut inferred_avro_schema = Schema::parse_str(&avro_schema_json_string).unwrap();
 
