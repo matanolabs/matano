@@ -61,9 +61,12 @@ jobs:
 
     - name: "Update nightly release"
       if: success()
-      uses: pyTooling/Actions/releaser@r0
+      uses: Wandalen/wretry.action@v1.0.25
       with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        tag: nightly
-        files: |
-          matano*.sh
+        action: pyTooling/Actions/releaser/composite@main
+        with: |
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: nightly
+          files: matano*.sh
+        attempt_limit: 10
+        attempt_delay: 2000
