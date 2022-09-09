@@ -63,7 +63,7 @@ jobs:
       if: success()
       uses: Wandalen/wretry.action@v1.0.25
       with:
-        action: pyTooling/Actions/releaser/composite@main
+        action: pyTooling/Actions/releaser/composite@r0
         with: |
           token: ${{ secrets.GITHUB_TOKEN }}
           tag: nightly
