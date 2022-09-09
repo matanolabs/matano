@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::arrow::{coerce_data_type, type_to_schema};
 use ::value::value::{timestamp_to_string, Value};
 use anyhow::{anyhow, Result};
@@ -21,10 +23,21 @@ impl TryIntoAvro<apache_avro::types::Value> for Value {
                 String::from_utf8(v.to_vec()).map_err(Self::Error::ConvertToUtf8)?,
             )),
             Self::Regex(regex) => Ok(apache_avro::types::Value::from(regex.as_str().to_string())),
-            Self::Object(v) => Ok(apache_avro::to_value(v)?),
-            Self::Array(v) => Ok(apache_avro::to_value(v)?),
+            Self::Object(v) => {
+                let items: Result<HashMap<String, _>, _> = v
+                    .into_iter()
+                    .map(|(key, value)| {
+                        TryIntoAvro::try_into(value).and_then(|value| Ok((key, value)))
+                    })
+                    .collect();
+                Ok(apache_avro::types::Value::Map(items?))
+            }
+            Self::Array(v) => {
+                let items: Result<Vec<_>, _> = v.into_iter().map(TryIntoAvro::try_into).collect();
+                Ok(apache_avro::types::Value::Array(items?))
+            }
             Self::Null => Ok(apache_avro::types::Value::Null),
-            Self::Timestamp(v) => Ok(apache_avro::types::Value::from(timestamp_to_string(&v))),
+            Self::Timestamp(v) => Ok(apache_avro::types::Value::from(v.timestamp_micros())),
         }
     }
 }
