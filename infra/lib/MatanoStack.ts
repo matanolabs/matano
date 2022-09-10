@@ -59,6 +59,11 @@ export class MatanoStack extends cdk.Stack {
     this.cdkAssetsBucket = s3.Bucket.fromBucketName(this, "cdkAssetsBucket", this.cdkAssetsBucketName);
   }
 
+  humanCfnOutput(name: string, props: cdk.CfnOutputProps) {
+    const ret = new cdk.CfnOutput(this, name, props);
+    ret.overrideLogicalId(name);
+    return ret;
+  }
 
   get matanoUserDirectory(): string {
     return this.node.tryGetContext("matanoUserDirectory");

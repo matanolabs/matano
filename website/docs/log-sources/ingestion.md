@@ -7,11 +7,13 @@ You can ingest data from any log source using Matano. To ingest a log source int
 
 ## S3 Ingestion
 
-When you use S3 ingestion, Matano ingests data from your log source using an S3 bucket. You can either use a Matano provided bucket or bring your own bucket if you have existing.
+When you use S3 ingestion, Matano ingests data from your log source using an S3 bucket. You can either use a Matano provided bucket or bring your own bucket if you have existing data.
 
 ### Using the Matano provided sources bucket
 
 Matano creates a managed S3 bucket for you to use for S3 ingestion. You can use this bucket to ingest data into Matano.
+
+To retrieve the value of the Matano sources bucket, use the `matano info` command. See [Retrieving resource values](../getting-started.md#retrieving-resource-values).
 
 When sending data to the Matano provided sources bucket, upload files to the `/data/<log_source_name>` prefix where `log_source_name` is the name of your log source that you specified in your `log_source.yml` file.
 

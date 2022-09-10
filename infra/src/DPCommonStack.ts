@@ -18,7 +18,6 @@ export class DPCommonStack extends MatanoStack {
     super(scope, id, props);
 
     this.matanoIngestionBucket = new S3BucketWithNotifications(this, "MatanoIngestionBucket", {});
-    this.exportValue(this.matanoIngestionBucket.bucket.bucketName);
 
     this.matanoLakeStorageBucket = new S3BucketWithNotifications(this, "MatanoLakeStorageBucket", {
       queueProps: {
@@ -39,6 +38,16 @@ export class DPCommonStack extends MatanoStack {
         locationUri: `s3://${this.matanoLakeStorageBucket.bucket.bucketName}/lake`,
       },
       catalogId: cdk.Aws.ACCOUNT_ID,
+    });
+
+    this.humanCfnOutput("MatanoIngestionS3BucketName", {
+      value: this.matanoIngestionBucket.bucket.bucketName,
+      description: "The name of the S3 Bucket used for Matano ingestion. See https://www.matano.dev/docs/log-sources/ingestion",
+    });
+
+    this.humanCfnOutput("MatanoLakeStorageS3BucketName", {
+      value: this.matanoLakeStorageBucket.bucket.bucketName,
+      description: "The name of the S3 Bucket used for long term storage backing your data lake. See https://www.matano.dev/docs/tables/querying",
     });
   }
 }

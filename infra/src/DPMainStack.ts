@@ -118,6 +118,11 @@ export class DPMainStack extends MatanoStack {
       lakeStorageBucket: props.lakeStorageBucket,
     });
 
+    this.humanCfnOutput("MatanoAlertingSnsTopicArn", {
+      value: matanoAlerting.alertingTopic.topicArn,
+      description: "The ARN of the SNS topic used for Matano alerts. See https://www.matano.dev/docs/detections/alerting",
+    });
+
     // const logSourcesConfigurationLayer = new lambda.LayerVersion(this, "LogSourcesConfigurationLayer", {
     //   code: lambda.Code.fromAsset("../lambdas", {
     //     bundling: {

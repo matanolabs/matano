@@ -13,7 +13,6 @@ import { readConfig } from "../util";
 import BaseCommand from "../base";
 
 
-
 export default class RefreshContext extends BaseCommand {
   static description = "Refreshes Matano context.";
 

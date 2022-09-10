@@ -9,6 +9,7 @@ title: Matano CLI reference
 * [`matano deploy`](#matano-deploy)
 * [`matano generate:matano-dir DIRECTORY-NAME`](#matano-generatematano-dir-directory-name)
 * [`matano help [COMMAND]`](#matano-help-command)
+* [`matano info`](#matano-info)
 * [`matano init`](#matano-init)
 * [`matano refresh-context`](#matano-refresh-context)
 
@@ -47,12 +48,10 @@ Deploys matano.
 
 ```
 USAGE
-  $ matano deploy [-p <value>] [-a <value>] [-r <value>] [--user-directory <value>]
+  $ matano deploy [-p <value>] [--user-directory <value>]
 
 FLAGS
-  -a, --account=<value>     AWS Account to deploy to.
   -p, --profile=<value>     AWS Profile to use for credentials.
-  -r, --region=<value>      AWS Region to deploy to.
   --user-directory=<value>  Matano user directory to use.
 
 DESCRIPTION
@@ -64,8 +63,6 @@ EXAMPLES
   $ matano deploy --profile prod
 
   $ matano deploy --profile prod --user-directory matano-directory
-
-  $ matano deploy --profile prod --region eu-central-1 --account 12345678901
 ```
 
 _See code: [dist/commands/deploy.ts](https://github.com/matanolabs/matano/blob/main/cli/src/commands/deploy.ts)_
@@ -109,6 +106,32 @@ DESCRIPTION
 ```
 
 _See code: [@oclif/plugin-help](https://github.com/oclif/plugin-help/blob/v5.1.12/src/commands/help.ts)_
+
+## `matano info`
+
+Retrieves information about your Matano deployment in structured format.
+
+```
+USAGE
+  $ matano info [-p <value>] [--output csv|json|yaml |  | ]
+
+FLAGS
+  -p, --profile=<value>  AWS Profile to use for credentials.
+  --output=<option>      output in a more machine friendly format
+                         <options: csv|json|yaml>
+
+DESCRIPTION
+  Retrieves information about your Matano deployment in structured format.
+
+EXAMPLES
+  $ matano info
+
+  $ matano info --profile prod
+
+  $ matano info --output json
+```
+
+_See code: [dist/commands/info.ts](https://github.com/matanolabs/matano/blob/main/cli/src/commands/info.ts)_
 
 ## `matano init`
 

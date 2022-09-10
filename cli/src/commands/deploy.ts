@@ -1,4 +1,4 @@
-import { Command, Flags } from "@oclif/core";
+import { CliUx, Command, Flags } from "@oclif/core";
 import { prompt } from "enquirer";
 import execa from "execa";
 
@@ -19,21 +19,12 @@ export default class Deploy extends BaseCommand {
     "matano deploy",
     "matano deploy --profile prod",
     "matano deploy --profile prod --user-directory matano-directory",
-    "matano deploy --profile prod --region eu-central-1 --account 12345678901",
   ];
 
   static flags = {
     profile: Flags.string({
       char: "p",
       description: "AWS Profile to use for credentials.",
-    }),
-    account: Flags.string({
-      char: "a",
-      description: "AWS Account to deploy to.",
-    }),
-    region: Flags.string({
-      char: "r",
-      description: "AWS Region to deploy to.",
     }),
     "user-directory": Flags.string({
       required: false,
@@ -42,19 +33,19 @@ export default class Deploy extends BaseCommand {
   };
 
   static deployMatano(matanoUserDirectory: string, awsProfile: string | undefined, awsAccountId: string, awsRegion: string) {
+    const cdkOutDir = getCdkOutputDir();
 
-    const cfnOutputsPath = getCfnOutputsPath();
+    CliUx.ux.debug("Using cdk out directory: " + cdkOutDir);
+
     const cdkArgs = [
       "deploy",
       "DPMainStack",
       "--require-approval",
       "never",
-      "--outputs-file",
-      cfnOutputsPath,
       "--app",
       getMatanoCdkApp(),
       "--output",
-      getCdkOutputDir(),
+      cdkOutDir,
     ];
     if (awsProfile) {
       cdkArgs.push("--profile", awsProfile);

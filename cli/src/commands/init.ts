@@ -15,6 +15,7 @@ import { getCdkOutputDir, getMatanoCdkApp, PROJ_ROOT_DIR } from "..";
 import GenerateMatanoDir from "./generate/matano-dir";
 import Deploy from "./deploy";
 import { AWS_REGIONS } from "../util";
+import Info from "./info";
 
 const getAwsAcctId = async (profile?: string) => {
   try {
@@ -44,26 +45,6 @@ export default class Init extends BaseCommand {
       description: "AWS Profile to use for credentials.",
     }),
   };
-
-  renderOutputsTable(cfnOutputs: any) {
-    // const cfnOutputs = JSON.parse(fs.readFileSync(CFN_OUPUTS_PATH).toString());
-    const rows = [];
-    for (const [k,v] of Object.entries(cfnOutputs["MatanoDPCommonStack"])) {
-      let name = undefined;
-      if (k.includes("MatanoLakeStorageBucket") && !k.includes("Queue")) name = "Ingestion Bucket"
-      if (name) {
-        rows.push({ name, value: v })
-      }
-    }
-
-    const columns: CliUx.Table.table.Columns<any> = {
-      // where `.name` is a property of a data object
-      name: {},
-      value: {}
-    }
-    CliUx.Table.table(rows, columns, {
-    });
-  }
 
   async run(): Promise<void> {
     const { args, flags } = await this.parse(Init);
@@ -190,7 +171,8 @@ export default class Init extends BaseCommand {
     await Deploy.deployMatano(matanoUserDirectory, awsProfile, awsAccountId, awsRegion);
     spinner2.succeed(chalk.bold.greenBright("Successfully deployed Matano."));
 
-    // this.log("\n" + chalk.yellowBright("· Here are some useful values to get you started:") + "");
-    // this.renderOutputsTable();
+    this.log("\n" + chalk.yellowBright("· Here are some useful values to get you started:") + "");
+    const cfnOutputs = await Info.retrieveCfnOutputs(awsAccountId, awsRegion, awsProfile);
+    Info.renderOutputsTable(cfnOutputs);
   }
 }
