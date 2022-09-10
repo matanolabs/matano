@@ -36,6 +36,12 @@ jobs:
       with:
         python-version: '3.10'
 
+    - name: Import GPG key
+      uses: crazy-max/ghaction-import-gpg@v5
+      with:
+        gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+        passphrase: ${{ secrets.GPG_PASSPHRASE }}
+
     - run: |
         python -m pip install cargo-lambda
 
@@ -48,7 +54,7 @@ jobs:
     - uses: actions/upload-artifact@v3
       with:
         name: build-assets
-        path: matano*.sh
+        path: "matano*.sh*"
 
   release:
     runs-on: ubuntu-latest
@@ -65,5 +71,4 @@ jobs:
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag: nightly
-        files: |
-          matano*.sh
+        files: "matano*.sh*"

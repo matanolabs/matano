@@ -126,7 +126,14 @@ async function main() {
       )} --target /usr/local/matano-cli ${targetSubDir} ${archiveName} "Matano CLI" ./post-install.sh`
     );
     execSync(`chmod 777 ${archiveName}`);
+
     execSync(`cp ${archiveName} ${projDir}`);
+
+    if (process.env.CI) {
+      console.log("GPG Signing artifact...");
+      execSync(`gpg --output ${archiveName}.sig --detach-sig ${archiveName}`);
+      execSync(`cp ${archiveName}.sig ${projDir}`);
+    }
   }
 
   execSync(`rm -rf ${workDir}`);
