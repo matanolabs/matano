@@ -4,16 +4,10 @@
         <title>Matano Blog</title>
         <link>https://www.matano.dev/blog</link>
         <description>Matano Blog</description>
-        <lastBuildDate>Tue, 06 Sep 2022 00:00:00 GMT</lastBuildDate>
+        <lastBuildDate>Thu, 11 Aug 2022 00:00:00 GMT</lastBuildDate>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
         <generator>https://github.com/jpmonette/feed</generator>
         <language>en</language>
-        <item>
-            <title><![CDATA[ingesting-data-iceberg]]></title>
-            <link>https://www.matano.dev/blog/2022/09/06/ingesting-data-iceberg</link>
-            <guid>/2022/09/06/ingesting-data-iceberg</guid>
-            <pubDate>Tue, 06 Sep 2022 00:00:00 GMT</pubDate>
-        </item>
         <item>
             <title><![CDATA[Announcing Matano]]></title>
             <link>https://www.matano.dev/blog/2022/08/11/announcing-matano</link>
