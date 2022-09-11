@@ -24,29 +24,31 @@ with open(csv_filepath) as csvf:
     reader = csv.DictReader(csvf)
     ecs_fields_raw = list(reader)
 
-def map_ecs_iceberg_type(ecs_type, path=None):
+def map_ecs_iceberg_type(ecs_field, path=None):
+    ecs_type = ecs_field["Type"]
+    normalization = ecs_field["Normalization"]
     colname = ".".join(path)
-
+    ret = None
     if ecs_type == "keyword":
-        return "string"
+        ret = "string"
     elif ecs_type == "scaled_float":
-        return "float"
+        ret = "float"
     elif ecs_type == "date":
-        return "timestamp"
+        ret = "timestamp"
     elif ecs_type == "wildcard":
-        return "string"
+        ret = "string"
     elif ecs_type == "float":
-        return "float"
+        ret = "float"
     elif ecs_type == "object":
-        return "string"
+        ret = "string"
     elif ecs_type == "constant_keyword":
-        return "string"
+        ret = "string"
     elif ecs_type == "boolean":
-        return "boolean"
+        ret = "boolean"
     elif ecs_type == "long":
-        return "long"
+        ret = "long"
     elif ecs_type == "geo_point":
-        return {
+        ret = {
             "type": "struct",
             "fields": [
                 # TODO: FIX THIS
@@ -65,20 +67,31 @@ def map_ecs_iceberg_type(ecs_type, path=None):
             ]
         }
     elif ecs_type == "nested":
-        return {
+        ret = {
             "type": "list",
             "element-required": False,
             "element-id": ecs_field_id(colname, extra=True),
             "element": "string",
         }
     elif ecs_type == "match_only_text":
-        return "string"
+        ret = "string"
     elif ecs_type == "ip":
-        return "string"
+        ret = "string"
     elif ecs_type == "flattened":
-        return "string"
-    else:
+        ret = "string"
+
+    if ret is None:
         raise Exception(f"Unknown ECS type: {ecs_type}")
+
+    if ecs_type != "nested" and normalization == "array":
+        ret = {
+            "type": "list",
+            "element-required": False,
+            "element-id": ecs_field_id(colname, extra=True),
+            "element": ret,
+        }
+
+    return ret
 
 def find_arr(arr, pred):
     return next((x for x in arr if pred(x)))
@@ -142,7 +155,7 @@ def add_struct(obj, path, ecs_field, is_leaf):
         append_obj.append({
             "id": ecs_field_id(colname),
             "name": get_iceberg_field_name(path[-1]),
-            "type": map_ecs_iceberg_type(ecs_field["Type"], path),
+            "type": map_ecs_iceberg_type(ecs_field, path),
             "required": False,
             "doc": ecs_field["Description"],
         })
@@ -160,6 +173,7 @@ def add_struct(obj, path, ecs_field, is_leaf):
 
 def insert_col(obj, ecs_field, ecs_fields_raw):
     col_name = ecs_field["Field"]
+    normalization = ecs_field["Normalization"]
     parts = col_name.split(".")
 
     for idx in range(len(parts)):
@@ -201,8 +215,7 @@ def insert_col(obj, ecs_field, ecs_fields_raw):
         try:
             get_field_val(obj, subpath)
         except StopIteration:
-            add_struct(obj, subpath, ecs_field, ".".join(subpath) == col_name)
-
+            add_struct(obj, subpath, ecs_field, ".".join(subpath) == col_name)    
 
 ecs_version_int = int(ECS_VERSION.replace(".", ""))
 

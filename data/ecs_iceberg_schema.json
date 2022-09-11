@@ -25,7 +25,12 @@
     {
       "id": 3,
       "name": "tags",
-      "type": "string",
+      "type": {
+        "type": "list",
+        "element-required": false,
+        "element-id": 5507,
+        "element": "string"
+      },
       "required": false,
       "doc": "List of keywords used to tag each event."
     },
@@ -204,13 +209,13 @@
                     "type": "struct",
                     "fields": [
                       {
-                        "id": 5507,
+                        "id": 5508,
                         "name": "lon",
                         "required": false,
                         "type": "float"
                       },
                       {
-                        "id": 5508,
+                        "id": 5509,
                         "name": "lat",
                         "required": false,
                         "type": "float"
@@ -417,7 +422,12 @@
                 {
                   "id": 128,
                   "name": "roles",
-                  "type": "string",
+                  "type": {
+                    "type": "list",
+                    "element-required": false,
+                    "element-id": 5510,
+                    "element": "string"
+                  },
                   "required": false,
                   "doc": "Array of user roles at the time of the event."
                 }
@@ -953,7 +963,12 @@
                       {
                         "id": 257,
                         "name": "all",
-                        "type": "string",
+                        "type": {
+                          "type": "list",
+                          "element-required": false,
+                          "element-id": 5511,
+                          "element": "string"
+                        },
                         "required": false,
                         "doc": "An array of digests of the image the container was built on."
                       }
@@ -972,7 +987,12 @@
                 {
                   "id": 263,
                   "name": "tag",
-                  "type": "string",
+                  "type": {
+                    "type": "list",
+                    "element-required": false,
+                    "element-id": 5512,
+                    "element": "string"
+                  },
                   "required": false,
                   "doc": "Container image tags."
                 }
@@ -1215,13 +1235,13 @@
                     "type": "struct",
                     "fields": [
                       {
-                        "id": 5509,
+                        "id": 5513,
                         "name": "lon",
                         "required": false,
                         "type": "float"
                       },
                       {
-                        "id": 5510,
+                        "id": 5514,
                         "name": "lat",
                         "required": false,
                         "type": "float"
@@ -1428,7 +1448,12 @@
                 {
                   "id": 398,
                   "name": "roles",
-                  "type": "string",
+                  "type": {
+                    "type": "list",
+                    "element-required": false,
+                    "element-id": 5515,
+                    "element": "string"
+                  },
                   "required": false,
                   "doc": "Array of user roles at the time of the event."
                 }
@@ -1677,7 +1702,12 @@
           {
             "id": 493,
             "name": "header_flags",
-            "type": "string",
+            "type": {
+              "type": "list",
+              "element-required": false,
+              "element-id": 5516,
+              "element": "string"
+            },
             "required": false,
             "doc": "Array of DNS header flags."
           },
@@ -1751,7 +1781,12 @@
           {
             "id": 517,
             "name": "resolved_ip",
-            "type": "string",
+            "type": {
+              "type": "list",
+              "element-required": false,
+              "element-id": 5517,
+              "element": "string"
+            },
             "required": false,
             "doc": "Array containing all IPs seen in answers.data"
           },
@@ -1807,7 +1842,12 @@
                 {
                   "id": 579,
                   "name": "address",
-                  "type": "string",
+                  "type": {
+                    "type": "list",
+                    "element-required": false,
+                    "element-id": 5518,
+                    "element": "string"
+                  },
                   "required": false,
                   "doc": "Email address of BCC recipient"
                 }
@@ -1825,7 +1865,12 @@
                 {
                   "id": 582,
                   "name": "address",
-                  "type": "string",
+                  "type": {
+                    "type": "list",
+                    "element-required": false,
+                    "element-id": 5519,
+                    "element": "string"
+                  },
                   "required": false,
                   "doc": "Email address of CC recipient"
                 }
@@ -1864,7 +1909,12 @@
                 {
                   "id": 591,
                   "name": "address",
-                  "type": "string",
+                  "type": {
+                    "type": "list",
+                    "element-required": false,
+                    "element-id": 5520,
+                    "element": "string"
+                  },
                   "required": false,
                   "doc": "The sender's email address."
                 }
@@ -1903,7 +1953,12 @@
                 {
                   "id": 600,
                   "name": "address",
-                  "type": "string",
+                  "type": {
+                    "type": "list",
+                    "element-required": false,
+                    "element-id": 5521,
+                    "element": "string"
+                  },
                   "required": false,
                   "doc": "Address replies should be delivered to."
                 }
@@ -1946,7 +2001,12 @@
                 {
                   "id": 611,
                   "name": "address",
-                  "type": "string",
+                  "type": {
+                    "type": "list",
+                    "element-required": false,
+                    "element-id": 5522,
+                    "element": "string"
+                  },
                   "required": false,
                   "doc": "Email address of recipient"
                 }
@@ -2036,7 +2096,12 @@
           {
             "id": 632,
             "name": "category",
-            "type": "string",
+            "type": {
+              "type": "list",
+              "element-required": false,
+              "element-id": 5523,
+              "element": "string"
+            },
             "required": false,
             "doc": "Event category. The second categorization field in the hierarchy."
           },
@@ -2190,7 +2255,12 @@
           {
             "id": 676,
             "name": "type",
-            "type": "string",
+            "type": {
+              "type": "list",
+              "element-required": false,
+              "element-id": 5524,
+              "element": "string"
+            },
             "required": false,
             "doc": "Event type. The third categorization field in the hierarchy."
           },
@@ -2268,7 +2338,12 @@
           {
             "id": 700,
             "name": "attributes",
-            "type": "string",
+            "type": {
+              "type": "list",
+              "element-required": false,
+              "element-id": 5525,
+              "element": "string"
+            },
             "required": false,
             "doc": "Array of file attributes."
           },
@@ -2418,7 +2493,12 @@
                 {
                   "id": 752,
                   "name": "exports",
-                  "type": "string",
+                  "type": {
+                    "type": "list",
+                    "element-required": false,
+                    "element-id": 5526,
+                    "element": "string"
+                  },
                   "required": false,
                   "doc": "List of exported element names and types."
                 },
@@ -2492,14 +2572,24 @@
                 {
                   "id": 787,
                   "name": "imports",
-                  "type": "string",
+                  "type": {
+                    "type": "list",
+                    "element-required": false,
+                    "element-id": 5527,
+                    "element": "string"
+                  },
                   "required": false,
                   "doc": "List of imported element names and types."
                 },
                 {
                   "id": 840,
                   "name": "shared_libraries",
-                  "type": "string",
+                  "type": {
+                    "type": "list",
+                    "element-required": false,
+                    "element-id": 5528,
+                    "element": "string"
+                  },
                   "required": false,
                   "doc": "List of shared libraries used by this ELF object."
                 },
@@ -2756,7 +2846,12 @@
                 {
                   "id": 927,
                   "name": "alternative_names",
-                  "type": "string",
+                  "type": {
+                    "type": "list",
+                    "element-required": false,
+                    "element-id": 5529,
+                    "element": "string"
+                  },
                   "required": false,
                   "doc": "List of subject alternative names (SAN)."
                 },
@@ -2769,14 +2864,24 @@
                       {
                         "id": 931,
                         "name": "common_name",
-                        "type": "string",
+                        "type": {
+                          "type": "list",
+                          "element-required": false,
+                          "element-id": 5530,
+                          "element": "string"
+                        },
                         "required": false,
                         "doc": "List of common name (CN) of issuing certificate authority."
                       },
                       {
                         "id": 935,
                         "name": "country",
-                        "type": "string",
+                        "type": {
+                          "type": "list",
+                          "element-required": false,
+                          "element-id": 5531,
+                          "element": "string"
+                        },
                         "required": false,
                         "doc": "List of country (C) codes"
                       },
@@ -2790,28 +2895,48 @@
                       {
                         "id": 943,
                         "name": "locality",
-                        "type": "string",
+                        "type": {
+                          "type": "list",
+                          "element-required": false,
+                          "element-id": 5532,
+                          "element": "string"
+                        },
                         "required": false,
                         "doc": "List of locality names (L)"
                       },
                       {
                         "id": 947,
                         "name": "organization",
-                        "type": "string",
+                        "type": {
+                          "type": "list",
+                          "element-required": false,
+                          "element-id": 5533,
+                          "element": "string"
+                        },
                         "required": false,
                         "doc": "List of organizations (O) of issuing certificate authority."
                       },
                       {
                         "id": 951,
                         "name": "organizational_unit",
-                        "type": "string",
+                        "type": {
+                          "type": "list",
+                          "element-required": false,
+                          "element-id": 5534,
+                          "element": "string"
+                        },
                         "required": false,
                         "doc": "List of organizational units (OU) of issuing certificate authority."
                       },
                       {
                         "id": 955,
                         "name": "state_or_province",
-                        "type": "string",
+                        "type": {
+                          "type": "list",
+                          "element-required": false,
+                          "element-id": 5535,
+                          "element": "string"
+                        },
                         "required": false,
                         "doc": "List of state or province names (ST, S, or P)"
                       }
@@ -2885,14 +3010,24 @@
                       {
                         "id": 983,
                         "name": "common_name",
-                        "type": "string",
+                        "type": {
+                          "type": "list",
+                          "element-required": false,
+                          "element-id": 5536,
+                          "element": "string"
+                        },
                         "required": false,
                         "doc": "List of common names (CN) of subject."
                       },
                       {
                         "id": 987,
                         "name": "country",
-                        "type": "string",
+                        "type": {
+                          "type": "list",
+                          "element-required": false,
+                          "element-id": 5537,
+                          "element": "string"
+                        },
                         "required": false,
                         "doc": "List of country (C) code"
                       },
@@ -2906,28 +3041,48 @@
                       {
                         "id": 995,
                         "name": "locality",
-                        "type": "string",
+                        "type": {
+                          "type": "list",
+                          "element-required": false,
+                          "element-id": 5538,
+                          "element": "string"
+                        },
                         "required": false,
                         "doc": "List of locality names (L)"
                       },
                       {
                         "id": 999,
                         "name": "organization",
-                        "type": "string",
+                        "type": {
+                          "type": "list",
+                          "element-required": false,
+                          "element-id": 5539,
+                          "element": "string"
+                        },
                         "required": false,
                         "doc": "List of organizations (O) of subject."
                       },
                       {
                         "id": 1003,
                         "name": "organizational_unit",
-                        "type": "string",
+                        "type": {
+                          "type": "list",
+                          "element-required": false,
+                          "element-id": 5540,
+                          "element": "string"
+                        },
                         "required": false,
                         "doc": "List of organizational units (OU) of subject."
                       },
                       {
                         "id": 1007,
                         "name": "state_or_province",
-                        "type": "string",
+                        "type": {
+                          "type": "list",
+                          "element-required": false,
+                          "element-id": 5541,
+                          "element": "string"
+                        },
                         "required": false,
                         "doc": "List of state or province names (ST, S, or P)"
                       }
@@ -3136,13 +3291,13 @@
                     "type": "struct",
                     "fields": [
                       {
-                        "id": 5511,
+                        "id": 5542,
                         "name": "lon",
                         "required": false,
                         "type": "float"
                       },
                       {
-                        "id": 5512,
+                        "id": 5543,
                         "name": "lat",
                         "required": false,
                         "type": "float"
@@ -3209,14 +3364,24 @@
           {
             "id": 1073,
             "name": "ip",
-            "type": "string",
+            "type": {
+              "type": "list",
+              "element-required": false,
+              "element-id": 5544,
+              "element": "string"
+            },
             "required": false,
             "doc": "Host ip addresses."
           },
           {
             "id": 1075,
             "name": "mac",
-            "type": "string",
+            "type": {
+              "type": "list",
+              "element-required": false,
+              "element-id": 5545,
+              "element": "string"
+            },
             "required": false,
             "doc": "Host MAC addresses."
           },
@@ -3773,13 +3938,13 @@
                     "type": "struct",
                     "fields": [
                       {
-                        "id": 5513,
+                        "id": 5546,
                         "name": "lon",
                         "required": false,
                         "type": "float"
                       },
                       {
-                        "id": 5514,
+                        "id": 5547,
                         "name": "lat",
                         "required": false,
                         "type": "float"
@@ -3839,14 +4004,24 @@
           {
             "id": 1362,
             "name": "ip",
-            "type": "string",
+            "type": {
+              "type": "list",
+              "element-required": false,
+              "element-id": 5548,
+              "element": "string"
+            },
             "required": false,
             "doc": "IP addresses of the observer."
           },
           {
             "id": 1364,
             "name": "mac",
-            "type": "string",
+            "type": {
+              "type": "list",
+              "element-required": false,
+              "element-id": 5549,
+              "element": "string"
+            },
             "required": false,
             "doc": "MAC addresses of the observer."
           },
@@ -4039,7 +4214,12 @@
                 {
                   "id": 1429,
                   "name": "ip",
-                  "type": "string",
+                  "type": {
+                    "type": "list",
+                    "element-required": false,
+                    "element-id": 5550,
+                    "element": "string"
+                  },
                   "required": false,
                   "doc": "IP address assigned to the resource associated with the event being observed."
                 },
@@ -4228,7 +4408,12 @@
           {
             "id": 1476,
             "name": "args",
-            "type": "string",
+            "type": {
+              "type": "list",
+              "element-required": false,
+              "element-id": 5551,
+              "element": "string"
+            },
             "required": false,
             "doc": "Array of process arguments."
           },
@@ -4357,7 +4542,12 @@
                 {
                   "id": 1525,
                   "name": "exports",
-                  "type": "string",
+                  "type": {
+                    "type": "list",
+                    "element-required": false,
+                    "element-id": 5552,
+                    "element": "string"
+                  },
                   "required": false,
                   "doc": "List of exported element names and types."
                 },
@@ -4431,7 +4621,12 @@
                 {
                   "id": 1560,
                   "name": "imports",
-                  "type": "string",
+                  "type": {
+                    "type": "list",
+                    "element-required": false,
+                    "element-id": 5553,
+                    "element": "string"
+                  },
                   "required": false,
                   "doc": "List of imported element names and types."
                 },
@@ -4441,7 +4636,7 @@
                   "type": {
                     "type": "list",
                     "element-required": false,
-                    "element-id": 5515,
+                    "element-id": 5554,
                     "element": "string"
                   },
                   "required": false,
@@ -4453,7 +4648,7 @@
                   "type": {
                     "type": "list",
                     "element-required": false,
-                    "element-id": 5516,
+                    "element-id": 5555,
                     "element": "string"
                   },
                   "required": false,
@@ -4462,7 +4657,12 @@
                 {
                   "id": 1613,
                   "name": "shared_libraries",
-                  "type": "string",
+                  "type": {
+                    "type": "list",
+                    "element-required": false,
+                    "element-id": 5556,
+                    "element": "string"
+                  },
                   "required": false,
                   "doc": "List of shared libraries used by this ELF object."
                 },
@@ -4501,7 +4701,12 @@
                 {
                   "id": 1623,
                   "name": "args",
-                  "type": "string",
+                  "type": {
+                    "type": "list",
+                    "element-required": false,
+                    "element-id": 5557,
+                    "element": "string"
+                  },
                   "required": false,
                   "doc": "Array of process arguments."
                 },
@@ -4885,7 +5090,12 @@
                 {
                   "id": 1801,
                   "name": "args",
-                  "type": "string",
+                  "type": {
+                    "type": "list",
+                    "element-required": false,
+                    "element-id": 5558,
+                    "element": "string"
+                  },
                   "required": false,
                   "doc": "Array of process arguments."
                 },
@@ -5222,7 +5432,12 @@
                 {
                   "id": 1962,
                   "name": "args",
-                  "type": "string",
+                  "type": {
+                    "type": "list",
+                    "element-required": false,
+                    "element-id": 5559,
+                    "element": "string"
+                  },
                   "required": false,
                   "doc": "Array of process arguments."
                 },
@@ -5351,7 +5566,12 @@
                       {
                         "id": 2028,
                         "name": "exports",
-                        "type": "string",
+                        "type": {
+                          "type": "list",
+                          "element-required": false,
+                          "element-id": 5560,
+                          "element": "string"
+                        },
                         "required": false,
                         "doc": "List of exported element names and types."
                       },
@@ -5425,7 +5645,12 @@
                       {
                         "id": 2072,
                         "name": "imports",
-                        "type": "string",
+                        "type": {
+                          "type": "list",
+                          "element-required": false,
+                          "element-id": 5561,
+                          "element": "string"
+                        },
                         "required": false,
                         "doc": "List of imported element names and types."
                       },
@@ -5435,7 +5660,7 @@
                         "type": {
                           "type": "list",
                           "element-required": false,
-                          "element-id": 5517,
+                          "element-id": 5562,
                           "element": "string"
                         },
                         "required": false,
@@ -5447,7 +5672,7 @@
                         "type": {
                           "type": "list",
                           "element-required": false,
-                          "element-id": 5518,
+                          "element-id": 5563,
                           "element": "string"
                         },
                         "required": false,
@@ -5456,7 +5681,12 @@
                       {
                         "id": 2139,
                         "name": "shared_libraries",
-                        "type": "string",
+                        "type": {
+                          "type": "list",
+                          "element-required": false,
+                          "element-id": 5564,
+                          "element": "string"
+                        },
                         "required": false,
                         "doc": "List of shared libraries used by this ELF object."
                       },
@@ -6010,7 +6240,12 @@
                 {
                   "id": 2390,
                   "name": "args",
-                  "type": "string",
+                  "type": {
+                    "type": "list",
+                    "element-required": false,
+                    "element-id": 5565,
+                    "element": "string"
+                  },
                   "required": false,
                   "doc": "Array of process arguments."
                 },
@@ -6142,7 +6377,12 @@
                 {
                   "id": 2435,
                   "name": "args",
-                  "type": "string",
+                  "type": {
+                    "type": "list",
+                    "element-required": false,
+                    "element-id": 5566,
+                    "element": "string"
+                  },
                   "required": false,
                   "doc": "Array of process arguments."
                 },
@@ -6590,7 +6830,12 @@
                 {
                   "id": 2644,
                   "name": "strings",
-                  "type": "string",
+                  "type": {
+                    "type": "list",
+                    "element-required": false,
+                    "element-id": 5567,
+                    "element": "string"
+                  },
                   "required": false,
                   "doc": "List of strings representing what was written to the registry."
                 },
@@ -6648,28 +6893,48 @@
           {
             "id": 2657,
             "name": "hash",
-            "type": "string",
+            "type": {
+              "type": "list",
+              "element-required": false,
+              "element-id": 5568,
+              "element": "string"
+            },
             "required": false,
             "doc": "All the hashes seen on your event."
           },
           {
             "id": 2659,
             "name": "hosts",
-            "type": "string",
+            "type": {
+              "type": "list",
+              "element-required": false,
+              "element-id": 5569,
+              "element": "string"
+            },
             "required": false,
             "doc": "All the host identifiers seen on your event."
           },
           {
             "id": 2661,
             "name": "ip",
-            "type": "string",
+            "type": {
+              "type": "list",
+              "element-required": false,
+              "element-id": 5570,
+              "element": "string"
+            },
             "required": false,
             "doc": "All of the IPs seen on your event."
           },
           {
             "id": 2663,
             "name": "user",
-            "type": "string",
+            "type": {
+              "type": "list",
+              "element-required": false,
+              "element-id": 5571,
+              "element": "string"
+            },
             "required": false,
             "doc": "All the user names or other user identifiers seen on the event."
           }
@@ -6687,7 +6952,12 @@
           {
             "id": 2665,
             "name": "author",
-            "type": "string",
+            "type": {
+              "type": "list",
+              "element-required": false,
+              "element-id": 5572,
+              "element": "string"
+            },
             "required": false,
             "doc": "Rule author"
           },
@@ -6870,13 +7140,13 @@
                     "type": "struct",
                     "fields": [
                       {
-                        "id": 5519,
+                        "id": 5573,
                         "name": "lon",
                         "required": false,
                         "type": "float"
                       },
                       {
-                        "id": 5520,
+                        "id": 5574,
                         "name": "lat",
                         "required": false,
                         "type": "float"
@@ -7083,7 +7353,12 @@
                 {
                   "id": 2795,
                   "name": "roles",
-                  "type": "string",
+                  "type": {
+                    "type": "list",
+                    "element-required": false,
+                    "element-id": 5575,
+                    "element": "string"
+                  },
                   "required": false,
                   "doc": "Array of user roles at the time of the event."
                 }
@@ -7484,13 +7759,13 @@
                     "type": "struct",
                     "fields": [
                       {
-                        "id": 5521,
+                        "id": 5576,
                         "name": "lon",
                         "required": false,
                         "type": "float"
                       },
                       {
-                        "id": 5522,
+                        "id": 5577,
                         "name": "lat",
                         "required": false,
                         "type": "float"
@@ -7697,7 +7972,12 @@
                 {
                   "id": 2993,
                   "name": "roles",
-                  "type": "string",
+                  "type": {
+                    "type": "list",
+                    "element-required": false,
+                    "element-id": 5578,
+                    "element": "string"
+                  },
                   "required": false,
                   "doc": "Array of user roles at the time of the event."
                 }
@@ -7790,7 +8070,12 @@
                 {
                   "id": 4043,
                   "name": "alias",
-                  "type": "string",
+                  "type": {
+                    "type": "list",
+                    "element-required": false,
+                    "element-id": 5579,
+                    "element": "string"
+                  },
                   "required": false,
                   "doc": "Alias of the group."
                 },
@@ -7910,7 +8195,12 @@
                       {
                         "id": 4085,
                         "name": "attributes",
-                        "type": "string",
+                        "type": {
+                          "type": "list",
+                          "element-required": false,
+                          "element-id": 5580,
+                          "element": "string"
+                        },
                         "required": false,
                         "doc": "Array of file attributes."
                       },
@@ -8060,7 +8350,12 @@
                             {
                               "id": 4175,
                               "name": "exports",
-                              "type": "string",
+                              "type": {
+                                "type": "list",
+                                "element-required": false,
+                                "element-id": 5581,
+                                "element": "string"
+                              },
                               "required": false,
                               "doc": "List of exported element names and types."
                             },
@@ -8134,7 +8429,12 @@
                             {
                               "id": 4228,
                               "name": "imports",
-                              "type": "string",
+                              "type": {
+                                "type": "list",
+                                "element-required": false,
+                                "element-id": 5582,
+                                "element": "string"
+                              },
                               "required": false,
                               "doc": "List of imported element names and types."
                             },
@@ -8144,7 +8444,7 @@
                               "type": {
                                 "type": "list",
                                 "element-required": false,
-                                "element-id": 5523,
+                                "element-id": 5583,
                                 "element": "string"
                               },
                               "required": false,
@@ -8156,7 +8456,7 @@
                               "type": {
                                 "type": "list",
                                 "element-required": false,
-                                "element-id": 5524,
+                                "element-id": 5584,
                                 "element": "string"
                               },
                               "required": false,
@@ -8165,7 +8465,12 @@
                             {
                               "id": 4309,
                               "name": "shared_libraries",
-                              "type": "string",
+                              "type": {
+                                "type": "list",
+                                "element-required": false,
+                                "element-id": 5585,
+                                "element": "string"
+                              },
                               "required": false,
                               "doc": "List of shared libraries used by this ELF object."
                             },
@@ -8422,7 +8727,12 @@
                             {
                               "id": 4464,
                               "name": "alternative_names",
-                              "type": "string",
+                              "type": {
+                                "type": "list",
+                                "element-required": false,
+                                "element-id": 5586,
+                                "element": "string"
+                              },
                               "required": false,
                               "doc": "List of subject alternative names (SAN)."
                             },
@@ -8435,14 +8745,24 @@
                                   {
                                     "id": 4470,
                                     "name": "common_name",
-                                    "type": "string",
+                                    "type": {
+                                      "type": "list",
+                                      "element-required": false,
+                                      "element-id": 5587,
+                                      "element": "string"
+                                    },
                                     "required": false,
                                     "doc": "List of common name (CN) of issuing certificate authority."
                                   },
                                   {
                                     "id": 4476,
                                     "name": "country",
-                                    "type": "string",
+                                    "type": {
+                                      "type": "list",
+                                      "element-required": false,
+                                      "element-id": 5588,
+                                      "element": "string"
+                                    },
                                     "required": false,
                                     "doc": "List of country (C) codes"
                                   },
@@ -8456,28 +8776,48 @@
                                   {
                                     "id": 4488,
                                     "name": "locality",
-                                    "type": "string",
+                                    "type": {
+                                      "type": "list",
+                                      "element-required": false,
+                                      "element-id": 5589,
+                                      "element": "string"
+                                    },
                                     "required": false,
                                     "doc": "List of locality names (L)"
                                   },
                                   {
                                     "id": 4494,
                                     "name": "organization",
-                                    "type": "string",
+                                    "type": {
+                                      "type": "list",
+                                      "element-required": false,
+                                      "element-id": 5590,
+                                      "element": "string"
+                                    },
                                     "required": false,
                                     "doc": "List of organizations (O) of issuing certificate authority."
                                   },
                                   {
                                     "id": 4500,
                                     "name": "organizational_unit",
-                                    "type": "string",
+                                    "type": {
+                                      "type": "list",
+                                      "element-required": false,
+                                      "element-id": 5591,
+                                      "element": "string"
+                                    },
                                     "required": false,
                                     "doc": "List of organizational units (OU) of issuing certificate authority."
                                   },
                                   {
                                     "id": 4506,
                                     "name": "state_or_province",
-                                    "type": "string",
+                                    "type": {
+                                      "type": "list",
+                                      "element-required": false,
+                                      "element-id": 5592,
+                                      "element": "string"
+                                    },
                                     "required": false,
                                     "doc": "List of state or province names (ST, S, or P)"
                                   }
@@ -8551,14 +8891,24 @@
                                   {
                                     "id": 4552,
                                     "name": "common_name",
-                                    "type": "string",
+                                    "type": {
+                                      "type": "list",
+                                      "element-required": false,
+                                      "element-id": 5593,
+                                      "element": "string"
+                                    },
                                     "required": false,
                                     "doc": "List of common names (CN) of subject."
                                   },
                                   {
                                     "id": 4558,
                                     "name": "country",
-                                    "type": "string",
+                                    "type": {
+                                      "type": "list",
+                                      "element-required": false,
+                                      "element-id": 5594,
+                                      "element": "string"
+                                    },
                                     "required": false,
                                     "doc": "List of country (C) code"
                                   },
@@ -8572,28 +8922,48 @@
                                   {
                                     "id": 4570,
                                     "name": "locality",
-                                    "type": "string",
+                                    "type": {
+                                      "type": "list",
+                                      "element-required": false,
+                                      "element-id": 5595,
+                                      "element": "string"
+                                    },
                                     "required": false,
                                     "doc": "List of locality names (L)"
                                   },
                                   {
                                     "id": 4576,
                                     "name": "organization",
-                                    "type": "string",
+                                    "type": {
+                                      "type": "list",
+                                      "element-required": false,
+                                      "element-id": 5596,
+                                      "element": "string"
+                                    },
                                     "required": false,
                                     "doc": "List of organizations (O) of subject."
                                   },
                                   {
                                     "id": 4582,
                                     "name": "organizational_unit",
-                                    "type": "string",
+                                    "type": {
+                                      "type": "list",
+                                      "element-required": false,
+                                      "element-id": 5597,
+                                      "element": "string"
+                                    },
                                     "required": false,
                                     "doc": "List of organizational units (OU) of subject."
                                   },
                                   {
                                     "id": 4588,
                                     "name": "state_or_province",
-                                    "type": "string",
+                                    "type": {
+                                      "type": "list",
+                                      "element-required": false,
+                                      "element-id": 5598,
+                                      "element": "string"
+                                    },
                                     "required": false,
                                     "doc": "List of state or province names (ST, S, or P)"
                                   }
@@ -8674,13 +9044,13 @@
                           "type": "struct",
                           "fields": [
                             {
-                              "id": 5525,
+                              "id": 5599,
                               "name": "lon",
                               "required": false,
                               "type": "float"
                             },
                             {
-                              "id": 5526,
+                              "id": 5600,
                               "name": "lat",
                               "required": false,
                               "type": "float"
@@ -8812,7 +9182,12 @@
                             {
                               "id": 4672,
                               "name": "strings",
-                              "type": "string",
+                              "type": {
+                                "type": "list",
+                                "element-required": false,
+                                "element-id": 5601,
+                                "element": "string"
+                              },
                               "required": false,
                               "doc": "List of strings representing what was written to the registry."
                             },
@@ -9000,7 +9375,12 @@
                       {
                         "id": 4772,
                         "name": "alternative_names",
-                        "type": "string",
+                        "type": {
+                          "type": "list",
+                          "element-required": false,
+                          "element-id": 5602,
+                          "element": "string"
+                        },
                         "required": false,
                         "doc": "List of subject alternative names (SAN)."
                       },
@@ -9013,14 +9393,24 @@
                             {
                               "id": 4777,
                               "name": "common_name",
-                              "type": "string",
+                              "type": {
+                                "type": "list",
+                                "element-required": false,
+                                "element-id": 5603,
+                                "element": "string"
+                              },
                               "required": false,
                               "doc": "List of common name (CN) of issuing certificate authority."
                             },
                             {
                               "id": 4782,
                               "name": "country",
-                              "type": "string",
+                              "type": {
+                                "type": "list",
+                                "element-required": false,
+                                "element-id": 5604,
+                                "element": "string"
+                              },
                               "required": false,
                               "doc": "List of country (C) codes"
                             },
@@ -9034,28 +9424,48 @@
                             {
                               "id": 4792,
                               "name": "locality",
-                              "type": "string",
+                              "type": {
+                                "type": "list",
+                                "element-required": false,
+                                "element-id": 5605,
+                                "element": "string"
+                              },
                               "required": false,
                               "doc": "List of locality names (L)"
                             },
                             {
                               "id": 4797,
                               "name": "organization",
-                              "type": "string",
+                              "type": {
+                                "type": "list",
+                                "element-required": false,
+                                "element-id": 5606,
+                                "element": "string"
+                              },
                               "required": false,
                               "doc": "List of organizations (O) of issuing certificate authority."
                             },
                             {
                               "id": 4802,
                               "name": "organizational_unit",
-                              "type": "string",
+                              "type": {
+                                "type": "list",
+                                "element-required": false,
+                                "element-id": 5607,
+                                "element": "string"
+                              },
                               "required": false,
                               "doc": "List of organizational units (OU) of issuing certificate authority."
                             },
                             {
                               "id": 4807,
                               "name": "state_or_province",
-                              "type": "string",
+                              "type": {
+                                "type": "list",
+                                "element-required": false,
+                                "element-id": 5608,
+                                "element": "string"
+                              },
                               "required": false,
                               "doc": "List of state or province names (ST, S, or P)"
                             }
@@ -9129,14 +9539,24 @@
                             {
                               "id": 4844,
                               "name": "common_name",
-                              "type": "string",
+                              "type": {
+                                "type": "list",
+                                "element-required": false,
+                                "element-id": 5609,
+                                "element": "string"
+                              },
                               "required": false,
                               "doc": "List of common names (CN) of subject."
                             },
                             {
                               "id": 4849,
                               "name": "country",
-                              "type": "string",
+                              "type": {
+                                "type": "list",
+                                "element-required": false,
+                                "element-id": 5610,
+                                "element": "string"
+                              },
                               "required": false,
                               "doc": "List of country (C) code"
                             },
@@ -9150,28 +9570,48 @@
                             {
                               "id": 4859,
                               "name": "locality",
-                              "type": "string",
+                              "type": {
+                                "type": "list",
+                                "element-required": false,
+                                "element-id": 5611,
+                                "element": "string"
+                              },
                               "required": false,
                               "doc": "List of locality names (L)"
                             },
                             {
                               "id": 4864,
                               "name": "organization",
-                              "type": "string",
+                              "type": {
+                                "type": "list",
+                                "element-required": false,
+                                "element-id": 5612,
+                                "element": "string"
+                              },
                               "required": false,
                               "doc": "List of organizations (O) of subject."
                             },
                             {
                               "id": 4869,
                               "name": "organizational_unit",
-                              "type": "string",
+                              "type": {
+                                "type": "list",
+                                "element-required": false,
+                                "element-id": 5613,
+                                "element": "string"
+                              },
                               "required": false,
                               "doc": "List of organizational units (OU) of subject."
                             },
                             {
                               "id": 4874,
                               "name": "state_or_province",
-                              "type": "string",
+                              "type": {
+                                "type": "list",
+                                "element-required": false,
+                                "element-id": 5614,
+                                "element": "string"
+                              },
                               "required": false,
                               "doc": "List of state or province names (ST, S, or P)"
                             }
@@ -9206,7 +9646,12 @@
                 {
                   "id": 4881,
                   "name": "alias",
-                  "type": "string",
+                  "type": {
+                    "type": "list",
+                    "element-required": false,
+                    "element-id": 5615,
+                    "element": "string"
+                  },
                   "required": false,
                   "doc": "Alias of the software"
                 },
@@ -9227,7 +9672,12 @@
                 {
                   "id": 4890,
                   "name": "platforms",
-                  "type": "string",
+                  "type": {
+                    "type": "list",
+                    "element-required": false,
+                    "element-id": 5616,
+                    "element": "string"
+                  },
                   "required": false,
                   "doc": "Platforms of the software."
                 },
@@ -9259,21 +9709,36 @@
                 {
                   "id": 4899,
                   "name": "id",
-                  "type": "string",
+                  "type": {
+                    "type": "list",
+                    "element-required": false,
+                    "element-id": 5617,
+                    "element": "string"
+                  },
                   "required": false,
                   "doc": "Threat tactic id."
                 },
                 {
                   "id": 4902,
                   "name": "name",
-                  "type": "string",
+                  "type": {
+                    "type": "list",
+                    "element-required": false,
+                    "element-id": 5618,
+                    "element": "string"
+                  },
                   "required": false,
                   "doc": "Threat tactic."
                 },
                 {
                   "id": 4905,
                   "name": "reference",
-                  "type": "string",
+                  "type": {
+                    "type": "list",
+                    "element-required": false,
+                    "element-id": 5619,
+                    "element": "string"
+                  },
                   "required": false,
                   "doc": "Threat tactic URL reference."
                 }
@@ -9291,21 +9756,36 @@
                 {
                   "id": 4908,
                   "name": "id",
-                  "type": "string",
+                  "type": {
+                    "type": "list",
+                    "element-required": false,
+                    "element-id": 5620,
+                    "element": "string"
+                  },
                   "required": false,
                   "doc": "Threat technique id."
                 },
                 {
                   "id": 4914,
                   "name": "name",
-                  "type": "string",
+                  "type": {
+                    "type": "list",
+                    "element-required": false,
+                    "element-id": 5621,
+                    "element": "string"
+                  },
                   "required": false,
                   "doc": "Threat technique name."
                 },
                 {
                   "id": 4918,
                   "name": "reference",
-                  "type": "string",
+                  "type": {
+                    "type": "list",
+                    "element-required": false,
+                    "element-id": 5622,
+                    "element": "string"
+                  },
                   "required": false,
                   "doc": "Threat technique URL reference."
                 },
@@ -9318,21 +9798,36 @@
                       {
                         "id": 4922,
                         "name": "id",
-                        "type": "string",
+                        "type": {
+                          "type": "list",
+                          "element-required": false,
+                          "element-id": 5623,
+                          "element": "string"
+                        },
                         "required": false,
                         "doc": "Threat subtechnique id."
                       },
                       {
                         "id": 4930,
                         "name": "name",
-                        "type": "string",
+                        "type": {
+                          "type": "list",
+                          "element-required": false,
+                          "element-id": 5624,
+                          "element": "string"
+                        },
                         "required": false,
                         "doc": "Threat subtechnique name."
                       },
                       {
                         "id": 4935,
                         "name": "reference",
-                        "type": "string",
+                        "type": {
+                          "type": "list",
+                          "element-required": false,
+                          "element-id": 5625,
+                          "element": "string"
+                        },
                         "required": false,
                         "doc": "Threat subtechnique URL reference."
                       }
@@ -9380,7 +9875,12 @@
                 {
                   "id": 4943,
                   "name": "certificate_chain",
-                  "type": "string",
+                  "type": {
+                    "type": "list",
+                    "element-required": false,
+                    "element-id": 5626,
+                    "element": "string"
+                  },
                   "required": false,
                   "doc": "Array of PEM-encoded certificates that make up the certificate chain offered by the client."
                 },
@@ -9461,7 +9961,12 @@
                 {
                   "id": 4976,
                   "name": "supported_ciphers",
-                  "type": "string",
+                  "type": {
+                    "type": "list",
+                    "element-required": false,
+                    "element-id": 5627,
+                    "element": "string"
+                  },
                   "required": false,
                   "doc": "Array of ciphers offered by the client during the client hello."
                 },
@@ -9474,7 +9979,12 @@
                       {
                         "id": 4980,
                         "name": "alternative_names",
-                        "type": "string",
+                        "type": {
+                          "type": "list",
+                          "element-required": false,
+                          "element-id": 5628,
+                          "element": "string"
+                        },
                         "required": false,
                         "doc": "List of subject alternative names (SAN)."
                       },
@@ -9487,14 +9997,24 @@
                             {
                               "id": 4985,
                               "name": "common_name",
-                              "type": "string",
+                              "type": {
+                                "type": "list",
+                                "element-required": false,
+                                "element-id": 5629,
+                                "element": "string"
+                              },
                               "required": false,
                               "doc": "List of common name (CN) of issuing certificate authority."
                             },
                             {
                               "id": 4990,
                               "name": "country",
-                              "type": "string",
+                              "type": {
+                                "type": "list",
+                                "element-required": false,
+                                "element-id": 5630,
+                                "element": "string"
+                              },
                               "required": false,
                               "doc": "List of country (C) codes"
                             },
@@ -9508,28 +10028,48 @@
                             {
                               "id": 5000,
                               "name": "locality",
-                              "type": "string",
+                              "type": {
+                                "type": "list",
+                                "element-required": false,
+                                "element-id": 5631,
+                                "element": "string"
+                              },
                               "required": false,
                               "doc": "List of locality names (L)"
                             },
                             {
                               "id": 5005,
                               "name": "organization",
-                              "type": "string",
+                              "type": {
+                                "type": "list",
+                                "element-required": false,
+                                "element-id": 5632,
+                                "element": "string"
+                              },
                               "required": false,
                               "doc": "List of organizations (O) of issuing certificate authority."
                             },
                             {
                               "id": 5010,
                               "name": "organizational_unit",
-                              "type": "string",
+                              "type": {
+                                "type": "list",
+                                "element-required": false,
+                                "element-id": 5633,
+                                "element": "string"
+                              },
                               "required": false,
                               "doc": "List of organizational units (OU) of issuing certificate authority."
                             },
                             {
                               "id": 5015,
                               "name": "state_or_province",
-                              "type": "string",
+                              "type": {
+                                "type": "list",
+                                "element-required": false,
+                                "element-id": 5634,
+                                "element": "string"
+                              },
                               "required": false,
                               "doc": "List of state or province names (ST, S, or P)"
                             }
@@ -9603,14 +10143,24 @@
                             {
                               "id": 5052,
                               "name": "common_name",
-                              "type": "string",
+                              "type": {
+                                "type": "list",
+                                "element-required": false,
+                                "element-id": 5635,
+                                "element": "string"
+                              },
                               "required": false,
                               "doc": "List of common names (CN) of subject."
                             },
                             {
                               "id": 5057,
                               "name": "country",
-                              "type": "string",
+                              "type": {
+                                "type": "list",
+                                "element-required": false,
+                                "element-id": 5636,
+                                "element": "string"
+                              },
                               "required": false,
                               "doc": "List of country (C) code"
                             },
@@ -9624,28 +10174,48 @@
                             {
                               "id": 5067,
                               "name": "locality",
-                              "type": "string",
+                              "type": {
+                                "type": "list",
+                                "element-required": false,
+                                "element-id": 5637,
+                                "element": "string"
+                              },
                               "required": false,
                               "doc": "List of locality names (L)"
                             },
                             {
                               "id": 5072,
                               "name": "organization",
-                              "type": "string",
+                              "type": {
+                                "type": "list",
+                                "element-required": false,
+                                "element-id": 5638,
+                                "element": "string"
+                              },
                               "required": false,
                               "doc": "List of organizations (O) of subject."
                             },
                             {
                               "id": 5077,
                               "name": "organizational_unit",
-                              "type": "string",
+                              "type": {
+                                "type": "list",
+                                "element-required": false,
+                                "element-id": 5639,
+                                "element": "string"
+                              },
                               "required": false,
                               "doc": "List of organizational units (OU) of subject."
                             },
                             {
                               "id": 5082,
                               "name": "state_or_province",
-                              "type": "string",
+                              "type": {
+                                "type": "list",
+                                "element-required": false,
+                                "element-id": 5640,
+                                "element": "string"
+                              },
                               "required": false,
                               "doc": "List of state or province names (ST, S, or P)"
                             }
@@ -9715,7 +10285,12 @@
                 {
                   "id": 5100,
                   "name": "certificate_chain",
-                  "type": "string",
+                  "type": {
+                    "type": "list",
+                    "element-required": false,
+                    "element-id": 5641,
+                    "element": "string"
+                  },
                   "required": false,
                   "doc": "Array of PEM-encoded certificates that make up the certificate chain offered by the server."
                 },
@@ -9795,7 +10370,12 @@
                       {
                         "id": 5131,
                         "name": "alternative_names",
-                        "type": "string",
+                        "type": {
+                          "type": "list",
+                          "element-required": false,
+                          "element-id": 5642,
+                          "element": "string"
+                        },
                         "required": false,
                         "doc": "List of subject alternative names (SAN)."
                       },
@@ -9808,14 +10388,24 @@
                             {
                               "id": 5136,
                               "name": "common_name",
-                              "type": "string",
+                              "type": {
+                                "type": "list",
+                                "element-required": false,
+                                "element-id": 5643,
+                                "element": "string"
+                              },
                               "required": false,
                               "doc": "List of common name (CN) of issuing certificate authority."
                             },
                             {
                               "id": 5141,
                               "name": "country",
-                              "type": "string",
+                              "type": {
+                                "type": "list",
+                                "element-required": false,
+                                "element-id": 5644,
+                                "element": "string"
+                              },
                               "required": false,
                               "doc": "List of country (C) codes"
                             },
@@ -9829,28 +10419,48 @@
                             {
                               "id": 5151,
                               "name": "locality",
-                              "type": "string",
+                              "type": {
+                                "type": "list",
+                                "element-required": false,
+                                "element-id": 5645,
+                                "element": "string"
+                              },
                               "required": false,
                               "doc": "List of locality names (L)"
                             },
                             {
                               "id": 5156,
                               "name": "organization",
-                              "type": "string",
+                              "type": {
+                                "type": "list",
+                                "element-required": false,
+                                "element-id": 5646,
+                                "element": "string"
+                              },
                               "required": false,
                               "doc": "List of organizations (O) of issuing certificate authority."
                             },
                             {
                               "id": 5161,
                               "name": "organizational_unit",
-                              "type": "string",
+                              "type": {
+                                "type": "list",
+                                "element-required": false,
+                                "element-id": 5647,
+                                "element": "string"
+                              },
                               "required": false,
                               "doc": "List of organizational units (OU) of issuing certificate authority."
                             },
                             {
                               "id": 5166,
                               "name": "state_or_province",
-                              "type": "string",
+                              "type": {
+                                "type": "list",
+                                "element-required": false,
+                                "element-id": 5648,
+                                "element": "string"
+                              },
                               "required": false,
                               "doc": "List of state or province names (ST, S, or P)"
                             }
@@ -9924,14 +10534,24 @@
                             {
                               "id": 5203,
                               "name": "common_name",
-                              "type": "string",
+                              "type": {
+                                "type": "list",
+                                "element-required": false,
+                                "element-id": 5649,
+                                "element": "string"
+                              },
                               "required": false,
                               "doc": "List of common names (CN) of subject."
                             },
                             {
                               "id": 5208,
                               "name": "country",
-                              "type": "string",
+                              "type": {
+                                "type": "list",
+                                "element-required": false,
+                                "element-id": 5650,
+                                "element": "string"
+                              },
                               "required": false,
                               "doc": "List of country (C) code"
                             },
@@ -9945,28 +10565,48 @@
                             {
                               "id": 5218,
                               "name": "locality",
-                              "type": "string",
+                              "type": {
+                                "type": "list",
+                                "element-required": false,
+                                "element-id": 5651,
+                                "element": "string"
+                              },
                               "required": false,
                               "doc": "List of locality names (L)"
                             },
                             {
                               "id": 5223,
                               "name": "organization",
-                              "type": "string",
+                              "type": {
+                                "type": "list",
+                                "element-required": false,
+                                "element-id": 5652,
+                                "element": "string"
+                              },
                               "required": false,
                               "doc": "List of organizations (O) of subject."
                             },
                             {
                               "id": 5228,
                               "name": "organizational_unit",
-                              "type": "string",
+                              "type": {
+                                "type": "list",
+                                "element-required": false,
+                                "element-id": 5653,
+                                "element": "string"
+                              },
                               "required": false,
                               "doc": "List of organizational units (OU) of subject."
                             },
                             {
                               "id": 5233,
                               "name": "state_or_province",
-                              "type": "string",
+                              "type": {
+                                "type": "list",
+                                "element-required": false,
+                                "element-id": 5654,
+                                "element": "string"
+                              },
                               "required": false,
                               "doc": "List of state or province names (ST, S, or P)"
                             }
@@ -10245,7 +10885,12 @@
                 {
                   "id": 5320,
                   "name": "roles",
-                  "type": "string",
+                  "type": {
+                    "type": "list",
+                    "element-required": false,
+                    "element-id": 5655,
+                    "element": "string"
+                  },
                   "required": false,
                   "doc": "Array of user roles at the time of the event."
                 }
@@ -10344,7 +10989,12 @@
                 {
                   "id": 5363,
                   "name": "roles",
-                  "type": "string",
+                  "type": {
+                    "type": "list",
+                    "element-required": false,
+                    "element-id": 5656,
+                    "element": "string"
+                  },
                   "required": false,
                   "doc": "Array of user roles at the time of the event."
                 }
@@ -10423,7 +11073,12 @@
           {
             "id": 5390,
             "name": "roles",
-            "type": "string",
+            "type": {
+              "type": "list",
+              "element-required": false,
+              "element-id": 5657,
+              "element": "string"
+            },
             "required": false,
             "doc": "Array of user roles at the time of the event."
           },
@@ -10510,7 +11165,12 @@
                 {
                   "id": 5431,
                   "name": "roles",
-                  "type": "string",
+                  "type": {
+                    "type": "list",
+                    "element-required": false,
+                    "element-id": 5658,
+                    "element": "string"
+                  },
                   "required": false,
                   "doc": "Array of user roles at the time of the event."
                 }
@@ -10643,7 +11303,12 @@
           {
             "id": 5474,
             "name": "category",
-            "type": "string",
+            "type": {
+              "type": "list",
+              "element-required": false,
+              "element-id": 5659,
+              "element": "string"
+            },
             "required": false,
             "doc": "Category of a vulnerability."
           },

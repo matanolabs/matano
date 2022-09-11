@@ -586,6 +586,10 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessRe
                 let writer = writer.into_inner();
                 let bytes = writer.into_inner().unwrap();
 
+                if bytes.len() == 0 {
+                    return;
+                }
+
                 let uuid = Uuid::new_v4();
                 let bucket = var("MATANO_REALTIME_BUCKET_NAME").unwrap().to_string();
                 let key = format!("transformed/{}/{}.snappy.avro", &log_source, uuid);

@@ -85,7 +85,7 @@
   },
   "scripts": {
     "clean": "rm -rf dist && rm -rf node_modules",
-    "full-install": "npm uninstall -g matano && npm install -g .",
+    "full-install": "npm uninstall -g matano && npm install -g . --prefix ${NPM_GLOBAL_INSTALL_PREFIX:-$(npm config get prefix)}",
     "build": "tsc",
     "watch": "tsc -w",
     "lint": "eslint . --ext .ts --config .eslintrc",

@@ -1,7 +1,7 @@
 tasks:
   - name: base
     command: |
-      make -j build-assets
+      make -j build-assets local-install
 
 image:
   file: .gitpod.Dockerfile

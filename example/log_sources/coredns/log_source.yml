@@ -16,4 +16,4 @@ transform:
     del(.do)
 
 schema:
-  ecs_field_names: ["dns"]
+  ecs_field_names: ["event"]

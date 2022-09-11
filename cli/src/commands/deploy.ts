@@ -63,6 +63,7 @@ export default class Deploy extends BaseCommand {
     for (const [key, value] of Object.entries(cdkContext)) {
       cdkArgs.push(`--context`, `${key}=${value}`);
     }
+    if (process.env.DEV) cdkArgs.push(`--hotswap`);
     if (process.env.DEBUG) cdkArgs.push(`-vvv`);
 
     const subprocess = execa(getCdkExecutable(), cdkArgs, {

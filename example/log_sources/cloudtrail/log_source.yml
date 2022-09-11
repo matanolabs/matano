@@ -86,6 +86,487 @@ transform: | # TODO: ts handling... file, source...
         .aws.cloudtrail.console_login.additional_eventdata.login_to = .aws.cloudtrail.flattened.additional_eventdata.LoginTo
       }
     }
+
+    mappings = {
+      "AddUserToGroup": {
+        "category": [
+          "iam"
+        ],
+        "type": [
+          "group",
+          "change"
+        ]
+      },
+      "AssumeRole": {
+        "category": [
+          "authentication"
+        ],
+        "type": [
+          "info"
+        ]
+      },
+      "AttachGroupPolicy": {
+        "category": [
+          "iam"
+        ],
+        "type": [
+          "group",
+          "change"
+        ]
+      },
+      "AttachUserPolicy": {
+        "category": [
+          "iam"
+        ],
+        "type": [
+          "user",
+          "change"
+        ]
+      },
+      "ChangePassword": {
+        "category": [
+          "iam"
+        ],
+        "type": [
+          "user",
+          "change"
+        ]
+      },
+      "ConsoleLogin": {
+        "category": [
+          "authentication"
+        ],
+        "type": [
+          "info"
+        ]
+      },
+      "CreateAccessKey": {
+        "category": [
+          "iam"
+        ],
+        "type": [
+          "user",
+          "change"
+        ]
+      },
+      "CreateBucket": {
+        "category": [
+          "file"
+        ],
+        "type": [
+          "creation"
+        ]
+      },
+      "CreateGroup": {
+        "category": [
+          "iam"
+        ],
+        "type": [
+          "group",
+          "creation"
+        ]
+      },
+      "CreateKeyPair": {
+        "category": [
+          "iam"
+        ],
+        "type": [
+          "admin",
+          "creation"
+        ]
+      },
+      "CreateUser": {
+        "category": [
+          "iam"
+        ],
+        "type": [
+          "user",
+          "creation"
+        ]
+      },
+      "CreateVirtualMFADevice": {
+        "category": [
+          "iam"
+        ],
+        "type": [
+          "user",
+          "change"
+        ]
+      },
+      "DeactivateMFADevice": {
+        "category": [
+          "iam"
+        ],
+        "type": [
+          "user",
+          "change"
+        ]
+      },
+      "DeleteAccessKey": {
+        "category": [
+          "iam"
+        ],
+        "type": [
+          "user",
+          "change"
+        ]
+      },
+      "DeleteBucket": {
+        "category": [
+          "file"
+        ],
+        "type": [
+          "deletion"
+        ]
+      },
+      "DeleteGroup": {
+        "category": [
+          "iam"
+        ],
+        "type": [
+          "group",
+          "deletion"
+        ]
+      },
+      "DeleteGroupPolicy": {
+        "category": [
+          "iam"
+        ],
+        "type": [
+          "group",
+          "change"
+        ]
+      },
+      "DeleteSSHPublicKey": {
+        "category": [
+          "iam"
+        ],
+        "type": [
+          "user",
+          "change"
+        ]
+      },
+      "DeleteUser": {
+        "category": [
+          "iam"
+        ],
+        "type": [
+          "user",
+          "deletion"
+        ]
+      },
+      "DeleteUserPermissionsBoundary": {
+        "category": [
+          "iam"
+        ],
+        "type": [
+          "user",
+          "change"
+        ]
+      },
+      "DeleteUserPolicy": {
+        "category": [
+          "iam"
+        ],
+        "type": [
+          "user",
+          "change"
+        ]
+      },
+      "DeleteVirtualMFADevice": {
+        "category": [
+          "iam"
+        ],
+        "type": [
+          "user",
+          "change"
+        ]
+      },
+      "DetachGroupPolicy": {
+        "category": [
+          "iam"
+        ],
+        "type": [
+          "group",
+          "change"
+        ]
+      },
+      "DetachUserPolicy": {
+        "category": [
+          "iam"
+        ],
+        "type": [
+          "user",
+          "change"
+        ]
+      },
+      "EnableMFADevice": {
+        "category": [
+          "iam"
+        ],
+        "type": [
+          "user",
+          "change"
+        ]
+      },
+      "GetGroup": {
+        "category": [
+          "iam"
+        ],
+        "type": [
+          "group",
+          "info"
+        ]
+      },
+      "GetGroupPolicy": {
+        "category": [
+          "iam"
+        ],
+        "type": [
+          "group",
+          "info"
+        ]
+      },
+      "GetUser": {
+        "category": [
+          "iam"
+        ],
+        "type": [
+          "user",
+          "info"
+        ]
+      },
+      "GetUserPolicy": {
+        "category": [
+          "iam"
+        ],
+        "type": [
+          "user",
+          "info"
+        ]
+      },
+      "ListAttachedGroupPolicies": {
+        "category": [
+          "iam"
+        ],
+        "type": [
+          "group",
+          "info"
+        ]
+      },
+      "ListAttachedUserPolicies": {
+        "category": [
+          "iam"
+        ],
+        "type": [
+          "user",
+          "info"
+        ]
+      },
+      "ListGroupPolicies": {
+        "category": [
+          "iam"
+        ],
+        "type": [
+          "group",
+          "info"
+        ]
+      },
+      "ListGroups": {
+        "category": [
+          "iam"
+        ],
+        "type": [
+          "group",
+          "info"
+        ]
+      },
+      "ListGroupsForUser": {
+        "category": [
+          "iam"
+        ],
+        "type": [
+          "user",
+          "info"
+        ]
+      },
+      "ListUserPolicies": {
+        "category": [
+          "iam"
+        ],
+        "type": [
+          "user",
+          "info"
+        ]
+      },
+      "ListUsers": {
+        "category": [
+          "iam"
+        ],
+        "type": [
+          "user",
+          "info"
+        ]
+      },
+      "ListUserTags": {
+        "category": [
+          "iam"
+        ],
+        "type": [
+          "user",
+          "info"
+        ]
+      },
+      "PutGroupPolicy": {
+        "category": [
+          "iam"
+        ],
+        "type": [
+          "group",
+          "change"
+        ]
+      },
+      "PutUserPermissionsBoundary": {
+        "category": [
+          "iam"
+        ],
+        "type": [
+          "user",
+          "change"
+        ]
+      },
+      "PutUserPolicy": {
+        "category": [
+          "iam"
+        ],
+        "type": [
+          "user",
+          "change"
+        ]
+      },
+      "RemoveUserFromGroup": {
+        "category": [
+          "iam"
+        ],
+        "type": [
+          "group",
+          "change"
+        ]
+      },
+      "SetDefaultPolicyVersion": {
+        "category": [
+          "iam"
+        ],
+        "type": [
+          "admin",
+          "change"
+        ]
+      },
+      "SetSecurityTokenServicePreferences": {
+        "category": [
+          "iam"
+        ],
+        "type": [
+          "admin",
+          "change"
+        ]
+      },
+      "TagUser": {
+        "category": [
+          "iam"
+        ],
+        "type": [
+          "user",
+          "change"
+        ]
+      },
+      "UntagUser": {
+        "category": [
+          "iam"
+        ],
+        "type": [
+          "user",
+          "change"
+        ]
+      },
+      "UpdateAccessKey": {
+        "category": [
+          "iam"
+        ],
+        "type": [
+          "user",
+          "change"
+        ]
+      },
+      "UpdateAccountPasswordPolicy": {
+        "category": [
+          "iam"
+        ],
+        "type": [
+          "admin",
+          "change"
+        ]
+      },
+      "UpdateGroup": {
+        "category": [
+          "iam"
+        ],
+        "type": [
+          "group",
+          "change"
+        ]
+      },
+      "UpdateLoginProfile": {
+        "category": [
+          "iam"
+        ],
+        "type": [
+          "user",
+          "change"
+        ]
+      },
+      "UpdateRole": {
+        "category": [
+          "iam"
+        ],
+        "type": [
+          "admin",
+          "change"
+        ]
+      },
+      "UpdateSSHPublicKey": {
+        "category": [
+          "iam"
+        ],
+        "type": [
+          "user",
+          "change"
+        ]
+      },
+      "UpdateUser": {
+        "category": [
+          "iam"
+        ],
+        "type": [
+          "user",
+          "change"
+        ]
+      }
+    }
+    .event.kind = "event"
+    .event.type = "info"
+    .event.outcome = if .aws.cloudtrail.error_code != null || .aws.cloudtrail.error_message != null {
+        "failure"
+    } else if .event.action == "ConsoleLogin" && .aws.cloudtrail.flattened.response_elements.ConsoleLogin != null {
+        downcase!(.aws.cloudtrail.flattened.response_elements.ConsoleLogin)
+    } else {
+        "success"
+    }
+
+    fields, err = get(mappings, [.event.action])
+    if (err != null) {
+        .event |= object!(fields)
+    }
   
     .cloud.account.id = del(.json.awsAccountId)
     .file.path = del(.json.previousDigestS3Object)
@@ -124,23 +605,28 @@ transform: | # TODO: ts handling... file, source...
     .user.target.name = .aws.cloudtrail.flattened.request_parameters.userName
     .aws.cloudtrail.flattened.digest = del(.aws.cloudtrail.digest)
     .aws.cloudtrail.flattened.insight_details = del(.aws.cloudtrail.insight_details)
-  
-    del(.aws.cloudtrail.flattened)
+
+    .aws.cloudtrail.flattened.request_parameters = encode_json(.aws.cloudtrail.flattened.request_parameters)
+    .aws.cloudtrail.flattened.response_elements = encode_json(.aws.cloudtrail.flattened.response_elements)
+    .aws.cloudtrail.flattened.additional_eventdata = encode_json(.aws.cloudtrail.flattened.additional_eventdata)
+    .aws.cloudtrail.flattened.service_event_details = encode_json(.aws.cloudtrail.flattened.service_event_details)
+
+    # del(.aws.cloudtrail.flattened)
     del(.json)
     . |= .aws.cloudtrail
     del(.aws)
     . = compact(.)
 
 schema:
-  # ecs_field_names:
-  #   - cloud
-  #   - event
-  #   - file
-  #   - group
-  #   - related
-  #   - source
-  #   - user
-  #   - user_agent
+  ecs_field_names:
+    - cloud
+    # - event
+    # - file
+    # - group
+    # - related
+    # - source
+    # - user
+    # - user_agent
   fields:
   - name: error_code
     type: string
@@ -175,103 +661,23 @@ schema:
       type: struct
       fields:
       - name: request_parameters
-        type: 
-          type: map
-          key: string
-          value: string
+        type: string
+          # TODO(shaeq): impl map/object type
+          # type: map 
+          # key: string
+          # value: string
       - name: response_parameters
-        type: 
-          type: map
-          key: string
-          value: string
+        type: string
+          # type: map
+          # key: string
+          # value: string
       - name: additional_eventdata
-        type: 
-          type: map
-          key: string
-          value: string
+        type: string
+          # type: map
+          # key: string
+          # value: string
       - name: service_event_details
-        type: 
-          type: map
-          key: string
-          value: string
-
-  # - id: 10001
-  #   name: cloud
-  #
-  #   type:
-  #     type: struct
-  #     fields:
-  #     - id: 100022
-  #       name: account
-  #    
-  #       type:
-  #         type: struct
-  #         fields:
-  #         - id: 100021
-  #           name: id
-  #        
-  #           type: string
-  #     - id: 100023
-  #       name: region
-  #    
-  #       type: string
-  # - id: 10002
-  #   name: event
-  #
-  #   type:
-  #     type: struct
-  #     fields:
-  #     - id: 100024
-  #       name: action
-  #    
-  #       type: string
-  #     - id: 100025
-  #       name: id
-  #    
-  #       type: string
-  #     - id: 100026
-  #       name: provider
-  #    
-  #       type: string
-  # - id: 10003
-  #   name: related
-  #
-  #   type:
-  #     type: struct
-  #     fields:
-  #     - id: 100028
-  #       name: user
-  #    
-  #       type:
-  #         type: list
-  #         element-id: 100027
-  #         element: string
-  #         eleme
-  # - id: 10004
-  #   name: source
-  #
-  #   type:
-  #     type: struct
-  #     fields:
-  #     - id: 100029
-  #       name: ip
-  #    
-  #       type: string
-  # - id: 10005
-  #   name: ts
-  #
-  #   type: long
-  # - id: 10006
-  #   name: user
-  #
-  #   type:
-  #     type: struct
-  #     fields:
-  #     - id: 100030
-  #       name: id
-  #    
-  #       type: string
-  # - id: 10007
-  #   name: user_agent
-  #
-  #   type: string
+        type: string
+          # type: map
+          # key: string
+          # value: string
