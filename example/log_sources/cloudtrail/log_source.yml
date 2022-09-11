@@ -619,14 +619,14 @@ transform: | # TODO: ts handling... file, source...
 
 schema:
   ecs_field_names:
+    - event
     - cloud
-    # - event
-    # - file
-    # - group
-    # - related
-    # - source
-    # - user
-    # - user_agent
+    - file
+    - group
+    - related
+    - source
+    - user
+    - user_agent
   fields:
   - name: error_code
     type: string

@@ -144,7 +144,7 @@ pub fn vrl<'a>(
 ) -> Result<(::value::Value, &'a mut ::value::Value)> {
     thread_local!(
         static CACHE: RefCell<LruCache<String, Result<Program, String>>> =
-            RefCell::new(LruCache::new(400));
+            RefCell::new(LruCache::new(std::num::NonZeroUsize::new(400).unwrap()));
     );
 
     CACHE.with(|c| {
