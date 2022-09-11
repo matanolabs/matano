@@ -9,8 +9,7 @@ rust-version = "1.63.0"
 [dependencies]
 shared = { path = "../shared" }
 anymap = "0.12.1"
-lru = "0.7.8"
-cached = "0.38.0"
+lru = "0.8.0"
 tokio = { version = "1.17.0", features = ["macros"] }
 tokio-util = { version = "0.7", default-features = false, features = ["codec"] }
 rayon = "1.5.3"
@@ -30,9 +29,9 @@ arrow2 = { git = "https://github.com/jorgecarleitao/arrow2", features = [
 ] }
 indexmap = "1.9.1"
 
-apache-avro = { git = "https://github.com/shaeqahmed/avro.git", branch = "master", features = [
+apache-avro = { git = "https://github.com/apache/avro.git", rev = "c78f12f", features = [
   "zstandard",
-  "snappy"
+  "snappy",
 ] }
 
 uuid = "1.1.2"

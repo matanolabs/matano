@@ -6,8 +6,8 @@ use arrow2::io::avro::avro_schema::schema::{
 };
 use indexmap::map::IndexMap as HashMap;
 use indexmap::set::IndexSet as HashSet;
+use log::debug;
 use std::borrow::Borrow;
-use log::{debug};
 
 const ITEM_NAME: &str = "item";
 
@@ -67,11 +67,15 @@ pub(crate) fn coerce_data_type<A: Borrow<DataType> + std::fmt::Debug>(datatypes:
             .filter(|f| f.data_type != DataType::Null)
             .collect::<Vec<_>>();
 
-        let data_type =
-         if fields.iter().filter(|f| f.data_type != DataType::Null).count() > 0 {
+        let data_type = if fields
+            .iter()
+            .filter(|f| f.data_type != DataType::Null)
+            .count()
+            > 0
+        {
             Struct(fields)
         } else {
-            debug!("datatypes: {:?} \n\n fields:{:?}",datatypes,fields);
+            debug!("datatypes: {:?} \n\n fields:{:?}", datatypes, fields);
             DataType::Null
         };
         return data_type;
@@ -167,6 +171,6 @@ fn _type_to_schema(data_type: &DataType, name: String) -> Result<AvroSchema> {
         }
         DataType::FixedSizeBinary(size) => AvroSchema::Fixed(Fixed::new("", *size)),
         DataType::Decimal(p, s) => AvroSchema::Bytes(Some(BytesLogical::Decimal(*p, *s))),
-        other => return Err(anyhow!("write {:?} to avro", other)),
+        other => return Err(anyhow!("cannot write {:?} to avro", other)),
     })
 }

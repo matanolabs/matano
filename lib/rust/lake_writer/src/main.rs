@@ -1,60 +1,31 @@
-use async_compat::CompatExt;
 use aws_sdk_s3::types::ByteStream;
 use futures::future::join_all;
 use serde::{Deserialize, Serialize};
 use shared::*;
-use tokio::runtime::Handle;
-use tokio_util::codec::{FramedRead, LinesCodec};
-use tokio_util::io::{ReaderStream, StreamReader};
+use tokio::fs;
 use uuid::Uuid;
 
-use bytes::Bytes;
-use std::fs::File;
-use std::rc::Rc;
-use std::sync::{Arc, MutexGuard};
-use std::sync::{Condvar, Mutex};
-use std::thread::{self, JoinHandle};
+use std::sync::Arc;
+use std::sync::Mutex;
 use std::{time::Instant, vec};
 
 use aws_lambda_events::event::sqs::SqsEvent;
-use lambda_runtime::{handler_fn, Context as LambdaContext, Error as LambdaError};
-use log::{debug, error, info};
+use lambda_runtime::{run, service_fn, Context, Error as LambdaError, LambdaEvent};
+
+use log::{error, info};
 use threadpool::ThreadPool;
 
-use std::io::Write;
+use anyhow::{anyhow, Result};
 
-use std::io::{BufRead, BufReader, Seek};
-use std::io::{Cursor, Read};
-use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncReadExt};
-
-use lazy_static::{__Deref, lazy_static};
-
-use anyhow::{anyhow, Error, Result};
-
-use aws_sdk_s3::Region;
-use futures::{stream, Future, TryFutureExt, TryStreamExt};
 // use tokio_stream::StreamExt;
 use futures::StreamExt;
 
-use tokio_stream::{wrappers::LinesStream, StreamMap};
-
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
-
-use arrow2::io::avro::avro_schema::file::{Block, CompressedBlock, FileMetadata};
+use arrow2::io::avro::avro_schema::file::Block;
 use arrow2::io::avro::avro_schema::read_async::{block_stream, decompress_block, read_metadata};
 use arrow2::io::avro::read::{deserialize, infer_schema};
-use arrow2::io::parquet::read as parquet_read;
-use arrow2::{
-    chunk::Chunk,
-    datatypes::{Field, Schema},
-    error::Error as ArrowError,
-    error::Result as ArrowResult,
-    io::parquet::write::{
-        transverse, CompressionOptions, Encoding, FileWriter, RowGroupIterator, Version,
-        WriteOptions,
-    },
+use arrow2::io::parquet::write::{
+    transverse, CompressionOptions, Encoding, FileWriter, RowGroupIterator, Version, WriteOptions,
 };
-use futures::pin_mut;
 use tokio_util::compat::TokioAsyncReadCompatExt;
 
 // const ECS_PARQUET: &[u8] = include_bytes!("../../../../data/ecs_parquet_metadata.parquet");
@@ -79,8 +50,8 @@ async fn main() -> Result<(), LambdaError> {
 
     // my_handler(ev11).await.unwrap();
 
-    let func = handler_fn(my_handler);
-    lambda_runtime::run(func).await?;
+    let func = service_fn(my_handler);
+    run(func).await?;
 
     info!("Call lambda took {:.2?}", start.elapsed());
 
@@ -93,10 +64,11 @@ async fn main() -> Result<(), LambdaError> {
 //     ret
 // }
 
-pub(crate) async fn my_handler(event: SqsEvent, _ctx: LambdaContext) -> Result<()> {
+pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
     info!("Request: {:?}", event);
 
     let downloads = event
+        .payload
         .records
         .iter()
         .flat_map(|record| {
@@ -227,6 +199,9 @@ pub(crate) async fn my_handler(event: SqsEvent, _ctx: LambdaContext) -> Result<(
     let chunks = Mutex::into_inner(chunks_ref)?;
     dbg!(chunks.len());
 
+    if chunks.len() == 0 {
+        return Ok(());
+    }
     let schema = res.first().unwrap().clone();
     let encodings: Vec<Vec<Encoding>> = schema
         .clone()
