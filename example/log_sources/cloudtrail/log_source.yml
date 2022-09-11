@@ -16,7 +16,7 @@ transform: | # TODO: ts handling... file, source...
     .cloud.account.id = del(.json.userIdentity.accountId)
     .aws.cloudtrail.user_identity.access_key_id = del(.json.userIdentity.accessKeyId)
     .aws.cloudtrail.user_identity.session_context.mfa_authenticated = del(.json.userIdentity.sessionContext.attributes.mfaAuthenticated)
-  
+
       if .json.userIdentity.sessionContext.attributes.creationDate != null {
             .aws.cloudtrail.user_identity.session_context.creation_date = to_timestamp!(.json.userIdentity.sessionContext.attributes.creationDate)
       }
@@ -31,17 +31,17 @@ transform: | # TODO: ts handling... file, source...
     .aws.cloudtrail.event_category = del(.json.eventCategory)
     .cloud.region = del(.json.awsRegion)
     .source.address = del(.json.sourceIPAddress)
-  
+
     _grokked, err = parse_groks(.source.address, ["^%{IP:source.ip}$"])
     if err == null {
         . |= _grokked
     }
     .source.as.number = del(.source.as.asn)
     .source.as.organization.name = del(.source.as.organization_name)
-    .user_agent = del(.json.userAgent)
+    .user_agent = parse_user_agent!(del(.json.userAgent))
     .aws.cloudtrail.error_code = del(.json.errorCode)
     .aws.cloudtrail.error_message = del(.json.errorMessage)
-  
+
     if .json.requestParameters != null {
         .aws.cloudtrail.flattened.request_parameters = flatten!(del(.json.requestParameters))
     }
@@ -54,8 +54,8 @@ transform: | # TODO: ts handling... file, source...
     if .json.serviceEventDetails != null {
         .aws.cloudtrail.flattened.service_event_details = flatten!(del(.json.serviceEventDetails))
     }
-  
-  
+
+
     .aws.cloudtrail.request_id = del(.json.requestId)
     .event.id = del(.json.eventID)
     .aws.cloudtrail.event_type = del(.json.eventType)
@@ -74,7 +74,7 @@ transform: | # TODO: ts handling... file, source...
     if .aws.cloudtrail.flattened.request_parameters.newUserName != null {
         .related.user = push!(.related.user, .aws.cloudtrail.flattened.request_parameters.newUserName)
     }
-  
+
     if (.event.action == "ConsoleLogin") {
       if .aws.cloudtrail.flattened.additional_eventdata.MobileVersion != null {
         .aws.cloudtrail.console_login.additional_eventdata.mobile_version = .aws.cloudtrail.flattened.additional_eventdata.MobileVersion != "No"
@@ -554,7 +554,7 @@ transform: | # TODO: ts handling... file, source...
       }
     }
     .event.kind = "event"
-    .event.type = "info"
+    .event.type = ["info"]
     .event.outcome = if .aws.cloudtrail.error_code != null || .aws.cloudtrail.error_message != null {
         "failure"
     } else if .event.action == "ConsoleLogin" && .aws.cloudtrail.flattened.response_elements.ConsoleLogin != null {
@@ -567,7 +567,7 @@ transform: | # TODO: ts handling... file, source...
     if (err != null) {
         .event |= object!(fields)
     }
-  
+
     .cloud.account.id = del(.json.awsAccountId)
     .file.path = del(.json.previousDigestS3Object)
     .file.hash.sha256 = del(.json.previousDigestSignature)
@@ -575,18 +575,18 @@ transform: | # TODO: ts handling... file, source...
         .related.hash = push!(.related.hash, .file.hash.sha256)
     }
     .aws.cloudtrail.digest.log_files = del(.json.logFiles)
-  
+
     if .json.digestStartTime != null {
         .aws.cloudtrail.digest.start_time = to_timestamp!(.json.digestStartTime)
     }
-  
+
     if .json.digestEndTime != null {
         .ts = to_timestamp!(.json.digestEndTime)
         .aws.cloudtrail.digest.end_time = .ts
     }
-  
+
     .aws.cloudtrail.digest.s3_bucket = del(.json.digestS3Bucket)
-  
+
     if .json.newestEventTime != null {
         .aws.cloudtrail.digest.newest_event_time = to_timestamp!(.json.newestEventTime)
     }
