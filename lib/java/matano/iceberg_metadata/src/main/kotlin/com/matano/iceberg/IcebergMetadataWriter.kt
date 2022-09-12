@@ -16,9 +16,7 @@ import org.apache.iceberg.catalog.Catalog
 import org.apache.iceberg.catalog.Namespace
 import org.apache.iceberg.catalog.TableIdentifier
 import org.apache.iceberg.parquet.ParquetUtil
-import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.Executors
 
 class LazyConcurrentMap<K, V>(
         private val compute: (K) -> V,
@@ -43,9 +41,6 @@ fun main(args: Array<String>) {
 class IcebergMetadataWriter {
     lateinit var fileIO: S3FileIO
     val icebergCatalog = createIcebergCatalog()
-
-    // val executor = Executors.newFixedThreadPool(8)
-
     inner class TableObj(tableName: String) {
         val table: Table = icebergCatalog.loadTable(TableIdentifier.of(Namespace.of(MATANO_NAMESPACE), tableName))
         val appendFiles: AppendFiles = table.newAppend()
@@ -75,19 +70,10 @@ class IcebergMetadataWriter {
         for (record in sqsEvent.records) {
             processRecord(record, tableObjs)
         }
-//        val processFutures = sqsEvent.records.map {record ->
-//            CompletableFuture.runAsync({ processRecord(record) }, executor)
-//        }
-//        CompletableFuture.allOf(*processFutures.toTypedArray()).join()
-
         println("Committing...")
         for (tableObj in tableObjs.values) {
             tableObj.appendFiles.commit()
         }
-//        val futures = tableObjs.map.values.map { tableObj ->
-//            CompletableFuture.runAsync({ tableObj.appendFiles.commit() }, executor)
-//        }
-//        CompletableFuture.allOf(*futures.toTypedArray()).join()
         println("DONE!")
     }
 

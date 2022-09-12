@@ -8,6 +8,7 @@
         <a href="#"><img src="https://img.shields.io/badge/rust-%233A3B3C.svg?style=for-the-badge&logo=rust&labelColor=B1513E&logoColor=white"/></a>
         <br>
         <a href="/LICENSE" target="_blank"><img src="https://img.shields.io/github/license/matanolabs/matano?style=flat"/></a>
+        <a href="https://bestpractices.coreinfrastructure.org/projects/6478"><img src="https://bestpractices.coreinfrastructure.org/projects/6478/badge"></a>
         <!-- <img src="https://img.shields.io/github/v/release/matanolabs/matano?style=flat-square"/> -->
  <a href="https://discord.gg/YSYfHMbfZQ" target="_blank"><img src="https://img.shields.io/discord/996484553290022973.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2"/></a>
         <a href="https://twitter.com/intent/follow?screen_name=matanolabs" target="_blank"><img src="https://img.shields.io/twitter/follow/matanolabs?style=social" alt="Twitter Follow"/></a>
