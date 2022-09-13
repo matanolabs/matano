@@ -16,6 +16,7 @@ import org.apache.iceberg.avro.AvroSchemaUtil
 import org.apache.iceberg.aws.glue.GlueCatalog
 import org.apache.iceberg.catalog.Namespace
 import org.apache.iceberg.catalog.TableIdentifier
+import org.apache.iceberg.parquet.ParquetSchemaUtil
 import org.apache.iceberg.types.TypeUtil
 import org.apache.iceberg.types.TypeUtil.NextID
 import org.slf4j.Logger
@@ -94,11 +95,13 @@ class MatanoSchemasLayerCustomResource {
             val table = icebergCatalog.loadTable(tableId)
             val icebergSchema = table.schema()
             val avroSchema = AvroSchemaUtil.convert(icebergSchema.asStruct(), logSource)
+            val parquetSchema = ParquetSchemaUtil.convert(icebergSchema, logSource)
 
             val logSourceSubDir = tempDir.resolve(logSource)
             logSourceSubDir.toFile().mkdirs()
             logSourceSubDir.resolve("iceberg_schema.json").writeText(SchemaParser.toJson(icebergSchema))
             logSourceSubDir.resolve("avro_schema.avsc").writeText(avroSchema.toString())
+            writeParquetSchema(logSourceSubDir.resolve("metadata.parquet").toAbsolutePath().toString(), parquetSchema)
         }
         outZipFile.addFolder(tempDir.toFile())
 
