@@ -24,11 +24,11 @@ dependencies {
     implementation("org.slf4j:slf4j-api:1.7.32")
     //implementation("org.slf4j:slf4j-simple:1.7.32")
 
-    implementation("org.apache.iceberg:iceberg-api:0.13.2")
-    implementation("org.apache.iceberg:iceberg-core:0.13.2")
-    implementation("org.apache.iceberg:iceberg-common:0.13.2")
-    implementation("org.apache.iceberg:iceberg-parquet:0.13.2")
-    implementation("org.apache.iceberg:iceberg-aws:0.13.2")
+    implementation("org.apache.iceberg:iceberg-api:0.14.1")
+    implementation("org.apache.iceberg:iceberg-core:0.14.1")
+    implementation("org.apache.iceberg:iceberg-common:0.14.1")
+    implementation("org.apache.iceberg:iceberg-parquet:0.14.1")
+    implementation("org.apache.iceberg:iceberg-aws:0.14.1")
     implementation("org.apache.hadoop:hadoop-common:3.3.3") {
         exclude("org.slf4j")
     }
