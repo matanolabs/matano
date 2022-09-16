@@ -54,7 +54,6 @@ export default class Info extends BaseCommand {
         }));
   }
 
-
   static async retrieveCfnOutputs(awsAccountId: string, awsRegion: string, awsProfile?: string) {
     const sdkProvider = await SdkProvider.withAwsCliCompatibleDefaults({ profile: awsProfile, });
     const cfn = (await sdkProvider.forEnvironment(cxapi.EnvironmentUtils.make(awsAccountId, awsRegion), Mode.ForReading, {})).sdk.cloudFormation();
@@ -79,23 +78,18 @@ export default class Info extends BaseCommand {
         });
     }
 
-
-    // TODO: improve when https://github.com/cli-table/cli-table3/pull/303 merged
-    const getColWidths = () => {
-        const totalColWidth = process.stdout.columns;
-        if (!totalColWidth) return [null, 21, 30] // conservative?
-        else if (totalColWidth < 60) return [Math.round(totalColWidth/3), Math.round(totalColWidth/3), Math.round(totalColWidth/3)]
-        else if (totalColWidth > 110) return [32, 21, totalColWidth - 53 - 8]
-        else return [20, 21, totalColWidth - 41 - 8];
-    }
     const table = new Table({
         head: ["Name", "Value", "Description",].map(s => chalk.cyanBright.bold(s)),
         wordWrap: true,
         wrapOnWordBoundary: false,
-        colWidths: getColWidths(),
     });
+
     for (const row of cfnOutputs) {
-        table.push(Object.values(row) as any)
+        table.push([
+          row.name,
+          row.value,
+          { content: row.description, wrapOnWordBoundary: true, }
+        ]);
     }
     console.log(table.toString());
   }
