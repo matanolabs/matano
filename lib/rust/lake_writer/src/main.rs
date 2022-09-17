@@ -1,3 +1,8 @@
+use arrow::record_batch::RecordBatchReader;
+use arrow2::chunk::Chunk;
+use arrow2::datatypes::Field;
+use arrow2::io::parquet::write::row_group_iter;
+use arrow2::io::parquet::write::to_parquet_schema;
 use aws_sdk_s3::types::ByteStream;
 use futures::future::join_all;
 use serde::{Deserialize, Serialize};
@@ -27,6 +32,14 @@ use arrow2::io::parquet::write::{
     transverse, CompressionOptions, Encoding, FileWriter, RowGroupIterator, Version, WriteOptions,
 };
 use tokio_util::compat::TokioAsyncReadCompatExt;
+
+use arrow2::io::ipc::write::FileWriter as IpcFileWriter;
+use arrow2::io::print::write;
+
+use arrow::record_batch::RecordBatch;
+use parquet::arrow::arrow_writer::ArrowWriter;
+use parquet::basic::Compression;
+use parquet::file::properties::WriterProperties;
 
 // const ECS_PARQUET: &[u8] = include_bytes!("../../../../data/ecs_parquet_metadata.parquet");
 
@@ -186,7 +199,7 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
             });
 
             fut.await;
-            schema_copy.clone()
+            schema_copy
         }
     });
 
@@ -202,30 +215,67 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
     if chunks.len() == 0 {
         return Ok(());
     }
-    let schema = res.first().unwrap().clone();
-    let encodings: Vec<Vec<Encoding>> = schema
-        .clone()
-        .fields
-        .iter()
-        .map(|f| transverse(&f.data_type, |_| Encoding::Plain))
-        .collect();
 
     println!("Writing...");
-    let buf = vec![];
-    let mut writer = FileWriter::try_new(buf, schema.clone(), options)?;
+    let schema = res.first().unwrap();
 
-    let argi = chunks.into_iter().map(|x| Ok(x));
-    let row_groups = RowGroupIterator::try_new(argi, &schema, options, encodings).unwrap();
+    let field = Field::new(
+        "root".to_owned(),
+        arrow2::datatypes::DataType::Struct(schema.fields.clone()),
+        false,
+    );
+    let arrays = chunks
+        .iter()
+        .map(|chunk| {
+            let composite_array: Box<(dyn arrow2::array::Array)> =
+                Box::new(arrow2::array::StructArray::from_data(
+                    field.clone().data_type,
+                    chunk.arrays().to_vec(),
+                    None,
+                ));
+            composite_array
+        })
+        .collect::<Vec<_>>();
+    let iter = Box::new(arrays.clone().into_iter().map(Ok)) as _;
 
-    for row_group in row_groups {
-        writer.write(row_group?)?;
+    let mut arrow_array_stream = Box::new(arrow2::ffi::ArrowArrayStream::empty());
+
+    *arrow_array_stream = arrow2::ffi::export_iterator(iter, field.clone());
+
+    // import (arrow2)
+    // let mut stream = unsafe { arrow2::ffi::ArrowArrayStreamReader::try_new(arrow_array_stream)? };
+
+    // import (arrow)
+    let stream_ptr =
+        Box::into_raw(arrow_array_stream) as *mut arrow::ffi_stream::FFI_ArrowArrayStream;
+    let stream_reader =
+        unsafe { arrow::ffi_stream::ArrowArrayStreamReader::from_raw(stream_ptr).unwrap() };
+    let imported_schema = stream_reader.schema();
+
+    let props = WriterProperties::builder()
+        .set_compression(Compression::ZSTD)
+        .build();
+
+    let buf = std::io::Cursor::new(vec![]);
+    let mut writer = ArrowWriter::try_new(buf, imported_schema, Some(props)).unwrap();
+
+    for record_batch in stream_reader {
+        let record_batch = record_batch?;
+        writer.write(&record_batch)?;
     }
+    writer.flush()?;
 
-    let filesize = writer.end(None)?;
-    println!("Parquet file size: {}", filesize);
+    // let schema_ffi = arrow2::ffi::export_field_to_c(&field);
+    // let array_ffi = arrow2::ffi::export_array_to_c(composite_array);
 
-    let bytestream = ByteStream::from(writer.into_inner());
+    let bytes = writer.into_inner()?.into_inner();
 
+    // return Ok(());
+
+    // let filesize = writer.end(None)?;
+    // println!("Parquet file size: {}", filesize);
+
+    let bytestream = ByteStream::from(bytes);
     let bucket = std::env::var("OUT_BUCKET_NAME")?;
     let key_prefix = std::env::var("OUT_KEY_PREFIX")?;
     // lake/TABLE_NAME/data/partition_day=2022-07-05/<file>.parquet
@@ -248,6 +298,10 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
         .send()
         .await?;
     println!("Upload took: {:.2?}", ws1.elapsed());
+    // (drop/release)
+    unsafe {
+        Box::from_raw(stream_ptr);
+    }
 
     println!("----------------  Call took {:.2?}", start.elapsed());
 

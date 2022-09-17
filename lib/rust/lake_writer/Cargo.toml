@@ -38,13 +38,17 @@ tokio-stream = { version = "0.1.9", features = ["io-util"] }
 threadpool = "1.8.1"
 async-compat = "0.2.1"
 
-arrow2 = { git = "https://github.com/shaeqahmed/arrow2.git", features = [
+arrow2 = { git = "https://github.com/jorgecarleitao/arrow2.git", rev = "c615095", features = [
   "io_avro",
   "io_avro_async",
   "io_avro_compression",
   "io_parquet_compression",
   "io_parquet",
+  "io_print",
+  "io_ipc",
 ] }
 # avro-schema = {version = "0.3.0", features = ["full"]}
 # avro-rs = "0.13.0"
-async-stream = { version = "0.3.3" } # NEED THIS or parquet2 fails compile
+async-stream = { version = "0.3.3" }               # NEED THIS or parquet2 fails compile
+parquet = "22.0.0"
+arrow = { version = "22.0.0", features = ["ffi"] }

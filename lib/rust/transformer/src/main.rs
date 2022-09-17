@@ -549,14 +549,16 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessRe
                 let inferred_avro_schema = Arc::new(inferred_avro_schema);
 
                 let writer_schema = inferred_avro_schema.clone();
-                let writer = RefCell::new(Writer::with_codec(
-                    &writer_schema,
-                    Vec::new(),
-                    Codec::Snappy,
-                ));
+                let writer: Writer<Vec<u8>> = Writer::builder()
+                    .schema(&writer_schema)
+                    .writer(Vec::new())
+                    .codec(Codec::Snappy)
+                    .block_size(1 * 1024 * 1024 as usize)
+                    .build();
+                let writer = RefCell::new(writer);
 
                 reader
-                    .chunks(400) // chunks(8000) (avro block size)
+                    .chunks(8000) // chunks(8000) (avro block size)
                     .for_each(|chunk| {
                         // .for_each_concurrent(100, |chunk| { // figure out how to make this work (lock writer so that we can write better blocks...)
                         let mut writer = writer.borrow_mut();
