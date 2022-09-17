@@ -1,22 +1,40 @@
+from typing import Any
+from dataclasses import dataclass
 import os
 import base64
-import json, time
+import json
+import logging
 import importlib
 import boto3
-import jsonlines
 from uuid import uuid4
-from io import BytesIO
 from datetime import datetime, timezone
 import fastavro
+
+from detection.util import Timer, Timers, timing
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 s3 = boto3.resource("s3")
 sns = boto3.client("sns")
 DETECTION_CONFIGS = None
 ALERTING_SNS_TOPIC_ARN = None
+timers = Timers()
 
+@dataclass
+class RecordData:
+    record: Any
+    record_idx: int
+    s3_bucket: str
+    s3_key: str
+    log_source: str
 
+    def record_reference(self):
+        ref = f"{self.s3_bucket}#{self.s3_key}#{self.record_idx}"
+        return base64.b64encode(ref.encode("utf-8")).decode("utf-8"),
+
+@timing(timers)
 def handler(event, context):
-    processtime = {"t": 0}
 
     global ALERTING_SNS_TOPIC_ARN
     ALERTING_SNS_TOPIC_ARN = os.environ["ALERTING_SNS_TOPIC_ARN"]
@@ -29,71 +47,78 @@ def handler(event, context):
                 detection_config["module"] = importlib.import_module(".", detection_config["import_path"])
 
     alert_responses = []
-    i1 = 0
-    st = time.time()
-    for log_source, record in get_records(event, processtime):
-        i1 += 1
-        for response in run_detections(log_source, record, processtime):
-            alert_responses.append(response)
-    elt = time.time() - st
-    processtime["t"] += elt
-    print(f"DET: I took {processtime['t']} seconds to process {i1} records for an average time of {processtime['t']/i1} seconds per record")
+    with timers.get_timer("process"):
+        for record_data in get_records(event):
+            for response in run_detections(record_data):
+                if response:
+                    alert_responses.append(response)
+
     process_responses(alert_responses)
 
+    debug_metrics(record_count = record_data.record_idx)
+
+
+def debug_metrics(record_count):
+    processing_time = timers.get_timer("process").elapsed
+    dl_time = timers.get_timer("data_download").elapsed
+
+    avg_process_time = 0 if record_count == 0 else processing_time/record_count
+    logger.info(f"DET: Took {processing_time} seconds to process {record_count} records for an average time of {avg_process_time} seconds per record")
+    logger.info(f"Downloading took: {dl_time} seconds")
+
+
 # { bucket: ddd, key: "" }
-def get_records(event, processtime):
+def get_records(event):
     # Actually batch size: 1 currrently
     for sqs_record in event['Records']:
         sqs_record_body = json.loads(sqs_record['body'])
+        log_source = sqs_record_body["log_source"]
         s3_bucket, s3_key = sqs_record_body["bucket"], sqs_record_body["key"]
 
-        st = time.time()
-        print(f"START: Downloading from s3://{s3_bucket}/{s3_key}")
-        obj_body = s3.Object(s3_bucket, s3_key).get()["Body"]
-        print(f"END: Downloading from s3://{s3_bucket}/{s3_key}")
-        print("Time taken: ", time.time() - st)
-        processtime["t"] -= time.time() - st
+        logger.info(f"START: Downloading from s3://{s3_bucket}/{s3_key}")
+        with timers.get_timer("process").pause():
+            with timers.get_timer("data_download"):
+                obj_body = s3.Object(s3_bucket, s3_key).get()["Body"]
+        logger.info(f"END: Downloading from s3://{s3_bucket}/{s3_key}")
 
         reader = fastavro.reader(obj_body)
 
-        for record in reader:
-            log_source = sqs_record_body["log_source"]
-            yield log_source, record
+        for record_idx, record in enumerate(reader):
+            yield RecordData(record, record_idx, s3_bucket, s3_key, log_source)
 
-def run_detections(log_source, record, processtime):
-    configs = DETECTION_CONFIGS[log_source]
+def run_detections(record_data: RecordData):
+    configs = DETECTION_CONFIGS[record_data.log_source]
 
-    st3 = time.time()
     for detection_config in configs:
         detection_name, detection_module = detection_config['name'], detection_config["module"]
-        # print(f"Running detection: {detection_name} for log_source: {log_source}")
 
-        alert_title = log_source
-        alert_response = detection_module.detect(record)
+        alert_title = detection_name # TODO: fix
+        alert_response = detection_module.detect(record_data.record)
 
-        yield {
-            "alert": alert_response,
-            "title": alert_title,
-            "detection": detection_name,
-            "log_source": log_source,
-        }
-    et3 = time.time() - st3
-    processtime["t"] += et3
+        if not alert_response:
+            yield False
+        else:
+            yield {
+                "alert": alert_response,
+                "title": alert_title,
+                "detection": detection_name,
+                "record_data": record_data,
+            }
 
 def process_responses(alert_responses):
+    if not alert_responses:
+        return
+
     alert_objs = []
     for idx, response in enumerate(alert_responses):
-        if not response["alert"]:
-            continue
+        record_data: RecordData = response["record_data"]
         alert_obj = {
             "id": str(uuid4()),
             "title": response["title"],
-            "detection": response["detection"],
-            "log_source": response["log_source"],
+            "detection": record_data.detection,
+            "log_source": record_data.log_source,
             "time": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
-            # "record_reference": base64.b64encode(
-            #     f"{topic}#{partition}#{offset}".encode("utf-8")
-            # ).decode("utf-8"),
+            "record_reference": record_data.record_reference(),
         }
         alert_objs.append(alert_obj)
 
