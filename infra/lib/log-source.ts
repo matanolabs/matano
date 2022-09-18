@@ -1,3 +1,5 @@
+import * as path from "path";
+import * as fs from "fs";
 import { Construct } from "constructs";
 import * as cdk from "aws-cdk-lib";
 import * as iam from "aws-cdk-lib/aws-iam";
@@ -12,6 +14,7 @@ import { MatanoStack } from "./MatanoStack";
 import { resolveSchema } from "./schema";
 import { SqsSubscription } from "aws-cdk-lib/aws-sns-subscriptions";
 import { SqsEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
+import { dataDirPath, mergeDeep, readConfig } from "./utils";
 
 export const MATANO_DATABASE_NAME = "matano";
 
@@ -31,6 +34,10 @@ export interface LogSourceConfig {
   transform?: {
     vrl?: string
   }
+  managed?: {
+    type?: string;
+  }
+  [key: string]: any;
 }
 
 interface MatanoLogSourceProps {
@@ -38,12 +45,14 @@ interface MatanoLogSourceProps {
   defaultSourceBucket: s3.Bucket;
   realtimeTopic: sns.Topic;
   lakeIngestionLambda: lambda.Function;
-  resolvedSchema: any;
 }
 
-const MATANO_GLUE_DATABASE_NAME = "matano";
+const MANAGED_LOG_SOURCES_DIR = path.join(dataDirPath, "managed");
+
 export class MatanoLogSource extends Construct {
   name: string;
+  schema: Record<string, any>;
+  sourceConfig: LogSourceConfig;
   constructor(scope: Construct, id: string, props: MatanoLogSourceProps) {
     super(scope, id);
 
@@ -56,9 +65,26 @@ export class MatanoLogSource extends Construct {
 
     this.name = logSourceName;
 
+    if (props.config?.managed) {
+      const managedLogSourceType = props.config?.managed?.type;
+      if (!managedLogSourceType) {
+        throw "Invalid Managed Log source type: cannot be empty"
+      }
+      const managedConfigPath = path.join(MANAGED_LOG_SOURCES_DIR, managedLogSourceType);
+      if (!fs.existsSync(managedConfigPath)) {
+        throw `The managed log source type: ${managedLogSourceType} does not exist.`
+      }
+      const managedConfig = readConfig(managedConfigPath, "log_source.yml");
+      this.sourceConfig = mergeDeep(props.config, managedConfig);
+    } else {
+      this.sourceConfig = props.config;
+    }
+
+    this.schema = resolveSchema(this.sourceConfig.schema?.ecs_field_names, this.sourceConfig.schema?.fields);
+
     const matanoIcebergTable = new MatanoIcebergTable(this, "MatanoIcebergTable", {
       logSourceName,
-      schema: props.resolvedSchema,
+      schema: this.schema,
     });
 
     const ingestionDlq = new sqs.Queue(this, "LakeIngestionDLQ", {

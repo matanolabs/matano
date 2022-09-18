@@ -31,6 +31,7 @@ import { Transformer } from "../lib/transformer";
 import { SqsSubscription } from "aws-cdk-lib/aws-sns-subscriptions";
 import { MatanoAlerting } from "../lib/alerting";
 import { resolveSchema } from "../lib/schema";
+import { MatanoS3Sources } from "../lib/s3-sources";
 
 interface DPMainStackProps extends MatanoStackProps {
   matanoSourcesBucket: S3BucketWithNotifications;
@@ -68,22 +69,25 @@ export class DPMainStack extends MatanoStack {
     });
 
     const logSources: MatanoLogSource[] = [];
-
-    const allResolvedSchemasHashStr = logSourceConfigs
-      .map(lsc => resolveSchema(lsc.schema?.ecs_field_names, lsc.schema?.fields))
-      .reduce((prev, cur) => prev + JSON.stringify(cur), "");
-    const schemasHash = md5Hash(allResolvedSchemasHashStr);
-
     for (const logSourceConfig of logSourceConfigs) {
       const logSource = new MatanoLogSource(this, `MatanoLogSource${logSourceConfig.name}`, {
         config: logSourceConfig,
         defaultSourceBucket: props.matanoSourcesBucket.bucket,
         realtimeTopic: props.realtimeBucketTopic,
         lakeIngestionLambda: lakeIngestion.lakeIngestionLambda,
-        resolvedSchema: resolveSchema(logSourceConfig.schema?.ecs_field_names, logSourceConfig.schema?.fields),
       });
       logSources.push(logSource);
     }
+
+    new MatanoS3Sources(this, "CustomIngestionLogSources", {
+      logSources,
+      sourcesIngestionTopic: props.matanoSourcesBucket.topic,
+    });
+
+    const allResolvedSchemasHashStr = logSources
+      .map(ls => ls.schema)
+      .reduce((prev, cur) => prev + JSON.stringify(cur), "");
+    const schemasHash = md5Hash(allResolvedSchemasHashStr);
 
     const schemasCR = new MatanoSchemas(this, "MatanoSchemasCustomResource", {
       schemaOutputPath: schemasHash,
