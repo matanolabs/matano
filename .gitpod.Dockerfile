@@ -8,7 +8,7 @@ RUN echo "START" && \
     rm -rf awscliv2.zip aws && \
     npm install -g aws-cdk && \
     python -m pip install --user pipx && python -m pipx ensurepath && \
-    python -m pip install yawsso && python -m pip install cargo-lambda \
+    python -m pip install yawsso && python -m pip install cargo-lambda && \
     bash -c ". /home/gitpod/.sdkman/bin/sdkman-init.sh \
              && sdk install kotlin 1.7.0 \
              && sdk install spark 3.2.1" && \
