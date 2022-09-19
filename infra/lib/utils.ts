@@ -77,3 +77,10 @@ export function mergeDeep(target: any, source: any) {
 export function isObject(item: any): boolean {
   return (item && typeof item === 'object' && !Array.isArray(item));
 }
+
+const ERROR_PREFIX = "MATANO_ERROR: "
+export function fail(e: string): never {
+  const msg = ERROR_PREFIX + e;
+  console.error(msg);
+  process.exit(1);
+}

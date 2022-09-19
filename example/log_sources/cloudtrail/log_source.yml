@@ -1,4 +1,4 @@
-name: "cloudtrail"
+name: "aws_cloudtrail"
 
 managed:
-  type: "cloudtrail"
+  type: AWS_CLOUDTRAIL

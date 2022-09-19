@@ -40,6 +40,7 @@ export default class Init extends BaseCommand {
   ];
 
   static flags = {
+    ...BaseCommand.flags,
     profile: Flags.string({
       char: "p",
       description: "AWS Profile to use for credentials.",

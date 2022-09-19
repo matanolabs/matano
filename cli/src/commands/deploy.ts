@@ -1,8 +1,9 @@
 import { CliUx, Command, Flags } from "@oclif/core";
 import { prompt } from "enquirer";
-import execa from "execa";
+import execa, { ExecaError } from "execa";
 
 import ora from "ora";
+import chalk from "chalk";
 import * as fs from "fs";
 import * as fse from "fs-extra"; 
 import path from "path";
@@ -12,8 +13,12 @@ import { readConfig } from "../util";
 import BaseCommand from "../base";
 import { getCdkExecutable, } from "..";
 
+const MATANO_ERROR_PREFIX = "MATANO_ERROR: ";
+
 export default class Deploy extends BaseCommand {
   static description = "Deploys matano.";
+
+  private foundErrorPattern = /Error: (.+)/;
 
   static examples = [
     "matano deploy",
@@ -22,6 +27,7 @@ export default class Deploy extends BaseCommand {
   ];
 
   static flags = {
+    ...BaseCommand.flags,
     profile: Flags.string({
       char: "p",
       description: "AWS Profile to use for credentials.",
@@ -71,6 +77,7 @@ export default class Deploy extends BaseCommand {
       env: {
         MATANO_CDK_ACCOUNT: awsAccountId,
         MATANO_CDK_REGION: awsRegion,
+        FORCE_COLOR: "1",
       },
     });
 
@@ -83,14 +90,44 @@ export default class Deploy extends BaseCommand {
     const { profile: awsProfile } = flags;
     const matanoUserDirectory = this.validateGetMatanoDir(flags);
     const { awsAccountId, awsRegion } = this.validateGetAwsRegionAccount(flags, matanoUserDirectory);
-    const spinner = ora("Deploying Matano...").start();
+    const spinner = ora(chalk.dim("Deploying Matano...")).start();
 
     const subprocess = Deploy.deployMatano(matanoUserDirectory, awsProfile, awsAccountId, awsRegion)
 
-    subprocess.stdout?.pipe(process.stdout);
-    subprocess.stderr?.pipe(process.stdout);
+    if (process.env.DEBUG) {
+      subprocess.stdout?.pipe(process.stdout);
+      subprocess.stderr?.pipe(process.stdout);
+    }
 
-    await subprocess;
-    spinner.succeed("Successfully deployed.");
+    try {
+      await subprocess;
+      spinner.succeed("Successfully deployed.");
+    } catch (e) {
+      spinner.fail("Deployment failed.");
+      const err = e as ExecaError;
+      const matanoError = err.message.split("\n").find(s => s.startsWith(MATANO_ERROR_PREFIX));
+
+      const suggestions = [];
+      if (matanoError) {
+        this.error(matanoError.replace(MATANO_ERROR_PREFIX, ""), {
+          exit: 1,
+        });
+      } else {
+        const foundError = err.message.split("\n").find(s => s.match(this.foundErrorPattern));
+        let message: string;
+        if (foundError) {
+          message = foundError.match(this.foundErrorPattern)?.[1]!!;
+        } else {
+          message = "An error occurred during deployment.";
+          suggestions.push("Run with --debug to see debug logs.");
+        }
+
+        this.error(message, {
+          exit: 1,
+          message: err.message,
+          suggestions,
+        });
+      }
+    }
   }
 }

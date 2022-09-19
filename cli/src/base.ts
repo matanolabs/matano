@@ -1,8 +1,38 @@
 import path from "path";
-import { Command, Flags } from "@oclif/core";
+import chalk from "chalk";
+import { Command, Flags, Errors } from "@oclif/core";
 import { isMatanoDirectory, readConfig } from "./util";
+import { CLIError } from "@oclif/core/lib/errors";
+
+export class BaseCLIError extends CLIError {
+  constructor(error: string | Error, options?: { exit?: number | false; } & Errors.PrettyPrintableError) {
+    super(error, options);
+    this.name = chalk.bold.red("Error")
+  }
+}
 
 export default abstract class BaseCommand extends Command {
+
+  static flags = {
+    debug: Flags.boolean({
+      description: "View debug information.",
+    }),
+  }
+
+  async init() {
+    const { flags } = await this.parse(this.constructor as any) as any;
+    if (flags.debug) {
+      process.env.DEBUG = "*"
+      this.config.debug = 1;
+    }
+  }
+
+  error(input: string | Error, options: {code?: string; exit: false} & Errors.PrettyPrintableError): void
+  error(input: string | Error, options?: {code?: string; exit?: number} & Errors.PrettyPrintableError): never
+  error(input: string | Error, options: {code?: string; exit?: number | false} & Errors.PrettyPrintableError = {}): void {
+    return Errors.error(new BaseCLIError(input, options) , options as any);
+  }
+
   validateGetMatanoDir(flags: any): string {
     const defaultUserDir = process.cwd();
     const userDir = flags["user-directory"] as any;

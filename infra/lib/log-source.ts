@@ -14,7 +14,7 @@ import { MatanoStack } from "./MatanoStack";
 import { resolveSchema } from "./schema";
 import { SqsSubscription } from "aws-cdk-lib/aws-sns-subscriptions";
 import { SqsEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
-import { dataDirPath, mergeDeep, readConfig } from "./utils";
+import { dataDirPath, fail, mergeDeep, readConfig } from "./utils";
 
 export const MATANO_DATABASE_NAME = "matano";
 
@@ -47,6 +47,14 @@ interface MatanoLogSourceProps {
   lakeIngestionLambda: lambda.Function;
 }
 
+const MANAGED_LOG_SOURCE_CATEGORY_MAP: Record<string, string> = {
+  "aws_cloudtrail": "aws",
+}
+
+function getCategoryForManagedLogSourceType(logSourceType: string) {
+  return MANAGED_LOG_SOURCE_CATEGORY_MAP[logSourceType]!!;
+}
+
 const MANAGED_LOG_SOURCES_DIR = path.join(dataDirPath, "managed");
 
 export class MatanoLogSource extends Construct {
@@ -66,13 +74,18 @@ export class MatanoLogSource extends Construct {
     this.name = logSourceName;
 
     if (props.config?.managed) {
-      const managedLogSourceType = props.config?.managed?.type;
+      const managedLogSourceType = props.config?.managed?.type?.toLowerCase();
       if (!managedLogSourceType) {
-        throw "Invalid Managed Log source type: cannot be empty"
+        fail("Invalid Managed Log source type: cannot be empty");
       }
       const managedConfigPath = path.join(MANAGED_LOG_SOURCES_DIR, managedLogSourceType);
       if (!fs.existsSync(managedConfigPath)) {
-        throw `The managed log source type: ${managedLogSourceType} does not exist.`
+        fail(`The managed log source type: ${managedLogSourceType} does not exist. Available managed log sources: ${JSON.stringify(Object.keys(MANAGED_LOG_SOURCE_CATEGORY_MAP))}`);
+      }
+
+      const category = getCategoryForManagedLogSourceType(managedLogSourceType);
+      if (!props.config.name.startsWith(category)) {
+        fail(`Since you are using the managed log source type: ${managedLogSourceType}, your log source name must be prefixed with ${category}. Please rename your log source as: ${category}_${props.config.name}`);
       }
       const managedConfig = readConfig(managedConfigPath, "log_source.yml");
       this.sourceConfig = mergeDeep(props.config, managedConfig);

@@ -36,9 +36,14 @@ export default class Info extends BaseCommand {
   ];
 
   static flags = {
+    ...BaseCommand.flags,
     profile: Flags.string({
       char: "p",
       description: "AWS Profile to use for credentials.",
+    }),
+    "user-directory": Flags.string({
+      required: false,
+      description: "Matano user directory to use.",
     }),
     output: CliUx.ux.table.flags().output,
   };
