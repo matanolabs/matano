@@ -519,12 +519,15 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessRe
                     .block_size(1 * 1024 * 1024 as usize)
                     .build();
                 let writer = RefCell::new(writer);
+                let mut rows = RefCell::new(0);
 
                 reader
                     .chunks(8000) // chunks(8000) (avro block size)
                     .for_each(|chunk| {
                         // .for_each_concurrent(100, |chunk| { // figure out how to make this work (lock writer so that we can write better blocks...)
                         let mut writer = writer.borrow_mut();
+                        let mut rows = rows.borrow_mut();
+
                         let schema = Arc::clone(&inferred_avro_schema);
 
                         async move {
@@ -543,6 +546,8 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessRe
                             .await
                             .unwrap();
 
+                            *rows += avro_values.len();
+
                             writer.extend_from_slice(&avro_values).unwrap(); // IO (well theoretically) TODO: since this actually does non-trivial comptuuation work too (schema validation), we need to figure out a way to prevent this from blocking our main async thread
                         }
                     })
@@ -551,7 +556,7 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessRe
                 let writer = writer.into_inner();
                 let bytes = writer.into_inner().unwrap();
 
-                if bytes.len() == 0 {
+                if bytes.len() == 0 || rows.into_inner() == 0 {
                     return;
                 }
 
