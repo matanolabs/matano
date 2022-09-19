@@ -17,7 +17,7 @@ Matano currently supports ECS version **8.3.1**.
 
 ## Using a Matano managed log source
 
-If your log source is supported by Matano, you should use a Matano managed log source. Matano will take care of specifying the schema for your log source.
+If your log source is supported by Matano, you should use a [Matano managed log source](./managed-log-sources/index.mdx). Matano will take care of specifying the schema for your log source.
 
 ## Defining a custom schema
 

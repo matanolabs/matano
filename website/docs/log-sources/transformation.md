@@ -7,7 +7,7 @@ Matano allows you to transform your data into a normalized form. The transformat
 
 ### Using Matano managed log sources
 
-If you're using a Matano managed log source, a transformation will be applied for you and you don't need to write a VRL expression to transform your data.
+If you're using a [Matano managed log source](./managed-log-sources/index.mdx), a transformation will be applied for you and you don't need to write a VRL expression to transform your data.
 
 ## Transformations
 

@@ -34,9 +34,9 @@ In your `log_source.yml`, specify the S3 Bucket and object prefix that your data
 
 ```yml
 ingest:
-    s3_source:
-        bucket_name: "my-org-logs-bucket"
-        key_prefix: "data/mypath"
+  s3_source:
+    bucket_name: "my-org-logs-bucket"
+    key_prefix: "data/mypath"
 ```
 
 If you are bringing your own bucket, you need to ensure that you have correctly set up permissions on the bucket for Matano to be able to access it.
@@ -49,7 +49,7 @@ If you data is not line delimited, you must tell Matano how to expand your data 
 
 ```yml
 ingest:
-    expand_records_from_payload: "parse_json!(.__raw).Records"
+  expand_records_from_payload: "parse_json!(.__raw).Records"
 ```
 
 Your VRL expression will receive the raw payload as `__raw` and must return an array of records. 
