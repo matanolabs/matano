@@ -47,23 +47,25 @@ def handler(event, context):
                 detection_config["module"] = importlib.import_module(".", detection_config["import_path"])
 
     alert_responses = []
+    detection_run_count = 0
     with timers.get_timer("process"):
         for record_data in get_records(event):
             for response in run_detections(record_data):
+                detection_run_count += 1
                 if response:
                     alert_responses.append(response)
 
     process_responses(alert_responses)
 
-    debug_metrics(record_count = record_data.record_idx)
+    debug_metrics(record_data.record_idx, detection_run_count)
 
 
-def debug_metrics(record_count):
+def debug_metrics(record_count, detection_run_count):
     processing_time = timers.get_timer("process").elapsed
     dl_time = timers.get_timer("data_download").elapsed
 
-    avg_process_time = 0 if record_count == 0 else processing_time/record_count
-    logger.info(f"DET: Took {processing_time} seconds to process {record_count} records for an average time of {avg_process_time} seconds per record")
+    avg_detection_run_time = 0 if record_count == 0 else processing_time/detection_run_count
+    logger.info(f"Took {processing_time} seconds to process {record_count} records for an average time of {avg_detection_run_time} seconds per detection run")
     logger.info(f"Downloading took: {dl_time} seconds")
 
 
