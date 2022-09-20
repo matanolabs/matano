@@ -49,9 +49,6 @@ export class DPMainStack extends MatanoStack {
       .map((d) => path.join(logSourcesDirectory, d))
       .map((p) => readConfig(p, "log_source.yml") as LogSourceConfig);
 
-    const logSourcesConfigurationPath = path.resolve(path.join(makeTempDir(), "log_sources_configuration.yml"));
-    fs.writeFileSync(logSourcesConfigurationPath, YAML.stringify(logSourceConfigs, { blockQuote: "literal" }));
-
     const rawDataBatcher = new DataBatcher(this, "DataBatcher", {
       s3Bucket: props.matanoSourcesBucket,
     });
@@ -78,6 +75,10 @@ export class DPMainStack extends MatanoStack {
       });
       logSources.push(logSource);
     }
+
+    const resolvedLogSourceConfigs = logSources.map(ls => ls.sourceConfig);
+    const logSourcesConfigurationPath = path.resolve(path.join(makeTempDir(), "log_sources_configuration.yml"));
+    fs.writeFileSync(logSourcesConfigurationPath, YAML.stringify(resolvedLogSourceConfigs, { blockQuote: "literal" }));
 
     new MatanoS3Sources(this, "CustomIngestionLogSources", {
       logSources,
