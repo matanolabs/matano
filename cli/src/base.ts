@@ -33,6 +33,15 @@ export default abstract class BaseCommand extends Command {
     return Errors.error(new BaseCLIError(input, options) , options as any);
   }
 
+  protected async catch(err: Error & { exitCode?: number | undefined; }): Promise<any> {
+    if (err instanceof CLIError) {
+      throw err;
+    }
+    else {
+      throw new BaseCLIError(`An error occurred: ${err.message}`);
+    }
+  }
+
   validateGetMatanoDir(flags: any): string {
     const defaultUserDir = process.cwd();
     const userDir = flags["user-directory"] as any;

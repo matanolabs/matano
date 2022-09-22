@@ -65,7 +65,7 @@ def debug_metrics(record_count, detection_run_count):
     dl_time = timers.get_timer("data_download").elapsed
 
     avg_detection_run_time = 0 if record_count == 0 else processing_time/detection_run_count
-    logger.info(f"Took {processing_time} seconds to process {record_count} records for an average time of {avg_detection_run_time} seconds per detection run")
+    logger.info(f"Took {processing_time} seconds, processed {record_count} records, ran {detection_run_count} detections, an average time of {avg_detection_run_time} seconds per detection run")
     logger.info(f"Downloading took: {dl_time} seconds")
 
 

@@ -1,22 +1,13 @@
 import { CliUx, Command, Flags } from "@oclif/core";
 import ora from "ora";
-import BaseCommand from "../base";
+import BaseCommand, { BaseCLIError } from "../base";
 import chalk from "chalk";
-import { SdkProvider } from "aws-cdk/lib/api/aws-auth/sdk-provider";
+import { SdkProvider, SdkForEnvironment } from "aws-cdk/lib/api/aws-auth/sdk-provider";
 import { Mode } from "aws-cdk/lib/api/plugin/credential-provider-source";
 import * as cxapi from "@aws-cdk/cx-api";
 import { CloudFormation } from "aws-sdk";
-import wrap from "word-wrap";
 import Table from 'cli-table3';
-
-
-
-const cfnOutputKeyNameMap = {
-
-};
-function defaultWrap(s: string, opts?: wrap.IOptions) {
-    return wrap(s, { indent: "", ...opts })
-}
+import { promiseTimeout } from "../util";
 
 function isInteractive({stream = process.stdout} = {}) {
 	return Boolean(
@@ -49,7 +40,18 @@ export default class Info extends BaseCommand {
   };
 
   private static async getCfnOutputs(cfn: CloudFormation, stackName: string) {
-    const outputs = (await cfn.describeStacks({StackName: stackName, }).promise()).Stacks!![0].Outputs!!;
+    let describeResult;
+    // TODO: there's probably a better way to do this, shouldn't hang on invalic creds...
+    try {
+      describeResult = await promiseTimeout(() => cfn.describeStacks({StackName: stackName, }).promise());
+    } catch (error) {
+      if (error  === "Timed out.") {
+        throw new BaseCLIError("Failed to retrieve values. Your AWS credentials are likely misconfigured.");
+      } else {
+        throw error;
+      }
+    }
+    const outputs = describeResult.Stacks!![0].Outputs!!;
     return outputs
         .filter(obj => !!obj.Description)
         .map(obj => ({
@@ -108,8 +110,13 @@ export default class Info extends BaseCommand {
     const { awsAccountId, awsRegion } = this.validateGetAwsRegionAccount(flags, matanoUserDirectory);
 
     const spinner = ora("Retrieving Matano deployment information...").start();
-    const cfnOutputs = await Info.retrieveCfnOutputs(awsAccountId, awsRegion, awsProfile);
-    spinner.stop();
+    let cfnOutputs;
+    try {
+      cfnOutputs = await Info.retrieveCfnOutputs(awsAccountId, awsRegion, awsProfile);
+    } catch (error) {
+      spinner.stop();
+      throw error;
+    }
 
     Info.renderOutputsTable(cfnOutputs, output);
   }
