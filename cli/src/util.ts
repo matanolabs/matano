@@ -10,7 +10,7 @@ export function isMatanoDirectory(dirpath: string) {
   return fs.existsSync(dirpath) && fs.existsSync(path.join(dirpath, "matano.config.yml"));
 }
 
-export function promiseTimeout<T>(promiseFunc: () => Promise<T>, ms = 800): Promise<T> {
+export function promiseTimeout<T>(promiseFunc: () => Promise<T>, ms = 30000): Promise<T> {
   let id: any;
   let timeout = new Promise((_, reject) => {
     id = setTimeout(() => {

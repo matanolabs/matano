@@ -29,13 +29,13 @@
     "aws-cdk": "^2.28",
     "aws-sdk": "^2.1093",
     "chalk": "^4",
-    "cli-table3": "^0.6.3",
     "enquirer": "^2.3",
     "execa": "^5",
     "fs-extra": "^10.1.0",
     "ora": "^4",
     "promptly": "^3.2.0",
     "proxy-agent": "^5.0.0",
+    "tty-table": "^4.1.6",
     "yaml": "^2.1.1"
   },
   "devDependencies": {

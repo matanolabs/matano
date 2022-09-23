@@ -78,6 +78,7 @@ export default class Deploy extends BaseCommand {
         MATANO_CDK_ACCOUNT: awsAccountId,
         MATANO_CDK_REGION: awsRegion,
         FORCE_COLOR: "1",
+        DEBUG: "-agent-base", // superflous logs
       },
     });
 

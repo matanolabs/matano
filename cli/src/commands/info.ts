@@ -6,7 +6,7 @@ import { SdkProvider, SdkForEnvironment } from "aws-cdk/lib/api/aws-auth/sdk-pro
 import { Mode } from "aws-cdk/lib/api/plugin/credential-provider-source";
 import * as cxapi from "@aws-cdk/cx-api";
 import { CloudFormation } from "aws-sdk";
-import Table from 'cli-table3';
+import Table from "tty-table";
 import { promiseTimeout } from "../util";
 
 function isInteractive({stream = process.stdout} = {}) {
@@ -45,7 +45,7 @@ export default class Info extends BaseCommand {
     try {
       describeResult = await promiseTimeout(() => cfn.describeStacks({StackName: stackName, }).promise());
     } catch (error) {
-      if (error  === "Timed out.") {
+      if (error === "Timed out.") {
         throw new BaseCLIError("Failed to retrieve values. Your AWS credentials are likely misconfigured.");
       } else {
         throw error;
@@ -85,20 +85,32 @@ export default class Info extends BaseCommand {
         });
     }
 
-    const table = new Table({
-        head: ["Name", "Value", "Description",].map(s => chalk.cyanBright.bold(s)),
-        wordWrap: true,
-        wrapOnWordBoundary: false,
-    });
-
-    for (const row of cfnOutputs) {
-        table.push([
-          row.name,
-          row.value,
-          { content: row.description, wrapOnWordBoundary: true, }
-        ]);
-    }
-    console.log(table.toString());
+    const header: Table.Header[] = [
+      {
+        value: "name",
+        alias: chalk.bold.cyanBright("Name"),
+        align: "left",
+        width: "20%"
+      },
+      {
+        value: "value",
+        alias: chalk.bold.cyanBright("Value"),
+        align: "left",
+        width: "30%",
+        headerColor: "magenta",
+        color: "yellow"
+      },
+      {
+        value: "description",
+        alias: chalk.bold.cyanBright("Description"),
+        align: "left",
+        width: "50%",
+      },
+    ];
+    const options: Table.Options = {
+    };
+    const ttable = Table(header, cfnOutputs, options,);
+    console.log(ttable.render());
   }
 
 
@@ -118,6 +130,7 @@ export default class Info extends BaseCommand {
       throw error;
     }
 
+    spinner.stop();
     Info.renderOutputsTable(cfnOutputs, output);
   }
 }
