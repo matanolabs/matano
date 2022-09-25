@@ -39,6 +39,7 @@ class Detection extends Construct {
 export interface MatanoDetectionsProps {
   realtimeTopic: sns.Topic;
   alertingSnsTopic: sns.Topic;
+  matanoSourcesBucketName: string;
 }
 
 export class MatanoDetections extends Construct {
@@ -75,6 +76,7 @@ export class MatanoDetections extends Construct {
       memorySize: 1800,
       environment: {
         ALERTING_SNS_TOPIC_ARN: props.alertingSnsTopic.topicArn,
+        SOURCES_S3_BUCKET: props.matanoSourcesBucketName,
       },
       initialPolicy: [
         new iam.PolicyStatement({actions: ["s3:*"], resources: ["*"]}),

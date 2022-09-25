@@ -2,3 +2,4 @@ dist
 build
 *pycache*
 *.egg*
+*venv*

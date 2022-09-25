@@ -97,7 +97,6 @@ export default class Info extends BaseCommand {
         alias: chalk.bold.cyanBright("Value"),
         align: "left",
         width: "30%",
-        headerColor: "magenta",
         color: "yellow"
       },
       {
