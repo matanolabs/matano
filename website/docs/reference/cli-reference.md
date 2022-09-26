@@ -7,6 +7,7 @@ title: Matano CLI reference
 <!-- commands -->
 * [`matano autocomplete [SHELL]`](#matano-autocomplete-shell)
 * [`matano deploy`](#matano-deploy)
+* [`matano diff`](#matano-diff)
 * [`matano generate:matano-dir DIRECTORY-NAME`](#matano-generatematano-dir-directory-name)
 * [`matano help [COMMAND]`](#matano-help-command)
 * [`matano info`](#matano-info)
@@ -48,10 +49,11 @@ Deploys matano.
 
 ```
 USAGE
-  $ matano deploy [-p <value>] [--user-directory <value>]
+  $ matano deploy [--debug] [-p <value>] [--user-directory <value>]
 
 FLAGS
   -p, --profile=<value>     AWS Profile to use for credentials.
+  --debug                   View debug information.
   --user-directory=<value>  Matano user directory to use.
 
 DESCRIPTION
@@ -66,6 +68,32 @@ EXAMPLES
 ```
 
 _See code: [dist/commands/deploy.ts](https://github.com/matanolabs/matano/blob/main/cli/src/commands/deploy.ts)_
+
+## `matano diff`
+
+Shows differences in your Matano deployment.
+
+```
+USAGE
+  $ matano diff [--debug] [-p <value>] [--user-directory <value>]
+
+FLAGS
+  -p, --profile=<value>     AWS Profile to use for credentials.
+  --debug                   View debug information.
+  --user-directory=<value>  Matano user directory to use.
+
+DESCRIPTION
+  Shows differences in your Matano deployment.
+
+EXAMPLES
+  $ matano diff
+
+  $ matano diff --profile prod
+
+  $ matano diff --profile prod --user-directory matano-directory
+```
+
+_See code: [dist/commands/diff.ts](https://github.com/matanolabs/matano/blob/main/cli/src/commands/diff.ts)_
 
 ## `matano generate:matano-dir DIRECTORY-NAME`
 
@@ -113,12 +141,14 @@ Retrieves information about your Matano deployment in structured format.
 
 ```
 USAGE
-  $ matano info [-p <value>] [--output csv|json|yaml |  | ]
+  $ matano info [--debug] [-p <value>] [--user-directory <value>] [--output csv|json|yaml |  | ]
 
 FLAGS
-  -p, --profile=<value>  AWS Profile to use for credentials.
-  --output=<option>      output in a more machine friendly format
-                         <options: csv|json|yaml>
+  -p, --profile=<value>     AWS Profile to use for credentials.
+  --debug                   View debug information.
+  --output=<option>         output in a more machine friendly format
+                            <options: csv|json|yaml>
+  --user-directory=<value>  Matano user directory to use.
 
 DESCRIPTION
   Retrieves information about your Matano deployment in structured format.
@@ -139,10 +169,11 @@ Wizard to get started with Matano. Creates resources, initializes your account, 
 
 ```
 USAGE
-  $ matano init [-p <value>]
+  $ matano init [--debug] [-p <value>]
 
 FLAGS
   -p, --profile=<value>  AWS Profile to use for credentials.
+  --debug                View debug information.
 
 DESCRIPTION
   Wizard to get started with Matano. Creates resources, initializes your account, and deploys Matano.
@@ -161,12 +192,13 @@ Refreshes Matano context.
 
 ```
 USAGE
-  $ matano refresh-context [-p <value>] [-a <value>] [-r <value>] [--user-directory <value>]
+  $ matano refresh-context [--debug] [-p <value>] [-a <value>] [-r <value>] [--user-directory <value>]
 
 FLAGS
   -a, --account=<value>     AWS Account to deploy to.
   -p, --profile=<value>     AWS Profile to use for credentials.
   -r, --region=<value>      AWS Region to deploy to.
+  --debug                   View debug information.
   --user-directory=<value>  Matano user directory to use.
 
 DESCRIPTION

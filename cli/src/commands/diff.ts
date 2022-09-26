@@ -1,29 +1,27 @@
-import { CliUx, Command, Flags } from "@oclif/core";
-import { prompt } from "enquirer";
+import { Flags } from "@oclif/core";
 import execa, { ExecaError } from "execa";
 
 import ora from "ora";
 import chalk from "chalk";
 import * as fs from "fs";
-import * as fse from "fs-extra"; 
 import path from "path";
-import * as YAML from "yaml";
-import { getCdkOutputDir, getCfnOutputsPath, getMatanoCdkApp, isPkg, PROJ_ROOT_DIR } from "..";
-import { readConfig } from "../util";
+import { getCdkOutputDir, getMatanoCdkApp, isPkg, PROJ_ROOT_DIR } from "..";
 import BaseCommand from "../base";
 import { getCdkExecutable, } from "..";
 
 const MATANO_ERROR_PREFIX = "MATANO_ERROR: ";
 
-export default class Deploy extends BaseCommand {
-  static description = "Deploys matano.";
+export default class Diff extends BaseCommand {
+  static description = "Shows differences in your Matano deployment.";
 
   private foundErrorPattern = /Error: (.+)/;
+  private cdkDiffResourcesPattern = /Resources\n(.[\s\S]+)\n\n/g;
+  private cdkDiffOutputsPattern = /Outputs\n(.[\s\S]+)\n\n/g;
 
   static examples = [
-    "matano deploy",
-    "matano deploy --profile prod",
-    "matano deploy --profile prod --user-directory matano-directory",
+    "matano diff",
+    "matano diff --profile prod",
+    "matano diff --profile prod --user-directory matano-directory",
   ];
 
   static flags = {
@@ -38,17 +36,17 @@ export default class Deploy extends BaseCommand {
     }),
   };
 
-  static deployMatano(matanoUserDirectory: string, awsProfile: string | undefined, awsAccountId: string, awsRegion: string) {
+  static diffMatano(matanoUserDirectory: string, awsProfile: string | undefined, awsAccountId: string, awsRegion: string) {
     const cdkOutDir = getCdkOutputDir();
     const cdkArgs = [
-      "deploy",
+      "diff",
       "DPMainStack",
-      "--require-approval",
-      "never",
       "--app",
       getMatanoCdkApp(),
       "--output",
       cdkOutDir,
+      "--fail",
+      "false",
     ];
     if (awsProfile) {
       cdkArgs.push("--profile", awsProfile);
@@ -66,7 +64,6 @@ export default class Deploy extends BaseCommand {
     for (const [key, value] of Object.entries(cdkContext)) {
       cdkArgs.push(`--context`, `${key}=${value}`);
     }
-    if (process.env.DEV) cdkArgs.push(`--hotswap`);
     if (process.env.DEBUG) cdkArgs.push(`-vvv`);
 
     const subprocess = execa(getCdkExecutable(), cdkArgs, {
@@ -83,14 +80,14 @@ export default class Deploy extends BaseCommand {
   }
 
   async run(): Promise<void> {
-    const { args, flags } = await this.parse(Deploy);
+    const { args, flags } = await this.parse(Diff);
 
     const { profile: awsProfile } = flags;
     const matanoUserDirectory = this.validateGetMatanoDir(flags);
     const { awsAccountId, awsRegion } = this.validateGetAwsRegionAccount(flags, matanoUserDirectory);
-    const spinner = ora(chalk.dim("Deploying Matano...")).start();
+    const spinner = ora(chalk.dim("Checking Matano diff...")).start();
 
-    const subprocess = Deploy.deployMatano(matanoUserDirectory, awsProfile, awsAccountId, awsRegion)
+    const subprocess = Diff.diffMatano(matanoUserDirectory, awsProfile, awsAccountId, awsRegion)
 
     if (process.env.DEBUG) {
       subprocess.stdout?.pipe(process.stdout);
@@ -98,10 +95,31 @@ export default class Deploy extends BaseCommand {
     }
 
     try {
-      await subprocess;
-      spinner.succeed("Successfully deployed.");
+      const result = await subprocess;
+      spinner.stop();
+      const stderr = result.stderr;
+      const outputsMatches = [...stderr.matchAll(this.cdkDiffOutputsPattern)];
+      const resourcesMatches = [...stderr.matchAll(this.cdkDiffResourcesPattern)];
+
+      if (outputsMatches.length || resourcesMatches.length) {
+        if (outputsMatches.length) {
+            this.log(chalk.bold.underline("Outputs"));
+            for (const match in outputsMatches) {
+                console.log(match?.[1]);
+            }
+          }
+          if (resourcesMatches.length) {
+            this.log(chalk.bold.underline("Resources"));
+            for (const match in resourcesMatches) {
+                console.log(match?.[1]);
+            }
+          }
+      } else {
+        this.log(chalk.bold.green("There were no differences."));
+      }
+
     } catch (e) {
-      spinner.fail("Deployment failed.");
+      spinner.stop();
       const err = e as ExecaError;
       const matanoError = err.message.split("\n").find(s => s.startsWith(MATANO_ERROR_PREFIX));
 
@@ -111,6 +129,7 @@ export default class Deploy extends BaseCommand {
           exit: 1,
         });
       } else {
+        console.log(err);
         const foundError = err.message.split("\n").find(s => s.match(this.foundErrorPattern));
         let message: string;
         if (foundError) {
