@@ -10,6 +10,11 @@ pub(crate) struct DataBatcherRequestItem {
     pub size: i32,
     pub sequencer: String,
 }
+impl DataBatcherRequestItem {
+    pub fn is_matano_managed(&self) -> bool {
+        return self.bucket == std::env::var("MATANO_SOURCES_BUCKET").unwrap()
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct LogSourceConfiguration {
@@ -26,6 +31,8 @@ pub struct IngestConfig {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct S3SourceConfig {
+    bucket_name: String,
+    key_prefix: String,
 }
 
 #[derive(Debug, Serialize)]

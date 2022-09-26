@@ -41,8 +41,10 @@ interface DPMainStackProps extends MatanoStackProps {
 }
 
 export class DPMainStack extends MatanoStack {
+  configTempDir: string;
   constructor(scope: Construct, id: string, props: DPMainStackProps) {
     super(scope, id, props);
+    this.configTempDir = this.createConfigTempDir();
 
     const logSourcesDirectory = path.join(this.matanoUserDirectory, "log_sources");
     const logSourceConfigs = getDirectories(logSourcesDirectory)
@@ -60,6 +62,7 @@ export class DPMainStack extends MatanoStack {
       realtimeTopic: props.realtimeBucketTopic,
       matanoSourcesBucketName: props.matanoSourcesBucket.bucket.bucketName,
     });
+    this.addConfigFile("detections_config.json", JSON.stringify(detections.detectionConfigs));
 
     const lakeIngestion = new LakeIngestion(this, "LakeIngestion", {
       outputBucketName: props.lakeStorageBucket.bucket.bucketName,
@@ -78,8 +81,7 @@ export class DPMainStack extends MatanoStack {
     }
 
     const resolvedLogSourceConfigs = logSources.map(ls => ls.sourceConfig);
-    const logSourcesConfigurationPath = path.resolve(path.join(makeTempDir(), "log_sources_configuration.yml"));
-    fs.writeFileSync(logSourcesConfigurationPath, YAML.stringify(resolvedLogSourceConfigs, { blockQuote: "literal" }));
+    this.addConfigFile("log_sources_configuration.yml", YAML.stringify(resolvedLogSourceConfigs, { blockQuote: "literal" }));
 
     new MatanoS3Sources(this, "CustomIngestionLogSources", {
       logSources,
@@ -110,7 +112,8 @@ export class DPMainStack extends MatanoStack {
     const transformer = new Transformer(this, "Transformer", {
       realtimeBucketName: props.realtimeBucket.bucketName,
       realtimeTopic: props.realtimeBucketTopic,
-      logSourcesConfigurationPath,
+      matanoSourcesBucketName: props.matanoSourcesBucket.bucket.bucketName,
+      logSourcesConfigurationPath: path.join(this.configTempDir, "config"), // TODO: weird fix later (@shaeq)
       schemasLayer: schemasLayer,
     });
 
@@ -124,29 +127,27 @@ export class DPMainStack extends MatanoStack {
       lakeStorageBucket: props.lakeStorageBucket,
     });
 
+    const configLayer = new lambda.LayerVersion(this, "ConfigurationLayer", {
+      code: lambda.Code.fromAsset(this.configTempDir),
+      description: "A layer for static Matano configurations.",
+    });
+
+    detections.detectionFunction.addLayers(configLayer);
+
     this.humanCfnOutput("MatanoAlertingSnsTopicArn", {
       value: matanoAlerting.alertingTopic.topicArn,
       description: "The ARN of the SNS topic used for Matano alerts. See https://www.matano.dev/docs/detections/alerting",
     });
 
-    // const logSourcesConfigurationLayer = new lambda.LayerVersion(this, "LogSourcesConfigurationLayer", {
-    //   code: lambda.Code.fromAsset("../lambdas", {
-    //     bundling: {
-    //       volumes: [
-    //         {
-    //           hostPath: logSourcesConfigurationPath,
-    //           containerPath: "/asset-input/log_sources_configuration.yml",
-    //         },
-    //       ],
-    //       image: transformer.rustFunctionLayer.image,
-    //       command: [
-    //         "bash",
-    //         "-c",
-    //         "cp /asset-input/log_sources_configuration.yml /asset-output/log_sources_configuration.yml",
-    //       ],
-    //     },
-    //   }),
-    //   description: "A layer for Matano Log Source Configurations.",
-    // });
+  }
+
+  private createConfigTempDir() {
+    const configTempDir = makeTempDir("mtnconfig");
+    fs.mkdirSync(path.join(configTempDir, "config"));
+    return configTempDir;
+  }
+
+  private addConfigFile( filename: string, content: string) {
+    fs.writeFileSync(path.join(this.configTempDir, "config", filename), content);
   }
 }

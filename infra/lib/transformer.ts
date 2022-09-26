@@ -9,6 +9,7 @@ import { RustFunctionLayer } from "./rust-function-layer";
 interface TransformerProps {
   realtimeBucketName: string;
   realtimeTopic: sns.Topic;
+  matanoSourcesBucketName: string;
   logSourcesConfigurationPath: string;
   schemasLayer: lambda.LayerVersion;
 }
@@ -26,13 +27,14 @@ export class Transformer extends Construct {
     });
 
     this.transformerLambda = new lambda.Function(this, "Lambda", {
-      code: lambda.Code.fromAsset(path.dirname(props.logSourcesConfigurationPath)),
+      code: lambda.Code.fromAsset(props.logSourcesConfigurationPath),
       handler: "main",
       memorySize: 3008,
       runtime: lambda.Runtime.PROVIDED_AL2,
       architecture: this.rustFunctionLayer.arch,
       environment: {
         ...this.rustFunctionLayer.environmentVariables,
+        MATANO_SOURCES_BUCKET: props.matanoSourcesBucketName,
         MATANO_REALTIME_BUCKET_NAME: props.realtimeBucketName,
         MATANO_REALTIME_TOPIC_ARN: props.realtimeTopic.topicArn,
       },

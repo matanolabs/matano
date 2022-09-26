@@ -1,10 +1,15 @@
 from collections import UserDict
 from contextlib import contextmanager
 import time
+import json
+import datetime
 
 class Timers(UserDict):
     def get_timer(self, name: str) -> "Timer":
         return self.data.setdefault(name, Timer(name))
+
+def time_micros():
+    return time.time_ns() / 1000
 
 class Timer:
     def __init__(self, name) -> None:
@@ -48,3 +53,54 @@ def timing(timers: dict):
         yield
     finally:
         timers.clear()
+
+ALERT_ECS_FIELDS = [
+    "message"
+    "tags",
+    "labels",
+    "agent",
+    "client",
+    "cloud",
+    "container",
+    "data_stream",
+    "destination",
+    "dll",
+    "dns",
+    "error",
+    "event",
+    "file",
+    "group",
+    "host",
+    "http",
+    "log",
+    "network",
+    "observer",
+    "orchestrator",
+    "organization",
+    "package",
+    "process",
+    "registry",
+    "related",
+    "rule",
+    "server",
+    "service",
+    "source",
+    "span",
+    "threat",
+    "tls",
+    "trace",
+    "transaction",
+    "url",
+    "user",
+]
+
+def unix_time_micros(dt: datetime.datetime):
+    return dt.timestamp() * 1e6
+
+def _json_dumps_default(obj):
+    if isinstance(obj, datetime.datetime):
+        return unix_time_micros(obj)
+    raise TypeError('Cannot serialize %s' % (obj,))
+
+def json_dumps_dt(obj, **kwargs):
+    return json.dumps(obj, default=_json_dumps_default, **kwargs)

@@ -17,6 +17,7 @@ export class DPCommonStack extends MatanoStack {
   constructor(scope: Construct, id: string, props: DPCommonStackProps) {
     super(scope, id, props);
 
+    // Only one prefix rule allowed for filter
     this.matanoIngestionBucket = new S3BucketWithNotifications(this, "MatanoIngestionBucket", {});
 
     this.matanoLakeStorageBucket = new S3BucketWithNotifications(this, "MatanoLakeStorageBucket", {

@@ -4,8 +4,10 @@ import * as AWS from "aws-sdk";
 const sqs = new AWS.SQS({ region: process.env.AWS_REGION });
 
 export async function handler(event: SQSEvent, context: Context) {
-    const eventRecords: S3EventRecord[] = event.Records.map((r) => JSON.parse(r.body).Records[0]);
-
+    const eventRecords: S3EventRecord[] = event.Records.map((r) => JSON.parse(r.body).Records?.[0]).filter(x => !!x);
+    if (eventRecords.length === 0) {
+        return
+    }
     const newSqsRecords = []
     for (const record of eventRecords) {
         const s3Object = record.s3.object;

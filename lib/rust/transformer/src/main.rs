@@ -355,6 +355,19 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessRe
             data_batcher_request_items
         })
         .filter(|d| d.size > 0)
+        .filter(|d| {
+            // TODO: needs to handle non matano managed sources (@shaeq)
+            return d.is_matano_managed() && LOG_SOURCES_CONFIG.with(|c| {
+                let log_sources_config = c.borrow();
+                let log_source = &d
+                            .key
+                            .split(std::path::MAIN_SEPARATOR)
+                            .next()
+                            .unwrap()
+                            .to_string();
+                (*log_sources_config).contains_key(log_source)
+            })
+        })
         .collect::<Vec<_>>();
 
     info!(

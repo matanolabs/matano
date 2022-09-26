@@ -14,27 +14,6 @@ import { readDetectionConfig } from "./utils";
 import { SqsEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
 import { SqsSubscription } from "aws-cdk-lib/aws-sns-subscriptions";
 
-interface DetectionProps {
-  matanoUserDirectory: string;
-  detectionName: string;
-  detectionsLayer: lambda.LayerVersion;
-}
-
-class Detection extends Construct {
-  constructor(scope: Construct, id: string, props: DetectionProps) {
-    super(scope, id);
-    const { detectionName, detectionsLayer } = props;
-    const detectionDirectory = path.resolve(props.matanoUserDirectory, "detections", detectionName);
-    const config = readDetectionConfig(detectionDirectory);
-
-    const logSources = config["log_sources"];
-    if (logSources.length == 0) {
-      throw "Must have at least one log source configured for a detection.";
-    }
-    for (const logSource of logSources) {
-    }
-  }
-}
 
 export interface MatanoDetectionsProps {
   realtimeTopic: sns.Topic;
@@ -44,6 +23,8 @@ export interface MatanoDetectionsProps {
 
 export class MatanoDetections extends Construct {
   detectionsQueue: sqs.Queue;
+  detectionConfigs: any;
+  detectionFunction: lambda.Function;
   constructor(scope: Construct, id: string, props: MatanoDetectionsProps) {
     super(scope, id);
 
@@ -61,7 +42,7 @@ export class MatanoDetections extends Construct {
 
     const detectionsFuncAssetName = "MatanoDetectionFunction";
 
-    const detectionFunction = new lambda.Function(this, detectionsFuncAssetName, {
+    this.detectionFunction = new lambda.Function(this, detectionsFuncAssetName, {
       handler: "detection.common.handler",
       description: `Matano managed detections function.`,
       runtime: lambda.Runtime.PYTHON_3_9,
@@ -83,36 +64,29 @@ export class MatanoDetections extends Construct {
       ],
     });
 
-    props.alertingSnsTopic.grantPublish(detectionFunction);
+    props.alertingSnsTopic.grantPublish(this.detectionFunction);
 
     this.detectionsQueue = new sqs.Queue(this, "DetectionsQueue");
     const sqsEventSource = new SqsEventSource(this.detectionsQueue, {
       batchSize: 1,
     });
-    detectionFunction.addEventSource(sqsEventSource);
+    this.detectionFunction.addEventSource(sqsEventSource);
 
-    const detectionConfigs: any = {}
+    this.detectionConfigs = {}
+    let logSourcesWithDetections: string[] = [];
     for (const detectionName of detectionNames) {
       const detectionDirectory = path.resolve(matanoUserDirectory, "detections", detectionName);
       const config = readDetectionConfig(detectionDirectory);
-      const logSources = config["log_sources"];
-      for (const logSource of logSources) {
-        if (!detectionConfigs[logSource]) {
-          detectionConfigs[logSource] = []
-        }
-        detectionConfigs[logSource].push({ 
-          name: detectionName,
-          import_path: `${detectionName}.detect`,
-        });
-      }
+      this.detectionConfigs[detectionName] = config;
+      logSourcesWithDetections = [...logSourcesWithDetections, ...config["log_sources"]]
     }
-    detectionFunction.addEnvironment("DETECTION_CONFIGS", JSON.stringify(detectionConfigs));
+    logSourcesWithDetections = [...new Set(logSourcesWithDetections)];
 
     props.realtimeTopic.addSubscription(
       new SqsSubscription(this.detectionsQueue, {
         rawMessageDelivery: true,
         filterPolicy: {
-          "log_source": sns.SubscriptionFilter.stringFilter({ allowlist: Object.keys(detectionConfigs) })
+          "log_source": sns.SubscriptionFilter.stringFilter({ allowlist: logSourcesWithDetections })
         },
       }),
     );

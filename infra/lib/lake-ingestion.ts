@@ -21,8 +21,9 @@ export class LakeIngestion extends Construct {
       memorySize: 1800,
       runtime: lambda.Runtime.PROVIDED_AL2,
       environment: {
-        OUT_BUCKET_NAME: props.outputBucketName, // "matanodpcommonstack-raweventsbucket024cde12-1x4x1mvqkuk5d",
-        OUT_KEY_PREFIX:  props.outputObjectPrefix// "lake" ,
+        RUST_LOG: "warn,lake_writer=info",
+        OUT_BUCKET_NAME: props.outputBucketName,
+        OUT_KEY_PREFIX:  props.outputObjectPrefix,
       },
       timeout: cdk.Duration.seconds(5),
       initialPolicy: [
