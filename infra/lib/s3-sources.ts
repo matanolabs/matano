@@ -2,11 +2,9 @@ import * as cdk from "aws-cdk-lib";
 import { Construct } from "constructs";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as s3n from "aws-cdk-lib/aws-s3-notifications";
-import * as sqs from "aws-cdk-lib/aws-sqs";
 import * as sns from "aws-cdk-lib/aws-sns";
-import * as iam from "aws-cdk-lib/aws-iam";
-import * as lambda from "aws-cdk-lib/aws-lambda";
-import { LogSourceConfig, MatanoLogSource } from "./log-source";
+import { MatanoLogSource } from "./log-source";
+import { commonPathPrefix } from "./utils";
 
 interface MatanoS3SourcesProps {
   logSources: MatanoLogSource[];
@@ -45,8 +43,9 @@ export class MatanoS3Sources extends Construct {
         `ImportedSourcesBucket-${finalSource!!.bucket_name!!}`,
         finalSource!!.bucket_name!!
       );
-
-      const filters: s3.NotificationKeyFilter[] = finalSource?.key_prefixes.map((p) => ({ prefix: p }));
+      // Only one prefix filter allowed, so find common.
+      const commonPrefix = commonPathPrefix(finalSource.key_prefixes);
+      const filters: s3.NotificationKeyFilter[] = commonPrefix === "" ? [] : [{ prefix: commonPrefix }];
 
       importedBucket.addEventNotification(
         s3.EventType.OBJECT_CREATED_PUT,
