@@ -12,7 +12,7 @@ import * as os from "os";
 
 import * as sns from "aws-cdk-lib/aws-sns";
 import * as lambda from "aws-cdk-lib/aws-lambda";
-import { IcebergMetadata, MatanoSchemas } from "../lib/iceberg";
+import { IcebergMetadata, MatanoIcebergTable, MatanoSchemas } from "../lib/iceberg";
 import { getDirectories, getLocalAssetPath, makeTempDir, MATANO_USED_RUNTIMES, md5Hash, readConfig } from "../lib/utils";
 import { S3BucketWithNotifications } from "../lib/s3-bucket-notifs";
 import { MatanoLogSource, LogSourceConfig } from "../lib/log-source";
@@ -73,12 +73,24 @@ export class DPMainStack extends MatanoStack {
     for (const logSourceConfig of logSourceConfigs) {
       const logSource = new MatanoLogSource(this, `MatanoLogSource${logSourceConfig.name}`, {
         config: logSourceConfig,
-        defaultSourceBucket: props.matanoSourcesBucket.bucket,
         realtimeTopic: props.realtimeBucketTopic,
         lakeIngestionLambda: lakeIngestion.lakeIngestionLambda,
       });
       logSources.push(logSource);
     }
+
+    // Not a log source but just use it to represent
+    const matanoAlertsSource = new MatanoLogSource(this, "MatanoAlertsIcebergTable", {
+      config: {
+        name: "matano_alerts",
+        managed: {
+          type: "matano_alerts",
+        }
+      },
+      realtimeTopic: props.realtimeBucketTopic,
+      lakeIngestionLambda: lakeIngestion.lakeIngestionLambda,
+    });
+    logSources.push(matanoAlertsSource);
 
     const resolvedLogSourceConfigs = logSources.map(ls => ls.sourceConfig);
     this.addConfigFile("log_sources_configuration.yml", YAML.stringify(resolvedLogSourceConfigs, { blockQuote: "literal" }));

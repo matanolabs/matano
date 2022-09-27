@@ -42,17 +42,17 @@ export interface LogSourceConfig {
 
 interface MatanoLogSourceProps {
   config: LogSourceConfig;
-  defaultSourceBucket: s3.Bucket;
   realtimeTopic: sns.Topic;
   lakeIngestionLambda: lambda.Function;
 }
 
 const MANAGED_LOG_SOURCE_CATEGORY_MAP: Record<string, string> = {
   "aws_cloudtrail": "aws",
+  "matano_alerts": "matano_alerts", // doesn't really make sense but OK
 }
 
 function getCategoryForManagedLogSourceType(logSourceType: string) {
-  return MANAGED_LOG_SOURCE_CATEGORY_MAP[logSourceType]!!;
+  return MANAGED_LOG_SOURCE_CATEGORY_MAP[logSourceType];
 }
 
 const MANAGED_LOG_SOURCES_DIR = path.join(dataDirPath, "managed");
@@ -65,12 +65,6 @@ export class MatanoLogSource extends Construct {
     super(scope, id);
 
     const { name: logSourceName, ingest: ingestConfig } = props.config;
-    const s3SourceConfig = ingestConfig?.s3_source;
-    // const sourceBucket =
-    //   s3SourceConfig == null
-    //     ? props.defaultSourceBucket
-    //     : s3.Bucket.fromBucketName(this, "SourceBucket", s3SourceConfig.bucket_name);
-
     this.name = logSourceName;
 
     if (props.config?.managed) {
@@ -96,7 +90,7 @@ export class MatanoLogSource extends Construct {
     this.schema = resolveSchema(this.sourceConfig.schema?.ecs_field_names, this.sourceConfig.schema?.fields);
 
     const matanoIcebergTable = new MatanoIcebergTable(this, "MatanoIcebergTable", {
-      logSourceName,
+      tableName: logSourceName,
       schema: this.schema,
     });
 

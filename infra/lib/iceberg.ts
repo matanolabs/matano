@@ -75,7 +75,7 @@ export class SchemasProvider extends Construct {
 }
 
 interface MatanoIcebergTableProps {
-  logSourceName: string;
+  tableName: string;
   schema: Record<string, any>;
 }
 
@@ -87,7 +87,7 @@ export class MatanoIcebergTable extends Construct {
       serviceToken: IcebergTableProvider.getOrCreate(this, {}),
       resourceType: "Custom::MatanoIcebergTable",
       properties: {
-        logSourceName: props.logSourceName,
+        logSourceName: props.tableName,
         schema: props.schema,
       },
     });

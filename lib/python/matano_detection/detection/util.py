@@ -8,9 +8,6 @@ class Timers(UserDict):
     def get_timer(self, name: str) -> "Timer":
         return self.data.setdefault(name, Timer(name))
 
-def time_micros():
-    return time.time_ns() / 1000
-
 class Timer:
     def __init__(self, name) -> None:
         self.name = name
@@ -55,7 +52,7 @@ def timing(timers: dict):
         timers.clear()
 
 ALERT_ECS_FIELDS = [
-    "message"
+    "message",
     "tags",
     "labels",
     "agent",
@@ -94,12 +91,9 @@ ALERT_ECS_FIELDS = [
     "user",
 ]
 
-def unix_time_micros(dt: datetime.datetime):
-    return dt.timestamp() * 1e6
-
 def _json_dumps_default(obj):
     if isinstance(obj, datetime.datetime):
-        return unix_time_micros(obj)
+        return obj.timestamp()
     raise TypeError('Cannot serialize %s' % (obj,))
 
 def json_dumps_dt(obj, **kwargs):

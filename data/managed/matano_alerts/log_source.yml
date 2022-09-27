@@ -1,0 +1,83 @@
+schema:
+  ecs_field_names: [
+    "message",
+    "tags",
+    "labels",
+    "agent",
+    "client",
+    "cloud",
+    "container",
+    "data_stream",
+    "destination",
+    "dll",
+    "dns",
+    "error",
+    "event",
+    "file",
+    "group",
+    "host",
+    "http",
+    "log",
+    "network",
+    "observer",
+    "orchestrator",
+    "organization",
+    "package",
+    "process",
+    "registry",
+    "related",
+    "rule",
+    "server",
+    "service",
+    "source",
+    "span",
+    "threat",
+    "tls",
+    "trace",
+    "transaction",
+    "url",
+    "user"
+  ]
+  fields:
+  - name: matano
+    type:
+      type: struct
+      fields:
+      - name: table
+        type: string
+      - name: alert
+        type:
+          type: struct
+          fields:
+          - name: id
+            type: string
+          - name: title
+            type: string
+          - name: original_timestamp
+            type: timestamp
+          - name: original_event
+            type: string
+          - name: original_event_id
+            type: string
+          - name: rule
+            type:
+              type: struct
+              fields:
+              - name: "name"
+                type: string
+              - name: match
+                type:
+                  type: struct
+                  fields:
+                  - name: id
+                    type: string   
+
+transform: |
+  .json = parse_json!(.json)
+  . = del(.json)
+  .ts = to_timestamp!(.ts)
+  .matano.alert.original_timestamp = to_timestamp!(.matano.alert.original_timestamp)
+  # parse, compact, encode original_event to make less ugly
+  .matano.alert.original_event = parse_json!(.matano.alert.original_event)
+  . = compact(.)
+  .matano.alert.original_event = encode_json(.matano.alert.original_event)

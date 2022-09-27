@@ -129,7 +129,6 @@ export default class Diff extends BaseCommand {
           exit: 1,
         });
       } else {
-        console.log(err);
         const foundError = err.message.split("\n").find(s => s.match(this.foundErrorPattern));
         let message: string;
         if (foundError) {

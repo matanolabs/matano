@@ -41,17 +41,6 @@ use parquet::arrow::arrow_writer::ArrowWriter;
 use parquet::basic::Compression;
 use parquet::file::properties::WriterProperties;
 
-// const ECS_PARQUET: &[u8] = include_bytes!("../../../../data/ecs_parquet_metadata.parquet");
-
-// lazy_static! {
-//     static ref ECS_SCHEMA: Schema = {
-//         let rr1 = SerializedFileReader::new(Bytes::from(ECS_PARQUET)).unwrap();
-//         let rr1_ref = Arc::new(rr1);
-//         let mut rr2 = ParquetFileArrowReader::new(rr1_ref);
-//         rr2.get_schema().unwrap()
-//     };
-// }
-
 #[tokio::main]
 async fn main() -> Result<(), LambdaError> {
     setup_logging();
@@ -70,12 +59,6 @@ async fn main() -> Result<(), LambdaError> {
 
     Ok(())
 }
-
-// fn getit<T>(v: Arc<Mutex<T>>) -> MutexGuard<'static, T> {
-//     let ret = v.clone();
-//     let ret = v.lock().unwrap();
-//     ret
-// }
 
 pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
     info!("Request: {:?}", event);

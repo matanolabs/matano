@@ -3,6 +3,7 @@ from typing import Any
 from dataclasses import dataclass
 from collections import defaultdict
 import os
+import time
 import base64
 import asyncio
 import json
@@ -18,7 +19,7 @@ from uuid import uuid4
 from datetime import datetime, timezone
 import fastavro
 
-from detection.util import ALERT_ECS_FIELDS, Timer, Timers, json_dumps_dt, time_micros, timing
+from detection.util import ALERT_ECS_FIELDS, Timer, Timers, json_dumps_dt, timing
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -178,7 +179,7 @@ def create_alert(alert_response):
     detection_name = alert_response["detection"]
     ret = {
         **{ k: v for k,v in record.items() if k in ALERT_ECS_FIELDS },
-        "ts": time_micros(),
+        "ts": time.time(),
         "event": {
             **record.get("event", {}),
             "kind": "signal",

@@ -503,56 +503,6 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessRe
             async move {
                 let mut reader = stream.map(|(_, value)| value);
 
-                let now = Instant::now();
-                let head = reader
-                    .by_ref()
-                    .take(num_rows_to_infer_schema)
-                    .collect::<Vec<_>>()
-                    .await;
-                println!("Read 100 lines from head, {:?}", now.elapsed());
-                let now = Instant::now();
-
-                let inferred_avro_schema = {
-                    let head = head.clone();
-                    spawn_blocking(move || {
-                        // CPU bound (infer schemas)
-                        let data_types = head
-                            .iter()
-                            .flat_map(|v| {
-                                match read::infer(
-                                    &read::json_deserializer::parse(
-                                        &serde_json::to_vec(v).unwrap(),
-                                    )
-                                    .unwrap(),
-                                ) {
-                                    Ok(DataType::Null) => None,
-                                    Ok(dt) => Some(dt),
-                                    Err(e) => None,
-                                }
-                            })
-                            .collect::<Vec<_>>();
-                        let data_types = data_types.into_iter().collect::<HashSet<_>>();
-                        let unioned_data_type =
-                            &coerce_data_type(&data_types.iter().collect::<Vec<_>>());
-
-                        type_to_schema(unioned_data_type, false, "root".to_string()).unwrap()
-                    })
-                }
-                .await
-                .unwrap();
-                println!("Inferred schema, took {:?}", now.elapsed());
-
-                let reader = stream::iter(head).chain(reader); // rewind
-
-                let avro_schema_json_string =
-                    serde_json::to_string_pretty(&inferred_avro_schema).unwrap();
-
-                // let output_schemas_path = Path::new(&var("LAMBDA_TASK_ROOT").unwrap().to_string()).join("generated_schemas");
-                // fs::create_dir_all(&output_schemas_path).await.unwrap();
-                // let output_schema_path = output_schemas_path.join(format!("{}.avsc", log_source));
-                // fs::write(output_schema_path,&avro_schema_json_string).await.unwrap();
-                // let avro_schema_json_string = fs::read_to_string(output_schema_path).await.unwrap();
-
                 let schemas_path = Path::new("/opt/schemas");
                 let schema_path = schemas_path.join(&log_source).join("avro_schema.avsc");
                 let avro_schema_json_string = fs::read_to_string(schema_path).await.unwrap();
@@ -608,6 +558,7 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessRe
                 let uuid = Uuid::new_v4();
                 let bucket = var("MATANO_REALTIME_BUCKET_NAME").unwrap().to_string();
                 let key = format!("transformed/{}/{}.snappy.avro", &log_source, uuid);
+                info!("Writing Avro file to S3 path: {}/{}", bucket, key);
                 // let local_path = output_schemas_path.join(format!("{}.avro", log_source));
                 // fs::write(local_path, bytes).await.unwrap();
                 s3.put_object()
