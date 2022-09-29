@@ -16,7 +16,6 @@ import aiobotocore
 import aiobotocore.client
 import aiobotocore.session
 from uuid import uuid4
-from datetime import datetime, timezone
 import fastavro
 
 from detection.util import ALERT_ECS_FIELDS, Timer, Timers, json_dumps_dt, timing
@@ -165,10 +164,11 @@ def run_detections(record_data: RecordData):
         else:
             default_alert_title = detection_name
             alert_title = safe_call(detection_module, "title", record_data.record) or default_alert_title
+            alert_dedupe = safe_call(detection_module, "dedupe", record_data.record)
             yield {
-                "alert": alert_response,
                 "title": alert_title,
-                "detection": detection_name,
+                "dedupe": alert_dedupe,
+                "detection": detection,
                 "record_data": record_data,
             }
 
@@ -176,7 +176,9 @@ def run_detections(record_data: RecordData):
 def create_alert(alert_response):
     record_data: RecordData = alert_response["record_data"]
     record: dict = record_data.record
-    detection_name = alert_response["detection"]
+    detection = alert_response["detection"]
+    detection_name = detection["name"]
+    dedupe = alert_response["dedupe"]
     ret = {
         **{ k: v for k,v in record.items() if k in ALERT_ECS_FIELDS },
         "ts": time.time(),
@@ -189,6 +191,7 @@ def create_alert(alert_response):
             "alert": {
                 "id": str(uuid4()), # TODO: dedupe
                 "title": alert_response["title"],
+                "dedupe": dedupe,
                 "original_timestamp": record["ts"],
                 "original_event": json_dumps_dt(record_data.record),
                 "original_event_id": record_data.record_reference(), # TODO: replace w/ real ID when added
