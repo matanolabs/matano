@@ -20,6 +20,7 @@ aws-config = "0.48.0"
 
 aws_lambda_events = "0.6.3"
 aws-sdk-s3 = "0.18.0"
+aws-sdk-lambda = "0.18.0"
 futures = "0.3"
 futures-util = "0.3.23"
 anyhow = "1.0.53"
@@ -37,7 +38,11 @@ lazy_static = "1.4.0"
 tokio-stream = { version = "0.1.9", features = ["io-util"] }
 threadpool = "1.8.1"
 async-compat = "0.2.1"
-
+polars = {version = "0.24.2", features = [
+  "parquet", "dtype-full", "fmt", "timezones", "lazy", "list"
+  ]}
+rand = "0.8.5"
+chrono="*"
 arrow2 = { git = "https://github.com/jorgecarleitao/arrow2.git", rev = "c615095", features = [
   "io_avro",
   "io_avro_async",
@@ -47,6 +52,7 @@ arrow2 = { git = "https://github.com/jorgecarleitao/arrow2.git", rev = "c615095"
   "io_print",
   "io_ipc",
 ] }
+tikv-jemallocator = { version = "0.5.0" }
 # avro-schema = {version = "0.3.0", features = ["full"]}
 # avro-rs = "0.13.0"
 async-stream = { version = "0.3.3" }               # NEED THIS or parquet2 fails compile

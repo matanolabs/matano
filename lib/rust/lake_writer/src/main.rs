@@ -1,13 +1,7 @@
-use arrow::record_batch::RecordBatchReader;
-use arrow2::chunk::Chunk;
 use arrow2::datatypes::Field;
-use arrow2::io::parquet::write::row_group_iter;
-use arrow2::io::parquet::write::to_parquet_schema;
-use aws_sdk_s3::types::ByteStream;
 use futures::future::join_all;
 use serde::{Deserialize, Serialize};
 use shared::*;
-use tokio::fs;
 use uuid::Uuid;
 
 use std::sync::Arc;
@@ -33,13 +27,12 @@ use arrow2::io::parquet::write::{
 };
 use tokio_util::compat::TokioAsyncReadCompatExt;
 
-use arrow2::io::ipc::write::FileWriter as IpcFileWriter;
-use arrow2::io::print::write;
+mod common;
+mod matano_alerts;
+use common::write_arrow_to_s3_parquet;
 
-use arrow::record_batch::RecordBatch;
-use parquet::arrow::arrow_writer::ArrowWriter;
-use parquet::basic::Compression;
-use parquet::file::properties::WriterProperties;
+#[global_allocator]
+static ALLOC: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
 #[tokio::main]
 async fn main() -> Result<(), LambdaError> {
@@ -219,72 +212,10 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
             composite_array
         })
         .collect::<Vec<_>>();
-    let iter = Box::new(arrays.clone().into_iter().map(Ok)) as _;
 
-    let mut arrow_array_stream = Box::new(arrow2::ffi::ArrowArrayStream::empty());
-
-    *arrow_array_stream = arrow2::ffi::export_iterator(iter, field.clone());
-
-    // import (arrow2)
-    // let mut stream = unsafe { arrow2::ffi::ArrowArrayStreamReader::try_new(arrow_array_stream)? };
-
-    // import (arrow)
-    let stream_ptr =
-        Box::into_raw(arrow_array_stream) as *mut arrow::ffi_stream::FFI_ArrowArrayStream;
-    let stream_reader =
-        unsafe { arrow::ffi_stream::ArrowArrayStreamReader::from_raw(stream_ptr).unwrap() };
-    let imported_schema = stream_reader.schema();
-
-    let props = WriterProperties::builder()
-        .set_compression(Compression::ZSTD)
-        .build();
-
-    let buf = std::io::Cursor::new(vec![]);
-    let mut writer = ArrowWriter::try_new(buf, imported_schema, Some(props)).unwrap();
-
-    for record_batch in stream_reader {
-        let record_batch = record_batch?;
-        writer.write(&record_batch)?;
-    }
-    writer.flush()?;
-
-    // let schema_ffi = arrow2::ffi::export_field_to_c(&field);
-    // let array_ffi = arrow2::ffi::export_array_to_c(composite_array);
-
-    let bytes = writer.into_inner()?.into_inner();
-
-    // return Ok(());
-
-    // let filesize = writer.end(None)?;
-    // println!("Parquet file size: {}", filesize);
-
-    let bytestream = ByteStream::from(bytes);
-    let bucket = std::env::var("OUT_BUCKET_NAME")?;
-    let key_prefix = std::env::var("OUT_KEY_PREFIX")?;
-    // lake/TABLE_NAME/data/partition_day=2022-07-05/<file>.parquet
-    let table_name = log_source;
-    let key = format!(
-        "{}/{}/data/{}.parquet",
-        key_prefix,
-        table_name,
-        Uuid::new_v4()
-    );
-    println!("Writing to: {}", key);
-
-    println!("Starting upload...");
-    let ws1 = Instant::now();
-    let _upload_res = &s3
-        .put_object()
-        .bucket(bucket)
-        .key(key)
-        .body(bytestream)
-        .send()
-        .await?;
-    println!("Upload took: {:.2?}", ws1.elapsed());
-    // (drop/release)
-    unsafe {
-        Box::from_raw(stream_ptr);
-    }
+    // TODO: fix to use correct partition (@shaeq)
+    let partition_day = chrono::offset::Utc::now().date_naive().to_string();
+    write_arrow_to_s3_parquet(&s3, log_source, partition_day, field, arrays).await?;
 
     println!("----------------  Call took {:.2?}", start.elapsed());
 

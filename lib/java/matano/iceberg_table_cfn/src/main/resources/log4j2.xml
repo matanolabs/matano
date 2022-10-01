@@ -9,6 +9,7 @@
         <Root level="INFO">
             <AppenderRef ref="ConsoleAppender"/>
         </Root>
+        <Logger name="com.matano" level = "INFO" />
         <Logger name="org.apache.parquet" level = "WARN" />
         <Logger name="com.amazonaws.request" level="INFO" />
         <Logger name="software.amazon.awssdk" level="INFO" />

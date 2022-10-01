@@ -16,6 +16,7 @@ import org.apache.iceberg.catalog.Catalog
 import org.apache.iceberg.catalog.Namespace
 import org.apache.iceberg.catalog.TableIdentifier
 import org.apache.iceberg.parquet.ParquetUtil
+import org.slf4j.LoggerFactory
 import java.util.concurrent.ConcurrentHashMap
 
 class LazyConcurrentMap<K, V>(
@@ -28,9 +29,7 @@ class LazyConcurrentMap<K, V>(
 class IcebergMetadataHandler : RequestHandler<SQSEvent, Void?> {
     val writer = IcebergMetadataWriter()
     override fun handleRequest(event: SQSEvent, context: Context): Void? {
-        println("#####################")
         writer.handle(event)
-        println("#####################")
         return null
     }
 }
@@ -39,7 +38,8 @@ fun main(args: Array<String>) {
 }
 
 class IcebergMetadataWriter {
-    lateinit var fileIO: S3FileIO
+    private val logger = LoggerFactory.getLogger(this::class.java)
+
     val icebergCatalog = createIcebergCatalog()
     inner class TableObj(tableName: String) {
         val table: Table = icebergCatalog.loadTable(TableIdentifier.of(Namespace.of(MATANO_NAMESPACE), tableName))
@@ -49,20 +49,15 @@ class IcebergMetadataWriter {
     private fun createIcebergCatalog(): Catalog {
         return GlueCatalog()
                 .apply { initialize("glue_catalog", icebergProperties) }
-                .apply {
-                    val fileIOField = GlueCatalog::class.java.getDeclaredField("fileIO")
-                    fileIOField.setAccessible(true)
-                    fileIO = fileIOField.get(this) as S3FileIO
-                }
     }
 
-    private fun getTableNameFromObjectKey(key: String): String {
-        // lake/TABLE_NAME/data/partition_day=2022-07-05/<file>.parquet
-        // TODO: is assumption right?
-
-        val tableName = key.split("/")[1]
-        println("USING TABLE: $tableName")
-        return tableName
+    private fun parseObjectKey(key: String): Pair<String, String> {
+        // lake/TABLE_NAME/data/ts_day=2022-07-05/<file>.parquet
+        val parts = key.split("/")
+        val tableName = parts[1]
+        val partitionPath = parts[3]
+        logger.info("Using table: $tableName")
+        return Pair(tableName, partitionPath)
     }
 
     fun handle(sqsEvent: SQSEvent) {
@@ -78,7 +73,7 @@ class IcebergMetadataWriter {
     }
 
     fun readParquetMetrics(s3Path: String, table: Table): Metrics {
-        val inputFile = fileIO.newInputFile(s3Path)
+        val inputFile = table.io().newInputFile(s3Path)
         return ParquetUtil.fileMetrics(inputFile, MetricsConfig.forTable(table))
     }
 
@@ -86,23 +81,24 @@ class IcebergMetadataWriter {
         val record = S3EventNotification.parseJson(sqsMessage.body).records[0]
         val s3Bucket = record.s3.bucket.name
         val s3Object = record.s3.`object`
-        val s3ObjectKey = s3Object.key
+        val s3ObjectKey = s3Object.urlDecodedKey
         val s3ObjectSize = s3Object.sizeAsLong
         val s3Path = "s3://$s3Bucket/$s3ObjectKey"
         println(s3Path)
 
         if (checkDuplicate(s3Object.sequencer)) {
-            println("Found duplicate SQS message for key: ${s3ObjectKey}. Skipping...")
+            logger.info("Found duplicate SQS message for key: ${s3ObjectKey}. Skipping...")
             return
         }
 
-        val tableName = getTableNameFromObjectKey(s3ObjectKey)
+        val (tableName, partitionPath) = parseObjectKey(s3ObjectKey)
         val tableObj = tableObjs[tableName]
         val icebergTable = tableObj!!.table
 
         val metrics = readParquetMetrics(s3Path, icebergTable)
         val partition = PartitionSpec.builderFor(icebergTable.schema()).day(TIMESTAMP_COLUMN_NAME).build()
         val dataFile = DataFiles.builder(partition)
+                .withPartitionPath(partitionPath)
                 .withPath(s3Path)
                 .withFileSizeInBytes(s3ObjectSize)
                 .withFormat("PARQUET")
@@ -128,7 +124,7 @@ class IcebergMetadataWriter {
     }
 
     companion object {
-        private const val MATANO_NAMESPACE = "matano"
+        const val MATANO_NAMESPACE = "matano"
         private const val TIMESTAMP_COLUMN_NAME = "ts"
         private const val DDB_ITEM_EXPIRE_SECONDS = 1 * 24 * 60 * 60
         private val DUPLICATES_DDB_TABLE_NAME = System.getenv("DUPLICATES_DDB_TABLE_NAME")
@@ -138,7 +134,6 @@ class IcebergMetadataWriter {
                 "catalog-impl" to "org.apache.iceberg.aws.glue.GlueCatalog",
                 "warehouse" to WAREHOUSE_PATH,
                 "io-impl" to "org.apache.iceberg.aws.s3.S3FileIO",
-                "fs.s3a.endpoint.region" to "eu-central-1",
                 "fs.s3a.path.style.access" to "true"
         )
         private val ddb = AmazonDynamoDBClientBuilder.defaultClient()
