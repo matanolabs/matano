@@ -28,7 +28,7 @@ use arrow2::io::parquet::write::{
 use tokio_util::compat::TokioAsyncReadCompatExt;
 
 mod common;
-mod matano_alerts;
+// mod matano_alerts;
 use common::write_arrow_to_s3_parquet;
 
 #[global_allocator]
@@ -72,8 +72,11 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
         return Ok(());
     }
 
-    let log_source = downloads.first().map(|m| m.log_source.clone()).unwrap();
-    info!("Processing for log_source: {}", log_source);
+    let resolved_table_name = downloads
+        .first()
+        .map(|m| m.resolved_table_name.clone())
+        .unwrap();
+    info!("Processing for table: {}", resolved_table_name);
 
     info!("Starting {} downloads from S3", downloads.len());
 
@@ -215,7 +218,7 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
 
     // TODO: fix to use correct partition (@shaeq)
     let partition_day = chrono::offset::Utc::now().date_naive().to_string();
-    write_arrow_to_s3_parquet(&s3, log_source, partition_day, field, arrays).await?;
+    write_arrow_to_s3_parquet(&s3, resolved_table_name, partition_day, field, arrays).await?;
 
     println!("----------------  Call took {:.2?}", start.elapsed());
 
@@ -224,7 +227,7 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub(crate) struct S3SQSMessage {
-    pub log_source: String,
+    pub resolved_table_name: String,
     pub bucket: String,
     pub key: String,
 }

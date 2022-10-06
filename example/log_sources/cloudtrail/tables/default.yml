@@ -1,0 +1,2 @@
+transform: |
+  .mytablefield = "CUSTOM_TABLE"

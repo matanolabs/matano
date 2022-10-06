@@ -1,0 +1,4 @@
+name: default
+
+ingest:
+  expand_records_from_payload: parse_json!(.__raw).Records

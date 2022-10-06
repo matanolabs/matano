@@ -6,6 +6,7 @@ sidebar_position: 2
 Each detection you create occupies a directory under the `detections/` directory in your Matano directory.
 
 A detection directory has the following structure:
+
 ```
 my-matano-directory
 ├── detections
@@ -17,7 +18,7 @@ my-matano-directory
 
 ## Detection script
 
-*Detection scripts* are Python programs containing the logic of your detection. To create a detection script, create a file called `detect.py` in your detection directory.
+_Detection scripts_ are Python programs containing the logic of your detection. To create a detection script, create a file called `detect.py` in your detection directory.
 
 Inside the detection script, you define the following functions:
 
@@ -44,9 +45,9 @@ Each detection requires a configuration file named `detection.yml`. The file has
 
 ```yml
 name: "my_detection" # The name of the detection
-log_sources: # An array of log sources for which to run the detection
-    - "main-cloudtrail-logs"
-    - "my-zeek-logs"
+table_names: # An array of table names for which to run the detection
+  - "main-cloudtrail-logs"
+  - "my-zeek-logs"
 ```
 
 ## Python requirements

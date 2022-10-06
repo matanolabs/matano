@@ -1,4 +1,7 @@
-name: "aws_cloudtrail"
+name: aws_cloudtrail
 
 managed:
   type: AWS_CLOUDTRAIL
+
+transform: |
+  .mycustomlogfield = "CUSTOM_LOG_SOURCE"

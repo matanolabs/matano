@@ -13,7 +13,15 @@ import * as os from "os";
 import * as sns from "aws-cdk-lib/aws-sns";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import { IcebergMetadata, MatanoIcebergTable, MatanoSchemas } from "../lib/iceberg";
-import { getDirectories, getLocalAssetPath, makeTempDir, MATANO_USED_RUNTIMES, md5Hash, readConfig } from "../lib/utils";
+import {
+  fromEntries,
+  getDirectories,
+  getLocalAssetPath,
+  makeTempDir,
+  MATANO_USED_RUNTIMES,
+  md5Hash,
+  readConfig,
+} from "../lib/utils";
 import { S3BucketWithNotifications } from "../lib/s3-bucket-notifs";
 import { MatanoLogSource, LogSourceConfig } from "../lib/log-source";
 import { MatanoDetections } from "../lib/detections";
@@ -30,7 +38,6 @@ import { Transformer } from "../lib/transformer";
 
 import { SqsSubscription } from "aws-cdk-lib/aws-sns-subscriptions";
 import { MatanoAlerting } from "../lib/alerting";
-import { resolveSchema } from "../lib/schema";
 import { MatanoS3Sources } from "../lib/s3-sources";
 
 interface DPMainStackProps extends MatanoStackProps {
@@ -47,9 +54,7 @@ export class DPMainStack extends MatanoStack {
     this.configTempDir = this.createConfigTempDir();
 
     const logSourcesDirectory = path.join(this.matanoUserDirectory, "log_sources");
-    const logSourceConfigs = getDirectories(logSourcesDirectory)
-      .map((d) => path.join(logSourcesDirectory, d))
-      .map((p) => readConfig(p, "log_source.yml") as LogSourceConfig);
+    const logSourceConfigPaths = getDirectories(logSourcesDirectory).map((d) => path.join(logSourcesDirectory, d));
 
     const rawDataBatcher = new DataBatcher(this, "DataBatcher", {
       s3Bucket: props.matanoSourcesBucket,
@@ -70,30 +75,61 @@ export class DPMainStack extends MatanoStack {
     });
 
     const logSources: MatanoLogSource[] = [];
-    for (const logSourceConfig of logSourceConfigs) {
-      const logSource = new MatanoLogSource(this, `MatanoLogSource${logSourceConfig.name}`, {
-        config: logSourceConfig,
-        realtimeTopic: props.realtimeBucketTopic,
-        lakeIngestionLambda: lakeIngestion.lakeIngestionLambda,
-      });
+    for (const logSourceConfigPath of logSourceConfigPaths) {
+      const logSource = new MatanoLogSource(
+        this,
+        `MatanoLogSource${path.relative(logSourcesDirectory, logSourceConfigPath)}`,
+        {
+          configPath: logSourceConfigPath,
+          realtimeTopic: props.realtimeBucketTopic,
+          lakeIngestionLambda: lakeIngestion.lakeIngestionLambda,
+        }
+      );
+      (logSource.node.id as any) = `MatanoLogSource${logSource.logSourceLevelConfig
+        .name!.split("_")
+        .map((substr) => substr.charAt(0).toUpperCase() + substr.slice(1))
+        .join("_")}`; // TODO(shaeq): fix this
       logSources.push(logSource);
     }
 
     // Not a log source but just use it to represent
-    const matanoAlertsSource = new MatanoLogSource(this, "MatanoAlertsIcebergTable", {
-      config: {
-        name: "matano_alerts",
-        managed: {
-          type: "matano_alerts",
-        }
-      },
-      realtimeTopic: props.realtimeBucketTopic,
-      lakeIngestionLambda: lakeIngestion.lakeIngestionLambda,
-    });
-    logSources.push(matanoAlertsSource);
+    // const matanoAlertsSource = new MatanoLogSource(this, "MatanoAlertsIcebergTable", {
+    //   config: {
+    //     name: "matano_alerts",
+    //     managed: {
+    //       type: "matano_alerts",
+    //     }
+    //   },
+    //   realtimeTopic: props.realtimeBucketTopic,
+    //   lakeIngestionLambda: lakeIngestion.lakeIngestionLambda,
+    // });
+    // logSources.push(matanoAlertsSource);
 
-    const resolvedLogSourceConfigs = logSources.map(ls => ls.sourceConfig);
-    this.addConfigFile("log_sources_configuration.yml", YAML.stringify(resolvedLogSourceConfigs, { blockQuote: "literal" }));
+    const resolvedLogSourceConfigs: Record<string, any> = fromEntries(
+      logSources.map((ls) => [
+        ls.logSourceConfig.name,
+        { base: ls.logSourceLevelConfig, tables: ls.tablesConfig },
+      ]) as any
+    );
+
+    for (const logSource in resolvedLogSourceConfigs) {
+      this.addConfigFile(
+        `log_sources/${logSource}/log_source.yml`,
+        YAML.stringify(resolvedLogSourceConfigs[logSource].base, {
+          aliasDuplicateObjects: false,
+          blockQuote: "literal",
+        })
+      );
+      for (const table in resolvedLogSourceConfigs[logSource].tables) {
+        this.addConfigFile(
+          `log_sources/${logSource}/tables/${table}.yml`,
+          YAML.stringify(resolvedLogSourceConfigs[logSource].tables[table], {
+            aliasDuplicateObjects: false,
+            blockQuote: "literal",
+          })
+        );
+      }
+    }
 
     new MatanoS3Sources(this, "CustomIngestionLogSources", {
       logSources,
@@ -101,13 +137,13 @@ export class DPMainStack extends MatanoStack {
     });
 
     const allResolvedSchemasHashStr = logSources
-      .map(ls => ls.schema)
+      .map((ls) => ls.schema)
       .reduce((prev, cur) => prev + JSON.stringify(cur), "");
     const schemasHash = md5Hash(allResolvedSchemasHashStr);
 
     const schemasCR = new MatanoSchemas(this, "MatanoSchemasCustomResource", {
       schemaOutputPath: schemasHash,
-      logSources: logSources.map(ls => ls.name),
+      logSources: logSources.map((ls) => ls.name),
     });
 
     for (const logSource of logSources) {
@@ -148,18 +184,24 @@ export class DPMainStack extends MatanoStack {
 
     this.humanCfnOutput("MatanoAlertingSnsTopicArn", {
       value: matanoAlerting.alertingTopic.topicArn,
-      description: "The ARN of the SNS topic used for Matano alerts. See https://www.matano.dev/docs/detections/alerting",
+      description:
+        "The ARN of the SNS topic used for Matano alerts. See https://www.matano.dev/docs/detections/alerting",
     });
-
   }
 
   private createConfigTempDir() {
     const configTempDir = makeTempDir("mtnconfig");
     fs.mkdirSync(path.join(configTempDir, "config"));
+
+    if (process.env.DEBUG) {
+      console.log(`Created temporary directory for configuration files: ${path.join(configTempDir, "config")}`);
+    }
     return configTempDir;
   }
 
-  private addConfigFile( filename: string, content: string) {
-    fs.writeFileSync(path.join(this.configTempDir, "config", filename), content);
+  private addConfigFile(fileSubpath: string, content: string) {
+    const filePath = path.join(this.configTempDir, "config", fileSubpath);
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+    fs.writeFileSync(filePath, content);
   }
 }

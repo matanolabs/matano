@@ -9,6 +9,5 @@
 # - https://docs.aws.amazon.com/IAM/latest/UserGuide/id_root-user.html
 # status: experimental
 
-
 name: "aws_root_credentials"
-log_sources: ["aws_cloudtrail"]
+table_names: ["aws_cloudtrail"]

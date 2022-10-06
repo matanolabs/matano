@@ -10,6 +10,5 @@
 # - https://docs.aws.amazon.com/vm-import/latest/userguide/vmexport.html#export-instance
 # status: experimental
 
-
 name: "aws_ec2_vm_export_failure"
-log_sources: ["aws_cloudtrail"]
+table_names: ["aws_cloudtrail"]

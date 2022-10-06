@@ -14,7 +14,6 @@ import { readDetectionConfig } from "./utils";
 import { SqsEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
 import { SqsSubscription } from "aws-cdk-lib/aws-sns-subscriptions";
 
-
 export interface MatanoDetectionsProps {
   realtimeTopic: sns.Topic;
   alertingSnsTopic: sns.Topic;
@@ -30,7 +29,7 @@ export class MatanoDetections extends Construct {
 
     const matanoUserDirectory = (cdk.Stack.of(this) as MatanoStack).matanoUserDirectory;
     const detectionsCommonCodeDir = path.resolve("..", "lib/python/matano_detection");
-    const detectionsCommonAssetName = "MatanoDetectionsCommonLayer"
+    const detectionsCommonAssetName = "MatanoDetectionsCommonLayer";
 
     const detectionsLayer = new lambda.LayerVersion(this, detectionsCommonAssetName, {
       compatibleRuntimes: [lambda.Runtime.PYTHON_3_9],
@@ -59,9 +58,7 @@ export class MatanoDetections extends Construct {
         ALERTING_SNS_TOPIC_ARN: props.alertingSnsTopic.topicArn,
         SOURCES_S3_BUCKET: props.matanoSourcesBucketName,
       },
-      initialPolicy: [
-        new iam.PolicyStatement({actions: ["s3:*"], resources: ["*"]}),
-      ],
+      initialPolicy: [new iam.PolicyStatement({ actions: ["s3:*"], resources: ["*"] })],
     });
 
     props.alertingSnsTopic.grantPublish(this.detectionFunction);
@@ -72,23 +69,23 @@ export class MatanoDetections extends Construct {
     });
     this.detectionFunction.addEventSource(sqsEventSource);
 
-    this.detectionConfigs = {}
-    let logSourcesWithDetections: string[] = [];
+    this.detectionConfigs = {};
+    let tablesWithDetections: string[] = [];
     for (const detectionName of detectionNames) {
       const detectionDirectory = path.resolve(matanoUserDirectory, "detections", detectionName);
       const config = readDetectionConfig(detectionDirectory);
       this.detectionConfigs[detectionName] = config;
-      logSourcesWithDetections = [...logSourcesWithDetections, ...config["log_sources"]]
+      tablesWithDetections = [...tablesWithDetections, ...config["table_names"]];
     }
-    logSourcesWithDetections = [...new Set(logSourcesWithDetections)];
+    tablesWithDetections = [...new Set(tablesWithDetections)];
 
     props.realtimeTopic.addSubscription(
       new SqsSubscription(this.detectionsQueue, {
         rawMessageDelivery: true,
         filterPolicy: {
-          "log_source": sns.SubscriptionFilter.stringFilter({ allowlist: logSourcesWithDetections })
+          resolved_table_name: sns.SubscriptionFilter.stringFilter({ allowlist: tablesWithDetections }),
         },
-      }),
+      })
     );
   }
 }

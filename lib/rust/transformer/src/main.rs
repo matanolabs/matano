@@ -21,6 +21,7 @@ use std::time::Instant;
 use tokio::fs;
 use tokio::io::AsyncReadExt;
 use tokio::task::spawn_blocking;
+use walkdir::WalkDir;
 
 #[global_allocator]
 static ALLOC: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
@@ -66,17 +67,101 @@ use vrl::{diagnostic::Formatter, state, value, Program, Runtime, TargetValueRef}
 use crate::arrow::{coerce_data_type, type_to_schema};
 use crate::avro::TryIntoAvro;
 
+use config::{Config, ConfigError, Environment, File};
+
 thread_local! {
     pub static RUNTIME: RefCell<Runtime> = RefCell::new(Runtime::new(state::Runtime::default()));
     pub static LOG_SOURCES_CONFIG: RefCell<BTreeMap<String, LogSourceConfiguration>> = {
-        let log_sources_configuration_path = Path::new(&var("LAMBDA_TASK_ROOT").unwrap().to_string()).join("log_sources_configuration.yml");
-        let log_sources_configuration_string = std::fs::read_to_string(log_sources_configuration_path).expect("Unable to read file");
+        let log_sources_configuration_path = Path::new(&var("LAMBDA_TASK_ROOT").unwrap().to_string()).join("log_sources");
+        let mut log_sources_configuration_map: BTreeMap<String, LogSourceConfiguration> = BTreeMap::new();
 
-        let log_sources_configuration: Vec<LogSourceConfiguration> = serde_yaml::from_str(&log_sources_configuration_string).expect("Unable to parse log_sources_configuration.yml");
-        let mut log_sources_configuration_map = BTreeMap::new();
-        for log_source_configuration in log_sources_configuration.iter() {
-            log_sources_configuration_map.insert(log_source_configuration.name.clone(), log_source_configuration.clone());
+        for entry in WalkDir::new(log_sources_configuration_path).min_depth(1).max_depth(1) {
+            let log_source_dir_path = match entry {
+                Ok(v) => v,
+                Err(e) => {
+                    error!("Invalid entry while walking children for log_sources/ directory: {}", e);
+                    continue;
+                }
+            };
+            let log_source_dir_path = log_source_dir_path.path();
+            if !log_source_dir_path.is_dir() {
+                continue;
+            }
+
+            let log_source_folder_name = match log_source_dir_path.file_name() {
+                Some(v) => v,
+                None => {
+                    error!("Invalid entry name under log_sources/.");
+                    continue;
+                }
+            };
+
+            let log_source_folder_name = match log_source_folder_name.to_str() {
+                Some(v) => v,
+                None => {
+                    error!("Invalid entry name under log_sources/");
+                    continue;
+                }
+            };
+
+            let log_source_configuration_path = log_source_dir_path.join("log_source.yml");
+            let log_source_configuration_path = log_source_configuration_path.as_path().to_str().unwrap();
+            let base_configuration_builder = Config::builder()
+                .add_source(
+                    File::with_name(log_source_configuration_path).required(true)
+                );
+            let base_configuration = base_configuration_builder.build().expect(format!("Failed to load base configuration for log_source: {}/", log_source_folder_name).as_str());
+
+            let mut log_source_configuration = LogSourceConfiguration {
+                base: base_configuration,
+                tables: HashMap::new()
+            };
+            let log_source_name = log_source_configuration.base.get_string("name").unwrap();
+
+            let tables_path = log_source_dir_path.join("tables");
+            if tables_path.is_dir() {
+                for entry in WalkDir::new(&tables_path).min_depth(1).max_depth(1) {
+                    let tables_path = &tables_path.as_path().to_str().unwrap();
+
+                    let table_configuration_path = entry.expect(format!("Invalid entry while walking children for {} directory.", &tables_path).as_str());
+                    let table_configuration_path = table_configuration_path.path();
+
+                    let err_str = format!("Invalid table entry: {}.", table_configuration_path.display());
+                    let table_file_name = table_configuration_path.file_name().expect(&err_str).to_str().expect(&err_str);
+
+                    let extension = table_configuration_path
+                        .extension()
+                        .and_then(std::ffi::OsStr::to_str);
+
+                    if !table_configuration_path.is_file() || !(extension == Some("yml") || extension == Some("yaml")) {
+                        continue;
+                    }
+
+                    let table_configuration_path = table_configuration_path.to_str().unwrap();
+
+                    let table_configuration = Config::builder()
+                    .add_source(
+                        File::with_name(table_configuration_path).required(true)
+                    )
+                    .build();
+
+                    let table_configuration = match table_configuration {
+                        Ok(v) => v,
+                        Err(e) => {
+                            error!("Failed to load table configuration for log_source={}, table_path={}: {}", log_source_name, table_file_name, e);
+                            continue;
+                        }
+                    };
+
+                    let table_name = table_configuration.get_string("name").unwrap();
+
+                    // .add_source(Environment::with_prefix("app"));
+                    log_source_configuration.tables.insert(table_name, table_configuration);
+                }
+            }
+            log_sources_configuration_map.insert(log_source_name, log_source_configuration);
         }
+
         RefCell::new(log_sources_configuration_map)
     };
 }
@@ -225,7 +310,10 @@ async fn read_lines_s3<'a>(
     s3: &aws_sdk_s3::Client,
     r: &DataBatcherRequestItem,
     compression: Option<Compression>,
-) -> Result<Pin<Box<dyn Stream<Item = Result<Value>> + Send>>> {
+) -> Result<(
+    config::Config,
+    Pin<Box<dyn Stream<Item = Result<Value>> + Send>>,
+)> {
     println!("Starting download");
     let res = s3
         .get_object()
@@ -290,17 +378,66 @@ async fn read_lines_s3<'a>(
         }),
     };
 
-    let expand_records_from_payload_expr = LOG_SOURCES_CONFIG.with(|c| {
+    let select_table_expr = LOG_SOURCES_CONFIG.with(|c| {
         let log_sources_config = c.borrow();
 
         (*log_sources_config)
             .get(log_source)
             .unwrap()
-            .ingest
-            .as_ref()?
-            .expand_records_from_payload
-            .clone()
+            .base
+            .get_string("ingest.select_table_from_payload_metadata")
+            .ok()
     });
+
+    let table_name = match select_table_expr {
+        Some(prog) => {
+            let r_json = serde_json::to_value(r).unwrap();
+            let mut value = value!({
+                "__metadata": {
+                    "s3": {
+                        r_json
+                    }
+                }
+            });
+
+            let wrapped_prog = format!(
+                // For type safety, TODO(shaeq): use SchemaKind's
+                "
+                .__metadata.s3.bucket = string!(.__metadata.s3.bucket)
+                .__metadata.s3.key = string!(.__metadata.s3.key)
+                .__metadata.s3.size = int!(.__metadata.s3.size)
+                .__metadata.s3.sequencer = string!(.__metadata.s3.sequencer)
+
+                {}
+                ",
+                prog
+            );
+            let (table_name, _) = vrl(&wrapped_prog, &mut value)?;
+
+            match &table_name {
+                Value::Null => Ok("default".to_owned()),
+                Value::Bytes(b) => Ok(table_name.to_string_lossy()),
+                _ => {
+                    Err(anyhow!("Invalid table_name returned from select_table_from_payload_metadata expression: {}", table_name))
+                }
+            }
+        }
+        None => Ok("default".to_owned()),
+    }?;
+
+    let table_config = LOG_SOURCES_CONFIG.with(|c| {
+        let log_sources_config = c.borrow();
+
+        (*log_sources_config)
+        .get(log_source)
+        .unwrap()
+        .tables.get(&table_name).cloned()
+    }).ok_or(anyhow!("Configuration doesn't exist for table name returned from select_table_from_payload_metadata expression: {}", &table_name))?;
+
+    let expand_records_from_payload_expr = table_config
+        .get_string("ingest.expand_records_from_payload")
+        .ok();
+
     let lines = match expand_records_from_payload_expr {
         Some(prog) => {
             let start = Instant::now();
@@ -336,7 +473,7 @@ async fn read_lines_s3<'a>(
             .boxed(),
     };
 
-    Ok(lines)
+    Ok((table_config, lines))
 }
 
 pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessResponse> {
@@ -356,17 +493,18 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessRe
         })
         .filter(|d| d.size > 0)
         .filter(|d| {
-            // TODO: needs to handle non matano managed sources (@shaeq)
-            return d.is_matano_managed() && LOG_SOURCES_CONFIG.with(|c| {
-                let log_sources_config = c.borrow();
-                let log_source = &d
-                            .key
-                            .split(std::path::MAIN_SEPARATOR)
-                            .next()
-                            .unwrap()
-                            .to_string();
-                (*log_sources_config).contains_key(log_source)
-            })
+            // TODO(shaeq): needs to handle non matano managed sources
+            return d.is_matano_managed_resource()
+                && LOG_SOURCES_CONFIG.with(|c| {
+                    let log_sources_config = c.borrow();
+                    let log_source = &d
+                        .key
+                        .split(std::path::MAIN_SEPARATOR)
+                        .next()
+                        .unwrap()
+                        .to_string();
+                    (*log_sources_config).contains_key(log_source)
+                });
         })
         .collect::<Vec<_>>();
 
@@ -388,37 +526,34 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessRe
             let s3 = &s3;
 
             async move {
-                let raw_lines = read_lines_s3(s3, &item, None).await.unwrap();
+                let (table_config, raw_lines): (
+                    _,
+                    Pin<Box<dyn Stream<Item = Result<Value, anyhow::Error>> + Send>>,
+                ) = read_lines_s3(s3, &item, None).await.unwrap();
 
                 let reader = raw_lines;
 
-                let transform_expr = LOG_SOURCES_CONFIG
-                    .with(|c| {
-                        let log_sources_config = c.borrow();
-
-                        let log_source = &item
-                            .key
-                            .split(std::path::MAIN_SEPARATOR)
-                            .next()
-                            .unwrap()
-                            .to_string();
-
-                        (*log_sources_config)
-                            .get(log_source)
-                            .unwrap()
-                            .transform
-                            .clone()
-                    })
-                    .unwrap();
+                let transform_expr = table_config.get_string("transform").unwrap_or_default();
 
                 let wrapped_transform_expr = format!(
-                    "
-                    .related.ip = []
-                    .related.hash = []
-                    .related.user = []
-                    {}
-                    del(.json)
-                    ",
+                    r#"
+if .message != null {{
+    .json, err = parse_json(string!(.message))
+    if err == null {{
+        del(.message)
+    }}
+}}
+
+.related.ip = []
+.related.hash = []
+.related.user = []
+
+{}
+del(.json)
+
+. = compact(.)
+.ecs.version = "8.0.0"
+                    "#,
                     transform_expr
                 );
 
@@ -434,10 +569,22 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessRe
                                     .into_par_iter()
                                     .map(|r| match r {
                                         Ok(line) => {
-                                            let mut v = value!({ "json": line });
-                                            vrl(&wrapped_transform_expr, &mut v).map_err(|e| {
+                                            let mut v = match line {
+                                                Value::Object(_) => value!({ "json": line }),
+                                                Value::Bytes(_) => value!({ "message": line }),
+                                                _ => unimplemented!()
+                                            };
+
+                                            match vrl(&wrapped_transform_expr, &mut v).map_err(|e| {
                                                 anyhow!("Failed to transform: {}", e)
-                                            })?;
+                                            }) {
+                                                Ok(_) => {},
+                                                Err(e) => {
+                                                    error!("Failed to process event, mutated event state: {}\n {}", v.to_string_lossy(), e);
+                                                    return Err(e);
+                                                }
+                                            }
+
                                             Ok(v)
                                         }
                                         Err(e) => Err(anyhow!("Malformed line: {}", e)),
@@ -464,28 +611,29 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessRe
                     }
                 });
 
-                (item.key.clone(), stream)
+                (table_config, stream)
             }
         })
         .collect::<Vec<_>>();
 
     let result = join_all(transformed_lines_streams).await;
-    let result = result.into_iter().group_by(|(object_key, _)| {
-        let log_source = object_key
-            .split(std::path::MAIN_SEPARATOR)
-            .next()
-            .unwrap()
-            .to_string();
-        log_source
-    });
+    let result = result
+        .into_iter()
+        .group_by(|(table_config, _)| table_config.get_string("resolved_name").unwrap());
 
-    let mut merged: HashMap<String, StreamMap<String, Pin<Box<dyn Stream<Item = Value> + Send>>>> =
-        HashMap::new();
-    for (log_source, streams) in result.into_iter() {
-        for (i, (_object_key, stream)) in streams.enumerate() {
+    let mut merged: HashMap<
+        String,
+        (
+            config::Config,
+            StreamMap<String, Pin<Box<dyn Stream<Item = Value> + Send>>>,
+        ),
+    > = HashMap::new();
+    for (resolved_table_name, streams) in result.into_iter() {
+        for (i, (table_config, stream)) in streams.enumerate() {
             merged
-                .entry(log_source.clone())
-                .or_insert(StreamMap::new())
+                .entry(resolved_table_name.clone())
+                .or_insert((table_config, StreamMap::new()))
+                .1
                 .insert(
                     format!("{}", i), // object_key.clone(),
                     Box::pin(stream), // as Pin<Box<dyn Stream<Item = usize> + Send>>,
@@ -495,7 +643,7 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessRe
 
     let futures = merged
         .into_iter()
-        .map(|(log_source, stream)| {
+        .map(|(resolved_table_name, (table_config, stream))| {
             let s3 = &s3;
             let sns = &sns;
             let num_rows_to_infer_schema = 100;
@@ -504,7 +652,9 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessRe
                 let mut reader = stream.map(|(_, value)| value);
 
                 let schemas_path = Path::new("/opt/schemas");
-                let schema_path = schemas_path.join(&log_source).join("avro_schema.avsc");
+                let schema_path = schemas_path
+                    .join(&resolved_table_name)
+                    .join("avro_schema.avsc");
                 let avro_schema_json_string = fs::read_to_string(schema_path).await.unwrap();
 
                 let mut inferred_avro_schema = Schema::parse_str(&avro_schema_json_string).unwrap();
@@ -562,9 +712,9 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessRe
 
                 let uuid = Uuid::new_v4();
                 let bucket = var("MATANO_REALTIME_BUCKET_NAME").unwrap().to_string();
-                let key = format!("transformed/{}/{}.snappy.avro", &log_source, uuid);
+                let key = format!("transformed/{}/{}.snappy.avro", &resolved_table_name, uuid);
                 info!("Writing Avro file to S3 path: {}/{}", bucket, key);
-                // let local_path = output_schemas_path.join(format!("{}.avro", log_source));
+                // let local_path = output_schemas_path.join(format!("{}.avro", resolved_table_name));
                 // fs::write(local_path, bytes).await.unwrap();
                 s3.put_object()
                     .bucket(&bucket)
@@ -586,15 +736,15 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessRe
                         json!({
                             "bucket": &bucket,
                             "key": &key,
-                            "log_source": log_source
+                            "resolved_table_name": resolved_table_name
                         })
                         .to_string(),
                     )
                     .message_attributes(
-                        "log_source",
+                        "resolved_table_name",
                         MessageAttributeValue::builder()
                             .data_type("String".to_string())
-                            .string_value(log_source)
+                            .string_value(resolved_table_name)
                             .build(),
                     )
                     .send()
@@ -608,8 +758,14 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessRe
         })
         .collect::<Vec<_>>();
 
+    let resp = SuccessResponse {
+        req_id: event.context.request_id,
+        msg: format!("Hello from Transformer! The command was executed."),
+    };
+
     let mut start = Instant::now();
     println!("Starting processing");
+
     {
         let _ = join_all(futures).await;
         println!(
@@ -619,11 +775,6 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessRe
         start = Instant::now();
     }
     println!("time to drop {:?}", start.elapsed());
-
-    let resp = SuccessResponse {
-        req_id: event.context.request_id,
-        msg: format!("Hello from Transformer! The command was executed."),
-    };
 
     // return `Response` (it will be serialized to JSON automatically by the runtime)
     Ok(resp)

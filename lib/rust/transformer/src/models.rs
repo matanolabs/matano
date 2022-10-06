@@ -1,5 +1,8 @@
 //! Project-specific model definitions
 //!
+use std::collections::HashMap;
+
+use config::Config;
 use serde::{Deserialize, Serialize};
 
 //todo: handle key as urlencoded_string, plus AWS encodes spaces as `+` rather than `%20`
@@ -11,28 +14,15 @@ pub(crate) struct DataBatcherRequestItem {
     pub sequencer: String,
 }
 impl DataBatcherRequestItem {
-    pub fn is_matano_managed(&self) -> bool {
-        return self.bucket == std::env::var("MATANO_SOURCES_BUCKET").unwrap()
+    pub fn is_matano_managed_resource(&self) -> bool {
+        return self.bucket == std::env::var("MATANO_SOURCES_BUCKET").unwrap();
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Clone)]
 pub struct LogSourceConfiguration {
-    pub name: String,
-    pub transform: Option<String>,
-    pub ingest: Option<IngestConfig>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct IngestConfig {
-    pub expand_records_from_payload: Option<String>,
-    pub s3_source: Option<S3SourceConfig>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct S3SourceConfig {
-    bucket_name: String,
-    key_prefix: String,
+    pub base: Config,
+    pub tables: HashMap<String, Config>,
 }
 
 #[derive(Debug, Serialize)]

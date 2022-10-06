@@ -18,32 +18,28 @@ import org.apache.iceberg.catalog.Namespace
 import org.apache.iceberg.catalog.TableIdentifier
 import org.apache.iceberg.parquet.ParquetSchemaUtil
 import org.apache.iceberg.types.TypeUtil
-import org.apache.iceberg.types.TypeUtil.NextID
-import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import software.amazon.awssdk.services.s3.S3Client
-import java.io.File
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.io.path.createTempDirectory
 import kotlin.io.path.writeText
-
 
 fun main() {
 }
 
 @JsonNaming(PropertyNamingStrategies.UpperCamelCaseStrategy::class)
 data class CfnResponse(
-        val PhysicalResourceId: String? = null,
-        val Data: Map<String, String>? = null,
-        val NoEcho: Boolean = false,
+    val PhysicalResourceId: String? = null,
+    val Data: Map<String, String>? = null,
+    val NoEcho: Boolean = false
 )
 
 // Cloudformation stringifies all values in properties!
 private fun processCfnNode(path: String, node: JsonNode, parent: ObjectNode) {
     if (node.isObject) {
         val fields = node.fields()
-        fields.forEachRemaining { (k,v) -> processCfnNode(k,v, node as ObjectNode) }
+        fields.forEachRemaining { (k, v) -> processCfnNode(k, v, node as ObjectNode) }
     } else if (node.isArray) {
         val elems = node.elements()
         while (elems.hasNext()) {
@@ -87,7 +83,7 @@ class MatanoSchemasLayerCustomResource {
 
     private fun doWork(logSources: List<String>, outputPath: String) {
         val tempDir = createTempDirectory().resolve("schemas")
-        val outFileName = "$outputPath.zip"// UUID.randomUUID().toString() + "zip"
+        val outFileName = "$outputPath.zip" // UUID.randomUUID().toString() + "zip"
         val outZipFile = ZipFile(tempDir.resolve(outFileName).toFile())
 
         for (logSource in logSources) {
@@ -105,7 +101,7 @@ class MatanoSchemasLayerCustomResource {
         }
         outZipFile.addFolder(tempDir.toFile())
 
-        s3.putObject({ b -> b.bucket(System.getenv("ASSETS_BUCKET_NAME")).key("$outputPath.zip")}, outZipFile.file.toPath())
+        s3.putObject({ b -> b.bucket(System.getenv("ASSETS_BUCKET_NAME")).key("$outputPath.zip") }, outZipFile.file.toPath())
     }
 
     fun create(event: CloudFormationCustomResourceEvent, context: Context): CfnResponse? {
@@ -117,7 +113,7 @@ class MatanoSchemasLayerCustomResource {
 
         val physicalId = UUID.randomUUID().toString()
         logger.info("Returning with physical resource ID: $physicalId")
-        return CfnResponse(PhysicalResourceId = physicalId,)
+        return CfnResponse(PhysicalResourceId = physicalId)
     }
 
     fun update(event: CloudFormationCustomResourceEvent, context: Context): CfnResponse? {
@@ -166,9 +162,14 @@ class MatanoIcebergTableCustomResource {
 
         val tableId = TableIdentifier.of(Namespace.of(MATANO_NAMESPACE), logSourceName)
         val partition = PartitionSpec.builderFor(icebergSchema).day(TIMESTAMP_COLUMN_NAME).build()
-        val table = icebergCatalog.createTable(tableId, icebergSchema, partition, mapOf(
-                "format-version" to "2",
-        ))
+        val table = icebergCatalog.createTable(
+            tableId,
+            icebergSchema,
+            partition,
+            mapOf(
+                "format-version" to "2"
+            )
+        )
         logger.info("Successfully created table.")
         return CfnResponse(PhysicalResourceId = logSourceName)
     }
@@ -193,8 +194,8 @@ class MatanoIcebergTableCustomResource {
         logger.info(SchemaParser.toJson(resolvedNewSchema))
 
         val updateSchemaReq = table.updateSchema()
-                .unionByNameWith(resolvedNewSchema)
-                .setIdentifierFields(resolvedNewSchema.identifierFieldNames())
+            .unionByNameWith(resolvedNewSchema)
+            .setIdentifierFields(resolvedNewSchema.identifierFieldNames())
         val updateSchema = updateSchemaReq.apply()
         if (!existingSchema.sameSchema(updateSchema)) {
             logger.info("Extending schema of ${table.name()}")
@@ -212,6 +213,8 @@ class MatanoIcebergTableCustomResource {
             icebergCatalog.dropTable(tableId, false)
         } catch (e: software.amazon.awssdk.services.s3.model.NoSuchKeyException) {
             logger.info("S3 key not found while deleting table, skipping...")
+        } catch (e: software.amazon.awssdk.services.glue.model.EntityNotFoundException) {
+            logger.info("Glue table not found while deleting table, skipping...")
         }
         return null
     }
@@ -224,11 +227,11 @@ class MatanoIcebergTableCustomResource {
         const val MATANO_NAMESPACE = "matano"
         private const val TIMESTAMP_COLUMN_NAME = "ts"
         val icebergProperties = mapOf(
-                "catalog-name" to "iceberg",
-                "catalog-impl" to "org.apache.iceberg.aws.glue.GlueCatalog",
-                "warehouse" to "s3://${System.getenv("MATANO_ICEBERG_BUCKET")}/lake",
-                "io-impl" to "org.apache.iceberg.aws.s3.S3FileIO",
-                "fs.s3a.path.style.access" to "true"
+            "catalog-name" to "iceberg",
+            "catalog-impl" to "org.apache.iceberg.aws.glue.GlueCatalog",
+            "warehouse" to "s3://${System.getenv("MATANO_ICEBERG_BUCKET")}/lake",
+            "io-impl" to "org.apache.iceberg.aws.s3.S3FileIO",
+            "fs.s3a.path.style.access" to "true"
         )
     }
 }

@@ -1,0 +1,85 @@
+name: digest
+
+transform: |
+  .file.path = del(.json.previousDigestS3Object)
+  .file.hash.sha256 = del(.json.previousDigestSignature)
+  if .file.hash.sha256 != null {
+      .related.hash = push!(.related.hash, .file.hash.sha256)
+  }
+  .aws.cloudtrail.digest.log_files = del(.json.logFiles)
+
+  if .json.digestStartTime != null {
+    .aws.cloudtrail.digest.start_time = to_timestamp!(.json.digestStartTime, "milliseconds")
+  }
+
+  if .json.digestEndTime != null {
+    .ts = to_timestamp!(.json.digestEndTime, "milliseconds")
+    .aws.cloudtrail.digest.end_time = .ts
+  }
+
+  .aws.cloudtrail.digest.s3_bucket = del(.json.digestS3Bucket)
+
+  if .json.newestEventTime != null {
+    .aws.cloudtrail.digest.newest_event_time = to_timestamp!(.json.newestEventTime, "milliseconds")
+  }
+
+  if .json.oldestEventTime != null {
+    .aws.cloudtrail.digest.oldest_event_time = to_timestamp!(.json.oldestEventTime, "milliseconds")
+  }
+  .aws.cloudtrail.digest.previous_s3_bucket = del(.json.previousDigestS3Bucket)
+  .aws.cloudtrail.digest.previous_hash_algorithm = del(.json.previousDigestHashAlgorithm)
+  .aws.cloudtrail.digest.public_key_fingerprint = del(.json.publicKeyFingerprint)
+  .aws.cloudtrail.digest.signature_algorithm = del(.json.digestSignatureAlgorithm)
+
+  .aws.cloudtrail.flattened.digest = encode_json(del(.aws.cloudtrail.digest))
+
+schema:
+  ecs_field_names:
+    - file.hash.md5
+    - file.hash.sha1
+    - file.hash.sha256
+    - file.hash.sha512
+    - file.path
+  fields:
+    - name: aws
+      type:
+        type: struct
+        fields:
+          - name: cloudtrail
+            type:
+              type: struct
+              fields:
+                - name: flattened
+                  type:
+                    type: struct
+                    fields:
+                      - name: digest
+                        type: string
+                - name: digest
+                  type:
+                    type: struct
+                    fields:
+                      - name: log_files
+                        type:
+                          type: list
+                          element: string
+                      - name: start_time
+                        type: timestamp
+                      - name: end_time
+                        type: timestamp
+                      - name: s3_bucket
+                        type: string
+                      - name: s3_object
+                        type: string
+                      - name: newest_event_time
+                        type: timestamp
+                      - name: oldest_event_time
+                        type: timestamp
+                      - name: previous_s3_bucket
+                        type: string
+                      - name: previous_hash_algorithm
+                        type: string
+                      - name: public_key_fingerprint
+                        type: string
+                      - name: signature_algorithm
+                        type: string

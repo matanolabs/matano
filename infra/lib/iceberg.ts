@@ -1,5 +1,6 @@
 import * as path from "path";
-import * as crypto from 'crypto';
+import * as crypto from "crypto";
+import * as YAML from "yaml";
 import { Construct, Node } from "constructs";
 import * as cdk from "aws-cdk-lib";
 import * as ddb from "aws-cdk-lib/aws-dynamodb";
@@ -9,7 +10,7 @@ import * as cr from "aws-cdk-lib/custom-resources";
 import { CustomResource } from "aws-cdk-lib";
 import { execSync } from "child_process";
 import { S3BucketWithNotifications } from "./s3-bucket-notifs";
-import { AwsCliLayer } from 'aws-cdk-lib/lambda-layer-awscli';
+import { AwsCliLayer } from "aws-cdk-lib/lambda-layer-awscli";
 import { SqsEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
 import { getLocalAsset } from "./utils";
 import { MatanoStack } from "./MatanoStack";
@@ -34,15 +35,14 @@ export class MatanoSchemas extends Construct {
   }
 }
 
-interface SchemasProviderProps {
-}
+interface SchemasProviderProps {}
 
 export class SchemasProvider extends Construct {
   provider: cr.Provider;
 
   public static getOrCreate(scope: Construct, props: SchemasProviderProps) {
     const stack = cdk.Stack.of(scope);
-    const hash = "" //md5(props.icebergS3BucketName); // TODO: or should it be in properties? think multi...
+    const hash = ""; //md5(props.icebergS3BucketName); // TODO: or should it be in properties? think multi...
     const id = `MatanoCustomResourceSchemasProvider${hash}`;
     const x = (stack.node.tryFindChild(id) as SchemasProvider) || new SchemasProvider(stack, id, props);
     return x.provider.serviceToken;
@@ -94,15 +94,14 @@ export class MatanoIcebergTable extends Construct {
   }
 }
 
-interface IcebergTableProviderProps {
-}
+interface IcebergTableProviderProps {}
 
 export class IcebergTableProvider extends Construct {
   provider: cr.Provider;
 
   public static getOrCreate(scope: Construct, props: IcebergTableProviderProps) {
     const stack = cdk.Stack.of(scope);
-    const hash = "" //md5(props.icebergS3BucketName); // TODO: or should it be in properties? think multi...
+    const hash = ""; //md5(props.icebergS3BucketName); // TODO: or should it be in properties? think multi...
     const id = `MatanoCustomResourceIcebergTableProvider${hash}`;
     const x = (stack.node.tryFindChild(id) as IcebergTableProvider) || new IcebergTableProvider(stack, id, props);
     return x.provider.serviceToken;
@@ -135,7 +134,6 @@ export class IcebergTableProvider extends Construct {
   }
 }
 
-
 interface IcebergMetadataProps {
   lakeStorageBucket: S3BucketWithNotifications;
 }
@@ -159,16 +157,17 @@ export class IcebergMetadata extends Construct {
         MATANO_ICEBERG_BUCKET: props.lakeStorageBucket.bucket.bucketName,
       },
       code: getLocalAsset("iceberg_metadata"),
-      initialPolicy: [new iam.PolicyStatement({
-        actions: ["glue:*", "s3:*",],
-        resources: ["*"],
-      })],
+      initialPolicy: [
+        new iam.PolicyStatement({
+          actions: ["glue:*", "s3:*"],
+          resources: ["*"],
+        }),
+      ],
     });
 
     duplicatesTable.grantReadWriteData(lambdaFunction);
 
     const eventSource = new SqsEventSource(props.lakeStorageBucket.queue, {});
     lambdaFunction.addEventSource(eventSource);
-
   }
 }

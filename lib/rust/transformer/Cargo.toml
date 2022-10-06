@@ -49,15 +49,23 @@ tracing-subscriber = { version = "0.3.8", features = ["env-filter"] }
 tracing = { version = "0.1.30", features = ["log"] }
 # NOTE: the following crate is not part of the SDK, but it is maintained by AWS.
 lambda_runtime = "0.6.0"
-aws-config = "0.48.0"
+aws-config = "0.49.0"
 # We are using the Amazon Simple Storage Service (Amazon S3) crate in this example,
 # but you can use any SDK crate in your Lambda code.
-aws-sdk-s3 = "0.18.0"
-aws-sdk-sns = "0.18.0"
-aws_lambda_events = "0.6.3"
+aws-sdk-s3 = "0.19.0"
+aws-sdk-sns = "0.19.0"
+aws_lambda_events = "0.7.0"
+walkdir = "2.3.2"
 anyhow = "1.0.53"
+config = { version = "0.13.1", features = ["yaml"] }
 
 tikv-jemallocator = { version = "0.5.0" }
+
+# VRL related dependencies
+## enrichment
+arc-swap = { version = "1.5.1", default-features = false }
+dyn-clone = { version = "1.0.9", default-features = false }
+chrono = { version = "0.4.19", default-features = false }
 
 value = { git = "https://github.com/vectordotdev/vector" }
 vrl = { git = "https://github.com/vectordotdev/vector" }
@@ -67,6 +75,7 @@ pest = { version = "2.2.1", default-features = false, features = ["std"] }
 pest_derive = { version = "2.2.1", default-features = false, features = [
   "std",
 ] }
+
 http = "0.2.8"
 flame = "0.2.2"
 
