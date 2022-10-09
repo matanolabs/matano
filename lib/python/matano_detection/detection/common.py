@@ -189,7 +189,6 @@ def create_alert(alert_response):
         "matano": {
             "table": record_data.table_name,
             "alert": {
-                "id": str(uuid4()), # TODO: dedupe
                 "title": alert_response["title"],
                 "dedupe": dedupe,
                 "original_timestamp": record["ts"],
@@ -223,7 +222,7 @@ async def process_responses(alert_responses):
         sns_fut = publish_sns_batch(
             topic_arn=ALERTING_SNS_TOPIC_ARN,
             entries=[
-                { 'Id': obj["matano"]["alert"]["id"], 'Message': json_dumps_dt(obj) }
+                { 'Id': str(uuid4()), 'Message': json_dumps_dt(obj) }
                 for obj in alert_objs_chunk
             ]
         )

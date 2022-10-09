@@ -154,6 +154,7 @@ class MatanoIcebergTableCustomResource {
 
     fun create(event: CloudFormationCustomResourceEvent, context: Context): CfnResponse? {
         logger.info("Received event: ${mapper.writeValueAsString(event)}")
+        println("Received event: ${mapper.writeValueAsString(event)}")
 
         val logSourceName = event.resourceProperties["logSourceName"] as String
         val schemaRaw = event.resourceProperties["schema"] ?: throw RuntimeException("`schema` cannot be null.")

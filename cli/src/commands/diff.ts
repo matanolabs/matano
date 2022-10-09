@@ -15,8 +15,8 @@ export default class Diff extends BaseCommand {
   static description = "Shows differences in your Matano deployment.";
 
   private foundErrorPattern = /Error: (.+)/;
-  private cdkDiffResourcesPattern = /Resources\n(.[\s\S]+)\n\n/g;
-  private cdkDiffOutputsPattern = /Outputs\n(.[\s\S]+)\n\n/g;
+  private cdkDiffResourcesPattern = /.*Resources.*\n([\s\S]+)\n\n/g;
+  private cdkDiffOutputsPattern = /.*Outputs.*\n([\s\S]+)\n\n/g;
 
   static examples = [
     "matano diff",
@@ -104,16 +104,16 @@ export default class Diff extends BaseCommand {
       if (outputsMatches.length || resourcesMatches.length) {
         if (outputsMatches.length) {
             this.log(chalk.bold.underline("Outputs"));
-            for (const match in outputsMatches) {
+            for (const match of outputsMatches) {
                 console.log(match?.[1]);
             }
           }
-          if (resourcesMatches.length) {
+        if (resourcesMatches.length) {
             this.log(chalk.bold.underline("Resources"));
-            for (const match in resourcesMatches) {
+            for (const match of resourcesMatches) {
                 console.log(match?.[1]);
             }
-          }
+        }
       } else {
         this.log(chalk.bold.green("There were no differences."));
       }

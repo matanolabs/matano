@@ -93,17 +93,18 @@ export class DPMainStack extends MatanoStack {
     }
 
     // Not a log source but just use it to represent
-    // const matanoAlertsSource = new MatanoLogSource(this, "MatanoAlertsIcebergTable", {
-    //   config: {
-    //     name: "matano_alerts",
-    //     managed: {
-    //       type: "matano_alerts",
-    //     }
-    //   },
-    //   realtimeTopic: props.realtimeBucketTopic,
-    //   lakeIngestionLambda: lakeIngestion.lakeIngestionLambda,
-    // });
-    // logSources.push(matanoAlertsSource);
+    const matanoAlertsSource = new MatanoLogSource(this, "MatanoAlertsIcebergTable", {
+      config: {
+        name: "matano_alerts",
+        managed: {
+          type: "matano_alerts",
+          properties: {}
+        }
+      },
+      realtimeTopic: props.realtimeBucketTopic,
+      lakeIngestionLambda: lakeIngestion.alertsLakeIngestionLambda,
+    });
+    logSources.push(matanoAlertsSource);
 
     const resolvedLogSourceConfigs: Record<string, any> = fromEntries(
       logSources.map((ls) => [
@@ -111,6 +112,10 @@ export class DPMainStack extends MatanoStack {
         { base: ls.logSourceLevelConfig, tables: ls.tablesConfig },
       ]) as any
     );
+
+    const resolvedTableNames = logSources.flatMap(ls => {
+      return Object.values(ls.tablesConfig).map(t => t.resolved_name)
+    });
 
     for (const logSource in resolvedLogSourceConfigs) {
       this.addConfigFile(
@@ -132,18 +137,18 @@ export class DPMainStack extends MatanoStack {
     }
 
     new MatanoS3Sources(this, "CustomIngestionLogSources", {
-      logSources,
+      logSources: logSources.filter(ls => ls.name == "matano_alerts"),
       sourcesIngestionTopic: props.matanoSourcesBucket.topic,
     });
 
     const allResolvedSchemasHashStr = logSources
-      .map((ls) => ls.schema)
+      .flatMap((ls) => Object.values(ls.tablesSchemas))
       .reduce((prev, cur) => prev + JSON.stringify(cur), "");
     const schemasHash = md5Hash(allResolvedSchemasHashStr);
 
     const schemasCR = new MatanoSchemas(this, "MatanoSchemasCustomResource", {
       schemaOutputPath: schemasHash,
-      logSources: logSources.map((ls) => ls.name),
+      tables: resolvedTableNames
     });
 
     for (const logSource of logSources) {
@@ -171,14 +176,21 @@ export class DPMainStack extends MatanoStack {
       })
     );
 
-    new IcebergMetadata(this, "IcebergMetadata", {
+    const icebergMetadata = new IcebergMetadata(this, "IcebergMetadata", {
       lakeStorageBucket: props.lakeStorageBucket,
     });
+
+    lakeIngestion.alertsLakeIngestionLambda.addEnvironment(
+      "ALERT_HELPER_FUNCTION_NAME", icebergMetadata.alertsHelperFunction.functionName
+    );
+    icebergMetadata.alertsHelperFunction.grantInvoke(lakeIngestion.alertsLakeIngestionLambda);
 
     const configLayer = new lambda.LayerVersion(this, "ConfigurationLayer", {
       code: lambda.Code.fromAsset(this.configTempDir),
       description: "A layer for static Matano configurations.",
     });
+
+    lakeIngestion.alertsLakeIngestionLambda.addLayers(schemasLayer);
 
     detections.detectionFunction.addLayers(configLayer);
 

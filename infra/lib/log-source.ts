@@ -8,7 +8,7 @@ import * as sns from "aws-cdk-lib/aws-sns";
 import { MatanoIcebergTable } from "../lib/iceberg";
 import { resolveSchema, serializeToFields, merge, fieldsToSchema } from "./schema";
 import { SqsSubscription } from "aws-cdk-lib/aws-sns-subscriptions";
-import { SqsEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
+import { SqsEventSource, SqsEventSourceProps } from "aws-cdk-lib/aws-lambda-event-sources";
 import { dataDirPath, fail, mergeDeep, readConfig } from "./utils";
 
 export const MATANO_DATABASE_NAME = "matano";
@@ -76,9 +76,11 @@ export interface LogSourceConfig {
 }
 
 interface MatanoLogSourceProps {
-  configPath: string;
+  config?: LogSourceConfig;
+  configPath?: string;
   realtimeTopic: sns.Topic;
   lakeIngestionLambda: lambda.Function;
+  eventSourceProps?: SqsEventSourceProps
 }
 
 const MANAGED_LOG_SOURCE_PREFIX_MAP: Record<string, string> = {
@@ -92,6 +94,55 @@ function getPrefixForManagedLogSourceType(logSourceType: string) {
 
 const MANAGED_LOG_SOURCES_DIR = path.join(dataDirPath, "managed");
 
+export interface MatanoTableProps {
+  tableName: string;
+  schema: any;
+  realtimeTopic: sns.Topic;
+  lakeIngestionLambda: lambda.Function;
+  eventSourceProps?: SqsEventSourceProps
+}
+export class MatanoTable extends Construct {
+  constructor(scope: Construct, id: string, props: MatanoTableProps) {
+    super(scope, id);
+    const matanoIcebergTable = new MatanoIcebergTable(this, `Table`, {
+      tableName: props.tableName,
+      schema: props.schema,
+    });
+
+    const ingestionDlq = new sqs.Queue(this, `LakeIngestionDLQ`, {
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+    });
+
+    const ingestionQueue = new sqs.Queue(this, `LakeIngestionQueue`, {
+      deadLetterQueue: {
+        queue: ingestionDlq,
+        maxReceiveCount: 3,
+      },
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+      visibilityTimeout: cdk.Duration.seconds(
+        Math.max(props.lakeIngestionLambda.timeout!.toSeconds(), 30)
+      ),
+    });
+
+    props.realtimeTopic.addSubscription(
+      new SqsSubscription(ingestionQueue, {
+        rawMessageDelivery: true,
+        filterPolicy: {
+          resolved_table_name: sns.SubscriptionFilter.stringFilter({ allowlist: [props.tableName] }),
+        },
+      })
+    );
+
+    props.lakeIngestionLambda.addEventSource(
+      new SqsEventSource(ingestionQueue, {
+        batchSize: 10,
+        maxBatchingWindow: cdk.Duration.seconds(20),
+        ...props.eventSourceProps,
+      })
+    );
+  }
+}
+
 export class MatanoLogSource extends Construct {
   name: string;
   schema: Record<string, any>;
@@ -103,13 +154,20 @@ export class MatanoLogSource extends Construct {
   constructor(scope: Construct, id: string, props: MatanoLogSourceProps) {
     super(scope, id);
 
-    const logSourceConfig = readConfig(props.configPath, "log_source.yml") as LogSourceConfig;
+    const logSourceConfig = props.config ? props.config : readConfig(props.configPath!, "log_source.yml") as LogSourceConfig;
     this.logSourceConfig = logSourceConfig;
+
+    if (props.config?.name === "matano_alerts") {
+      const managedConf = readConfig(MANAGED_LOG_SOURCES_DIR, "matano_alerts/log_source.yml");
+      this.logSourceConfig = mergeDeep(logSourceConfig, managedConf);
+      this.tablesConfig["matano_alerts"] = {};
+    }
 
     const { name: logSourceName, ingest: ingestConfig } = logSourceConfig;
     this.name = logSourceName;
 
-    if (logSourceConfig?.managed) {
+    if (logSourceConfig?.managed && logSourceConfig.name !== "matano_alerts") {
+      const configPath = props.configPath!;
       const managedLogSourceType = logSourceConfig?.managed?.type?.toLowerCase();
       if (!managedLogSourceType) {
         fail("Invalid Managed Log source type: cannot be empty");
@@ -131,7 +189,7 @@ export class MatanoLogSource extends Construct {
       }
 
       let managedConfigFilePaths = walkdirSync(managedConfigPath).map((p) => path.relative(managedConfigPath, p));
-      let userConfigFilePaths = walkdirSync(props.configPath).map((p) => path.relative(props.configPath, p));
+      let userConfigFilePaths = walkdirSync(configPath).map((p) => path.relative(configPath, p));
 
       const sharedConfigFilePaths = managedConfigFilePaths.filter((p) => userConfigFilePaths.includes(p));
       managedConfigFilePaths = managedConfigFilePaths.filter((p) => !sharedConfigFilePaths.includes(p));
@@ -163,7 +221,7 @@ export class MatanoLogSource extends Construct {
               : {};
           const userConfig =
             configInfo.type == "user" || configInfo.type == "shared"
-              ? readConfig(props.configPath, configInfo.relativePath)
+              ? readConfig(configPath, configInfo.relativePath)
               : {};
 
           if (managedConfig.transform) {
@@ -225,7 +283,6 @@ export class MatanoLogSource extends Construct {
     this.schema = resolveSchema(this.logSourceConfig.schema?.ecs_field_names, this.logSourceConfig.schema?.fields);
 
     const logSourceConfigToMerge = diff(this.logSourceConfig, logSourceLevelConfig);
-
     if (Object.keys(this.tablesConfig).length == 0) {
       this.tablesConfig["default"] = {};
     }
@@ -272,48 +329,24 @@ export class MatanoLogSource extends Construct {
         merged.schema.fields = serializeToFields(tableSchema);
       }
 
-      const tableSchema = (this.tablesSchemas[tableName] = resolveSchema(
+      this.tablesSchemas[tableName] = resolveSchema(
         merged.schema?.ecs_field_names,
         merged.schema?.fields
-      ));
+      );
+      const tableSchema = this.tablesSchemas[tableName];
       merged.schema.fields = tableSchema.fields; // store the resolved fields & schema in the config
 
       this.tablesConfig[tableName] = merged;
       const resolvedTableName = this.tablesConfig[tableName].resolved_name;
 
       const formattedName = merged.name.charAt(0).toUpperCase() + merged.name.slice(1);
-      const matanoIcebergTable = new MatanoIcebergTable(this, `${formattedName}Table`, {
+
+      new MatanoTable(this, `${resolvedTableName}MatanoTable`, {
         tableName: resolvedTableName,
         schema: tableSchema,
+        realtimeTopic: props.realtimeTopic,
+        lakeIngestionLambda: props.lakeIngestionLambda,
       });
-
-      const ingestionDlq = new sqs.Queue(this, `${formattedName}LakeIngestionDLQ`, {
-        removalPolicy: cdk.RemovalPolicy.RETAIN,
-      });
-
-      const ingestionQueue = new sqs.Queue(this, `${formattedName}LakeIngestionQueue`, {
-        deadLetterQueue: {
-          queue: ingestionDlq,
-          maxReceiveCount: 3,
-        },
-        removalPolicy: cdk.RemovalPolicy.RETAIN,
-      });
-
-      props.realtimeTopic.addSubscription(
-        new SqsSubscription(ingestionQueue, {
-          rawMessageDelivery: true,
-          filterPolicy: {
-            resolved_table_name: sns.SubscriptionFilter.stringFilter({ allowlist: [resolvedTableName] }),
-          },
-        })
-      );
-
-      props.lakeIngestionLambda.addEventSource(
-        new SqsEventSource(ingestionQueue, {
-          batchSize: 10,
-          maxBatchingWindow: cdk.Duration.seconds(20),
-        })
-      );
     }
   }
 }

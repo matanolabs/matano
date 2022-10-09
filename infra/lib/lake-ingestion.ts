@@ -12,6 +12,7 @@ interface LakeIngestionProps {
 
 export class LakeIngestion extends Construct {
   lakeIngestionLambda: lambda.Function;
+  alertsLakeIngestionLambda: lambda.Function;
   constructor(scope: Construct, id: string, props: LakeIngestionProps) {
     super(scope, id);
 
@@ -32,6 +33,27 @@ export class LakeIngestion extends Construct {
           resources: ["*"],
         }),
       ],
+    });
+
+    this.alertsLakeIngestionLambda = new lambda.Function(this, "AlertsLakeIngestionLambda", {
+      code: RustFunctionCode.assetCode({ package: "lake_writer" }),
+      handler: "main",
+      memorySize: 1800,
+      runtime: lambda.Runtime.PROVIDED_AL2,
+      environment: {
+        RUST_LOG: "warn,lake_writer=info",
+        OUT_BUCKET_NAME: props.outputBucketName,
+        OUT_KEY_PREFIX:  props.outputObjectPrefix,
+      },
+      timeout: cdk.Duration.seconds(60),
+      initialPolicy: [
+        new iam.PolicyStatement({
+          actions: ["secretsmanager:*", "dynamodb:*", "s3:*", ],
+          resources: ["*"],
+        }),
+      ],
+      // prevent concurrency
+      reservedConcurrentExecutions: 1,
     });
   }
 }

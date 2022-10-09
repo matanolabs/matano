@@ -17,7 +17,9 @@ import org.apache.iceberg.catalog.Namespace
 import org.apache.iceberg.catalog.TableIdentifier
 import org.apache.iceberg.parquet.ParquetUtil
 import org.slf4j.LoggerFactory
+import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
+
 
 class LazyConcurrentMap<K, V>(
         private val compute: (K) -> V,
@@ -47,8 +49,9 @@ class IcebergMetadataWriter {
     }
 
     private fun createIcebergCatalog(): Catalog {
-        return GlueCatalog()
+        val glueCatalog = GlueCatalog()
                 .apply { initialize("glue_catalog", icebergProperties) }
+        return CachingCatalog.wrap(glueCatalog)
     }
 
     private fun parseObjectKey(key: String): Pair<String, String> {
@@ -86,12 +89,17 @@ class IcebergMetadataWriter {
         val s3Path = "s3://$s3Bucket/$s3ObjectKey"
         println(s3Path)
 
+        val (tableName, partitionPath) = parseObjectKey(s3ObjectKey)
+
+        if (tableName == "matano_alerts") {
+            return
+        }
+
         if (checkDuplicate(s3Object.sequencer)) {
             logger.info("Found duplicate SQS message for key: ${s3ObjectKey}. Skipping...")
             return
         }
 
-        val (tableName, partitionPath) = parseObjectKey(s3ObjectKey)
         val tableObj = tableObjs[tableName]
         val icebergTable = tableObj!!.table
 
@@ -125,7 +133,7 @@ class IcebergMetadataWriter {
 
     companion object {
         const val MATANO_NAMESPACE = "matano"
-        private const val TIMESTAMP_COLUMN_NAME = "ts"
+        const val TIMESTAMP_COLUMN_NAME = "ts"
         private const val DDB_ITEM_EXPIRE_SECONDS = 1 * 24 * 60 * 60
         private val DUPLICATES_DDB_TABLE_NAME = System.getenv("DUPLICATES_DDB_TABLE_NAME")
         private val WAREHOUSE_PATH = "s3://${System.getenv("MATANO_ICEBERG_BUCKET")}/lake"
@@ -134,7 +142,8 @@ class IcebergMetadataWriter {
                 "catalog-impl" to "org.apache.iceberg.aws.glue.GlueCatalog",
                 "warehouse" to WAREHOUSE_PATH,
                 "io-impl" to "org.apache.iceberg.aws.s3.S3FileIO",
-                "fs.s3a.path.style.access" to "true"
+                "write.metadata.delete-after-commit.enabled" to "true",
+                "fs.s3a.path.style.access" to "true",
         )
         private val ddb = AmazonDynamoDBClientBuilder.defaultClient()
     }

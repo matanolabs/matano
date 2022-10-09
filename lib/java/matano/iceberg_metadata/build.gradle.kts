@@ -10,6 +10,8 @@ configurations.all {
     exclude("org.slf4j","slf4j-reload4j")
 }
 dependencies {
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
+
     implementation("com.fasterxml.jackson.core:jackson-annotations:2.13.+")
     implementation("com.fasterxml.jackson.core:jackson-databind:2.13.+")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.13.+")

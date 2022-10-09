@@ -31,16 +31,19 @@ reqwest = { version = "0.11.9", default-features = false, features = [
   "stream",
   "multipart",
 ] }
+
 json-deserializer = "0.4.0"
 uuid = { version = "1.1.2", features = ["v4"] }
 bytes = "1.1.0"
 lazy_static = "1.4.0"
+async_once = "0.2.6"
 tokio-stream = { version = "0.1.9", features = ["io-util"] }
 threadpool = "1.8.1"
 async-compat = "0.2.1"
-polars = {version = "0.24.2", features = [
-  "parquet", "dtype-full", "fmt", "timezones", "lazy", "list"
-  ]}
+apache-avro = { git = "https://github.com/apache/avro.git", rev = "c78f12f", features = [
+  "zstandard",
+  "snappy",
+] }
 rand = "0.8.5"
 chrono="*"
 arrow2 = { git = "https://github.com/jorgecarleitao/arrow2.git", rev = "c615095", features = [

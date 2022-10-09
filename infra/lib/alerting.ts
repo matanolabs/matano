@@ -4,6 +4,8 @@ import * as sqs from "aws-cdk-lib/aws-sqs";
 import * as sns from "aws-cdk-lib/aws-sns";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as lambda from "aws-cdk-lib/aws-lambda";
+import { MatanoTable } from "./log-source";
+import { resolveSchema } from "./schema";
 
 interface MatanoAlertingProps {
 }
@@ -16,6 +18,5 @@ export class MatanoAlerting extends Construct {
     this.alertingTopic =  new sns.Topic(this, "MatanoAlertingTopic", {
         displayName: "MatanoAlertingTopic",
     });
-
   }
 }

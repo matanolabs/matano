@@ -17,7 +17,7 @@ import { MatanoStack } from "./MatanoStack";
 
 interface MatanoSchemasProps {
   schemaOutputPath: string;
-  logSources: string[];
+  tables: string[];
 }
 
 export class MatanoSchemas extends Construct {
@@ -29,7 +29,7 @@ export class MatanoSchemas extends Construct {
       resourceType: "Custom::MatanoSchemas",
       properties: {
         schemaOutputPath: props.schemaOutputPath,
-        logSources: props.logSources,
+        logSources: props.tables,
       },
     });
   }
@@ -138,6 +138,7 @@ interface IcebergMetadataProps {
   lakeStorageBucket: S3BucketWithNotifications;
 }
 export class IcebergMetadata extends Construct {
+  alertsHelperFunction: lambda.Function;
   constructor(scope: Construct, id: string, props: IcebergMetadataProps) {
     super(scope, id);
 
@@ -169,5 +170,24 @@ export class IcebergMetadata extends Construct {
 
     const eventSource = new SqsEventSource(props.lakeStorageBucket.queue, {});
     lambdaFunction.addEventSource(eventSource);
+
+    this.alertsHelperFunction = new lambda.Function(this, "MatanoAlertsIcebergHelper", {
+      description: "JVM Iceberg helper for alerting.",
+      runtime: lambda.Runtime.JAVA_11,
+      memorySize: 1500,
+      handler: "com.matano.iceberg.AlertsIcebergHelper::handleRequest",
+      timeout: cdk.Duration.minutes(3),
+      environment: {
+        DUPLICATES_DDB_TABLE_NAME: duplicatesTable.tableName,
+        MATANO_ICEBERG_BUCKET: props.lakeStorageBucket.bucket.bucketName,
+      },
+      code: getLocalAsset("iceberg_metadata"),
+      initialPolicy: [new iam.PolicyStatement({
+        actions: ["glue:*", "s3:*",],
+        resources: ["*"],
+      })],
+    });
+
+    duplicatesTable.grantReadWriteData(this.alertsHelperFunction);
   }
 }

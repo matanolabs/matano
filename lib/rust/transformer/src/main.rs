@@ -541,6 +541,7 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessRe
 
                 let transform_expr = table_config.get_string("transform").unwrap_or_default();
 
+                // TODO: fix for non json, object check
                 let wrapped_transform_expr = format!(
                     r#"
 if .message != null {{
@@ -558,7 +559,7 @@ if .message != null {{
 del(.json)
 
 . = compact(.)
-.ecs.version = "8.0.0"
+.ecs.version = "8.3.1"
                     "#,
                     transform_expr
                 );
@@ -693,8 +694,23 @@ del(.json)
                                     .into_par_iter()
                                     .map(|v| {
                                         let v_avro = TryIntoAvro::try_into(v).unwrap();
-                                        v_avro.resolve(schema.as_ref()).unwrap()
+                                        let ret = v_avro.resolve(schema.as_ref());
+
+                                        let ret = ret.map(|v| Some(v)).or_else(|e| {
+                                            match e {
+                                                apache_avro::Error::FindUnionVariant => {
+                                                    // TODO: report errors
+                                                    println!("USER_ERROR: Failed at FindUnionVariant, likely schema issue.");
+                                                    // println!("{}", serde_json::to_string(&v).unwrap());
+                                                    Ok(None)
+                                                }
+                                                e => Err(e)
+                                            }
+                                        }).unwrap();
+
+                                        ret
                                     })
+                                    .flatten()
                                     .collect::<Vec<_>>();
 
                                 avro_values
