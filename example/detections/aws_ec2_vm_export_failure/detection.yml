@@ -11,4 +11,4 @@
 # status: experimental
 
 name: "aws_ec2_vm_export_failure"
-table_names: ["aws_cloudtrail"]
+tables: ["aws_cloudtrail"]

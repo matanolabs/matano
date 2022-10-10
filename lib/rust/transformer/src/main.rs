@@ -467,7 +467,7 @@ async fn read_lines_s3<'a>(
         }
         None => FramedRead::new(reader, LinesCodec::new())
             .map(|v| match v {
-                Ok(v) => Ok(Value::from(v.as_bytes())),
+                Ok(v) => Ok(Value::from(v)),
                 Err(e) => Err(anyhow!(e)),
             })
             .boxed(),

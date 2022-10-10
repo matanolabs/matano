@@ -10,4 +10,4 @@
 # status: experimental
 
 name: "aws_root_credentials"
-table_names: ["aws_cloudtrail"]
+tables: ["aws_cloudtrail"]

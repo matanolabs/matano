@@ -75,7 +75,7 @@ export class MatanoDetections extends Construct {
       const detectionDirectory = path.resolve(matanoUserDirectory, "detections", detectionName);
       const config = readDetectionConfig(detectionDirectory);
       this.detectionConfigs[detectionName] = config;
-      tablesWithDetections = [...tablesWithDetections, ...config["table_names"]];
+      tablesWithDetections = [...tablesWithDetections, ...config["tables"]];
     }
     tablesWithDetections = [...new Set(tablesWithDetections)];
 

@@ -67,9 +67,11 @@ arc-swap = { version = "1.5.1", default-features = false }
 dyn-clone = { version = "1.0.9", default-features = false }
 chrono = { version = "0.4.19", default-features = false }
 
-value = { git = "https://github.com/vectordotdev/vector" }
-vrl = { git = "https://github.com/vectordotdev/vector" }
-vrl-stdlib = { git = "https://github.com/vectordotdev/vector" }
+# VRL v0.24.1
+value = { git = "https://github.com/vectordotdev/vector", rev = "8935681" }
+vrl = { git = "https://github.com/vectordotdev/vector", rev = "8935681" }
+vrl-stdlib = { git = "https://github.com/vectordotdev/vector", rev = "8935681" }
+
 # wierd issue with 'alloc' missing from pest's Parser macro used in vrl requires reimporting with std to work...
 pest = { version = "2.2.1", default-features = false, features = ["std"] }
 pest_derive = { version = "2.2.1", default-features = false, features = [

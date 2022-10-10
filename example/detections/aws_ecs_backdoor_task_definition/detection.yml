@@ -15,4 +15,4 @@
 # status: experimental
 
 name: "aws_ecs_backdoor_task_definition"
-table_names: ["aws_cloudtrail"]
+tables: ["aws_cloudtrail"]

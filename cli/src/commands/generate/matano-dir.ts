@@ -23,7 +23,7 @@ def detect(record):
 const sampleDetectionYml = `# ${autogenerateNote}
 
 name: "cheese"
-log_sources:
+tables:
   - "me_source"
 `;
 

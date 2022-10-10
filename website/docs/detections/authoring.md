@@ -45,9 +45,9 @@ Each detection requires a configuration file named `detection.yml`. The file has
 
 ```yml
 name: "my_detection" # The name of the detection
-table_names: # An array of table names for which to run the detection
-  - "main-cloudtrail-logs"
-  - "my-zeek-logs"
+tables: # An array of table names for which to run the detection
+  - "main_cloudtrail_logs"
+  - "my_zeek_logs_dns"
 ```
 
 ## Python requirements

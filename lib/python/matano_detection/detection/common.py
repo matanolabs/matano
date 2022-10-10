@@ -18,7 +18,7 @@ import aiobotocore.session
 from uuid import uuid4
 import fastavro
 
-from detection.util import ALERT_ECS_FIELDS, Timer, Timers, json_dumps_dt, timing
+from detection.util import ALERT_ECS_FIELDS, Timers, json_dumps_dt, timing
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -57,7 +57,7 @@ async def ensure_clients():
         sns = await sns.__aenter__()
 
 DETECTION_CONFIGS = None
-LOGSOURCE_DETECTION_CONFIG = None
+TABLE_DETECTION_CONFIG = None
 ALERTING_SNS_TOPIC_ARN = None
 SOURCES_S3_BUCKET = None
 MATANO_ALERTS_TABLE_NAME = "matano_alerts"
@@ -69,16 +69,16 @@ def _load_detection_configs():
     with open(config_path) as f:
         DETECTION_CONFIGS = json.load(f)
 
-def _load_logsource_detection_config():
-    global LOGSOURCE_DETECTION_CONFIG
+def _load_table_detection_config():
+    global TABLE_DETECTION_CONFIG
     ret = defaultdict(list)
     for detection_path, detection_config in DETECTION_CONFIGS.items():
-        for log_source_name in detection_config["log_sources"]:
-            ret[log_source_name].append({
+        for table_name in detection_config["tables"]:
+            ret[table_name].append({
                 "detection": detection_config,
                 "module": importlib.import_module(".", f"{detection_path}.detect")
             })
-    LOGSOURCE_DETECTION_CONFIG = ret
+    TABLE_DETECTION_CONFIG = ret
 
 @dataclass
 class RecordData:
@@ -86,7 +86,7 @@ class RecordData:
     record_idx: int
     s3_bucket: str
     s3_key: str
-    log_source: str
+    table_name: str
 
     def record_reference(self):
         ref = f"{self.s3_bucket}#{self.s3_key}#{self.record_idx}"
@@ -103,7 +103,7 @@ def handler(event, context):
 
     if DETECTION_CONFIGS is None:
         _load_detection_configs()
-        _load_logsource_detection_config()
+        _load_table_detection_config()
 
     alert_responses = []
     detection_run_count = 0
@@ -133,7 +133,7 @@ def get_records(event):
     # Actually batch size: 1 currrently
     for sqs_record in event['Records']:
         sqs_record_body = json.loads(sqs_record['body'])
-        log_source = sqs_record_body["log_source"]
+        table_name = sqs_record_body["resolved_table_name"]
         s3_bucket, s3_key = sqs_record_body["bucket"], sqs_record_body["key"]
 
         logger.info(f"START: Downloading from s3://{s3_bucket}/{s3_key}")
@@ -148,10 +148,10 @@ def get_records(event):
         reader = fastavro.reader(obj_body)
 
         for record_idx, record in enumerate(reader):
-            yield RecordData(record, record_idx, s3_bucket, s3_key, log_source)
+            yield RecordData(record, record_idx, s3_bucket, s3_key, table_name)
 
 def run_detections(record_data: RecordData):
-    configs = LOGSOURCE_DETECTION_CONFIG[record_data.log_source]
+    configs = TABLE_DETECTION_CONFIG[record_data.table_name]
 
     for detection_config in configs:
         detection, detection_module = detection_config['detection'], detection_config["module"]
@@ -187,7 +187,7 @@ def create_alert(alert_response):
             "kind": "signal",
         },
         "matano": {
-            "table": record_data.log_source,
+            "table": record_data.table_name,
             "alert": {
                 "id": str(uuid4()), # TODO: dedupe
                 "title": alert_response["title"],
