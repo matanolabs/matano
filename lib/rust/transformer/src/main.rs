@@ -494,7 +494,7 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessRe
         .filter(|d| d.size > 0)
         .filter(|d| {
             // TODO(shaeq): needs to handle non matano managed sources
-            return d.is_matano_managed_resource()
+            let is_relevant = d.is_matano_managed_resource()
                 && LOG_SOURCES_CONFIG.with(|c| {
                     let log_sources_config = c.borrow();
                     let log_source = &d
@@ -505,6 +505,12 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessRe
                         .to_string();
                     (*log_sources_config).contains_key(log_source)
                 });
+
+            if !is_relevant {
+                println!("Skipping non-relevant S3 object: {:?}", d);
+            }
+
+            is_relevant
         })
         .collect::<Vec<_>>();
 
@@ -706,9 +712,11 @@ del(.json)
                 let writer = writer.into_inner();
                 let bytes = writer.into_inner().unwrap();
 
-                if bytes.len() == 0 || rows.into_inner() == 0 {
+                let rows = rows.into_inner();
+                if bytes.len() == 0 || rows == 0 {
                     return;
                 }
+                println!("Rows: {}", rows);
 
                 let uuid = Uuid::new_v4();
                 let bucket = var("MATANO_REALTIME_BUCKET_NAME").unwrap().to_string();

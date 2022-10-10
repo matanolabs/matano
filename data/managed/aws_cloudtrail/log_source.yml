@@ -733,7 +733,7 @@ schema:
                 - name: management_event
                   type: string
                 - name: read_only
-                  type: string
+                  type: boolean
                 - name: resources
                   type:
                     type: struct
