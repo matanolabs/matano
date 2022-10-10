@@ -35,10 +35,6 @@ def detect(record) -> bool | None:
 
 Your `detect` function must return a boolean `True` to signal an alert. A return value of `False` or `None` will be interpreted as no alert for detection on that record.
 
-### Deduping alerts
-
-You can dedupe alerts using a dedupe string.
-
 ## Detection configuration file (`detection.yml`)
 
 Each detection requires a configuration file named `detection.yml`. The file has the following structure:

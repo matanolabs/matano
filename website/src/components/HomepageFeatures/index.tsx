@@ -12,7 +12,7 @@ const FeatureList: FeatureItem[] = [
     title: 'Collect data from all your sources',
     description: (
       <>
-        Matano lets you collect log data from sources using S3 or SQS based ingestion.
+        Matano lets you collect log data from sources using S3 or SQS based ingestion, and comes out of the box with sources like CloudTrail, Zeek, and more.
       </>
     ),
   },
@@ -28,7 +28,7 @@ const FeatureList: FeatureItem[] = [
     title: 'Store data in S3 object storage',
     description: (
       <>
-        Log data is always stored in S3 object storage, for cost effective, long term, durable storage.
+        Log data is always stored in highly optimized Parquet files in S3 object storage, for cost effective, long term, durable storage.
       </>
     ),
   },
@@ -36,7 +36,7 @@ const FeatureList: FeatureItem[] = [
     title: 'Apache Iceberg Data lake',
     description: (
       <>
-        All data is ingested into an Apache Iceberg based data lake, allowing you to perform ACID transactions, time travel, and more on all your log data.      
+        All data is ingested into an Apache Iceberg data lake. The Iceberg open table format ensures you <i>own your data</i> in a vendor agnostic format.
       </>
     ),
   },
@@ -65,7 +65,7 @@ function Feature({title, description}: FeatureItem) {
         <Svg className={styles.featureSvg} role="img" />
       </div> */}
       <div className="text--center padding-horiz--md padding-vert--md">
-        <h3 className='text-2xl leading-6 font-[Lexend]'>{title}</h3>
+        <h3 className='text-2xl leading-6'>{title}</h3>
         <p className="text-lg">{description}</p>
       </div>
     </div>
@@ -76,7 +76,7 @@ export default function HomepageFeatures(): JSX.Element {
   return (
     <section className={styles.features}>
       <div className="container flex flex-col items-center">
-        <h2 className="!text-4xl font-[Lexend] text-center py-8 px-8">
+        <h2 className="!text-4xl text-center py-8 px-8">
             Why Matano?
         </h2>
         <div className="row">
