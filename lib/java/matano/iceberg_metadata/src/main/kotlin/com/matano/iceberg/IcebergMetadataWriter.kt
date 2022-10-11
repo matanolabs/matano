@@ -9,6 +9,9 @@ import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.events.SQSEvent
 import com.amazonaws.services.lambda.runtime.events.SQSEvent.SQSMessage
 import com.amazonaws.services.s3.event.S3EventNotification
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.apache.iceberg.*
 import org.apache.iceberg.aws.glue.GlueCatalog
 import org.apache.iceberg.aws.s3.S3FileIO
@@ -65,12 +68,16 @@ class IcebergMetadataWriter {
 
     fun handle(sqsEvent: SQSEvent) {
         val tableObjs = LazyConcurrentMap<String, TableObj>({ name -> TableObj(name) })
-        for (record in sqsEvent.records) {
-            processRecord(record, tableObjs)
+        runBlocking {
+            for (record in sqsEvent.records) {
+                launch(Dispatchers.IO) { processRecord(record, tableObjs) }
+            }
         }
         println("Committing...")
-        for (tableObj in tableObjs.values) {
-            tableObj.appendFiles.commit()
+        runBlocking {
+            for (tableObj in tableObjs.values) {
+                launch(Dispatchers.IO) { tableObj.appendFiles.commit() }
+            }
         }
         println("DONE!")
     }
