@@ -35,6 +35,29 @@ def detect(record) -> bool | None:
 
 Your `detect` function must return a boolean `True` to signal an alert. A return value of `False` or `None` will be interpreted as no alert for detection on that record.
 
+### Examples
+
+Here is a sample Python detection. It runs on AWS CloudTrail logs and detects a failed attempt to export an AWS EC2 instance.
+
+```python
+def detect(record):
+  if (
+    record.get("event", {}).get("action")
+    == "CreateInstanceExportTask"
+    and record.get("event", {}).get("provider")
+    == "ec2.amazonaws.com"
+  ):
+    aws_cloudtrail = record.get("aws", {}).get("cloudtrail", {})
+    if (
+      aws_cloudtrail.get("error_message")
+      or aws_cloudtrail.get("error_code")
+      or "Failure" in aws_cloudtrail.get("response_elements")
+    ):
+        return True
+```
+
+
+
 ## Detection configuration file (`detection.yml`)
 
 Each detection requires a configuration file named `detection.yml`. The file has the following structure:
