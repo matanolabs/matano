@@ -6,7 +6,7 @@ sidebar_position: 3
 All Matano data is stored as Iceberg tables, with data stored in Parquet files on S3. You can query and interact with these like any other Iceberg table, using Athena, Spark, or any other technology supporting Iceberg.
 
 ## Notes
-Matano tables are stored in AWS Glue database named **matano**, with the Iceberg table name as the log source name specified in your `matano.config.yml`. 
+Matano tables are stored in AWS Glue database named **matano**, with the Iceberg table name as the log source name specified in your `matano.config.yml`.
 
 ## Querying a log source
 
@@ -15,7 +15,7 @@ Matano tables are stored in AWS Glue database named **matano**, with the Iceberg
 You can query a log source from Athena using the following syntax:
 
 ```sql
-SELECT * FROM matano.log_source_name [WHERE predicate]
+SELECT * FROM matano.table_name [WHERE predicate]
 ```
 
 ## Advanced

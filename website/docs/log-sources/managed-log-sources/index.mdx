@@ -12,10 +12,10 @@ To use a Matano managed log source, specify the `managed.type` property in your 
 
 For example, to use the CloudTrail managed log source, your `log_source.yml` may look as follows:
 ```yml
-name: "cloudtrail"
+name: "aws_cloudtrail"
 
 managed:
-  type: "cloudtrail"
+  type: "AWS_CLOUDTRAIL"
 ```
 
 Managed log sources may also specify additional properties for custom configuration. You may provide this in the `managed.properties` key in your `log_source.yml`. Consult the log source specific documentation for the values to provide, if any.
