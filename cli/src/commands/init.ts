@@ -80,7 +80,7 @@ export default class Init extends BaseCommand {
     const getAwsAcctIdPromise = getAwsAcctId(awsProfile);
     // CliUx.ux.url("Feel free to read about the Matano directory here.", "https://www.matano.dev/docs");
 
-    const [{awsRegion}, maybeDefaultAwsAccountId] = await Promise.all([
+    const [awsRegion, maybeDefaultAwsAccountId] = await Promise.all([
       regionPrompt,
       getAwsAcctIdPromise,
     ]);
