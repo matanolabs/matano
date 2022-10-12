@@ -8,8 +8,8 @@ import ora from "ora";
 const autogenerateNote = ``;
 const sampleMatanoConfigYml = (awsAccountId?: string, awsRegion?: string) => `# Use this file for Matano configuration.
 
-# aws_account: "${awsAccountId ?? "123456789012"}" # Specify the AWS account to deploy to.
-# aws_region: "${awsRegion ?? "us-east-1"}" # Specify the AWS region to deploy to.
+aws_account: "${awsAccountId ?? "123456789012"}" # Specify the AWS account to deploy to.
+aws_region: "${awsRegion ?? "us-east-1"}" # Specify the AWS region to deploy to.
 
 # vpc:
 #   id: vpc-0ea06dd2385eeb53c # Specify the VPC id to use, will use the default VPC if not specified.
@@ -17,19 +17,22 @@ const sampleMatanoConfigYml = (awsAccountId?: string, awsRegion?: string) => `# 
 const sampleDetectionPy = `# ${autogenerateNote}
 
 def detect(record):
-    return True
+    return False
 `;
 
 const sampleDetectionYml = `# ${autogenerateNote}
 
-name: "cheese"
+name: "my_detection"
 tables:
-  - "me_source"
+  - "test_log_source"
 `;
 
 const sampleLogSourceYml = `# ${autogenerateNote}
+name: "test_log_source"
 
-name: "me_source"
+schema:
+  fields: []
+  ecs_field_names: []
 `;
 
 const sampleDetectionReqs = `# ${autogenerateNote}
@@ -52,11 +55,11 @@ export default class GenerateMatanoDir extends Command {
     fs.mkdirSync(path.resolve(dirName), { recursive: true });
     fs.writeFileSync(path.join(dirName, "matano.config.yml" ), sampleMatanoConfigYml(awsAccountId, awsRegion));
     fs.mkdirSync(path.join(dirName, "detections/my_detection"), { recursive: true });
-    fs.mkdirSync(path.join(dirName, "log_sources/my_log_source"), { recursive: true });
+    fs.mkdirSync(path.join(dirName, "log_sources/test_log_source"), { recursive: true });
     fs.writeFileSync(path.join(dirName, "detections/my_detection/detect.py"), sampleDetectionPy);
     fs.writeFileSync(path.join(dirName, "detections/my_detection/detection.yml"), sampleDetectionYml);
     fs.writeFileSync(path.join(dirName, "detections/my_detection/requirements.txt"), sampleDetectionReqs);
-    fs.writeFileSync(path.join(dirName, "log_sources/my_log_source/log_source.yml"), sampleLogSourceYml);
+    fs.writeFileSync(path.join(dirName, "log_sources/test_log_source/log_source.yml"), sampleLogSourceYml);
   }
 
   async run(): Promise<void> {

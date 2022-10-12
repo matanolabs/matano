@@ -111,7 +111,7 @@ export default class Init extends BaseCommand {
         message: "What is the name of the directory to generate?" +  chalk.gray("(use . for current directory)"),
         initial: ".",
       });
-      GenerateMatanoDir.generateMatanoDirectory(directoryName);
+      GenerateMatanoDir.generateMatanoDirectory(directoryName, awsAccountId, awsRegion);
       matanoUserDirectory = path.resolve(directoryName);
       this.log(chalk.green('✔') + ` Generated Matano directory at ${matanoUserDirectory}.`);
     } else {
