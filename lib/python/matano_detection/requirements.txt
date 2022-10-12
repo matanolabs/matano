@@ -1,3 +1,4 @@
 aiobotocore==2.4.0
 jsonlines==3.0.0
 fastavro[snappy]==1.6.0
+pyston-lite==2.3.5

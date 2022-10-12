@@ -10,6 +10,7 @@ import json
 import jsonlines
 import logging
 import importlib
+import pyston_lite
 import botocore
 import botocore.session
 import aiobotocore
@@ -61,6 +62,7 @@ TABLE_DETECTION_CONFIG = None
 ALERTING_SNS_TOPIC_ARN = None
 SOURCES_S3_BUCKET = None
 MATANO_ALERTS_TABLE_NAME = "matano_alerts"
+LOADED_PYSTON = False
 timers = Timers()
 
 def _load_detection_configs():
@@ -94,6 +96,10 @@ class RecordData:
 
 @timing(timers)
 def handler(event, context):
+    global LOADED_PYSTON
+    if not LOADED_PYSTON:
+        pyston_lite.enable()
+        LOADED_PYSTON = True
 
     global ALERTING_SNS_TOPIC_ARN
     ALERTING_SNS_TOPIC_ARN = os.environ["ALERTING_SNS_TOPIC_ARN"]
