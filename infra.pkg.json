@@ -9,8 +9,9 @@
             "node16-macos-x64"
         ],
         "assets": [
-            "./data/**/*"
+            "./data/**/*",
+            "./infra/node_modules/aws-cdk-lib/custom-resources/lib/provider-framework/runtime/*.js"
         ],
         "outputPath": "build"
-    }   
+    }
 }
