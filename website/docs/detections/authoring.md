@@ -1,6 +1,6 @@
 ---
 title: Authoring detections
-sidebar_position: 2
+sidebar_position: 1
 ---
 
 Each detection you create occupies a directory under the `detections/` directory in your Matano directory.
@@ -41,22 +41,16 @@ Here is a sample Python detection. It runs on AWS CloudTrail logs and detects a 
 
 ```python
 def detect(record):
-  if (
+  return (
     record.get("event", {}).get("action")
     == "CreateInstanceExportTask"
     and record.get("event", {}).get("provider")
     == "ec2.amazonaws.com"
-  ):
-    aws_cloudtrail = record.get("aws", {}).get("cloudtrail", {})
-    if (
-      aws_cloudtrail.get("error_message")
-      or aws_cloudtrail.get("error_code")
-      or "Failure" in aws_cloudtrail.get("response_elements")
-    ):
-        return True
+    and event.outcome == "failure
+  )
 ```
 
-
+Note the use of the normalized ECS field `event.outcome`, which avoids us having to check multiple Cloudtrail properties.
 
 ## Detection configuration file (`detection.yml`)
 

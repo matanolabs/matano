@@ -24,6 +24,10 @@
   --ifm-hero-text-color: "black";
 }
 
+aside {
+  margin-bottom: 1rem;
+}
+
 .footer--dark {
   --ifm-footer-background-color:#0e1111;
 }

@@ -1,13 +1,13 @@
 # This file was generated from a Sigma rule
 
-# author: vitaliy0x1
-# date: '2020-01-21'
-# description: Detects AWS root account usage
-# id: 8ad1600d-e9dc-4251-b0ee-a65268f29add
-# level: medium
-# references:
-# - https://docs.aws.amazon.com/IAM/latest/UserGuide/id_root-user.html
-# status: experimental
+author: vitaliy0x1
+date: '2020-01-21'
+description: Detects AWS root account usage
+id: 8ad1600d-e9dc-4251-b0ee-a65268f29add
+level: medium
+references:
+- https://docs.aws.amazon.com/IAM/latest/UserGuide/id_root-user.html
+status: experimental
 
 name: "aws_root_credentials"
 tables: ["aws_cloudtrail"]

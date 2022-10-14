@@ -617,6 +617,7 @@ schema:
     - event.original
     - event.provider
     - event.type
+    - event.outcome
     - group.id
     - group.name
     - related.hash
