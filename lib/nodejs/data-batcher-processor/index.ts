@@ -8,16 +8,18 @@ export async function handler(event: SQSEvent, context: Context) {
     if (eventRecords.length === 0) {
         return
     }
+    let inputBytesSize = 0;
     const newSqsRecords = []
     for (const record of eventRecords) {
         const s3Object = record.s3.object;
+        inputBytesSize += s3Object.size;
         const data = {
             bucket: record.s3.bucket.name,
             key: s3Object.key,
             size: s3Object.size,
             sequencer: record.s3.object.sequencer
         };
-        newSqsRecords.push(data); 
+        newSqsRecords.push(data);
     }
 
     const batchedSqsRecords: AWS.SQS.SendMessageBatchRequestEntry[] = chunkedBy(newSqsRecords, {
@@ -29,6 +31,10 @@ export async function handler(event: SQSEvent, context: Context) {
             MessageBody: JSON.stringify(batch),
         }
     });
+
+    const outputLength = batchedSqsRecords.length;
+    const averageOutputSize = inputBytesSize / outputLength;
+    console.log(`Coalesced ${inputBytesSize} bytes of data from ${eventRecords.length} input records to ${outputLength} output records of average size ${averageOutputSize} bytes.`);
 
     const sqsBatchEntryLists = chunkedBy(batchedSqsRecords, { maxLength: 10 });
 
@@ -42,7 +48,7 @@ export async function handler(event: SQSEvent, context: Context) {
         sqsPromises.push(sqsPromise);
     }
     // TODO: handle failure!
-    await Promise.all(sqsPromises);   
+    await Promise.all(sqsPromises);
 }
 
 interface ChunkingProps<T> {
@@ -51,7 +57,7 @@ interface ChunkingProps<T> {
     sizeFn?: (item: T) => number;
 }
 
-const chunkedBy = <T>(arr: T[], { maxLength, maxSize, sizeFn }: ChunkingProps<T>): T[][] => {
+function chunkedBy<T>(arr: T[], { maxLength, maxSize, sizeFn }: ChunkingProps<T>): T[][] {
     if ((maxSize == null) != (sizeFn == null)) {
         throw new Error("maxSize and sizeFn must be specified together.");
     }
