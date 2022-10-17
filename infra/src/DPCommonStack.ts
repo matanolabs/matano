@@ -50,5 +50,8 @@ export class DPCommonStack extends MatanoStack {
       value: this.matanoLakeStorageBucket.bucket.bucketName,
       description: "The name of the S3 Bucket used for long term storage backing your data lake. See https://www.matano.dev/docs/tables/querying",
     });
+
+    // important: to prevent output deletion
+    this.exportValue(this.matanoIngestionBucket.topic.topicArn);
   }
 }
