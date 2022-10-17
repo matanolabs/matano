@@ -329,11 +329,14 @@ export class MatanoLogSource extends Construct {
         merged.schema.fields = serializeToFields(tableSchema);
       }
 
-      this.tablesSchemas[tableName] = resolveSchema(
+      let tableSchema = resolveSchema(
         merged.schema?.ecs_field_names,
         merged.schema?.fields
       );
-      const tableSchema = this.tablesSchemas[tableName];
+      // partial sort to move ts to top
+      tableSchema.fields = sortBy(tableSchema.fields, (e) => e.name, ["ts"]);
+
+      this.tablesSchemas[tableName] = tableSchema;
       merged.schema.fields = tableSchema.fields; // store the resolved fields & schema in the config
 
       this.tablesConfig[tableName] = merged;
@@ -349,4 +352,17 @@ export class MatanoLogSource extends Construct {
       });
     }
   }
+}
+
+function sortBy<T, U>(arr: T[], elemFn: (e: T) => U, orderList: U[]) {
+  let ret: T[] = [];
+  for (const orderKey of orderList) {
+      const elemIdx = arr.findIndex(e => elemFn(e) === orderKey);
+      ret.push(arr[elemIdx]);
+      arr.splice(elemIdx, 1);
+  }
+  for (const remainingElem of arr) {
+      ret.push(remainingElem);
+  }
+  return ret;
 }
