@@ -11,11 +11,10 @@ If you're using a [Matano managed log source](./managed-log-sources/index.mdx), 
 
 ## Transformations
 
-To apply a transformation to your log source, specify a VRL expression to transform your data as a string in the `transform.vrl` key in your `log_source.yml` file.
+To apply a transformation to your log source, specify a VRL expression to transform your data as a string in the `transform` key in your `log_source.yml` file.
 
 ```yml
-transform:
-  vrl: |
+transform: |
     _date, err = to_timestamp(.json.eventTime)
     if err == null {
         .ts = to_unix_timestamp(_date, "milliseconds")
