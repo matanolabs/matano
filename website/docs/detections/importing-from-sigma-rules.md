@@ -99,5 +99,5 @@ def detect(record):
 [1]: https://github.com/SigmaHQ/pySigma
 [2]: https://github.com/SigmaHQ/sigma-cli/issues/3
 [3]: https://github.com/matanolabs/pySigma-backend-matano
-[4]: https://github.com/matanolabs/matano/blob/main/scripts/sigma_convert.py
+[4]: https://github.com/matanolabs/matano/blob/main/scripts/sigma_generate.py
 [5]: https://github.com/SigmaHQ/sigma-cli
