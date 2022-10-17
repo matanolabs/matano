@@ -137,7 +137,7 @@ export class DPMainStack extends MatanoStack {
     }
 
     new MatanoS3Sources(this, "CustomIngestionLogSources", {
-      logSources: logSources.filter(ls => ls.name == "matano_alerts"),
+      logSources: logSources.filter(ls => ls.name !== "matano_alerts"),
       sourcesIngestionTopic: props.matanoSourcesBucket.topic,
     });
 
