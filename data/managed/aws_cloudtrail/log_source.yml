@@ -1,8 +1,8 @@
 ingest:
   select_table_from_payload_metadata: |
-    if match(.__metadata.s3.key, r'/Digest/') {
+    if match(.__metadata.s3.key, r'Digest') {
       "digest"
-    } else if match(.__metadata.s3.key, r'/Insights/') {
+    } else if match(.__metadata.s3.key, r'Insights') {
       "insights"
     } else {
       "default"

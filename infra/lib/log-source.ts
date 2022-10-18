@@ -86,6 +86,7 @@ interface MatanoLogSourceProps {
 
 const MANAGED_LOG_SOURCE_PREFIX_MAP: Record<string, string> = {
   aws_cloudtrail: "aws",
+  zeek: "zeek",
   matano_alerts: "matano_alerts", // doesn't really make sense but OK
 };
 
@@ -279,6 +280,7 @@ export class MatanoLogSource extends Construct {
         compression: this.logSourceConfig.ingest?.compression,
         s3_source: this.logSourceConfig?.ingest?.s3_source,
         select_table_from_payload_metadata: this.logSourceConfig.ingest?.select_table_from_payload_metadata,
+        s3_source: this.logSourceConfig.ingest?.s3_source,
       },
       managed: this.logSourceConfig.managed,
     };
