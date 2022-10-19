@@ -345,6 +345,7 @@ async fn read_lines_s3<'a>(
     // let reader =
     //     StreamReader::new(stream::iter(Some(first)).chain(reader));
 
+    // TODO: fix for BYOB @shaeq
     let log_source = &r
         .key
         .split(std::path::MAIN_SEPARATOR)
@@ -476,7 +477,7 @@ async fn read_lines_s3<'a>(
     Ok((table_config, lines))
 }
 
-pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessResponse> {
+pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
     info!("Request: {:?}", event);
 
     let s3_download_items = event
@@ -493,7 +494,7 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<SuccessRe
         })
         .filter(|d| d.size > 0)
         .filter(|d| {
-            // TODO(shaeq): needs to handle non matano managed sources
+            // TODO(shaeq): needs to handle non matano managed sources, BYOB
             let is_relevant = d.is_matano_managed_resource()
                 && LOG_SOURCES_CONFIG.with(|c| {
                     let log_sources_config = c.borrow();
@@ -782,11 +783,6 @@ del(.json)
         })
         .collect::<Vec<_>>();
 
-    let resp = SuccessResponse {
-        req_id: event.context.request_id,
-        msg: format!("Hello from Transformer! The command was executed."),
-    };
-
     let mut start = Instant::now();
     println!("Starting processing");
 
@@ -800,6 +796,5 @@ del(.json)
     }
     println!("time to drop {:?}", start.elapsed());
 
-    // return `Response` (it will be serialized to JSON automatically by the runtime)
-    Ok(resp)
+    Ok(())
 }

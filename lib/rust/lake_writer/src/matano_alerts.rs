@@ -95,10 +95,10 @@ pub async fn process_alerts(s3: aws_sdk_s3::Client, data: Vec<Vec<u8>>) -> Resul
         let deduplication_window =
             get_av_path(&new_value, "matano.alert.rule.deduplication_window");
         let deduplication_window_micros: i64 =
-            (cast_av_int(deduplication_window).unwrap_or(30) * 1000000).into();
+            (cast_av_int(deduplication_window).unwrap_or(1) * 1000000).into();
 
         let alert_threshold = get_av_path(&new_value, "matano.alert.rule.threshold");
-        let alert_threshold = cast_av_int(alert_threshold).unwrap_or(10);
+        let alert_threshold = cast_av_int(alert_threshold).unwrap_or(1);
 
         let key = (matano_alert_rule_name_s, matano_alert_dedupe_s);
 

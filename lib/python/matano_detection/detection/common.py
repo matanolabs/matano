@@ -19,6 +19,7 @@ import botocore.session
 import fastavro
 import jsonlines
 import pyston_lite
+from detection.cache import RemoteCache
 from detection.util import ALERT_ECS_FIELDS, Timers, json_dumps_dt, timing
 
 logger = logging.getLogger()
@@ -43,6 +44,7 @@ botocore_client_kwargs = dict(
     region_name=os.environ["AWS_REGION"],
 )
 
+ddb = botocore_session.create_client("dynamodb", **botocore_client_kwargs)
 s3 = botocore_session.create_client("s3", **botocore_client_kwargs)
 s3_async = aiobotocore_session.create_client("s3", **botocore_client_kwargs)
 sns = aiobotocore_session.create_client("sns", **botocore_client_kwargs)
@@ -66,6 +68,10 @@ SOURCES_S3_BUCKET = None
 MATANO_ALERTS_TABLE_NAME = "matano_alerts"
 LOADED_PYSTON = False
 timers = Timers()
+
+
+def remote_cache(namespace: str, ttl: int = 3600):
+    return RemoteCache(ddb, os.environ["REMOTE_CACHE_TABLE_NAME"], namespace, ttl)
 
 
 def _load_detection_configs():
@@ -218,6 +224,10 @@ def create_alert(alert_response):
                 "original_event_id": record_data.record_reference(),  # TODO: replace w/ real ID when added
                 "rule": {
                     "name": detection_name,
+                    "threshold": detection.get("alert", {}).get("threshold"),
+                    "deduplication_window": detection.get("alert", {}).get(
+                        "deduplication_window"
+                    ),
                     "match": {
                         "id": str(uuid4()),
                     },
