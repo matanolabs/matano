@@ -1,7 +1,6 @@
 package com.matano.iceberg
 
 import org.apache.hadoop.conf.Configuration
-import org.apache.parquet.column.ColumnDescriptor
 import org.apache.parquet.hadoop.ParquetWriter
 import org.apache.parquet.hadoop.api.WriteSupport
 import org.apache.parquet.hadoop.metadata.CompressionCodecName
@@ -25,7 +24,13 @@ private class EmptyWriteSupport(var schema: MessageType) : WriteSupport<List<Str
 
 // It's weirdly hard to write an empty parquet file in Java.
 private class EmptyParquetWriter(file: org.apache.hadoop.fs.Path, schema: MessageType) : ParquetWriter<List<String?>?>(
-        file, EmptyWriteSupport(schema), CompressionCodecName.UNCOMPRESSED, DEFAULT_BLOCK_SIZE, DEFAULT_PAGE_SIZE, true, false
+    file,
+    EmptyWriteSupport(schema),
+    CompressionCodecName.UNCOMPRESSED,
+    DEFAULT_BLOCK_SIZE,
+    DEFAULT_PAGE_SIZE,
+    true,
+    false
 )
 
 /** You can't write a parquet schema separately, convention seems to be write empty parquet file with metadata. */

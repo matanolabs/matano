@@ -31,7 +31,7 @@
 
 ## What is Matano?
 
-Matano is an open source security lake platform for AWS. It lets you ingest petabytes of security and log data from various sources, store and query them in an open Apache Iceberg data lake, and create Python detections as code for realtime alerting. Matano is *fully serverless* and designed specifically for AWS and focuses on enabling high scale, low cost, and zero-ops. Matano deploys fully into your AWS account.
+Matano is an open source security lake platform for AWS. It lets you ingest petabytes of security and log data from various sources, store and query them in an open Apache Iceberg data lake, and create Python detections as code for realtime alerting. Matano is _fully serverless_ and designed specifically for AWS and focuses on enabling high scale, low cost, and zero-ops. Matano deploys fully into your AWS account.
 
 <div align="center">
   <br>
@@ -41,21 +41,27 @@ Matano is an open source security lake platform for AWS. It lets you ingest peta
 ## Features
 
 #### Collect data from all your sources
+
 Matano lets you collect log data from sources using [S3](#) or SQS based ingestion.
 
 #### Ingest, transform, normalize log data
-Matano normalizes and transforms your data using [Vector Remap Language (VRL)](https://vector.dev/docs/reference/vrl/). Matano works with the [Elastic Common Schema (ECS)](https://www.elastic.co/guide/en/ecs/current/index.html) by default and you can define your own schema. 
+
+Matano normalizes and transforms your data using [Vector Remap Language (VRL)](https://vector.dev/docs/reference/vrl/). Matano works with the [Elastic Common Schema (ECS)](https://www.elastic.co/guide/en/ecs/current/index.html) by default and you can define your own schema.
 
 #### Store data in S3 object storage
+
 Log data is always stored in S3 object storage, for cost effective, long term, durable storage.
 
 #### Apache Iceberg Data lake
+
 All data is ingested into an Apache Iceberg based data lake, allowing you to perform ACID transactions, time travel, and more on all your log data. Apache Iceberg is an open table format, so you always **own your own data**, with no vendor lock-in.
 
 #### Serverless
+
 Matano is a fully serverless platform, designed for zero-ops and unlimited elastic horizontal scaling.
 
 #### Detections as code
+
 Write Python detections to implement realtime alerting on your log data.
 
 ## Installing
@@ -81,6 +87,7 @@ sudo ./matano-linux-x64.sh
 ```
 
 ## Getting started
+
 [**Read the complete docs on getting started**](https://www.matano.dev/docs/getting-started).
 
 ### Deployment
@@ -101,6 +108,6 @@ Initial deployment takes a few minutes.
 
 ## License
 
-* [Apache-2.0 License](LICENSE)
+- [Apache-2.0 License](LICENSE)
 
 <img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=03c989f6-90f5-4982-b002-a48635f10b5d"/>

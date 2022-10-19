@@ -3,8 +3,7 @@ sidebar_position: 4
 title: Matano directory
 ---
 
-
-To specify configuration and data for Matano, you use a *Matano directory*. This directory has the following structure:
+To specify configuration and data for Matano, you use a _Matano directory_. This directory has the following structure:
 
 ```
 my-directory

@@ -5,13 +5,13 @@ import execa, { ExecaError } from "execa";
 import ora from "ora";
 import chalk from "chalk";
 import * as fs from "fs";
-import * as fse from "fs-extra"; 
+import * as fse from "fs-extra";
 import path from "path";
 import * as YAML from "yaml";
 import { getCdkOutputDir, getCfnOutputsPath, getMatanoCdkApp, isPkg, PROJ_ROOT_DIR } from "..";
 import { readConfig } from "../util";
 import BaseCommand from "../base";
-import { getCdkExecutable, } from "..";
+import { getCdkExecutable } from "..";
 
 const MATANO_ERROR_PREFIX = "MATANO_ERROR: ";
 
@@ -38,7 +38,12 @@ export default class Deploy extends BaseCommand {
     }),
   };
 
-  static deployMatano(matanoUserDirectory: string, awsProfile: string | undefined, awsAccountId: string, awsRegion: string) {
+  static deployMatano(
+    matanoUserDirectory: string,
+    awsProfile: string | undefined,
+    awsAccountId: string,
+    awsRegion: string
+  ) {
     const cdkOutDir = getCdkOutputDir();
     const cdkArgs = [
       "deploy",
@@ -90,7 +95,7 @@ export default class Deploy extends BaseCommand {
     const { awsAccountId, awsRegion } = this.validateGetAwsRegionAccount(flags, matanoUserDirectory);
     const spinner = ora(chalk.dim("Deploying Matano...")).start();
 
-    const subprocess = Deploy.deployMatano(matanoUserDirectory, awsProfile, awsAccountId, awsRegion)
+    const subprocess = Deploy.deployMatano(matanoUserDirectory, awsProfile, awsAccountId, awsRegion);
 
     if (process.env.DEBUG) {
       subprocess.stdout?.pipe(process.stdout);
@@ -103,7 +108,7 @@ export default class Deploy extends BaseCommand {
     } catch (e) {
       spinner.fail("Deployment failed.");
       const err = e as ExecaError;
-      const matanoError = err.message.split("\n").find(s => s.startsWith(MATANO_ERROR_PREFIX));
+      const matanoError = err.message.split("\n").find((s) => s.startsWith(MATANO_ERROR_PREFIX));
 
       const suggestions = [];
       if (matanoError) {
@@ -111,7 +116,7 @@ export default class Deploy extends BaseCommand {
           exit: 1,
         });
       } else {
-        const foundError = err.message.split("\n").find(s => s.match(this.foundErrorPattern));
+        const foundError = err.message.split("\n").find((s) => s.match(this.foundErrorPattern));
         let message: string;
         if (foundError) {
           message = foundError.match(this.foundErrorPattern)?.[1]!!;

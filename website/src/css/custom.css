@@ -29,19 +29,19 @@ aside {
 }
 
 .footer--dark {
-  --ifm-footer-background-color:#0e1111;
+  --ifm-footer-background-color: #0e1111;
 }
 
-[data-theme='light'] {
+[data-theme="light"] {
   --ifm-menu-color: #3d434b;
 }
 
 /* For readability concerns, you should choose a lighter palette in dark mode. */
-[data-theme='dark'] {
+[data-theme="dark"] {
   --ifm-color-primary: #4276e7;
   --ifm-color-primary-dark: #2d67e4;
   --ifm-color-primary-darker: #295dcd;
-  --ifm-color-primary-darkest: #2452b6;;
+  --ifm-color-primary-darkest: #2452b6;
   --ifm-color-primary-light: #5785e9;
   --ifm-color-primary-lighter: #6c95ec;
   --ifm-color-primary-lightest: #81a4ef;

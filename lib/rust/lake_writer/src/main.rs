@@ -1,8 +1,8 @@
 use arrow2::datatypes::Field;
 use async_once::AsyncOnce;
 use aws_config::SdkConfig;
-use futures::AsyncReadExt;
 use futures::future::join_all;
+use futures::AsyncReadExt;
 use serde::{Deserialize, Serialize};
 use shared::*;
 use uuid::Uuid;
@@ -14,9 +14,9 @@ use std::{time::Instant, vec};
 use aws_lambda_events::event::sqs::SqsEvent;
 use lambda_runtime::{run, service_fn, Context, Error as LambdaError, LambdaEvent};
 
+use lazy_static::lazy_static;
 use log::{error, info};
 use threadpool::ThreadPool;
-use lazy_static::lazy_static;
 
 use anyhow::{anyhow, Result};
 
@@ -42,13 +42,11 @@ static ALLOC: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
 const ALERTS_TABLE_NAME: &str = "matano_alerts";
 
-lazy_static!{
-    static ref AWS_CONFIG: AsyncOnce<SdkConfig> = AsyncOnce::new(async {
-        aws_config::load_from_env().await
-    });
-    static ref S3_CLIENT: AsyncOnce<aws_sdk_s3::Client> = AsyncOnce::new(async {
-        aws_sdk_s3::Client::new(AWS_CONFIG.get().await)
-    });
+lazy_static! {
+    static ref AWS_CONFIG: AsyncOnce<SdkConfig> =
+        AsyncOnce::new(async { aws_config::load_from_env().await });
+    static ref S3_CLIENT: AsyncOnce<aws_sdk_s3::Client> =
+        AsyncOnce::new(async { aws_sdk_s3::Client::new(AWS_CONFIG.get().await) });
 }
 
 #[tokio::main]
@@ -153,7 +151,7 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
                 let mut alert_blocks = alert_blocks_ref.lock().unwrap();
                 alert_blocks.push(buf);
 
-                return None
+                return None;
             };
 
             let metadata = read_metadata(reader).await.unwrap();
@@ -214,10 +212,11 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
 
     if resolved_table_name == ALERTS_TABLE_NAME {
         info!("Processing alerts...");
-        let alert_blocks_ref = Arc::try_unwrap(alert_blocks_ref).map_err(|e| anyhow!("fail get rowgroups"))?;
+        let alert_blocks_ref =
+            Arc::try_unwrap(alert_blocks_ref).map_err(|e| anyhow!("fail get rowgroups"))?;
         let alert_blocks = Mutex::into_inner(alert_blocks_ref)?;
         matano_alerts::process_alerts(s3, alert_blocks).await?;
-        return Ok(())
+        return Ok(());
     }
 
     let chunks_ref = Arc::try_unwrap(chunks_ref).map_err(|e| anyhow!("fail get rowgroups"))?;

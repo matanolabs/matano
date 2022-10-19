@@ -27,18 +27,23 @@ Matano is a **security lake platform**, a platform with an open cloud data lake 
 Here's a sample of what you can do with Matano:
 
 #### Collect data from all your sources
+
 Matano lets you collect log data from sources using [S3](#) or SQS based ingestion.
 
 #### Ingest, transform, normalize log data
+
 Matano normalizes and transforms your data using the flexible [Vector Remap Language (VRL)](https://vector.dev/docs/reference/vrl/). Matano works with the [Elastic Common Schema](https://www.elastic.co/guide/en/ecs/current/index.html) by default and you can extend the schema.
 
 #### Store data in S3 object storage
+
 Log data is always stored in S3 object storage, for cost effective, long term, durable storage.
 
 #### Apache Iceberg Data lake
+
 All data is ingested into an open Apache Iceberg based data lake, allowing you to query and perform ACID transactions, time travel, and more on all your log data. You can interact with security data using your existing tooling or any software that supports Apache Iceberg.
 
 #### Detections as code
+
 Write detections as code using Python to implement realtime alerting on your log data. You can use the full expressiveness and flexibility of Python for your detection engineering instead of relying on limiting rules and configurations.
 
 Matano is completely serverless, meaning no ops or maintenance. It's cloud-native and simple to deploy, and you can get started in just a few minutes.

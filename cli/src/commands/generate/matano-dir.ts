@@ -41,19 +41,19 @@ const sampleDetectionReqs = `# ${autogenerateNote}
 export default class GenerateMatanoDir extends Command {
   static description = "Generates a sample Matano directory to get started.";
 
-  static examples = [`matano generate:matano-dir`, ];
+  static examples = [`matano generate:matano-dir`];
 
   static args = [
     {
-      name: 'directory-name',
+      name: "directory-name",
       required: true,
-      description: 'The name of the directory to create',
-    }
+      description: "The name of the directory to create",
+    },
   ];
 
   static generateMatanoDirectory(dirName: string, awsAccountId?: string, awsRegion?: string) {
     fs.mkdirSync(path.resolve(dirName), { recursive: true });
-    fs.writeFileSync(path.join(dirName, "matano.config.yml" ), sampleMatanoConfigYml(awsAccountId, awsRegion));
+    fs.writeFileSync(path.join(dirName, "matano.config.yml"), sampleMatanoConfigYml(awsAccountId, awsRegion));
     fs.mkdirSync(path.join(dirName, "detections/my_detection"), { recursive: true });
     fs.mkdirSync(path.join(dirName, "log_sources/test_log_source"), { recursive: true });
     fs.writeFileSync(path.join(dirName, "detections/my_detection/detect.py"), sampleDetectionPy);

@@ -11,7 +11,6 @@ See [Deployment](#) for more on deploying Matano.
 
 - Docker: The Matano CLI requires Docker to be installed.
 
-
 ## Prebuilt installer
 
 Matano provides [a nightly release](https://github.com/matanolabs/matano/releases/tag/nightly) with the latest prebuilt files to install the Matano CLI on GitHub. You can download and execute these files to install Matano.
@@ -32,11 +31,11 @@ You can install without sudo if you specify directories that you already have wr
 
 - `--target` – This option specifies the directory to copy all of the files to.
 
-    The default value is `/usr/local/matano-cli`.
+  The default value is `/usr/local/matano-cli`.
 
 - `--bin-dir` – This option specifies that the main `matano` program in the install directory is symbolically linked to the file `matano` in the specified path. You must have write permissions to the specified directory. Creating a symlink to a directory that is already in your path eliminates the need to add the install directory to the user's `$PATH` variable.
 
-    The default value is `/usr/local/bin`.
+  The default value is `/usr/local/bin`.
 
 ### (Optional) Verify the installation
 
@@ -97,6 +96,7 @@ FXm9MedEAPNT2hc9
 =BE9X
 -----END PGP PUBLIC KEY BLOCK-----
 ```
+
 </details>
 
 Import the Matano PGP public key with the following command.
@@ -129,7 +129,7 @@ cd matano
 make package
 ```
 
-The installer file (e.g. `matano-linux-x64.sh`) will be generated at the project root. You can then execute this file to install Matano. 
+The installer file (e.g. `matano-linux-x64.sh`) will be generated at the project root. You can then execute this file to install Matano.
 
 ## Updating the matano CLI
 

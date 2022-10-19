@@ -45,7 +45,7 @@ apache-avro = { git = "https://github.com/apache/avro.git", rev = "c78f12f", fea
   "snappy",
 ] }
 rand = "0.8.5"
-chrono="*"
+chrono = "*"
 arrow2 = { git = "https://github.com/jorgecarleitao/arrow2.git", rev = "c615095", features = [
   "io_avro",
   "io_avro_async",

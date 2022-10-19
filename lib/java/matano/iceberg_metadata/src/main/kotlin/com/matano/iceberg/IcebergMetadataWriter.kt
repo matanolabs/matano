@@ -1,5 +1,4 @@
 package com.matano.iceberg
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder
 import com.amazonaws.services.dynamodbv2.model.AttributeValue
 import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException
@@ -14,20 +13,17 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.apache.iceberg.*
 import org.apache.iceberg.aws.glue.GlueCatalog
-import org.apache.iceberg.aws.s3.S3FileIO
 import org.apache.iceberg.catalog.Catalog
 import org.apache.iceberg.catalog.Namespace
 import org.apache.iceberg.catalog.TableIdentifier
 import org.apache.iceberg.parquet.ParquetUtil
 import org.slf4j.LoggerFactory
-import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
 
-
 class LazyConcurrentMap<K, V>(
-        private val compute: (K) -> V,
-        private val map: ConcurrentHashMap<K,V> = ConcurrentHashMap()
-): Map<K,V> by map {
+    private val compute: (K) -> V,
+    private val map: ConcurrentHashMap<K, V> = ConcurrentHashMap()
+) : Map<K, V> by map {
     override fun get(key: K): V? = map.getOrPut(key) { compute(key) }
 }
 
@@ -53,7 +49,7 @@ class IcebergMetadataWriter {
 
     private fun createIcebergCatalog(): Catalog {
         val glueCatalog = GlueCatalog()
-                .apply { initialize("glue_catalog", icebergProperties) }
+            .apply { initialize("glue_catalog", icebergProperties) }
         return CachingCatalog.wrap(glueCatalog)
     }
 
@@ -87,7 +83,7 @@ class IcebergMetadataWriter {
         return ParquetUtil.fileMetrics(inputFile, MetricsConfig.forTable(table))
     }
 
-    fun processRecord(sqsMessage: SQSMessage, tableObjs: Map<String, TableObj>): Unit {
+    fun processRecord(sqsMessage: SQSMessage, tableObjs: Map<String, TableObj>) {
         val record = S3EventNotification.parseJson(sqsMessage.body).records[0]
         val s3Bucket = record.s3.bucket.name
         val s3Object = record.s3.`object`
@@ -103,7 +99,7 @@ class IcebergMetadataWriter {
         }
 
         if (checkDuplicate(s3Object.sequencer)) {
-            logger.info("Found duplicate SQS message for key: ${s3ObjectKey}. Skipping...")
+            logger.info("Found duplicate SQS message for key: $s3ObjectKey. Skipping...")
             return
         }
 
@@ -113,26 +109,25 @@ class IcebergMetadataWriter {
         val metrics = readParquetMetrics(s3Path, icebergTable)
         val partition = PartitionSpec.builderFor(icebergTable.schema()).day(TIMESTAMP_COLUMN_NAME).build()
         val dataFile = DataFiles.builder(partition)
-                .withPartitionPath(partitionPath)
-                .withPath(s3Path)
-                .withFileSizeInBytes(s3ObjectSize)
-                .withFormat("PARQUET")
-                .withMetrics(metrics)
-                .build()
+            .withPartitionPath(partitionPath)
+            .withPath(s3Path)
+            .withFileSizeInBytes(s3ObjectSize)
+            .withFormat("PARQUET")
+            .withMetrics(metrics)
+            .build()
         tableObj.appendFiles.appendFile(dataFile)
     }
 
     fun checkDuplicate(sequencer: String): Boolean {
         val expireTime = ((System.currentTimeMillis() / 1000L) + DDB_ITEM_EXPIRE_SECONDS).toString()
         val attrs = mapOf(
-                "sequencer" to AttributeValue(sequencer),
-                "ttl" to AttributeValue().apply { this.setN(expireTime) }
+            "sequencer" to AttributeValue(sequencer),
+            "ttl" to AttributeValue().apply { this.setN(expireTime) }
         )
         val req = PutItemRequest(DUPLICATES_DDB_TABLE_NAME, attrs)
-                .apply { this.conditionExpression = "attribute_not_exists(sequencer)" }
+            .apply { this.conditionExpression = "attribute_not_exists(sequencer)" }
 
-        try { ddb.putItem(req) }
-        catch (e: ConditionalCheckFailedException) {
+        try { ddb.putItem(req) } catch (e: ConditionalCheckFailedException) {
             return true
         }
         return false
@@ -145,12 +140,12 @@ class IcebergMetadataWriter {
         private val DUPLICATES_DDB_TABLE_NAME = System.getenv("DUPLICATES_DDB_TABLE_NAME")
         private val WAREHOUSE_PATH = "s3://${System.getenv("MATANO_ICEBERG_BUCKET")}/lake"
         val icebergProperties = mapOf(
-                "catalog-name" to "iceberg",
-                "catalog-impl" to "org.apache.iceberg.aws.glue.GlueCatalog",
-                "warehouse" to WAREHOUSE_PATH,
-                "io-impl" to "org.apache.iceberg.aws.s3.S3FileIO",
-                "write.metadata.delete-after-commit.enabled" to "true",
-                "fs.s3a.path.style.access" to "true",
+            "catalog-name" to "iceberg",
+            "catalog-impl" to "org.apache.iceberg.aws.glue.GlueCatalog",
+            "warehouse" to WAREHOUSE_PATH,
+            "io-impl" to "org.apache.iceberg.aws.s3.S3FileIO",
+            "write.metadata.delete-after-commit.enabled" to "true",
+            "fs.s3a.path.style.access" to "true"
         )
         private val ddb = AmazonDynamoDBClientBuilder.defaultClient()
     }

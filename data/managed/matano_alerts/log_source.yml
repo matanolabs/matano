@@ -1,43 +1,43 @@
 schema:
   ecs_field_names: [
-    "message",
-    "tags",
-    "labels",
-    "agent",
-    "client",
-    "cloud",
-    "container",
-    "data_stream",
-    "destination",
-    # "dll",
-    # "dns",
-    "error",
-    "event",
-    "file",
-    "group",
-    "host",
-    "http",
-    "log",
-    "network",
-    "observer",
-    "orchestrator",
-    "organization",
-    # "package",
-    # "process",
-    # "registry",
-    "related",
-    "rule",
-    "server",
-    "service",
-    "source",
-    # "span",
-    # "threat",
-    # "tls",
-    # "trace",
-    # "transaction",
-    "url",
-    "user"
-  ]
+      "message",
+      "tags",
+      "labels",
+      "agent",
+      "client",
+      "cloud",
+      "container",
+      "data_stream",
+      "destination",
+      # "dll",
+      # "dns",
+      "error",
+      "event",
+      "file",
+      "group",
+      "host",
+      "http",
+      "log",
+      "network",
+      "observer",
+      "orchestrator",
+      "organization",
+      # "package",
+      # "process",
+      # "registry",
+      "related",
+      "rule",
+      "server",
+      "service",
+      "source",
+      # "span",
+      # "threat",
+      # "tls",
+      # "trace",
+      # "transaction",
+      "url",
+      "user",
+    ]
   fields:
     - name: matano
       type:
@@ -49,38 +49,38 @@ schema:
             type:
               type: struct
               fields:
-              - name: id
-                type: string
-              - name: created
-                type: timestamp
-              - name: dedupe
-                type: string
-              - name: breached
-                type: boolean
-              - name: title
-                type: string
-              - name: original_timestamp
-                type: timestamp
-              - name: original_event
-                type: string
-              - name: original_event_id
-                type: string
-              - name: rule
-                type:
-                  type: struct
-                  fields:
-                  - name: "name"
-                    type: string
-                  - name: threshold
-                    type: int
-                  - name: deduplication_window
-                    type: int
-                  - name: match
-                    type:
-                      type: struct
-                      fields:
-                      - name: id
-                        type: string   
+                - name: id
+                  type: string
+                - name: created
+                  type: timestamp
+                - name: dedupe
+                  type: string
+                - name: breached
+                  type: boolean
+                - name: title
+                  type: string
+                - name: original_timestamp
+                  type: timestamp
+                - name: original_event
+                  type: string
+                - name: original_event_id
+                  type: string
+                - name: rule
+                  type:
+                    type: struct
+                    fields:
+                      - name: "name"
+                        type: string
+                      - name: threshold
+                        type: int
+                      - name: deduplication_window
+                        type: int
+                      - name: match
+                        type:
+                          type: struct
+                          fields:
+                            - name: id
+                              type: string
 
 transform: |
   . = del(.json)

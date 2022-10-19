@@ -15,10 +15,10 @@ To apply a transformation to your log source, specify a VRL expression to transf
 
 ```yml
 transform: |
-    _date, err = to_timestamp(.json.eventTime)
-    if err == null {
-        .ts = to_unix_timestamp(_date, "milliseconds")
-    }
+  _date, err = to_timestamp(.json.eventTime)
+  if err == null {
+      .ts = to_unix_timestamp(_date, "milliseconds")
+  }
 ```
 
 ### Writing transformation VRL expressions

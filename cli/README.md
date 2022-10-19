@@ -1,4 +1,6 @@
 ## Commands
+
+<!-- prettier-ignore-start -->
 <!-- commands -->
 * [`matano autocomplete [SHELL]`](#matano-autocomplete-shell)
 * [`matano deploy`](#matano-deploy)
@@ -211,3 +213,4 @@ EXAMPLES
 
 _See code: [dist/commands/refresh-context.ts](https://github.com/matanolabs/matano/blob/main/cli/src/commands/refresh-context.ts)_
 <!-- commandsstop -->
+<!-- prettier-ignore-end -->

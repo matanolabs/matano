@@ -9,7 +9,7 @@ Matano lets you deduplicate common alerts to reduce alert fatigue.
 
 ### Dedupe string
 
-You can return a *dedupe string* from your detection. Rule matches with the same dedupe will be grouped together.
+You can return a _dedupe string_ from your detection. Rule matches with the same dedupe will be grouped together.
 
 To return a dedupe string from your detection, create a `dedupe` python function and return the dedupe string. The `dedupe` function will be passed the record being detected on, so you can dynamically create the dedupe string.
 
@@ -41,4 +41,3 @@ You can configure a deduplication window per detection by using the `alert.thres
 alert:
   threshold: 10
 ```
-

@@ -52,17 +52,16 @@ ingest:
   expand_records_from_payload: "parse_json!(.__raw).Records"
 ```
 
-Your VRL expression will receive the raw payload as `__raw` and must return an array of records. 
+Your VRL expression will receive the raw payload as `__raw` and must return an array of records.
 
 For example, if your data is a JSON document with following format:
 
 ```json
 {
-    "Data": [
-        { "name": "john" }
-    ]
+  "Data": [{ "name": "john" }]
 }
 ```
+
 You would use the following VRL expression to expand your data:
 
 ```

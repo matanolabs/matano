@@ -1,17 +1,17 @@
+use anyhow::{anyhow, Result};
 use arrow::record_batch::RecordBatchReader;
 use arrow2::chunk::Chunk;
 use aws_sdk_s3::types::ByteStream;
-use uuid::Uuid;
-use std::{time::Instant, vec};
 use log::{error, info};
-use anyhow::{anyhow, Result};
 use parquet::arrow::arrow_writer::ArrowWriter;
 use parquet::basic::Compression;
 use parquet::file::properties::WriterProperties;
-
+use std::{time::Instant, vec};
+use uuid::Uuid;
 
 pub fn struct_wrap_arrow2_for_ffi(
-    schema: &arrow2::datatypes::Schema, chunks: Vec<Chunk<Box<dyn arrow2::array::Array>>>
+    schema: &arrow2::datatypes::Schema,
+    chunks: Vec<Chunk<Box<dyn arrow2::array::Array>>>,
 ) -> (arrow2::datatypes::Field, Vec<Box<dyn arrow2::array::Array>>) {
     let field = arrow2::datatypes::Field::new(
         "root".to_owned(),
@@ -69,7 +69,6 @@ pub fn serialize_arrow_parquet(
     };
 
     Ok(bytes)
-
 }
 
 pub async fn write_arrow_to_s3_parquet(
@@ -79,7 +78,6 @@ pub async fn write_arrow_to_s3_parquet(
     field: arrow2::datatypes::Field,
     arrays: Vec<Box<dyn arrow2::array::Array>>,
 ) -> Result<(String, String, usize)> {
-
     let bytes = serialize_arrow_parquet(field, arrays)?;
     let file_length = bytes.len();
 

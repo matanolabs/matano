@@ -43,12 +43,14 @@ export class DPCommonStack extends MatanoStack {
 
     this.humanCfnOutput("MatanoIngestionS3BucketName", {
       value: this.matanoIngestionBucket.bucket.bucketName,
-      description: "The name of the S3 Bucket used for Matano ingestion. See https://www.matano.dev/docs/log-sources/ingestion",
+      description:
+        "The name of the S3 Bucket used for Matano ingestion. See https://www.matano.dev/docs/log-sources/ingestion",
     });
 
     this.humanCfnOutput("MatanoLakeStorageS3BucketName", {
       value: this.matanoLakeStorageBucket.bucket.bucketName,
-      description: "The name of the S3 Bucket used for long term storage backing your data lake. See https://www.matano.dev/docs/tables/querying",
+      description:
+        "The name of the S3 Bucket used for long term storage backing your data lake. See https://www.matano.dev/docs/tables/querying",
     });
 
     // important: to prevent output deletion

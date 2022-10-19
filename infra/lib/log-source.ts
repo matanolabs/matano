@@ -80,7 +80,7 @@ interface MatanoLogSourceProps {
   configPath?: string;
   realtimeTopic: sns.Topic;
   lakeIngestionLambda: lambda.Function;
-  eventSourceProps?: SqsEventSourceProps
+  eventSourceProps?: SqsEventSourceProps;
 }
 
 const MANAGED_LOG_SOURCE_PREFIX_MAP: Record<string, string> = {
@@ -99,7 +99,7 @@ export interface MatanoTableProps {
   schema: any;
   realtimeTopic: sns.Topic;
   lakeIngestionLambda: lambda.Function;
-  eventSourceProps?: SqsEventSourceProps
+  eventSourceProps?: SqsEventSourceProps;
 }
 export class MatanoTable extends Construct {
   constructor(scope: Construct, id: string, props: MatanoTableProps) {
@@ -119,9 +119,7 @@ export class MatanoTable extends Construct {
         maxReceiveCount: 3,
       },
       removalPolicy: cdk.RemovalPolicy.RETAIN,
-      visibilityTimeout: cdk.Duration.seconds(
-        Math.max(props.lakeIngestionLambda.timeout!.toSeconds(), 30)
-      ),
+      visibilityTimeout: cdk.Duration.seconds(Math.max(props.lakeIngestionLambda.timeout!.toSeconds(), 30)),
     });
 
     props.realtimeTopic.addSubscription(
@@ -154,7 +152,9 @@ export class MatanoLogSource extends Construct {
   constructor(scope: Construct, id: string, props: MatanoLogSourceProps) {
     super(scope, id);
 
-    const logSourceConfig = props.config ? props.config : readConfig(props.configPath!, "log_source.yml") as LogSourceConfig;
+    const logSourceConfig = props.config
+      ? props.config
+      : (readConfig(props.configPath!, "log_source.yml") as LogSourceConfig);
     this.logSourceConfig = logSourceConfig;
 
     if (props.config?.name === "matano_alerts") {
@@ -329,10 +329,7 @@ export class MatanoLogSource extends Construct {
         merged.schema.fields = serializeToFields(tableSchema);
       }
 
-      let tableSchema = resolveSchema(
-        merged.schema?.ecs_field_names,
-        merged.schema?.fields
-      );
+      let tableSchema = resolveSchema(merged.schema?.ecs_field_names, merged.schema?.fields);
       // partial sort to move ts to top
       tableSchema.fields = sortBy(tableSchema.fields, (e) => e.name, ["ts"]);
 
@@ -357,12 +354,12 @@ export class MatanoLogSource extends Construct {
 function sortBy<T, U>(arr: T[], elemFn: (e: T) => U, orderList: U[]) {
   let ret: T[] = [];
   for (const orderKey of orderList) {
-      const elemIdx = arr.findIndex(e => elemFn(e) === orderKey);
-      ret.push(arr[elemIdx]);
-      arr.splice(elemIdx, 1);
+    const elemIdx = arr.findIndex((e) => elemFn(e) === orderKey);
+    ret.push(arr[elemIdx]);
+    arr.splice(elemIdx, 1);
   }
   for (const remainingElem of arr) {
-      ret.push(remainingElem);
+    ret.push(remainingElem);
   }
   return ret;
 }

@@ -80,13 +80,22 @@ async function main() {
   localAssetSubDirs.forEach((subdir) => {
     const subpath = path.join(localAssetDir, subdir);
     execSync(
-      `zip -r ${subdir}.zip ./* && cp ${subdir}.zip ${localAssetDir} && cd ${localAssetDir} && rm -rf ${subpath}`, {
+      `zip -r ${subdir}.zip ./* && cp ${subdir}.zip ${localAssetDir} && cd ${localAssetDir} && rm -rf ${subpath}`,
+      {
         cwd: subpath,
       }
     );
   });
 
-  await exec(["--no-bytecode", "--public", "--public-packages", "*", "-c", path.join(projDir, "infra.pkg.json"), path.resolve(projDir, "infra/dist/bin/app.js",)]);
+  await exec([
+    "--no-bytecode",
+    "--public",
+    "--public-packages",
+    "*",
+    "-c",
+    path.join(projDir, "infra.pkg.json"),
+    path.resolve(projDir, "infra/dist/bin/app.js"),
+  ]);
   await exec(["--no-bytecode", "--public", "--public-packages", "*", path.resolve(projDir, "cli")]);
 
   prepareCdkPkg();

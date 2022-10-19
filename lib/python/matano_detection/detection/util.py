@@ -1,12 +1,14 @@
+import datetime
+import json
+import time
 from collections import UserDict
 from contextlib import contextmanager
-import time
-import json
-import datetime
+
 
 class Timers(UserDict):
     def get_timer(self, name: str) -> "Timer":
         return self.data.setdefault(name, Timer(name))
+
 
 class Timer:
     def __init__(self, name) -> None:
@@ -44,12 +46,14 @@ class Timer:
         finally:
             self.start()
 
+
 @contextmanager
 def timing(timers: dict):
-    try: 
+    try:
         yield
     finally:
         timers.clear()
+
 
 ALERT_ECS_FIELDS = [
     "message",
@@ -91,10 +95,12 @@ ALERT_ECS_FIELDS = [
     "user",
 ]
 
+
 def _json_dumps_default(obj):
     if isinstance(obj, datetime.datetime):
         return obj.timestamp()
-    raise TypeError('Cannot serialize %s' % (obj,))
+    raise TypeError("Cannot serialize %s" % (obj,))
+
 
 def json_dumps_dt(obj, **kwargs):
     return json.dumps(obj, default=_json_dumps_default, **kwargs)

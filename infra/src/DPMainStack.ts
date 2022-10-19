@@ -98,8 +98,8 @@ export class DPMainStack extends MatanoStack {
         name: "matano_alerts",
         managed: {
           type: "matano_alerts",
-          properties: {}
-        }
+          properties: {},
+        },
       },
       realtimeTopic: props.realtimeBucketTopic,
       lakeIngestionLambda: lakeIngestion.alertsLakeIngestionLambda,
@@ -113,8 +113,8 @@ export class DPMainStack extends MatanoStack {
       ]) as any
     );
 
-    const resolvedTableNames = logSources.flatMap(ls => {
-      return Object.values(ls.tablesConfig).map(t => t.resolved_name)
+    const resolvedTableNames = logSources.flatMap((ls) => {
+      return Object.values(ls.tablesConfig).map((t) => t.resolved_name);
     });
 
     for (const logSource in resolvedLogSourceConfigs) {
@@ -137,7 +137,7 @@ export class DPMainStack extends MatanoStack {
     }
 
     new MatanoS3Sources(this, "CustomIngestionLogSources", {
-      logSources: logSources.filter(ls => ls.name !== "matano_alerts"),
+      logSources: logSources.filter((ls) => ls.name !== "matano_alerts"),
       sourcesIngestionTopic: props.matanoSourcesBucket.topic,
     });
 
@@ -148,7 +148,7 @@ export class DPMainStack extends MatanoStack {
 
     const schemasCR = new MatanoSchemas(this, "MatanoSchemasCustomResource", {
       schemaOutputPath: schemasHash,
-      tables: resolvedTableNames
+      tables: resolvedTableNames,
     });
 
     for (const logSource of logSources) {
@@ -181,7 +181,8 @@ export class DPMainStack extends MatanoStack {
     });
 
     lakeIngestion.alertsLakeIngestionLambda.addEnvironment(
-      "ALERT_HELPER_FUNCTION_NAME", icebergMetadata.alertsHelperFunction.functionName
+      "ALERT_HELPER_FUNCTION_NAME",
+      icebergMetadata.alertsHelperFunction.functionName
     );
     icebergMetadata.alertsHelperFunction.grantInvoke(lakeIngestion.alertsLakeIngestionLambda);
 

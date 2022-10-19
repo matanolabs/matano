@@ -1,17 +1,12 @@
 {
-    "name": "matano-cdk",
-    "pkg": {
-        "scripts": [
-            "./infra/dist/**/*.js"
-        ],
-        "targets": [
-            "node16-linux-x64",
-            "node16-macos-x64"
-        ],
-        "assets": [
-            "./data/**/*",
-            "./infra/node_modules/aws-cdk-lib/custom-resources/lib/provider-framework/runtime/*.js"
-        ],
-        "outputPath": "build"
-    }
+  "name": "matano-cdk",
+  "pkg": {
+    "scripts": ["./infra/dist/**/*.js"],
+    "targets": ["node16-linux-x64", "node16-macos-x64"],
+    "assets": [
+      "./data/**/*",
+      "./infra/node_modules/aws-cdk-lib/custom-resources/lib/provider-framework/runtime/*.js"
+    ],
+    "outputPath": "build"
+  }
 }

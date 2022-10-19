@@ -3,11 +3,11 @@ title: Log source schema
 sidebar_position: 4
 ---
 
-You define the shape of your log source's data by defining a *schema*.
+You define the shape of your log source's data by defining a _schema_.
 
 ## Common schema
 
-By default, a log source will use the [**Elastic Common Schema (ECS)**](https://www.elastic.co/guide/en/ecs/current/ecs-reference.html). ECS is a popular format that defines a common set of fields to be used when storing log data. 
+By default, a log source will use the [**Elastic Common Schema (ECS)**](https://www.elastic.co/guide/en/ecs/current/ecs-reference.html). ECS is a popular format that defines a common set of fields to be used when storing log data.
 
 Matano encourages you to normalize your log data to ECS, so you can best analyze, and correlate the data represented in your events.
 
@@ -34,7 +34,7 @@ schema:
 
 ## Extending ECS with custom fields
 
-ECS is a permissive schema, that encourages you to add columns using custom field names for data that doesn't completely map to ECS. 
+ECS is a permissive schema, that encourages you to add columns using custom field names for data that doesn't completely map to ECS.
 
 To add custom fields to ECS for a Matano log source, you can define the fields in your `log_source.yml` configuration file:
 

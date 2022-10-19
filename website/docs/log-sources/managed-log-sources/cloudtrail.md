@@ -17,7 +17,6 @@ managed:
 
 CloudTrail data is normalized to standard ECS fields. Custom fields are normalized into the `aws` field. You can view the [complete mapping][1] to see the specific field mappings.
 
-
 [1]: https://github.com/matanolabs/matano/blob/main/data/managed/aws_cloudtrail/log_source.yml
 
 ## Tables

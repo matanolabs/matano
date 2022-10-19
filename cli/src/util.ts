@@ -14,17 +14,14 @@ export function promiseTimeout<T>(promiseFunc: () => Promise<T>, ms = 30000): Pr
   let id: any;
   let timeout = new Promise((_, reject) => {
     id = setTimeout(() => {
-      reject('Timed out.');
-    }, ms)
-  })
+      reject("Timed out.");
+    }, ms);
+  });
 
-  return Promise.race([
-    promiseFunc(),
-    timeout
-  ]).then((result) => {
-    clearTimeout(id)
-    return result
-  }) as Promise<T>
+  return Promise.race([promiseFunc(), timeout]).then((result) => {
+    clearTimeout(id);
+    return result;
+  }) as Promise<T>;
 }
 
 export const AWS_REGIONS = [
@@ -50,5 +47,5 @@ export const AWS_REGIONS = [
   "us-east-1",
   "us-east-2",
   "us-west-1",
-  "us-west-2"
+  "us-west-2",
 ];

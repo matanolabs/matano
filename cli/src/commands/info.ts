@@ -9,22 +9,14 @@ import { CloudFormation } from "aws-sdk";
 import Table from "tty-table";
 import { promiseTimeout } from "../util";
 
-function isInteractive({stream = process.stdout} = {}) {
-	return Boolean(
-		stream && stream.isTTY &&
-		process.env.TERM !== 'dumb' &&
-		!('CI' in process.env)
-	);
+function isInteractive({ stream = process.stdout } = {}) {
+  return Boolean(stream && stream.isTTY && process.env.TERM !== "dumb" && !("CI" in process.env));
 }
 
 export default class Info extends BaseCommand {
   static description = "Retrieves information about your Matano deployment in structured format.";
 
-  static examples = [
-    "matano info",
-    "matano info --profile prod",
-    "matano info --output json",
-  ];
+  static examples = ["matano info", "matano info --profile prod", "matano info --output json"];
 
   static flags = {
     ...BaseCommand.flags,
@@ -43,7 +35,7 @@ export default class Info extends BaseCommand {
     let describeResult;
     // TODO: there's probably a better way to do this, shouldn't hang on invalic creds...
     try {
-      describeResult = await promiseTimeout(() => cfn.describeStacks({StackName: stackName, }).promise());
+      describeResult = await promiseTimeout(() => cfn.describeStacks({ StackName: stackName }).promise());
     } catch (error) {
       if (error === "Timed out.") {
         throw new BaseCLIError("Failed to retrieve values. Your AWS credentials are likely misconfigured.");
@@ -53,21 +45,23 @@ export default class Info extends BaseCommand {
     }
     const outputs = describeResult.Stacks!![0].Outputs!!;
     return outputs
-        .filter(obj => !!obj.Description)
-        .map(obj => ({
-            name: obj.OutputKey!!,
-            value: obj.OutputValue!!,
-            description: obj.Description!!,
-        }));
+      .filter((obj) => !!obj.Description)
+      .map((obj) => ({
+        name: obj.OutputKey!!,
+        value: obj.OutputValue!!,
+        description: obj.Description!!,
+      }));
   }
 
   static async retrieveCfnOutputs(awsAccountId: string, awsRegion: string, awsProfile?: string) {
-    const sdkProvider = await SdkProvider.withAwsCliCompatibleDefaults({ profile: awsProfile, });
-    const cfn = (await sdkProvider.forEnvironment(cxapi.EnvironmentUtils.make(awsAccountId, awsRegion), Mode.ForReading, {})).sdk.cloudFormation();
+    const sdkProvider = await SdkProvider.withAwsCliCompatibleDefaults({ profile: awsProfile });
+    const cfn = (
+      await sdkProvider.forEnvironment(cxapi.EnvironmentUtils.make(awsAccountId, awsRegion), Mode.ForReading, {})
+    ).sdk.cloudFormation();
 
     const [o1, o2] = await Promise.all([
-        this.getCfnOutputs(cfn, "MatanoDPCommonStack"),
-        this.getCfnOutputs(cfn, "MatanoDPMainStack"),
+      this.getCfnOutputs(cfn, "MatanoDPCommonStack"),
+      this.getCfnOutputs(cfn, "MatanoDPMainStack"),
     ]);
     const outputs = [...o1, ...o2];
     return outputs;
@@ -75,14 +69,14 @@ export default class Info extends BaseCommand {
 
   static renderOutputsTable(cfnOutputs: any, output?: string) {
     if (output || !isInteractive()) {
-        const columns: CliUx.Table.table.Columns<any> = {
-            name: {},
-            value: {},
-            description: {},
-        }
-        return CliUx.Table.table(cfnOutputs, columns, {
-            output: output ?? "json",
-        });
+      const columns: CliUx.Table.table.Columns<any> = {
+        name: {},
+        value: {},
+        description: {},
+      };
+      return CliUx.Table.table(cfnOutputs, columns, {
+        output: output ?? "json",
+      });
     }
 
     const header: Table.Header[] = [
@@ -90,14 +84,14 @@ export default class Info extends BaseCommand {
         value: "name",
         alias: chalk.bold.cyanBright("Name"),
         align: "left",
-        width: "20%"
+        width: "20%",
       },
       {
         value: "value",
         alias: chalk.bold.cyanBright("Value"),
         align: "left",
         width: "30%",
-        color: "yellow"
+        color: "yellow",
       },
       {
         value: "description",
@@ -106,12 +100,10 @@ export default class Info extends BaseCommand {
         width: "50%",
       },
     ];
-    const options: Table.Options = {
-    };
-    const ttable = Table(header, cfnOutputs, options,);
+    const options: Table.Options = {};
+    const ttable = Table(header, cfnOutputs, options);
     console.log(ttable.render());
   }
-
 
   async run(): Promise<void> {
     const { args, flags } = await this.parse(Info);

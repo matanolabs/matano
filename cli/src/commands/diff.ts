@@ -7,7 +7,7 @@ import * as fs from "fs";
 import path from "path";
 import { getCdkOutputDir, getMatanoCdkApp, isPkg, PROJ_ROOT_DIR } from "..";
 import BaseCommand from "../base";
-import { getCdkExecutable, } from "..";
+import { getCdkExecutable } from "..";
 
 const MATANO_ERROR_PREFIX = "MATANO_ERROR: ";
 
@@ -36,18 +36,14 @@ export default class Diff extends BaseCommand {
     }),
   };
 
-  static diffMatano(matanoUserDirectory: string, awsProfile: string | undefined, awsAccountId: string, awsRegion: string) {
+  static diffMatano(
+    matanoUserDirectory: string,
+    awsProfile: string | undefined,
+    awsAccountId: string,
+    awsRegion: string
+  ) {
     const cdkOutDir = getCdkOutputDir();
-    const cdkArgs = [
-      "diff",
-      "DPMainStack",
-      "--app",
-      getMatanoCdkApp(),
-      "--output",
-      cdkOutDir,
-      "--fail",
-      "false",
-    ];
+    const cdkArgs = ["diff", "DPMainStack", "--app", getMatanoCdkApp(), "--output", cdkOutDir, "--fail", "false"];
     if (awsProfile) {
       cdkArgs.push("--profile", awsProfile);
     }
@@ -87,7 +83,7 @@ export default class Diff extends BaseCommand {
     const { awsAccountId, awsRegion } = this.validateGetAwsRegionAccount(flags, matanoUserDirectory);
     const spinner = ora(chalk.dim("Checking Matano diff...")).start();
 
-    const subprocess = Diff.diffMatano(matanoUserDirectory, awsProfile, awsAccountId, awsRegion)
+    const subprocess = Diff.diffMatano(matanoUserDirectory, awsProfile, awsAccountId, awsRegion);
 
     if (process.env.DEBUG) {
       subprocess.stdout?.pipe(process.stdout);
@@ -103,25 +99,24 @@ export default class Diff extends BaseCommand {
 
       if (outputsMatches.length || resourcesMatches.length) {
         if (outputsMatches.length) {
-            this.log(chalk.bold.underline("Outputs"));
-            for (const match of outputsMatches) {
-                console.log(match?.[1]);
-            }
+          this.log(chalk.bold.underline("Outputs"));
+          for (const match of outputsMatches) {
+            console.log(match?.[1]);
           }
+        }
         if (resourcesMatches.length) {
-            this.log(chalk.bold.underline("Resources"));
-            for (const match of resourcesMatches) {
-                console.log(match?.[1]);
-            }
+          this.log(chalk.bold.underline("Resources"));
+          for (const match of resourcesMatches) {
+            console.log(match?.[1]);
+          }
         }
       } else {
         this.log(chalk.bold.green("There were no differences."));
       }
-
     } catch (e) {
       spinner.stop();
       const err = e as ExecaError;
-      const matanoError = err.message.split("\n").find(s => s.startsWith(MATANO_ERROR_PREFIX));
+      const matanoError = err.message.split("\n").find((s) => s.startsWith(MATANO_ERROR_PREFIX));
 
       const suggestions = [];
       if (matanoError) {
@@ -129,7 +124,7 @@ export default class Diff extends BaseCommand {
           exit: 1,
         });
       } else {
-        const foundError = err.message.split("\n").find(s => s.match(this.foundErrorPattern));
+        const foundError = err.message.split("\n").find((s) => s.match(this.foundErrorPattern));
         let message: string;
         if (foundError) {
           message = foundError.match(this.foundErrorPattern)?.[1]!!;

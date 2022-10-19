@@ -13,31 +13,29 @@ import org.apache.iceberg.expressions.Expressions
 import org.apache.iceberg.parquet.ParquetUtil
 import java.io.InputStream
 import java.io.OutputStream
-import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
-import java.time.temporal.ChronoUnit
 
 data class AlertsIcebergHelperRequest(
     val operation: String,
-    val data: Any?,
+    val data: Any?
 )
 
 data class IcebergCommitRequestItem(
     val old_key: String?,
     val new_key: String,
     val ts_day: String,
-    val file_size_bytes: Int,
+    val file_size_bytes: Int
 )
 
-class AlertsIcebergHelper: RequestStreamHandler {
+class AlertsIcebergHelper : RequestStreamHandler {
     private val icebergCatalog = createIcebergCatalog()
     private val mapper = jacksonObjectMapper()
 
     private fun createIcebergCatalog(): Catalog {
         val glueCatalog = GlueCatalog()
-                .apply { initialize("glue_catalog", IcebergMetadataWriter.icebergProperties) }
+            .apply { initialize("glue_catalog", IcebergMetadataWriter.icebergProperties) }
         return CachingCatalog.wrap(glueCatalog)
     }
 
@@ -60,7 +58,7 @@ class AlertsIcebergHelper: RequestStreamHandler {
         val payload: List<IcebergCommitRequestItem> = mapper.convertValue(req.data!!)
         println("Doing commit for: $payload")
         val table = icebergCatalog.loadTable(
-                TableIdentifier.of(Namespace.of(IcebergMetadataWriter.MATANO_NAMESPACE), MATANO_ALERTS_TABLE_NAME)
+            TableIdentifier.of(Namespace.of(IcebergMetadataWriter.MATANO_NAMESPACE), MATANO_ALERTS_TABLE_NAME)
         )
         val transaction = table.newTransaction()
         val partition = PartitionSpec.builderFor(table.schema()).day(IcebergMetadataWriter.TIMESTAMP_COLUMN_NAME).build()
@@ -71,32 +69,32 @@ class AlertsIcebergHelper: RequestStreamHandler {
         for (item in payload) {
             val newPath = lakePath(item.new_key)
             val newDataFile = DataFiles.builder(partition)
-                    .withPartitionPath("ts_day=${item.ts_day}")
-                    // .withPath(newPath)
-                    // TODO: this call and calls for file sizes could be avoided by passing into lambda
-                    .withMetrics(readParquetMetrics(newPath, table))
-                    .withInputFile(table.io().newInputFile(newPath))
-                    .withFormat("PARQUET")
-                    .build()
+                .withPartitionPath("ts_day=${item.ts_day}")
+                // .withPath(newPath)
+                // TODO: this call and calls for file sizes could be avoided by passing into lambda
+                .withMetrics(readParquetMetrics(newPath, table))
+                .withInputFile(table.io().newInputFile(newPath))
+                .withFormat("PARQUET")
+                .build()
             if (item.old_key != null) {
                 val oldPath = lakePath(item.old_key)
                 val oldDataFile = DataFiles.builder(partition)
-                        .withPartitionPath("ts_day=${item.ts_day}")
-                        .withInputFile(table.io().newInputFile(oldPath))
-                        .withMetrics(readParquetMetrics(oldPath, table)) // TODO: avoid, need to return to Rust and pass back from readFiles
+                    .withPartitionPath("ts_day=${item.ts_day}")
+                    .withInputFile(table.io().newInputFile(oldPath))
+                    .withMetrics(readParquetMetrics(oldPath, table)) // TODO: avoid, need to return to Rust and pass back from readFiles
 //                        .withPath(lakePath(item.old_path))
-                        .withFormat("PARQUET")
-                        .build()
+                    .withFormat("PARQUET")
+                    .build()
                 transaction
-                        .newOverwrite()
-                        .addFile(newDataFile)
-                        .deleteFile(oldDataFile)
-                        .commit()
+                    .newOverwrite()
+                    .addFile(newDataFile)
+                    .deleteFile(oldDataFile)
+                    .commit()
             } else {
                 transaction
-                        .newAppend()
-                        .appendFile(newDataFile)
-                        .commit()
+                    .newAppend()
+                    .appendFile(newDataFile)
+                    .commit()
             }
         }
         transaction.commitTransaction()
@@ -105,7 +103,7 @@ class AlertsIcebergHelper: RequestStreamHandler {
 
     fun readFiles(): String {
         val table = icebergCatalog.loadTable(
-                TableIdentifier.of(Namespace.of(IcebergMetadataWriter.MATANO_NAMESPACE), MATANO_ALERTS_TABLE_NAME)
+            TableIdentifier.of(Namespace.of(IcebergMetadataWriter.MATANO_NAMESPACE), MATANO_ALERTS_TABLE_NAME)
         )
         val now = LocalDateTime.now().atOffset(ZoneOffset.UTC)
         val days = (0..7).map { dn ->
@@ -113,17 +111,18 @@ class AlertsIcebergHelper: RequestStreamHandler {
         }
 
         val files = table
-                .newScan()
-                .filter(
-                        Expressions.`in`(
-                                Expressions.day<String>("ts"), days
-                        )
+            .newScan()
+            .filter(
+                Expressions.`in`(
+                    Expressions.day<String>("ts"),
+                    days
                 )
-                .planFiles()
-                .map {
-                    it.file().path()
-                }
-                .toList()
+            )
+            .planFiles()
+            .map {
+                it.file().path()
+            }
+            .toList()
 
         return mapper.writeValueAsString(files)
     }
@@ -131,6 +130,4 @@ class AlertsIcebergHelper: RequestStreamHandler {
     companion object {
         const val MATANO_ALERTS_TABLE_NAME = "matano_alerts"
     }
-
-
 }

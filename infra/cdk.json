@@ -3,9 +3,7 @@
   "versionReporting": false,
   "requireApproval": "never",
   "watch": {
-    "include": [
-      "**"
-    ],
+    "include": ["**"],
     "exclude": [
       "README.md",
       "cdk*.json",

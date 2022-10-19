@@ -7,7 +7,7 @@ keywords: ["apache-iceberg", "iceberg", "serverless", "big data"]
 import coverImg from "./cover.png";
 
 <head>
-    <meta property="og:image" content={coverImg}/>
+  <meta property="og:image" content={coverImg} />
 </head>
 
 Matano relies on Apache Iceberg as its main data lake and store. To ingest data into Matano Iceberg tables, we rely on a unique design that keeps the system both realtime and serverless.
@@ -15,7 +15,7 @@ Matano relies on Apache Iceberg as its main data lake and store. To ingest data 
 <!-- truncate -->
 
 <figure align="center">
-    <img width="512px" src={coverImg}/>
+  <img width="512px" src={coverImg} />
 </figure>
 
 ## Background
@@ -31,7 +31,7 @@ We can design a system where we decouple data writing from Iceberg metadata inge
 To summarize, we need a system that:
 
 1. Lets us write data independent of Iceberg. For example, we can use a managed service like Firehose to write the Parquet data files or write them ourselves from a Lambda function.
-2. Ingest the data files into Iceberg in *realtime*. Thus, we don't want a batch based approach.
+2. Ingest the data files into Iceberg in _realtime_. Thus, we don't want a batch based approach.
 3. Be completely serverless. We don't want a system that e.g. relies on long running compute or an in memory/on disk buffer.
 
 The design works as follows. First, we write data files directly to S3. Next, we configure an S3 event notification on this bucket. The S3 event notification is sent to an SQS queue. We add a Lambda function trigger to this SQS queue. The Lambda function, using the Java Apache Iceberg library, calls Iceberg APIs (namely `appendFiles`) and ingests the files that were written to S3 into Apache Iceberg.
@@ -65,6 +65,7 @@ class IcebergMetadataWriter {
     }
 }
 ```
+
 We have a Lambda handler processing an SQS event. We create a new appendFiles for Iceberg. We then process each record in the event and (remember, we receive multiple files to commit based on our batch size) and append a file for each record and then we commit the entire appendFiles.
 
 Let's look at the how we process each record:
@@ -130,7 +131,7 @@ And that's how we do Iceberg ingestion in Matano. We think its a lightweight and
 
 <p style={{fontSize:"20px"}}>
 
-*Interested in how we use Iceberg to build the open source security lake platform for AWS? Check out [**Matano on GitHub**](https://github.com/matanolabs/matano) and give us a star.*
+_Interested in how we use Iceberg to build the open source security lake platform for AWS? Check out [**Matano on GitHub**](https://github.com/matanolabs/matano) and give us a star._
 
 </p>
 

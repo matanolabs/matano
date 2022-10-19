@@ -7,16 +7,15 @@ import * as lambda from "aws-cdk-lib/aws-lambda";
 import { MatanoTable } from "./log-source";
 import { resolveSchema } from "./schema";
 
-interface MatanoAlertingProps {
-}
+interface MatanoAlertingProps {}
 
 export class MatanoAlerting extends Construct {
   alertingTopic: sns.Topic;
   constructor(scope: Construct, id: string, props: MatanoAlertingProps) {
     super(scope, id);
-    
-    this.alertingTopic =  new sns.Topic(this, "MatanoAlertingTopic", {
-        displayName: "MatanoAlertingTopic",
+
+    this.alertingTopic = new sns.Topic(this, "MatanoAlertingTopic", {
+      displayName: "MatanoAlertingTopic",
     });
   }
 }

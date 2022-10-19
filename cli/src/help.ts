@@ -1,5 +1,5 @@
-import { Command, Help } from '@oclif/core';
-import chalk from 'chalk';
+import { Command, Help } from "@oclif/core";
+import chalk from "chalk";
 
 export const LOGO = `\
 █▀▄▀█ ▄▀█ ▀█▀ ▄▀█ █▄░█ █▀█

@@ -19,14 +19,14 @@ You cannot currently use the [`sigma` cli][5] to convert Sigma rules to Matano d
 
 :::
 
-To import Sigma rules into Matano Python detections, you use the [*Matano backend for Sigma*][3]  which translates Sigma rules into Python detections.
+To import Sigma rules into Matano Python detections, you use the [_Matano backend for Sigma_][3] which translates Sigma rules into Python detections.
 
 ### Steps
 
 1. Install the Matano backend for Sigma by running `pip install git+https://github.com/matanolabs/pySigma-backend-matano.git`.
 1. Download the [following Python script][4].
 1. Execute the script by running `python sigma_generate.py <filepath>`.
-    - You can pass a pipeline using the `--pipeline` argument. Run the help command for a list of supported pipelines (e.g. ECS CloudTrail).
+   - You can pass a pipeline using the `--pipeline` argument. Run the help command for a list of supported pipelines (e.g. ECS CloudTrail).
 1. The script will output a ready to use detection directory in the current directory, containing a `detect.py` script and `detection.yml` configuration file.
 1. You can copy the detection directory into your Matano directory to use the detection.
 
@@ -43,22 +43,22 @@ author: Sittikorn S
 date: 2021/06/29
 modified: 2021/08/20
 references:
-    - https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_DisableEbsEncryptionByDefault.html
+  - https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_DisableEbsEncryptionByDefault.html
 tags:
-    - attack.impact
-    - attack.t1486
-    - attack.t1565
+  - attack.impact
+  - attack.t1486
+  - attack.t1565
 logsource:
-    product: aws
-    service: cloudtrail
+  product: aws
+  service: cloudtrail
 detection:
-    selection:
-        eventSource: ec2.amazonaws.com
-        eventName: DisableEbsEncryptionByDefault
-    condition: selection
+  selection:
+    eventSource: ec2.amazonaws.com
+    eventName: DisableEbsEncryptionByDefault
+  condition: selection
 falsepositives:
-    - System Administrator Activities
-    - DEV, UAT, SAT environment. You should apply this rule with PROD account only.
+  - System Administrator Activities
+  - DEV, UAT, SAT environment. You should apply this rule with PROD account only.
 level: medium
 ```
 
@@ -69,20 +69,19 @@ will be converted into a Matano detection with the following `detection.yml` and
 # This file was generated from a Sigma rule
 
 author: Sittikorn S
-date: '2021-06-29'
+date: "2021-06-29"
 description: Identifies disabling of default Amazon Elastic Block Store (EBS) encryption
   in the current region. Disabling default encryption does not change the encryption
   status of your existing volumes.
 id: 16124c2d-e40b-4fcc-8f2c-5ab7870a2223
 level: medium
 references:
-- https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_DisableEbsEncryptionByDefault.html
+  - https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_DisableEbsEncryptionByDefault.html
 status: stable
-
 
 name: aws_ec2_disable_ebs_encryption
 tables:
-- aws_cloudtrail
+  - aws_cloudtrail
 ```
 
 ```python
@@ -96,6 +95,7 @@ def detect(record):
         and record.get("event", {}).get("action") == "DisableEbsEncryptionByDefault"
     )
 ```
+
 [1]: https://github.com/SigmaHQ/pySigma
 [2]: https://github.com/SigmaHQ/sigma-cli/issues/3
 [3]: https://github.com/matanolabs/pySigma-backend-matano

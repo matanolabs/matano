@@ -24,12 +24,12 @@ export class LakeIngestion extends Construct {
       environment: {
         RUST_LOG: "warn,lake_writer=info",
         OUT_BUCKET_NAME: props.outputBucketName,
-        OUT_KEY_PREFIX:  props.outputObjectPrefix,
+        OUT_KEY_PREFIX: props.outputObjectPrefix,
       },
       timeout: cdk.Duration.seconds(5),
       initialPolicy: [
         new iam.PolicyStatement({
-          actions: ["secretsmanager:*", "dynamodb:*", "s3:*", ],
+          actions: ["secretsmanager:*", "dynamodb:*", "s3:*"],
           resources: ["*"],
         }),
       ],
@@ -43,12 +43,12 @@ export class LakeIngestion extends Construct {
       environment: {
         RUST_LOG: "warn,lake_writer=info",
         OUT_BUCKET_NAME: props.outputBucketName,
-        OUT_KEY_PREFIX:  props.outputObjectPrefix,
+        OUT_KEY_PREFIX: props.outputObjectPrefix,
       },
       timeout: cdk.Duration.seconds(60),
       initialPolicy: [
         new iam.PolicyStatement({
-          actions: ["secretsmanager:*", "dynamodb:*", "s3:*", ],
+          actions: ["secretsmanager:*", "dynamodb:*", "s3:*"],
           resources: ["*"],
         }),
       ],

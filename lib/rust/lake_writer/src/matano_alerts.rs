@@ -1,28 +1,35 @@
-use std::{vec, collections::{HashMap, HashSet}, path::Path, time::Instant};
+use crate::{
+    common::{struct_wrap_arrow2_for_ffi, write_arrow_to_s3_parquet},
+    ALERTS_TABLE_NAME, AWS_CONFIG,
+};
+use anyhow::{anyhow, Result};
+use arrow2::chunk::Chunk;
+use arrow2::datatypes::*;
+use arrow2::io::avro::avro_schema;
+use arrow2::io::avro::avro_schema::file::{Block, CompressedBlock, Compression};
+use arrow2::io::avro::avro_schema::schema::Record;
+use arrow2::io::avro::avro_schema::write::compress;
+use arrow2::io::avro::write;
 use async_once::AsyncOnce;
 use aws_sdk_lambda::types::Blob;
 use bytes::Bytes;
 use futures::future::join_all;
+use lazy_static::lazy_static;
+use log::{error, info};
 use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use log::{error, info};
-use lazy_static::lazy_static;
-use anyhow::{anyhow, Result};
-use arrow2::chunk::Chunk;
-use arrow2::datatypes::*;
-use arrow2::io::avro::avro_schema::file::{Block, CompressedBlock, Compression};
-use arrow2::io::avro::avro_schema::write::compress;
-use arrow2::io::avro::write;
-use arrow2::io::avro::avro_schema;
-use arrow2::io::avro::avro_schema::schema::Record;
-use crate::{common::{write_arrow_to_s3_parquet, struct_wrap_arrow2_for_ffi}, ALERTS_TABLE_NAME, AWS_CONFIG};
+use std::{
+    collections::{HashMap, HashSet},
+    path::Path,
+    time::Instant,
+    vec,
+};
 
 lazy_static! {
     static ref ALERTS_AVRO_SCHEMA: apache_avro::Schema = get_alerts_avro_schema().unwrap();
-    static ref LAMBDA_CLIENT: AsyncOnce<aws_sdk_lambda::Client> = AsyncOnce::new(async {
-        aws_sdk_lambda::Client::new(AWS_CONFIG.get().await)
-    });
+    static ref LAMBDA_CLIENT: AsyncOnce<aws_sdk_lambda::Client> =
+        AsyncOnce::new(async { aws_sdk_lambda::Client::new(AWS_CONFIG.get().await) });
 }
 
 /// Here's what we do:
@@ -43,22 +50,28 @@ lazy_static! {
 /// FIN!
 pub async fn process_alerts(s3: aws_sdk_s3::Client, data: Vec<Vec<u8>>) -> Result<()> {
     if data.is_empty() {
-        return Ok(())
+        return Ok(());
     }
 
     // read new data into avro values using apache_avro
-    let new_values = data.into_iter().flat_map(|buf| {
-        let data = std::io::Cursor::new(buf);
-        let r = apache_avro::Reader::with_schema(&ALERTS_AVRO_SCHEMA, data).unwrap();
-        r.map(|v| v.unwrap()).collect::<Vec<_>>()
-    }).collect::<Vec<_>>();
+    let new_values = data
+        .into_iter()
+        .flat_map(|buf| {
+            let data = std::io::Cursor::new(buf);
+            let r = apache_avro::Reader::with_schema(&ALERTS_AVRO_SCHEMA, data).unwrap();
+            r.map(|v| v.unwrap()).collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
     info!("Loaded new values.");
 
     type MaybeString = Option<String>;
 
     let st11 = std::time::Instant::now();
     let existing_values_vecs = get_existing_values(&s3).await?;
-    println!("**************** TIME: EXISTING_VALUES {:?}", st11.elapsed());
+    println!(
+        "**************** TIME: EXISTING_VALUES {:?}",
+        st11.elapsed()
+    );
     info!("Loaded existing values.");
 
     let now = chrono::Utc::now();
@@ -79,8 +92,10 @@ pub async fn process_alerts(s3: aws_sdk_s3::Client, data: Vec<Vec<u8>>) -> Resul
         let matano_rule_match_id = get_av_path(new_value, "matano.alert.rule.match.id");
         let matano_rule_match_id_s = cast_av_str(matano_rule_match_id).unwrap();
 
-        let deduplication_window = get_av_path(&new_value, "matano.alert.rule.deduplication_window");
-        let deduplication_window_micros: i64 = (cast_av_int(deduplication_window).unwrap_or(30) * 1000000).into();
+        let deduplication_window =
+            get_av_path(&new_value, "matano.alert.rule.deduplication_window");
+        let deduplication_window_micros: i64 =
+            (cast_av_int(deduplication_window).unwrap_or(30) * 1000000).into();
 
         let alert_threshold = get_av_path(&new_value, "matano.alert.rule.threshold");
         let alert_threshold = cast_av_int(alert_threshold).unwrap_or(10);
@@ -98,13 +113,13 @@ pub async fn process_alerts(s3: aws_sdk_s3::Client, data: Vec<Vec<u8>>) -> Resul
 
         let entry = new_value_agg.entry(key).or_insert(default);
         entry.rule_match_ids.push(matano_rule_match_id_s);
-
     }
 
     let st11 = std::time::Instant::now();
     // aggregate existing values to get active alerts, and their counts and window starts
     info!("Aggregating existing values...");
-    let mut existing_aggregation_map = HashMap::<(MaybeString, MaybeString), ExistingAlertsData>::new();
+    let mut existing_aggregation_map =
+        HashMap::<(MaybeString, MaybeString), ExistingAlertsData>::new();
     for (_, existing_values) in existing_values_vecs.iter() {
         for value in existing_values.iter() {
             let matano_rule_match_id = get_av_path(&value, "matano.alert.rule.match.id");
@@ -122,14 +137,16 @@ pub async fn process_alerts(s3: aws_sdk_s3::Client, data: Vec<Vec<u8>>) -> Resul
 
             let matano_alert_breached_bool = cast_av_bool(matano_alert_breached).unwrap_or(false);
 
-            let new_alert_entry = new_value_agg.get(&(matano_alert_rule_name.clone(), matano_alert_dedupe.clone()));
+            let new_alert_entry =
+                new_value_agg.get(&(matano_alert_rule_name.clone(), matano_alert_dedupe.clone()));
 
             if matano_alert_id_s.is_some() && new_alert_entry.is_some() {
-                let deduplication_window_micros = new_alert_entry.unwrap().deduplication_window_micros;
+                let deduplication_window_micros =
+                    new_alert_entry.unwrap().deduplication_window_micros;
 
-                if matano_alert_created_ts
-                    .map_or(false, |ts| ts + deduplication_window_micros > current_micros)
-                {
+                if matano_alert_created_ts.map_or(false, |ts| {
+                    ts + deduplication_window_micros > current_micros
+                }) {
                     let alert_id = matano_alert_id_s.unwrap();
                     let window_start = matano_alert_created_ts.unwrap();
                     let rule_match_id = cast_av_str(matano_rule_match_id).unwrap();
@@ -144,7 +161,6 @@ pub async fn process_alerts(s3: aws_sdk_s3::Client, data: Vec<Vec<u8>>) -> Resul
                     let entry = existing_aggregation_map.entry(key).or_insert(data);
                     entry.rule_match_ids.push(rule_match_id);
                 }
-
             }
         }
     }
@@ -197,23 +213,23 @@ pub async fn process_alerts(s3: aws_sdk_s3::Client, data: Vec<Vec<u8>>) -> Resul
         insert_av_path(
             new_value_mut,
             "matano.alert.id".to_string(),
-            avro_null_union(
-                apache_avro::types::Value::String(new_alert_data.alert_id.as_ref().unwrap().clone())
-            )
+            avro_null_union(apache_avro::types::Value::String(
+                new_alert_data.alert_id.as_ref().unwrap().clone(),
+            )),
         );
         insert_av_path(
             new_value_mut,
             "matano.alert.breached".to_string(),
-            avro_null_union(
-                apache_avro::types::Value::Boolean(*new_alert_data.breached.as_ref().unwrap())
-            )
+            avro_null_union(apache_avro::types::Value::Boolean(
+                *new_alert_data.breached.as_ref().unwrap(),
+            )),
         );
         insert_av_path(
             new_value_mut,
             "matano.alert.created".to_string(),
-            avro_null_union(
-                apache_avro::types::Value::TimestampMicros(new_alert_data.created_micros.unwrap())
-            )
+            avro_null_union(apache_avro::types::Value::TimestampMicros(
+                new_alert_data.created_micros.unwrap(),
+            )),
         );
     }
 
@@ -228,28 +244,34 @@ pub async fn process_alerts(s3: aws_sdk_s3::Client, data: Vec<Vec<u8>>) -> Resul
             let matano_alert_id_s = cast_av_str(matano_alert_id);
 
             let key = (
-                cast_av_str(matano_alert_rule_name), cast_av_str(matano_alert_dedupe)
+                cast_av_str(matano_alert_rule_name),
+                cast_av_str(matano_alert_dedupe),
             );
             if let Some(existing_data) = existing_aggregation_map.get(&key) {
-                if existing_data.breached_changed && matano_alert_id_s.map_or(false, |id| id == existing_data.alert_id ) {
+                if existing_data.breached_changed
+                    && matano_alert_id_s.map_or(false, |id| id == existing_data.alert_id)
+                {
                     let value_mut = unsafe { make_mut(value) };
                     insert_av_path(
                         value_mut,
                         "matano.alert.breached".to_string(),
-                        avro_null_union(
-                            apache_avro::types::Value::Boolean(true)
-                        )
+                        avro_null_union(apache_avro::types::Value::Boolean(true)),
                     );
                     modified_partitions.insert(partition.clone());
                 }
             }
         }
     }
-    println!("**************** TIME: AVRO_MODIFICATION {:?}", st11.elapsed());
+    println!(
+        "**************** TIME: AVRO_MODIFICATION {:?}",
+        st11.elapsed()
+    );
 
     // if new data fits in existing partition, add there, else create a new partition
     let mut partition_data = existing_values_vecs;
-    let existing_partition = partition_data.iter_mut().find(|((_, partition), _)| partition == &now_ts_day);
+    let existing_partition = partition_data
+        .iter_mut()
+        .find(|((_, partition), _)| partition == &now_ts_day);
     if let Some((_, e_vec)) = existing_partition {
         e_vec.extend(new_values);
     } else {
@@ -259,52 +281,67 @@ pub async fn process_alerts(s3: aws_sdk_s3::Client, data: Vec<Vec<u8>>) -> Resul
     let mut upload_join_handles = Vec::with_capacity(partition_data.len());
 
     // filter out unchanged partitions
-    let partition_data = partition_data.into_iter().filter(
-        |((_, partition), _)| {
-            partition == &now_ts_day || modified_partitions.contains(partition)
-        }
-    );
+    let partition_data = partition_data.into_iter().filter(|((_, partition), _)| {
+        partition == &now_ts_day || modified_partitions.contains(partition)
+    });
 
     info!("Writing final values to parquet...");
     let st11 = std::time::Instant::now();
-    let final_data = partition_data.map(|((old_key, partition), partition_values)| {
-        use arrow2::io::avro::read::infer_schema;
+    let final_data = partition_data
+        .map(|((old_key, partition), partition_values)| {
+            use arrow2::io::avro::read::infer_schema;
 
-        // encode values to avro using apache_avro
-        let mut writer = apache_avro::Writer::new(&ALERTS_AVRO_SCHEMA, Vec::new());
-        writer.extend(partition_values).unwrap();
-        let data = writer.into_inner().unwrap();
+            // encode values to avro using apache_avro
+            let mut writer = apache_avro::Writer::new(&ALERTS_AVRO_SCHEMA, Vec::new());
+            writer.extend(partition_values).unwrap();
+            let data = writer.into_inner().unwrap();
 
-        // then read back using arrow2 into arrow
-        let mut data_r = std::io::Cursor::new(data);
-        let metadata = arrow2::io::avro::avro_schema::read::read_metadata(&mut data_r).unwrap();
-        let schema = infer_schema(&metadata.record).unwrap();
-        let chunks = arrow2::io::avro::read::Reader::new(data_r, metadata, schema.fields.clone(), None).map(|c| c.unwrap()).collect::<Vec<_>>();
+            // then read back using arrow2 into arrow
+            let mut data_r = std::io::Cursor::new(data);
+            let metadata = arrow2::io::avro::avro_schema::read::read_metadata(&mut data_r).unwrap();
+            let schema = infer_schema(&metadata.record).unwrap();
+            let chunks =
+                arrow2::io::avro::read::Reader::new(data_r, metadata, schema.fields.clone(), None)
+                    .map(|c| c.unwrap())
+                    .collect::<Vec<_>>();
 
-        // and write to parquet
-        let (field, arrays) = struct_wrap_arrow2_for_ffi(&schema, chunks);
-        let fut = write_arrow_to_s3_parquet(s3.clone(), ALERTS_TABLE_NAME.into(), partition, field, arrays);
+            // and write to parquet
+            let (field, arrays) = struct_wrap_arrow2_for_ffi(&schema, chunks);
+            let fut = write_arrow_to_s3_parquet(
+                s3.clone(),
+                ALERTS_TABLE_NAME.into(),
+                partition,
+                field,
+                arrays,
+            );
 
-        let join_handle = tokio::spawn(fut);
-        upload_join_handles.push(join_handle);
+            let join_handle = tokio::spawn(fut);
+            upload_join_handles.push(join_handle);
 
-        old_key
-    }).collect::<Vec<_>>();
+            old_key
+        })
+        .collect::<Vec<_>>();
     println!("**************** TIME: WRITE_PARQUET {:?}", st11.elapsed());
 
-    let written_keys = join_all(upload_join_handles).await
-        .into_iter().collect::<Result<Vec<_>, _>>()?
-        .into_iter().collect::<Result<Vec<_>, _>>()?;
+    let written_keys = join_all(upload_join_handles)
+        .await
+        .into_iter()
+        .collect::<Result<Vec<_>, _>>()?
+        .into_iter()
+        .collect::<Result<Vec<_>, _>>()?;
 
-    let commit_req_items = final_data.into_iter().zip(written_keys.into_iter())
-        .map(|(old_key, (partition, new_key, file_size_bytes))| {
-            IcebergCommitRequestItem {
+    let commit_req_items = final_data
+        .into_iter()
+        .zip(written_keys.into_iter())
+        .map(
+            |(old_key, (partition, new_key, file_size_bytes))| IcebergCommitRequestItem {
                 old_key,
                 new_key,
                 ts_day: partition,
-                file_size_bytes
-            }
-        }).collect::<Vec<_>>();
+                file_size_bytes,
+            },
+        )
+        .collect::<Vec<_>>();
 
     info!("Doing Iceberg commit...");
     let st11 = std::time::Instant::now();
@@ -314,13 +351,11 @@ pub async fn process_alerts(s3: aws_sdk_s3::Client, data: Vec<Vec<u8>>) -> Resul
     Ok(())
 }
 
-
 fn serialize_to_block<R: AsRef<dyn arrow2::array::Array>>(
     columns: &Chunk<R>,
     record: Record,
     compression: Option<Compression>,
 ) -> Result<CompressedBlock> {
-
     let mut serializers = columns
         .arrays()
         .iter()
@@ -346,22 +381,34 @@ fn rand_name() -> String {
 }
 fn hack_fix_arrow2_avro_schema(schema: avro_schema::schema::Schema) -> avro_schema::schema::Schema {
     match schema {
-        avro_schema::schema::Schema::Record(rec) => avro_schema::schema::Schema::Record(avro_schema::schema::Record {
-            name: rand_name(),
-            namespace: rec.namespace,
-            doc: rec.doc,
-            aliases: rec.aliases,
-            fields: rec.fields.into_iter().map(|f| {
-                arrow2::io::avro::avro_schema::schema::Field::new(f.name, hack_fix_arrow2_avro_schema(f.schema))
-            }).collect(),
-        }),
-        avro_schema::schema::Schema::Array(schema) => avro_schema::schema::Schema::Array(Box::new(
-            hack_fix_arrow2_avro_schema(*schema)
-        )),
+        avro_schema::schema::Schema::Record(rec) => {
+            avro_schema::schema::Schema::Record(avro_schema::schema::Record {
+                name: rand_name(),
+                namespace: rec.namespace,
+                doc: rec.doc,
+                aliases: rec.aliases,
+                fields: rec
+                    .fields
+                    .into_iter()
+                    .map(|f| {
+                        arrow2::io::avro::avro_schema::schema::Field::new(
+                            f.name,
+                            hack_fix_arrow2_avro_schema(f.schema),
+                        )
+                    })
+                    .collect(),
+            })
+        }
+        avro_schema::schema::Schema::Array(schema) => {
+            avro_schema::schema::Schema::Array(Box::new(hack_fix_arrow2_avro_schema(*schema)))
+        }
         avro_schema::schema::Schema::Union(schemas) => avro_schema::schema::Schema::Union(
-            schemas.into_iter().map(hack_fix_arrow2_avro_schema).collect()
+            schemas
+                .into_iter()
+                .map(hack_fix_arrow2_avro_schema)
+                .collect(),
         ),
-        x => x
+        x => x,
     }
 }
 fn hack_fix_arrow2_avro_record(record: avro_schema::schema::Record) -> avro_schema::schema::Record {
@@ -369,7 +416,7 @@ fn hack_fix_arrow2_avro_record(record: avro_schema::schema::Record) -> avro_sche
     let new_schema = hack_fix_arrow2_avro_schema(schema);
     match new_schema {
         avro_schema::schema::Schema::Record(rec) => rec,
-        _ => panic!("invalid record")
+        _ => panic!("invalid record"),
     }
 }
 
@@ -378,26 +425,46 @@ fn hack_fix_arrow2_avro_record(record: avro_schema::schema::Record) -> avro_sche
 // TODO: fix the root cause
 fn hack_fix_arrow2_schema_ts(schema: Schema) -> Schema {
     Schema {
-        fields: schema.fields.iter().map(|field| {
-            Field::new(field.name.clone(), hack_fix_arrow2_dtyp_ts(field.data_type.clone()), field.is_nullable)
-        }).collect(),
+        fields: schema
+            .fields
+            .iter()
+            .map(|field| {
+                Field::new(
+                    field.name.clone(),
+                    hack_fix_arrow2_dtyp_ts(field.data_type.clone()),
+                    field.is_nullable,
+                )
+            })
+            .collect(),
         metadata: Default::default(),
     }
 }
 fn hack_fix_arrow2_dtyp_ts(dtype: DataType) -> DataType {
     match dtype {
         DataType::Timestamp(tu, _) => DataType::Timestamp(tu, None),
-        DataType::List(field) => DataType::List(Box::new(
-            Field::new(field.name, hack_fix_arrow2_dtyp_ts(field.data_type), field.is_nullable)
-        )),
-        DataType::LargeList(field) => DataType::LargeList(Box::new(
-            Field::new(field.name, hack_fix_arrow2_dtyp_ts(field.data_type), field.is_nullable)
-        )),
-        DataType::Struct(fields) => { DataType::Struct(
-            fields.iter().map(|field| Field::new(field.name.clone(), hack_fix_arrow2_dtyp_ts(field.data_type.clone()), field.is_nullable))
-            .collect()
-        )},
-        x => x
+        DataType::List(field) => DataType::List(Box::new(Field::new(
+            field.name,
+            hack_fix_arrow2_dtyp_ts(field.data_type),
+            field.is_nullable,
+        ))),
+        DataType::LargeList(field) => DataType::LargeList(Box::new(Field::new(
+            field.name,
+            hack_fix_arrow2_dtyp_ts(field.data_type),
+            field.is_nullable,
+        ))),
+        DataType::Struct(fields) => DataType::Struct(
+            fields
+                .iter()
+                .map(|field| {
+                    Field::new(
+                        field.name.clone(),
+                        hack_fix_arrow2_dtyp_ts(field.data_type.clone()),
+                        field.is_nullable,
+                    )
+                })
+                .collect(),
+        ),
+        x => x,
     }
 }
 
@@ -411,7 +478,11 @@ fn arrow_arrow2_parquet(reader: Bytes) -> Vec<u8> {
     let buf = vec![];
     let props = parquet::file::properties::WriterProperties::builder().build();
 
-    let batches = parq_reader.collect::<Vec<_>>().into_iter().collect::<Result<Vec<_>, _>>().unwrap();
+    let batches = parq_reader
+        .collect::<Vec<_>>()
+        .into_iter()
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap();
     let schema = batches.first().unwrap().schema();
     let mut writer = parquet::arrow::ArrowWriter::try_new(buf, schema, Some(props)).unwrap();
 
@@ -422,97 +493,121 @@ fn arrow_arrow2_parquet(reader: Bytes) -> Vec<u8> {
     writer.into_inner().unwrap()
 }
 
-async fn get_existing_values(s3: &aws_sdk_s3::Client)-> Result<Vec<((Option<String>, String), Vec<apache_avro::types::Value>)>> {
+async fn get_existing_values(
+    s3: &aws_sdk_s3::Client,
+) -> Result<Vec<((Option<String>, String), Vec<apache_avro::types::Value>)>> {
     let st11 = std::time::Instant::now();
     let iceberg_paths = get_iceberg_read_files().await?;
     println!("**************** TIME: READ_FILES {:?}", st11.elapsed());
     println!("{:?}", iceberg_paths);
     if iceberg_paths.is_empty() {
-        return Ok(vec![])
+        return Ok(vec![]);
     }
     let st11 = std::time::Instant::now();
 
-
-    let iceberg_partitions = iceberg_paths.iter().map(|(_, key)| {
-        let partition = key.split("/").find(|p| p.starts_with("ts_day=")).unwrap().trim_matches('/').replace("ts_day=", "");
-        (Some(key.clone()), partition)
-    }).collect::<Vec<_>>();
-
-    let dl_tasks = iceberg_paths
-        .into_iter()
-        .map(|(bucket, key)| {
-            let ret = async move {
-                let obj_res = s3
-                    .get_object()
-                    .bucket(bucket)
-                    .key(key)
-                    .send()
-                    .await
-                    .map_err(|e| {
-                        error!("Error downloading {} from S3: {}", "", e);
-                        e
-                    });
-                let obj = obj_res.unwrap();
-                println!("Got object...");
-                println!("_________len: {}", obj.content_length());
-
-                let stream = obj.body;
-                let body = stream.collect().await.unwrap();
-                body.into_bytes()
-            };
-            ret
+    let iceberg_partitions = iceberg_paths
+        .iter()
+        .map(|(_, key)| {
+            let partition = key
+                .split("/")
+                .find(|p| p.starts_with("ts_day="))
+                .unwrap()
+                .trim_matches('/')
+                .replace("ts_day=", "");
+            (Some(key.clone()), partition)
         })
-    ;
+        .collect::<Vec<_>>();
+
+    let dl_tasks = iceberg_paths.into_iter().map(|(bucket, key)| {
+        let ret = async move {
+            let obj_res = s3
+                .get_object()
+                .bucket(bucket)
+                .key(key)
+                .send()
+                .await
+                .map_err(|e| {
+                    error!("Error downloading {} from S3: {}", "", e);
+                    e
+                });
+            let obj = obj_res.unwrap();
+            println!("Got object...");
+            println!("_________len: {}", obj.content_length());
+
+            let stream = obj.body;
+            let body = stream.collect().await.unwrap();
+            body.into_bytes()
+        };
+        ret
+    });
 
     let readers = join_all(dl_tasks).await.into_iter();
 
     let s1 = Instant::now();
     let readers = readers.map(arrow_arrow2_parquet);
-    println!("********TIME: arrow parquet re serialization took: {:?}", s1.elapsed());
+    println!(
+        "********TIME: arrow parquet re serialization took: {:?}",
+        s1.elapsed()
+    );
 
     use arrow2::io::parquet::read;
 
     let mut avro_record = Box::new(None);
 
-    let all_chunks = readers.into_iter().map(|reader| {
-        let mut reader = std::io::Cursor::new(reader);
-        let metadata = read::read_metadata(&mut reader).unwrap();
-        let schema = read::infer_schema(&metadata).unwrap();
-        let schema = hack_fix_arrow2_schema_ts(schema);
-        let row_groups = metadata.row_groups;
+    let all_chunks = readers
+        .into_iter()
+        .map(|reader| {
+            let mut reader = std::io::Cursor::new(reader);
+            let metadata = read::read_metadata(&mut reader).unwrap();
+            let schema = read::infer_schema(&metadata).unwrap();
+            let schema = hack_fix_arrow2_schema_ts(schema);
+            let row_groups = metadata.row_groups;
 
-        let start = std::time::Instant::now();
+            let start = std::time::Instant::now();
 
-        let chunks = read::FileReader::new(reader, row_groups, schema.clone(), None, None, None)
-            .into_iter()
-            .map(|r| r.unwrap())
-            .collect::<Vec<_>>();
-        println!("**************** parq read time {:?}", start.elapsed());
+            let chunks =
+                read::FileReader::new(reader, row_groups, schema.clone(), None, None, None)
+                    .into_iter()
+                    .map(|r| r.unwrap())
+                    .collect::<Vec<_>>();
+            println!("**************** parq read time {:?}", start.elapsed());
 
-        if !avro_record.is_some() {
-            let record = hack_fix_arrow2_avro_record(write::to_record(&schema.clone()).unwrap());
-            avro_record = Box::new(Some(record));
-        }
-        chunks
-    }).collect::<Vec<_>>();
+            if !avro_record.is_some() {
+                let record =
+                    hack_fix_arrow2_avro_record(write::to_record(&schema.clone()).unwrap());
+                avro_record = Box::new(Some(record));
+            }
+            chunks
+        })
+        .collect::<Vec<_>>();
 
-    let final_values = all_chunks.into_iter().map(|chunks| {
-        let mut buf = vec![];
-        avro_schema::write::write_metadata(&mut buf, avro_record.clone().unwrap(), None).unwrap();
-        for chunk in chunks {
-            let rec = avro_record.clone().unwrap();
-            let block = serialize_to_block(&chunk, rec, None).unwrap();
-            avro_schema::write::write_block(&mut buf, &block).unwrap();
-        }
-        let data = std::io::Cursor::new(buf);
-        let r = apache_avro::Reader::with_schema(&ALERTS_AVRO_SCHEMA, data).unwrap();
-        let values = r.map(|v| v.unwrap()).collect::<Vec<_>>();
-        values
-    }).collect::<Vec<_>>();
+    let final_values = all_chunks
+        .into_iter()
+        .map(|chunks| {
+            let mut buf = vec![];
+            avro_schema::write::write_metadata(&mut buf, avro_record.clone().unwrap(), None)
+                .unwrap();
+            for chunk in chunks {
+                let rec = avro_record.clone().unwrap();
+                let block = serialize_to_block(&chunk, rec, None).unwrap();
+                avro_schema::write::write_block(&mut buf, &block).unwrap();
+            }
+            let data = std::io::Cursor::new(buf);
+            let r = apache_avro::Reader::with_schema(&ALERTS_AVRO_SCHEMA, data).unwrap();
+            let values = r.map(|v| v.unwrap()).collect::<Vec<_>>();
+            values
+        })
+        .collect::<Vec<_>>();
 
-    let ret = iceberg_partitions.into_iter().zip(final_values.into_iter()).collect::<Vec<_>>();
+    let ret = iceberg_partitions
+        .into_iter()
+        .zip(final_values.into_iter())
+        .collect::<Vec<_>>();
 
-    println!("**************** TIME: LOAD_EXISTING_VALUES {:?}", st11.elapsed());
+    println!(
+        "**************** TIME: LOAD_EXISTING_VALUES {:?}",
+        st11.elapsed()
+    );
     Ok(ret)
 }
 
@@ -520,7 +615,8 @@ async fn call_helper_lambda(payload: String) -> Result<Option<Vec<u8>>> {
     let lambda = LAMBDA_CLIENT.get().await;
     let helper_function_name = std::env::var("ALERT_HELPER_FUNCTION_NAME")?;
 
-    let func_res = lambda.invoke()
+    let func_res = lambda
+        .invoke()
         .function_name(helper_function_name)
         .payload(Blob::new(payload))
         .send()
@@ -558,18 +654,22 @@ async fn get_iceberg_read_files() -> Result<Vec<(String, String)>> {
 
     let func_resp_payload = func_resp.expect("Read files Function didn't return payload!");
     let read_files: Vec<String> = serde_json::from_slice(func_resp_payload.as_slice())?;
-    let read_files = read_files.into_iter().take(1).map(parse_s3_uri).collect::<Vec<_>>();
+    let read_files = read_files
+        .into_iter()
+        .take(1)
+        .map(parse_s3_uri)
+        .collect::<Vec<_>>();
 
     Ok(read_files)
 }
 
 fn parse_s3_uri(p: String) -> (String, String) {
     // s3://bucket/key/a/b/c
-    let p = &p.as_str()
+    let p = &p
+        .as_str()
         .trim_start_matches("s3://")
         .splitn(2, '/')
-        .collect::<Vec<_>>()
-    ;
+        .collect::<Vec<_>>();
     let bucket = p.get(0).unwrap().trim_matches('/');
     let key = p.get(1).unwrap().trim_matches('/');
     (bucket.to_string(), key.to_string())
@@ -577,26 +677,38 @@ fn parse_s3_uri(p: String) -> (String, String) {
 
 fn get_alerts_avro_schema() -> Result<apache_avro::Schema> {
     let schemas_path = Path::new("/opt/schemas");
-    let schema_path = schemas_path.join(ALERTS_TABLE_NAME).join("avro_schema.avsc");
+    let schema_path = schemas_path
+        .join(ALERTS_TABLE_NAME)
+        .join("avro_schema.avsc");
     let avro_schema_json_string = std::fs::read_to_string(schema_path).unwrap();
 
     let schema = apache_avro::Schema::parse_str(avro_schema_json_string.as_str())?;
     Ok(schema)
 }
 
-fn get_single_record(value: &apache_avro::types::Value, path: String) -> &apache_avro::types::Value {
+fn get_single_record(
+    value: &apache_avro::types::Value,
+    path: String,
+) -> &apache_avro::types::Value {
     match value {
         apache_avro::types::Value::Record(ref vals) => {
-            &vals.iter().find(|(k,_)| k == &path).unwrap().1
-        },
+            &vals.iter().find(|(k, _)| k == &path).unwrap().1
+        }
         apache_avro::types::Value::Union(pos, v) => {
-            if *pos == 0 { panic!("gsr empty!!") } else { get_single_record(v, path) }
-        },
-        _ => panic!("gsr!")
+            if *pos == 0 {
+                panic!("gsr empty!!")
+            } else {
+                get_single_record(v, path)
+            }
+        }
+        _ => panic!("gsr!"),
     }
 }
 
-fn get_av_path<'a>(value: &'a apache_avro::types::Value, path: &'a str) -> &'a apache_avro::types::Value {
+fn get_av_path<'a>(
+    value: &'a apache_avro::types::Value,
+    path: &'a str,
+) -> &'a apache_avro::types::Value {
     let parts = path.split(".");
     let mut curval = value;
     for part in parts {
@@ -606,26 +718,34 @@ fn get_av_path<'a>(value: &'a apache_avro::types::Value, path: &'a str) -> &'a a
     curval
 }
 
-fn insert_av(record_value: &mut apache_avro::types::Value, insert_field_name: String, insert_value: apache_avro::types::Value) {
+fn insert_av(
+    record_value: &mut apache_avro::types::Value,
+    insert_field_name: String,
+    insert_value: apache_avro::types::Value,
+) {
     match record_value {
         apache_avro::types::Value::Record(ref mut vals) => {
-            let index = &vals.iter().position(|(k,_)| k == &insert_field_name);
+            let index = &vals.iter().position(|(k, _)| k == &insert_field_name);
             if let Some(idx) = index {
                 let val_ref = vals.get_mut(*idx).unwrap();
                 *val_ref = (insert_field_name, insert_value);
             }
-        },
+        }
         apache_avro::types::Value::Union(pos, v) => {
             if *pos == 0 {
             } else {
                 insert_av(v, insert_field_name, insert_value)
             }
-        },
-        _ => panic!("gsr!")
+        }
+        _ => panic!("gsr!"),
     }
 }
 
-fn insert_av_path(value: &mut apache_avro::types::Value, path: String, insert_value: apache_avro::types::Value) {
+fn insert_av_path(
+    value: &mut apache_avro::types::Value,
+    path: String,
+    insert_value: apache_avro::types::Value,
+) {
     let parts = path.split(".").collect::<Vec<_>>();
     let (tail, parts) = parts.split_last().unwrap();
     let mut curval = value;
@@ -636,14 +756,17 @@ fn insert_av_path(value: &mut apache_avro::types::Value, path: String, insert_va
     insert_av(curval, tail.to_string(), insert_value);
 }
 
-
 fn cast_av_ts(v: &apache_avro::types::Value) -> Option<i64> {
     match v {
         apache_avro::types::Value::TimestampMicros(micros) => Some(*micros),
         apache_avro::types::Value::Union(pos, v) => {
-            if *pos == 0 { None } else { cast_av_ts(v) }
-        },
-        _ => panic!("gsr!")
+            if *pos == 0 {
+                None
+            } else {
+                cast_av_ts(v)
+            }
+        }
+        _ => panic!("gsr!"),
     }
 }
 
@@ -651,9 +774,13 @@ fn cast_av_str(v: &apache_avro::types::Value) -> Option<String> {
     match v {
         apache_avro::types::Value::String(s) => Some(s.clone()),
         apache_avro::types::Value::Union(pos, v) => {
-            if *pos == 0 { None } else { cast_av_str(v) }
-        },
-        _ => panic!("gsr!")
+            if *pos == 0 {
+                None
+            } else {
+                cast_av_str(v)
+            }
+        }
+        _ => panic!("gsr!"),
     }
 }
 
@@ -661,9 +788,13 @@ fn cast_av_int(v: &apache_avro::types::Value) -> Option<i32> {
     match v {
         apache_avro::types::Value::Int(x) => Some(*x),
         apache_avro::types::Value::Union(pos, v) => {
-            if *pos == 0 { None } else { cast_av_int(v) }
-        },
-        _ => panic!("gsr!")
+            if *pos == 0 {
+                None
+            } else {
+                cast_av_int(v)
+            }
+        }
+        _ => panic!("gsr!"),
     }
 }
 
@@ -671,9 +802,13 @@ fn cast_av_bool(v: &apache_avro::types::Value) -> Option<bool> {
     match v {
         apache_avro::types::Value::Boolean(s) => Some(*s),
         apache_avro::types::Value::Union(pos, v) => {
-            if *pos == 0 { None } else { cast_av_bool(v) }
-        },
-        _ => panic!("gsr!")
+            if *pos == 0 {
+                None
+            } else {
+                cast_av_bool(v)
+            }
+        }
+        _ => panic!("gsr!"),
     }
 }
 
@@ -702,7 +837,7 @@ struct NewAlertData {
     breached: Option<bool>,
     created_micros: Option<i64>,
     deduplication_window_micros: i64,
-    threshold: i32
+    threshold: i32,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

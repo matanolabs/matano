@@ -182,10 +182,12 @@ export class IcebergMetadata extends Construct {
         MATANO_ICEBERG_BUCKET: props.lakeStorageBucket.bucket.bucketName,
       },
       code: getLocalAsset("iceberg_metadata"),
-      initialPolicy: [new iam.PolicyStatement({
-        actions: ["glue:*", "s3:*",],
-        resources: ["*"],
-      })],
+      initialPolicy: [
+        new iam.PolicyStatement({
+          actions: ["glue:*", "s3:*"],
+          resources: ["*"],
+        }),
+      ],
     });
 
     duplicatesTable.grantReadWriteData(this.alertsHelperFunction);

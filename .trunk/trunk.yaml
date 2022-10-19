@@ -1,5 +1,8 @@
 version: 0.1
 runtimes:
+  definitions:
+    - type: rust
+      system_version: allowed
   enabled:
     - java@11.0.13
     - go@1.18.3
@@ -17,11 +20,18 @@ actions:
 cli:
   version: 0.18.1-beta
 lint:
+  ignore:
+    - linters: [ALL]
+      paths:
+        - scripts/packaging/post-install.sh
+        - "**/gradlew"
+        - "**/package.json"
+        - "**/tsconfig.json"
   enabled:
     - ktlint@0.47.1
     - actionlint@1.6.20
     - black@22.8.0
-    - clippy@1.58.1
+    - clippy@1.63.0
     - flake8@5.0.4
     - git-diff-check@SYSTEM
     - gitleaks@8.13.0
@@ -29,7 +39,7 @@ lint:
     - isort@5.10.1
     - markdownlint@0.32.2
     - prettier@2.7.1
-    - rustfmt@1.58.1
+    - rustfmt@1.63.0
     - shellcheck@0.8.0
     - shfmt@3.5.0
     - svgo@2.8.0

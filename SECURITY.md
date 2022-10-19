@@ -9,6 +9,7 @@ We appreciate your help in making Matano secure. We take security issues very se
 | All     | :white_check_mark: |
 
 ## Reporting a Vulnerability
+
 Please do not open a Github Issue for security issues you encounter. Instead, please send an email to security@matano.dev describing the issue and we'll respond as soon as possible.
 
 You may use the following PGP public key when contacting to report a vulnerability.
