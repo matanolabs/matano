@@ -1,0 +1,116 @@
+name: smb_mapping
+schema:
+  ecs_field_names:
+    - destination.address
+    - destination.as.number
+    - destination.as.organization.name
+    - destination.geo.city_name
+    - destination.geo.continent_name
+    - destination.geo.country_iso_code
+    - destination.geo.country_name
+    - destination.geo.location
+    - destination.geo.name
+    - destination.geo.region_iso_code
+    - destination.geo.region_name
+    - destination.ip
+    - destination.port
+    - error.message
+    - event.category
+    - event.id
+    - event.type
+    - file.path
+    - network.community_id
+    - network.protocol
+    - network.transport
+    - related.ip
+    - source.address
+    - source.as.number
+    - source.as.organization.name
+    - source.geo.city_name
+    - source.geo.continent_name
+    - source.geo.country_iso_code
+    - source.geo.country_name
+    - source.geo.location
+    - source.geo.name
+    - source.geo.region_iso_code
+    - source.geo.region_name
+    - source.ip
+    - source.port
+  fields:
+    - name: zeek
+      type:
+        fields:
+          - name: smb_mapping
+            type:
+              fields:
+                - name: path
+                  type: string
+                - name: service
+                  type: string
+                - name: native_file_system
+                  type: string
+                - name: share_type
+                  type: string
+              type: struct
+        type: struct
+transform: |
+  .event.kind = "event"
+  .event.category = ["network",]
+  .event.type = ["connection", "protocol",]
+
+  .network.transport = "tcp"
+  .network.protocol = "smb"
+
+  if .json.ts == null {
+      abort
+  }
+
+  .zeek.smb_mapping = object!(del(.json))
+
+  .event.created = .ts
+
+  .zeek.smb_mapping, err = set(.zeek.smb_mapping, split("id.orig_p", "."), .zeek.smb_mapping."id.orig_p")
+  del(.zeek.smb_mapping."id.orig_p")
+
+  .zeek.smb_mapping, err = set(.zeek.smb_mapping, split("id.orig_h", "."), .zeek.smb_mapping."id.orig_h")
+  del(.zeek.smb_mapping."id.orig_h")
+
+  .zeek.smb_mapping, err = set(.zeek.smb_mapping, split("id.resp_h", "."), .zeek.smb_mapping."id.resp_h")
+  del(.zeek.smb_mapping."id.resp_h")
+
+  .zeek.smb_mapping, err = set(.zeek.smb_mapping, split("id.resp_p", "."), .zeek.smb_mapping."id.resp_p")
+  del(.zeek.smb_mapping."id.resp_p")
+
+  .source.address = del(.zeek.smb_mapping.id.orig_h) || .source.address
+
+  .source.port = del(.zeek.smb_mapping.id.orig_p) || .source.port
+
+  .destination.address = del(.zeek.smb_mapping.id.resp_h) || .destination.address
+
+  .destination.port = del(.zeek.smb_mapping.id.resp_p) || .destination.port
+
+  .zeek.session_id = del(.zeek.smb_mapping.uid) || .zeek.session_id
+
+  .event.id = .zeek.session_id
+
+  .source.ip = .source.address
+
+  .destination.ip = .destination.address
+
+  .ts = to_timestamp!(.zeek.smb_mapping.ts, "seconds") 
+
+  del(.zeek.smb_mapping.ts)
+
+  .source.as.number = del(.source.as.asn) || .source.as.number
+
+  .source.as.organization.name = del(.source.as.organization_name) || .source.as.organization.name
+
+  .destination.as.number = del(.destination.as.asn) || .destination.as.number
+
+  .destination.as.organization.name = del(.destination.as.organization_name) || .destination.as.organization.name
+
+  .related.ip = unique(filter(flatten([.source.ip, .destination.ip])) -> |_, v| { v != null })
+
+  # TODO(): add network community id
+
+  del(.zeek.smb_mapping.id)

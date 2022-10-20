@@ -1,0 +1,115 @@
+name: dpd
+schema:
+  ecs_field_names:
+    - destination.address
+    - destination.as.number
+    - destination.as.organization.name
+    - destination.geo.city_name
+    - destination.geo.continent_name
+    - destination.geo.country_iso_code
+    - destination.geo.country_name
+    - destination.geo.location
+    - destination.geo.name
+    - destination.geo.region_iso_code
+    - destination.geo.region_name
+    - destination.ip
+    - destination.port
+    - error.message
+    - event.category
+    - event.id
+    - event.type
+    - network.community_id
+    - network.transport
+    - related.ip
+    - source.address
+    - source.as.number
+    - source.as.organization.name
+    - source.geo.city_name
+    - source.geo.continent_name
+    - source.geo.country_iso_code
+    - source.geo.country_name
+    - source.geo.location
+    - source.geo.name
+    - source.geo.region_iso_code
+    - source.geo.region_name
+    - source.ip
+    - source.port
+  fields:
+    - name: zeek
+      type:
+        fields:
+          - name: session_id
+            type: string
+          - name: dpd
+            type:
+              fields:
+                - name: analyzer
+                  type: string
+                - name: failure_reason
+                  type: string
+                - name: packet_segment
+                  type: string
+              type: struct
+        type: struct
+transform: |
+  .event.kind = "event"
+  .event.category = ["network"]
+  .event.type = ["connection", "info"]
+
+  .dns.header_flags = []
+
+  if .json.ts == null { 
+      abort
+  }
+
+  .zeek.dpd = object!(del(.json))
+
+  .event.created = .ts
+
+  .zeek.dpd, err = set(.zeek.dpd, split("id.orig_p", "."), .zeek.dpd."id.orig_p")
+  del(.zeek.dpd."id.orig_p")
+
+  .zeek.dpd, err = set(.zeek.dpd, split("id.orig_h", "."), .zeek.dpd."id.orig_h")
+  del(.zeek.dpd."id.orig_h")
+
+  .zeek.dpd, err = set(.zeek.dpd, split("id.resp_h", "."), .zeek.dpd."id.resp_h")
+  del(.zeek.dpd."id.resp_h")
+
+  .zeek.dpd, err = set(.zeek.dpd, split("id.resp_p", "."), .zeek.dpd."id.resp_p")
+  del(.zeek.dpd."id.resp_p")
+
+  .source.address = del(.zeek.dpd.id.orig_h) || .source.address
+
+  .source.port = del(.zeek.dpd.id.orig_p) || .source.port
+
+  .destination.address = del(.zeek.dpd.id.resp_h) || .destination.address
+
+  .destination.port = del(.zeek.dpd.id.resp_p) || .destination.port
+
+  .network.transport = del(.zeek.dpd.proto) || .network.transport
+
+  .zeek.session_id = del(.zeek.dpd.uid) || .zeek.session_id
+
+  .event.id = .zeek.session_id
+
+  .source.ip = .source.address
+
+  .destination.ip = .destination.address
+
+  .ts = to_timestamp!(.zeek.dpd.ts, "seconds") 
+
+  del(.zeek.dpd.ts)
+
+  .source.as.number = del(.source.as.asn) || .source.as.number
+
+  .source.as.organization.name = del(.source.as.organization_name) || .source.as.organization.name
+
+  .destination.as.number = del(.destination.as.asn) || .destination.as.number
+
+  .destination.as.organization.name = del(.destination.as.organization_name) || .destination.as.organization.name
+
+  .related.ip = unique(filter(flatten([.source.ip, .destination.ip])) -> |_, v| { v != null }) 
+      
+  # TODO(): add community network id
+
+  del(.zeek.dpd.id)

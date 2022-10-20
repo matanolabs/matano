@@ -1,0 +1,145 @@
+name: snmp
+schema:
+  ecs_field_names:
+    - destination.address
+    - destination.as.number
+    - destination.as.organization.name
+    - destination.geo.city_name
+    - destination.geo.continent_name
+    - destination.geo.country_iso_code
+    - destination.geo.country_name
+    - destination.geo.location
+    - destination.geo.name
+    - destination.geo.region_iso_code
+    - destination.geo.region_name
+    - destination.ip
+    - destination.port
+    - error.message
+    - event.category
+    - event.id
+    - event.type
+    - network.community_id
+    - network.protocol
+    - network.transport
+    - related.ip
+    - source.address
+    - source.as.number
+    - source.as.organization.name
+    - source.geo.city_name
+    - source.geo.continent_name
+    - source.geo.country_iso_code
+    - source.geo.country_name
+    - source.geo.location
+    - source.geo.name
+    - source.geo.region_iso_code
+    - source.geo.region_name
+    - source.ip
+    - source.port
+  fields:
+    - name: zeek
+      type:
+        fields:
+          - name: snmp
+            type:
+              fields:
+                - name: duration
+                  type: double
+                - name: version
+                  type: string
+                - name: community
+                  type: string
+                - name: get
+                  type:
+                    fields:
+                      - name: requests
+                        type: int
+                      - name: bulk_requests
+                        type: int
+                      - name: responses
+                        type: int
+                    type: struct
+                - name: set
+                  type:
+                    fields:
+                      - name: requests
+                        type: int
+                    type: struct
+                - name: display_string
+                  type: string
+                - name: up_since
+                  type: timestamp
+              type: struct
+        type: struct
+transform: |
+  .event.kind = "event"
+  .event.category = ["network",]
+  .event.type = ["connection", "protocol",]
+
+  .network.transport = "udp"
+  .network.protocol = "snmp"
+
+  .event.original = del(.message) || .event.original
+
+  if .json.ts == null { 
+    abort                     
+  }
+
+  .zeek.snmp = object!(del(.json))
+
+  .event.created = .ts
+
+  .zeek.snmp, err = set(.zeek.snmp, split("id.orig_p", "."), .zeek.snmp."id.orig_p")
+  del(.zeek.snmp."id.orig_p")
+
+  .zeek.snmp, err = set(.zeek.snmp, split("id.orig_h", "."), .zeek.snmp."id.orig_h")
+  del(.zeek.snmp."id.orig_h")
+
+  .zeek.snmp, err = set(.zeek.snmp, split("id.resp_h", "."), .zeek.snmp."id.resp_h")
+  del(.zeek.snmp."id.resp_h")
+
+  .zeek.snmp, err = set(.zeek.snmp, split("id.resp_p", "."), .zeek.snmp."id.resp_p")
+  del(.zeek.snmp."id.resp_p")
+
+  .source.address = del(.zeek.snmp.id.orig_h) || .source.address
+
+  .source.port = del(.zeek.snmp.id.orig_p) || .source.port
+
+  .destination.address = del(.zeek.snmp.id.resp_h) || .destination.address
+
+  .destination.port = del(.zeek.snmp.id.resp_p) || .destination.port
+
+  .zeek.session_id = del(.zeek.snmp.uid) || .zeek.session_id
+
+  .event.id = .zeek.session_id
+      
+  .source.ip = .source.address
+      
+  .destination.ip = .destination.address
+      
+  .zeek.snmp.get.requests = del(.zeek.snmp.get_requests)
+
+  .zeek.snmp.get.bulk_requests = del(.zeek.snmp.get_bulk_requests)
+
+  .zeek.snmp.get.responses = del(.zeek.snmp.get_responses)
+
+  .zeek.snmp.set.requests = del(.zeek.snmp.set_requests)
+
+  .ts = to_timestamp!(.zeek.snmp.ts, "seconds") 
+
+  del(.zeek.snmp.ts)
+
+  .zeek.snmp.up_since = to_timestamp(.zeek.snmp.up_since, "seconds") ?? null 
+      
+  .source.as.number = del(.source.as.asn) || .source.as.number
+
+  .source.as.organization.name = del(.source.as.organization_name) || .source.as.organization.name
+
+  .destination.as.number = del(.destination.as.asn) || .destination.as.number
+
+  .destination.as.organization.name = del(.destination.as.organization_name) || .destination.as.organization.name
+
+  .related.ip = unique(filter(flatten([.source.ip, .destination.ip])) -> |_, v| { v != null })
+            
+  # TODO(): add network community id                      
+
+  del(.zeek.snmp.id)

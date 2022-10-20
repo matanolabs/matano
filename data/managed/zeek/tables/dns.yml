@@ -1,0 +1,312 @@
+name: dns
+schema:
+  ecs_field_names:
+    - destination.address
+    - destination.as.number
+    - destination.as.organization.name
+    - destination.geo.city_name
+    - destination.geo.continent_name
+    - destination.geo.country_iso_code
+    - destination.geo.country_name
+    - destination.geo.location
+    - destination.geo.name
+    - destination.geo.region_iso_code
+    - destination.geo.region_name
+    - destination.ip
+    - destination.port
+    - dns.answers
+    - dns.answers.class
+    - dns.answers.data
+    - dns.answers.name
+    - dns.answers.ttl
+    - dns.answers.type
+    - dns.header_flags
+    - dns.id
+    - dns.question.class
+    - dns.question.name
+    - dns.question.registered_domain
+    - dns.question.subdomain
+    - dns.question.top_level_domain
+    - dns.question.type
+    - dns.resolved_ip
+    - dns.response_code
+    - dns.type
+    - error.message
+    - event.category
+    - event.duration
+    - event.id
+    - event.original
+    - event.outcome
+    - event.type
+    - network.community_id
+    - network.protocol
+    - network.transport
+    - related.ip
+    - source.address
+    - source.as.number
+    - source.as.organization.name
+    - source.geo.city_name
+    - source.geo.continent_name
+    - source.geo.country_iso_code
+    - source.geo.country_name
+    - source.geo.location
+    - source.geo.name
+    - source.geo.region_iso_code
+    - source.geo.region_name
+    - source.ip
+    - source.port
+  fields:
+    - name: zeek
+      type:
+        fields:
+          - name: session_id
+            type: string
+          - name: dns
+            type:
+              fields:
+                - name: trans_id
+                  type: string
+                - name: rtt
+                  type: double
+                - name: query
+                  type: string
+                - name: qclass
+                  type: long
+                - name: qclass_name
+                  type: string
+                - name: qtype
+                  type: long
+                - name: qtype_name
+                  type: string
+                - name: rcode
+                  type: long
+                - name: rcode_name
+                  type: string
+                - name: AA
+                  type: boolean
+                - name: TC
+                  type: boolean
+                - name: RD
+                  type: boolean
+                - name: RA
+                  type: boolean
+                - name: answers
+                  type:
+                    element: string
+                    type: list
+                - name: TTLs
+                  type:
+                    element: double
+                    type: list
+                - name: rejected
+                  type: boolean
+                - name: total_answers
+                  type: int
+                - name: total_replies
+                  type: int
+                - name: saw_query
+                  type: boolean
+                - name: saw_reply
+                  type: boolean
+              type: struct
+        type: struct
+    - name: input
+      type:
+        fields:
+          - name: type
+            type: string
+        type: struct
+    - name: log
+      type:
+        fields:
+          - name: flags
+            type: string
+          - name: offset
+            type: long
+        type: struct
+    - name: cloud
+      type:
+        fields:
+          - name: image
+            type:
+              fields:
+                - name: id
+                  type: string
+              type: struct
+        type: struct
+    - name: host
+      type:
+        fields:
+          - name: os
+            type:
+              fields:
+                - name: build
+                  type: string
+                - name: codename
+                  type: string
+              type: struct
+          - name: containerized
+            type: boolean
+        type: struct
+transform: |
+  .event.kind = "event"
+  .event.category = ["network"]
+  .event.type = ["connection", "protocol", "info"]
+
+  .network.protocol = "dns"
+
+  if .json.ts == null {
+      abort
+  }
+
+  .zeek.dns = object!(del(.json))
+
+  .event.created = .ts
+
+  .zeek.dns, err = set(.zeek.dns, split("id.orig_p", "."), .zeek.dns."id.orig_p")
+  if err == null { 
+      del(.zeek.dns."id.orig_p")
+  }
+
+  .zeek.dns, err = set(.zeek.dns, split("id.orig_h", "."), .zeek.dns."id.orig_h")
+  if err == null { 
+      del(.zeek.dns."id.orig_h")
+  }
+
+  .zeek.dns, err = set(.zeek.dns, split("id.resp_h", "."), .zeek.dns."id.resp_h")
+  if err == null { 
+      del(.zeek.dns."id.resp_h")
+  }
+
+  .zeek.dns, err = set(.zeek.dns, split("id.resp_p", "."), .zeek.dns."id.resp_p")
+  if err == null { 
+      del(.zeek.dns."id.resp_p")
+  }
+
+  .source.address = del(.zeek.dns.id.orig_h)
+
+  .source.port = del(.zeek.dns.id.orig_p)
+
+  .destination.address = del(.zeek.dns.id.resp_h)
+
+  .destination.port = del(.zeek.dns.id.resp_p)
+
+  .zeek.session_id = del(.zeek.dns.uid)
+
+  .network.transport = del(.zeek.dns.proto)
+
+  .event.id = .zeek.session_id
+
+  .source.ip = .source.address
+
+  .destination.ip = .destination.address
+
+  .dns.header_flags = []
+
+  if .zeek.dns.AA == true { 
+      .dns.header_flags = push(.dns.header_flags, "AA") 
+  }
+
+  if .zeek.dns.TC == true { 
+      .dns.header_flags = push(.dns.header_flags, "TC") 
+  }
+
+  if .zeek.dns.RD == true { 
+      .dns.header_flags = push(.dns.header_flags, "RD") 
+  }
+
+  if .zeek.dns.RA == true { 
+      .dns.header_flags = push(.dns.header_flags, "RA") 
+  }
+      
+  if .zeek.dns.qclass == 1 { 
+      .dns.question.class = "IN"
+  }
+
+  if .zeek.dns.qclass == 3 { 
+      .dns.question.class = "CH"
+  }
+      
+  if .zeek.dns.qclass == 4 { 
+      .dns.question.class = "HS"
+  }
+   
+  if .zeek.dns.qclass == 254 { 
+      .dns.question.class = "NONE"
+  }
+      
+  if .zeek.dns.qclass == 255 { 
+      .dns.question.class = "ANY"
+  }
+      
+  if .zeek.dns.rcode_name != null { 
+      .dns.type = "answer"
+  }
+
+  if .dns.type == null { 
+      .dns.type = "query"
+  }
+      
+  if .zeek.dns.rtt != null {                  
+  	.event.duration = to_int(float!(.zeek.dns.rtt) * 1000000000)           
+  }
+
+  if .zeek.dns.answers != null && .zeek.dns.TTLs != null { 
+  	answers = array!(.zeek.dns.answers)
+  	ttls = array!(.zeek.dns.TTLs)
+  	if !is_empty(answers) && !is_empty(ttls) && length(answers) == length(ttls) {
+      .dns.answers = []
+      .dns.resolved_ip = []
+
+      for_each(answers) -> |i, ans| {
+        ttl = get!(ttls, [i])
+        .dns.answers = push(.dns.answers, {"data": ans, "ttl": to_int!(ttl) })
+
+        # If the answer is an IP address, add it to the resolved_ip array
+        _, err = ip_pton(ans)
+        is_ip = err == null
+        if is_ip {
+          .dns.resolved_ip = push(.dns.resolved_ip, ans)
+        }
+      }
+    }
+  }
+      
+  if .dns.rcode == 0 { 
+      .event.outcome = "success"
+  }
+
+  if .event.outcome == null { 
+      .event.outcome = "success"
+  }
+
+  if .zeek.dns.trans_id != null {                      
+    .zeek.dns.trans_id = to_string!(.zeek.dns.trans_id) 
+  }                                                 
+
+  .dns.id = .zeek.dns.trans_id
+
+  .dns.question.type = .zeek.dns.qtype_name
+
+  .dns.response_code = .zeek.dns.rcode_name
+            
+  # TODO(): parse dns.question domain info from zeek.dns.query                 
+  # e.g .dns.question.name = parse from .zeek.dns.query
+
+  if .zeek.dns.ts != null {                                               
+    .ts = to_timestamp!(.zeek.dns.ts, "seconds") 
+  }
+
+  del(.zeek.dns.ts)
+
+  # TODO(): source/destination GeoIP enrichment
+             
+  # TODO(): compute a network community id
+           
+  # TODO(): should we include ips from .dns.resolved_ip too?
+  .related.ip = unique(filter(flatten([.source.ip, .destination.ip])) -> |_, v| { v != null })
+      
+  del(.zeek.dns.Z)
+  del(.zeek.dns.auth)
+  del(.zeek.dns.addl)
+  del(.zeek.dns.id)

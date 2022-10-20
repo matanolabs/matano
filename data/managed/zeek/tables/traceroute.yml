@@ -1,0 +1,75 @@
+name: traceroute
+schema:
+  ecs_field_names:
+    - destination.address
+    - destination.as.number
+    - destination.as.organization.name
+    - destination.geo.city_name
+    - destination.geo.continent_name
+    - destination.geo.country_iso_code
+    - destination.geo.country_name
+    - destination.geo.location
+    - destination.geo.name
+    - destination.geo.region_iso_code
+    - destination.geo.region_name
+    - destination.ip
+    - error.message
+    - event.category
+    - event.type
+    - network.transport
+    - related.ip
+    - source.address
+    - source.as.number
+    - source.as.organization.name
+    - source.geo.city_name
+    - source.geo.continent_name
+    - source.geo.country_iso_code
+    - source.geo.country_name
+    - source.geo.location
+    - source.geo.name
+    - source.geo.region_iso_code
+    - source.geo.region_name
+    - source.ip
+  fields:
+    - name: zeek
+      type:
+        fields:
+          - name: session_id
+            type: string
+        type: struct
+transform: |
+  .event.kind = "event"
+  .event.category = ["network"]
+  .event.type = ["info"]
+
+  if .json.ts == null { 
+      abort
+  }
+
+  .zeek.traceroute = object!(del(.json))
+
+  .event.created = .ts
+
+  .source.address = del(.zeek.traceroute.src)
+
+  .destination.address = del(.zeek.traceroute.dst)
+
+  .network.transport = del(.zeek.traceroute.proto)
+
+  .source.ip = .source.address
+
+  .destination.ip = .destination.address
+
+  .ts = to_timestamp!(.zeek.traceroute.ts, "seconds") 
+
+  del(.zeek.traceroute.ts)
+
+  .source.as.number = del(.source.as.asn)
+
+  .source.as.organization.name = del(.source.as.organization_name)
+
+  .destination.as.number = del(.destination.as.asn)
+
+  .destination.as.organization.name = del(.destination.as.organization_name)
+
+  .related.ip = unique(filter(flatten([.source.ip, .destination.ip])) -> |_, v| { v != null })

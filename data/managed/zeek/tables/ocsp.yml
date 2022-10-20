@@ -1,0 +1,103 @@
+name: ocsp
+schema:
+  ecs_field_names:
+    - error.message
+    - file.path
+    - network.transport
+    - related.hash
+  fields:
+    - name: zeek
+      type:
+        fields:
+          - name: session_id
+            type: string
+          - name: ocsp
+            type:
+              fields:
+                - name: file_id
+                  type: string
+                - name: hash
+                  type:
+                    fields:
+                      - name: algorithm
+                        type: string
+                      - name: issuer
+                        type:
+                          fields:
+                            - name: name
+                              type: string
+                            - name: key
+                              type: string
+                          type: struct
+                    type: struct
+                - name: serial_number
+                  type: string
+                - name: status
+                  type: string
+                - name: revoke
+                  type:
+                    fields:
+                      - name: date
+                        type: timestamp
+                      - name: reason
+                        type: string
+                    type: struct
+                - name: update
+                  type:
+                    fields:
+                      - name: this
+                        type: timestamp
+                      - name: next
+                        type: timestamp
+                    type: struct
+              type: struct
+        type: struct
+transform: |
+  .event.kind = "event"
+  .network.transport = "tcp"
+
+  if .json.ts == null { 
+      abort
+  }
+
+  .zeek.ocsp = del(.json)
+
+  .event.created = .ts
+
+  .zeek.ocsp.file_id = del(.zeek.ocsp.id)
+
+  .zeek.ocsp.hash.algorithm = del(.zeek.ocsp.hashAlgorithm)
+
+  .zeek.ocsp.hash.issuer.name = del(.zeek.ocsp.issuerNameHash)
+
+  .zeek.ocsp.hash.issuer.key = del(.zeek.ocsp.issuerKeyHash)
+
+  .zeek.ocsp.serial_number = del(.zeek.ocsp.serialNumber)
+
+  .zeek.ocsp.status = del(.zeek.ocsp.certStatus)
+
+  .zeek.ocsp.revoke.date = del(.zeek.ocsp.revoketime)
+
+  .zeek.ocsp.revoke.reason = del(.zeek.ocsp.revokereason)
+
+  .zeek.ocsp.update.this = del(.zeek.ocsp.thisUpdate)
+
+  .zeek.ocsp.update.next = del(.zeek.ocsp.nextUpdate)
+
+  if .zeek.ocsp.ts != null {                                               
+    .ts = to_timestamp!(.zeek.ocsp.ts, "seconds") 
+  }
+
+  del(.zeek.ocsp.ts)
+
+  .zeek.ocsp.revoke.date = to_timestamp(.zeek.ocsp.revoke.date, "seconds") ?? null
+  .zeek.ocsp.update.this = to_timestamp(.zeek.ocsp.update.this, "seconds") ?? null
+  .zeek.ocsp.update.next = to_timestamp(.zeek.ocsp.update.next, "seconds") ?? null
+      
+  if .zeek.ocsp.issuerNameHash != null { 
+      .related.hash = push(.related.hash, .zeek.ocsp.issuerNameHash) 
+  }
+      
+  if .zeek.ocsp.issuerKeyHash != null { 
+      .related.hash = push(.related.hash, .zeek.ocsp.issuerKeyHash) 
+  }

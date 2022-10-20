@@ -1,0 +1,181 @@
+name: smb_files
+schema:
+  ecs_field_names:
+    - destination.address
+    - destination.as.number
+    - destination.as.organization.name
+    - destination.geo.city_name
+    - destination.geo.continent_name
+    - destination.geo.country_iso_code
+    - destination.geo.country_name
+    - destination.geo.location
+    - destination.geo.name
+    - destination.geo.region_iso_code
+    - destination.geo.region_name
+    - destination.ip
+    - destination.port
+    - error.message
+    - event.action
+    - event.category
+    - event.id
+    - event.type
+    - file.accessed
+    - file.created
+    - file.ctime
+    - file.mtime
+    - file.name
+    - file.path
+    - file.size
+    - network.community_id
+    - network.protocol
+    - network.transport
+    - related.ip
+    - related.user
+    - source.address
+    - source.as.number
+    - source.as.organization.name
+    - source.geo.city_name
+    - source.geo.continent_name
+    - source.geo.country_iso_code
+    - source.geo.country_name
+    - source.geo.location
+    - source.geo.name
+    - source.geo.region_iso_code
+    - source.geo.region_name
+    - source.ip
+    - source.port
+  fields:
+    - name: zeek
+      type:
+        fields:
+          - name: smb_files
+            type:
+              fields:
+                - name: action
+                  type: string
+                - name: fid
+                  type: int
+                - name: name
+                  type: string
+                - name: path
+                  type: string
+                - name: previous_name
+                  type: string
+                - name: size
+                  type: long
+                - name: times
+                  type:
+                    fields:
+                      - name: accessed
+                        type: timestamp
+                      - name: changed
+                        type: timestamp
+                      - name: created
+                        type: timestamp
+                      - name: modified
+                        type: timestamp
+                    type: struct
+                - name: uuid
+                  type: string
+              type: struct
+        type: struct
+transform: |
+  .event.kind = "event"
+  .event.category = ["network", "file"]
+  .event.type = ["connection", "protocol"]
+
+  .network.transport = "tcp"
+  .network.protocol = "smb"
+
+  if .json.ts == null { 
+      abort
+  }
+
+  .zeek.smb_files = object!(del(.json))
+
+  .event.created = .ts 
+
+  .zeek.smb_files, err = set(.zeek.smb_files, split("id.orig_p", "."), .zeek.smb_files."id.orig_p")
+  del(.zeek.smb_files."id.orig_p")
+
+  .zeek.smb_files, err = set(.zeek.smb_files, split("id.orig_h", "."), .zeek.smb_files."id.orig_h")
+  del(.zeek.smb_files."id.orig_h")
+
+  .zeek.smb_files, err = set(.zeek.smb_files, split("id.resp_h", "."), .zeek.smb_files."id.resp_h")
+  del(.zeek.smb_files."id.resp_h")
+
+  .zeek.smb_files, err = set(.zeek.smb_files, split("id.resp_p", "."), .zeek.smb_files."id.resp_p")
+  del(.zeek.smb_files."id.resp_p")
+
+  .source.address = del(.zeek.smb_files.id.orig_h)
+
+  .source.port = del(.zeek.smb_files.id.orig_p)
+
+  .destination.address = del(.zeek.smb_files.id.resp_h)
+
+  .destination.port = del(.zeek.smb_files.id.resp_p)
+
+  .zeek.session_id = del(.zeek.smb_files.uid)
+
+  .event.id = .zeek.session_id
+
+  .source.ip = .source.address
+
+  .destination.ip = .destination.address
+
+  .event.action = .zeek.smb_files.action
+
+  .file.name = .zeek.smb_files.name
+
+  .file.size = .zeek.smb_files.size
+
+  .ts = to_timestamp!(.zeek.smb_files.ts, "seconds") 
+
+  del(.zeek.smb_files.ts)
+
+  .zeek.smb_files = set!(.zeek.smb_files, split("times.accessed", "."), .zeek.smb_files."times.accessed")
+  del(.zeek.smb_files."times.accessed")
+
+  .zeek.smb_files = set!(.zeek.smb_files, split("times.changed", "."), .zeek.smb_files."times.changed")
+  del(.zeek.smb_files."times.changed")
+
+  .zeek.smb_files = set!(.zeek.smb_files, split("times.created", "."), .zeek.smb_files."times.created")
+  del(.zeek.smb_files."times.created")
+
+  .zeek.smb_files = set!(.zeek.smb_files, split("times.modified", "."), .zeek.smb_files."times.modified")
+  del(.zeek.smb_files."times.modified")
+
+  .file.accessed = .zeek.smb_files.times.accessed = to_timestamp(.zeek.smb_files.times.accessed, "seconds") ?? null
+  .file.ctime = .zeek.smb_files.times.changed = to_timestamp(.zeek.smb_files.times.changed, "seconds") ?? null
+  .file.created = .zeek.smb_files.times.created = to_timestamp(.zeek.smb_files.times.created, "seconds") ?? null
+  .file.mtime = .zeek.smb_files.times.modified = to_timestamp(.zeek.smb_files.times.modified, "seconds") ?? null
+
+  .source.as.number = del(.source.as.asn)
+
+  .source.as.organization.name = del(.source.as.organization_name)
+
+  .destination.as.number = del(.destination.as.asn)
+
+  .destination.as.organization.name = del(.destination.as.organization_name)
+
+  .related.ip = unique(filter(flatten([.source.ip, .destination.ip])) -> |_, v| { v != null })
+      
+  if .user.name != null { 
+      .related.user = push(.related.user, .user.name) 
+  }
+
+  if .zeek.smb_files.path != null && .zeek.smb_files.name != null { 
+      .file.path, err = .zeek.smb_files.path + "\\" + .zeek.smb_files.name
+  }
+
+  _smb_file_action_map = {
+    "SMB::FILE_DELETE": "deletion",
+    "SMB::FILE_RENAME": "change",
+    "SMB::FILE_SET_ATTRIBUTE": "change",
+  }
+  if exists(.zeek.smb_files.action) {
+    action = get(_smb_file_action_map, .zeek.smb_files.action) ?? "info"
+    .event.type = push(.event.type, action)
+  }
+
+  del(.zeek.smb_files.id)

@@ -1,0 +1,318 @@
+name: kerberos
+schema:
+  ecs_field_names:
+    - client.address
+    - destination.address
+    - destination.as.number
+    - destination.as.organization.name
+    - destination.geo.city_name
+    - destination.geo.continent_name
+    - destination.geo.country_iso_code
+    - destination.geo.country_name
+    - destination.geo.location
+    - destination.geo.name
+    - destination.geo.region_iso_code
+    - destination.geo.region_name
+    - destination.ip
+    - destination.port
+    - error.message
+    - event.action
+    - event.category
+    - event.id
+    - event.outcome
+    - event.type
+    - network.community_id
+    - network.protocol
+    - network.transport
+    - related.ip
+    - related.user
+    - server.address
+    - source.address
+    - source.as.number
+    - source.as.organization.name
+    - source.geo.city_name
+    - source.geo.continent_name
+    - source.geo.country_iso_code
+    - source.geo.country_name
+    - source.geo.location
+    - source.geo.name
+    - source.geo.region_iso_code
+    - source.geo.region_name
+    - source.ip
+    - source.port
+    - tls.client.x509.subject.common_name
+    - tls.client.x509.subject.country
+    - tls.client.x509.subject.locality
+    - tls.client.x509.subject.organization
+    - tls.client.x509.subject.organizational_unit
+    - tls.client.x509.subject.state_or_province
+    - tls.server.x509.subject.common_name
+    - tls.server.x509.subject.country
+    - tls.server.x509.subject.locality
+    - tls.server.x509.subject.organization
+    - tls.server.x509.subject.organizational_unit
+    - tls.server.x509.subject.state_or_province
+    - user.domain
+    - user.name
+  fields:
+    - name: zeek
+      type:
+        fields:
+          - name: session_id
+            type: string
+          - name: kerberos
+            type:
+              fields:
+                - name: request_type
+                  type: string
+                - name: client
+                  type: string
+                - name: service
+                  type: string
+                - name: success
+                  type: boolean
+                - name: error
+                  type:
+                    fields:
+                      - name: code
+                        type: int
+                      - name: msg
+                        type: string
+                    type: struct
+                - name: valid
+                  type:
+                    fields:
+                      - name: from
+                        type: timestamp
+                      - name: until
+                        type: timestamp
+                      - name: days
+                        type: int
+                    type: struct
+                - name: cipher
+                  type: string
+                - name: forwardable
+                  type: boolean
+                - name: renewable
+                  type: boolean
+                - name: ticket
+                  type:
+                    fields:
+                      - name: auth
+                        type: string
+                      - name: new
+                        type: string
+                    type: struct
+                - name: cert
+                  type:
+                    fields:
+                      - name: client
+                        type:
+                          fields:
+                            - name: value
+                              type: string
+                            - name: fuid
+                              type: string
+                            - name: subject
+                              type: string
+                          type: struct
+                      - name: server
+                        type:
+                          fields:
+                            - name: value
+                              type: string
+                            - name: fuid
+                              type: string
+                            - name: subject
+                              type: string
+                          type: struct
+                    type: struct
+              type: struct
+        type: struct
+transform: |
+  .event.kind = "event"
+  .event.category = ["network", "authentication"]
+  .event.type = ["connection", "protocol", "access"]
+
+  .network.transport = "tcp"
+  .network.protocol = "kerberos"
+
+  if .json.ts == null {
+      abort
+  }
+
+  .zeek.kerberos = object!(del(.json))
+
+  .event.created = .ts
+
+  .zeek.kerberos, err = set(.zeek.kerberos, split("id.orig_p", "."), .zeek.kerberos."id.orig_p")
+  if err == null { 
+      del(.zeek.kerberos."id.orig_p")
+  }
+
+  .zeek.kerberos, err = set(.zeek.kerberos, split("id.orig_h", "."), .zeek.kerberos."id.orig_h")
+  if err == null { 
+      del(.zeek.kerberos."id.orig_h")
+  }
+
+  .zeek.kerberos, err = set(.zeek.kerberos, split("id.resp_h", "."), .zeek.kerberos."id.resp_h")
+  if err == null { 
+      del(.zeek.kerberos."id.resp_h")
+  }
+
+  .zeek.kerberos, err = set(.zeek.kerberos, split("id.resp_p", "."), .zeek.kerberos."id.resp_p")
+  if err == null { 
+      del(.zeek.kerberos."id.resp_p")
+  }
+
+  .source.address = del(.zeek.kerberos.id.orig_h)
+
+  .source.port = del(.zeek.kerberos.id.orig_p)
+
+  .destination.address = del(.zeek.kerberos.id.resp_h)
+
+  .destination.port = del(.zeek.kerberos.id.resp_p)
+
+  .zeek.session_id = del(.zeek.kerberos.uid)
+
+  .event.id = .zeek.session_id
+
+  .source.ip = .source.address
+      
+  .client.address = .source.address
+
+  .destination.ip = .destination.address
+
+  .server.address = .destination.address
+
+  .event.action = .zeek.kerberos.request_type
+      
+  .zeek.kerberos.valid.until = del(.zeek.kerberos.till)
+
+  .zeek.kerberos.valid.from = del(.zeek.kerberos.from)
+
+  .zeek.kerberos.error.code = del(.zeek.kerberos.error_code)
+
+  .zeek.kerberos.error.msg = del(.zeek.kerberos.error_msg)
+
+  .zeek.kerberos, err = set(.zeek.kerberos, split("cert.client", "."), .zeek.kerberos."cert.client")
+  if err == null { 
+      del(.zeek.kerberos."cert.client")
+  }
+
+  .zeek.kerberos, err = set(.zeek.kerberos, split("cert.client_subject", "."), .zeek.kerberos."cert.client_subject")
+  if err == null { 
+      del(.zeek.kerberos."cert.client_subject")
+  }
+
+  .zeek.kerberos, err = set(.zeek.kerberos, split("cert.client_fuid", "."), .zeek.kerberos."cert.client_fuid")
+  if err == null { 
+      del(.zeek.kerberos."cert.client_fuid")
+  }
+
+  .zeek.kerberos, err = set(.zeek.kerberos, split("cert.server", "."), .zeek.kerberos."cert.server")
+  if err == null { 
+      del(.zeek.kerberos."cert.server")
+  }
+
+  .zeek.kerberos, err = set(.zeek.kerberos, split("cert.server_subject", "."), .zeek.kerberos."cert.server_subject")
+  if err == null { 
+      del(.zeek.kerberos."cert.server_subject")
+  }
+
+  .zeek.kerberos, err = set(.zeek.kerberos, split("cert.server_fuid", "."), .zeek.kerberos."cert.server_fuid")
+  if err == null { 
+      del(.zeek.kerberos."cert.server_fuid")
+  }
+
+  .zeek.kerberos.cert.client.value = del(.zeek.kerberos.cert.client)
+
+  .zeek.kerberos.cert.client.subject = del(.zeek.kerberos.cert.client_subject)
+
+  .zeek.kerberos.cert.client.fuid = del(.zeek.kerberos.cert.client_fuid)
+
+  .zeek.kerberos.cert.server.value = del(.zeek.kerberos.cert.server)
+
+  .zeek.kerberos.cert.server.subject = del(.zeek.kerberos.cert.server_subject)
+
+  .zeek.kerberos.cert.server.fuid = del(.zeek.kerberos.cert.server_fuid)
+
+  .zeek.kerberos.ticket.auth = del(.zeek.kerberos.auth_ticket)
+
+  .zeek.kerberos.ticket.new = del(.zeek.kerberos.new_ticket)
+
+  .zeek.kerberos.client = string(.zeek.kerberos.client) ?? "default"
+  if contains(.zeek.kerberos.client, "/") { 
+    parts = split(.zeek.kerberos.client, "/")
+    if length(parts) == 2 {
+      .user.name = parts[0]
+      .user.domain = parts[1]
+    }                       
+  }
+   
+  if .zeek.kerberos.ts != null {                                               
+    .ts = to_timestamp!(.zeek.kerberos.ts, "seconds") 
+  }
+
+  del(.zeek.kerberos.ts)
+
+  if .zeek.kerberos.valid.from != null && .zeek.kerberos.valid.until != null {        
+  	.zeek.kerberos.valid.days = round({
+      (.zeek.kerberos.valid.until - .zeek.kerberos.valid.from) / 86400
+    } ?? -1)                       
+  }
+
+  if .zeek.kerberos.valid.until != null {                                               
+    .zeek.kerberos.valid.until = to_timestamp!(.zeek.kerberos.valid.until, "seconds") 
+  }
+     
+  if .zeek.kerberos.valid.from != null {                                               
+    .zeek.kerberos.valid.from = to_timestamp!(.zeek.kerberos.valid.from, "seconds") 
+  }
+
+  if .zeek.kerberos.success == true { 
+      .event.outcome = "success"
+  }
+
+  if .zeek.kerberos.success == false { 
+      .event.outcome = "failure"
+  }
+
+  .source.as.number = del(.source.as.asn)
+
+  .source.as.organization.name = del(.source.as.organization_name)
+
+  .destination.as.number = del(.destination.as.asn)
+
+  .destination.as.organization.name = del(.destination.as.organization_name)
+
+  .related.ip = unique(filter(flatten([.source.ip, .destination.ip])) -> |_, v| { v != null })
+
+  if .user.name != null { 
+      .related.user = push(.related.user, .user.name) 
+  }
+
+  .zeek.kerberos.cert.client.subject = replace(.zeek.kerberos.cert.client.subject, r'\\,', "") ?? null
+      
+
+  subject_info = parse_key_value(.zeek.kerberos.cert.client.subject, "=", ",") ?? {}
+  subject_info = map_values(subject_info) -> |v| { [v] }
+  .tls.client.x509.subject.country = subject_info.C
+  .tls.client.x509.subject.common_name = subject_info.CN
+  .tls.client.x509.subject.locality = subject_info.L
+  .tls.client.x509.subject.organization = subject_info.O
+  .tls.client.x509.subject.organizational_unit = subject_info.OU
+  .tls.client.x509.subject.state_or_province = subject_info.ST
+
+  .zeek.kerberos.cert.server.subject = replace(.zeek.kerberos.cert.server.subject, r'\\,', "") ?? null               
+
+  subject_info = parse_key_value(.zeek.kerberos.cert.server.subject, "=", ",") ?? {}
+  subject_info = map_values(subject_info) -> |v| { [v] }
+  .tls.server.x509.subject.country = subject_info.C
+  .tls.server.x509.subject.common_name = subject_info.CN
+  .tls.server.x509.subject.locality = subject_info.L
+  .tls.server.x509.subject.organization = subject_info.O
+  .tls.server.x509.subject.organizational_unit = subject_info.OU
+  .tls.server.x509.subject.state_or_province = subject_info.ST
+
+  del(.zeek.kerberos.id)

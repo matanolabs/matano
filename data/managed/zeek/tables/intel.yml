@@ -1,0 +1,226 @@
+name: intel
+schema:
+  ecs_field_names:
+    - destination.address
+    - destination.as.number
+    - destination.as.organization.name
+    - destination.geo.city_name
+    - destination.geo.continent_name
+    - destination.geo.country_iso_code
+    - destination.geo.country_name
+    - destination.geo.location
+    - destination.geo.name
+    - destination.geo.region_iso_code
+    - destination.geo.region_name
+    - destination.ip
+    - destination.port
+    - error.message
+    - event.original
+    - event.type
+    - network.community_id
+    - related.ip
+    - source.address
+    - source.as.number
+    - source.as.organization.name
+    - source.geo.city_name
+    - source.geo.continent_name
+    - source.geo.country_iso_code
+    - source.geo.country_name
+    - source.geo.location
+    - source.geo.name
+    - source.geo.region_iso_code
+    - source.geo.region_name
+    - source.ip
+    - source.port
+    - threat.enrichments
+    - threat.indicator.as.number
+    - threat.indicator.as.organization.name
+    - threat.indicator.email.address
+    - threat.indicator.file.name
+    - threat.indicator.geo.city_name
+    - threat.indicator.geo.continent_name
+    - threat.indicator.geo.country_iso_code
+    - threat.indicator.geo.country_name
+    - threat.indicator.geo.location
+    - threat.indicator.geo.region_iso_code
+    - threat.indicator.geo.region_name
+    - threat.indicator.geo.timezone
+    - threat.indicator.ip
+    - threat.indicator.type
+    - threat.indicator.url.domain
+    - threat.indicator.url.extension
+    - threat.indicator.url.fragment
+    - threat.indicator.url.full
+    - threat.indicator.url.original
+    - threat.indicator.url.password
+    - threat.indicator.url.path
+    - threat.indicator.url.port
+    - threat.indicator.url.query
+    - threat.indicator.url.registered_domain
+    - threat.indicator.url.scheme
+    - threat.indicator.url.subdomain
+    - threat.indicator.url.top_level_domain
+    - threat.indicator.url.username
+  fields:
+    - name: zeek
+      type:
+        fields:
+          - name: session_id
+            type: string
+          - name: intel
+            type:
+              fields:
+                - name: seen
+                  type:
+                    fields:
+                      - name: indicator
+                        type: string
+                      - name: indicator_type
+                        type: string
+                      - name: host
+                        type: string
+                      - name: conn
+                        type: string
+                      - name: where
+                        type: string
+                      - name: node
+                        type: string
+                      - name: uid
+                        type: string
+                      - name: f
+                        type: string
+                      - name: fuid
+                        type: string
+                    type: struct
+                - name: matched
+                  type:
+                    element: string
+                    type: list
+                - name: sources
+                  type:
+                    element: string
+                    type: list
+                - name: fuid
+                  type: string
+                - name: file_mime_type
+                  type: string
+                - name: file_desc
+                  type: string
+              type: struct
+        type: struct
+transform: |
+  .event.kind = "enrichment"
+  .event.category = ["threat"]
+  .event.type = ["indicator"]
+
+  if .json.ts == null {
+      abort
+  }
+
+  .zeek.intel = object!(del(.json))
+
+  .event.created = .ts
+
+  .zeek.intel, err = set(.zeek.intel, split("id.orig_p", "."), .zeek.intel."id.orig_p")
+  del(.zeek.intel."id.orig_p")
+
+  .zeek.intel, err = set(.zeek.intel, split("id.orig_h", "."), .zeek.intel."id.orig_h")
+  del(.zeek.intel."id.orig_h")
+
+  .zeek.intel, err = set(.zeek.intel, split("id.resp_h", "."), .zeek.intel."id.resp_h")
+   del(.zeek.intel."id.resp_h")
+
+  .zeek.intel, err = set(.zeek.intel, split("id.resp_p", "."), .zeek.intel."id.resp_p")
+  del(.zeek.intel."id.resp_p")
+
+  .source.address = del(.zeek.intel.id.orig_h) || .source.address
+
+  .source.port = del(.zeek.intel.id.orig_p) || .source.port
+
+  .destination.address = del(.zeek.intel.id.resp_h) || .destination.address
+
+  .destination.port = del(.zeek.intel.id.resp_p) || .destination.port
+
+  .zeek.session_id = del(.zeek.intel.uid) || .zeek.session_id
+
+  .event.id = .zeek.session_id
+      
+  .source.ip = .source.address
+
+  .destination.ip = .destination.address
+      
+  .zeek.intel, err = set(.zeek.intel, split("seen.indicator", "."), .zeek.intel."seen.indicator")
+  del(.zeek.intel."seen.indicator")
+
+  .zeek.intel, err = set(.zeek.intel, split("seen.indicator_type", "."), .zeek.intel."seen.indicator_type")
+  del(.zeek.intel."seen.indicator_type")
+
+  .zeek.intel, err = set(.zeek.intel, split("seen.host", "."), .zeek.intel."seen.host")
+  del(.zeek.intel."seen.host")
+
+  .zeek.intel, err = set(.zeek.intel, split("seen.where", "."), .zeek.intel."seen.where")
+  del(.zeek.intel."seen.where")
+
+  .zeek.intel, err = set(.zeek.intel, split("seen.node", "."), .zeek.intel."seen.node")
+   del(.zeek.intel."seen.node")
+
+  .zeek.intel, err = set(.zeek.intel, split("seen.conn", "."), .zeek.intel."seen.conn")
+  del(.zeek.intel."seen.conn")
+
+  .zeek.intel, err = set(.zeek.intel, split("seen.uid", "."), .zeek.intel."seen.uid")
+  del(.zeek.intel."seen.uid")
+
+  .zeek.intel, err = set(.zeek.intel, split("seen.f", "."), .zeek.intel."seen.f")
+  del(.zeek.intel."seen.f")
+
+  .zeek.intel, err = set(.zeek.intel, split("seen.fuid", "."), .zeek.intel."seen.fuid")
+  del(.zeek.intel."seen.fuid")
+
+  .ts = to_timestamp!(.zeek.intel.ts, "seconds") 
+  del(.zeek.intel.ts)
+
+  .source.as.number = del(.source.as.asn) || .source.as.number
+
+  .source.as.organization.name = del(.source.as.organization_name) || .source.as.organization.name
+
+  .destination.as.number = del(.destination.as.asn) || .destination.as.number
+
+  .destination.as.organization.name = del(.destination.as.organization_name) || .destination.as.organization.name
+
+  .related.ip = unique(filter(flatten([.source.ip, .destination.ip])) -> |_, v| { v != null })
+
+  # TODO(): add community id   
+
+  .threat.indicator.as.number = del(.threat.indicator.as.asn)
+
+  .threat.indicator.as.organization.name = del(.threat.indicator.as.organization_name)
+
+  _partial_ioc_type_map = {
+    # "Intel::ADDR": "ip-addr", not static e.g. ipv4-addr | ipv4-addr
+    "Intel::URL": "url",
+    "Intel::EMAIL": "email-addr",
+    "Intel::FILE_NAME": "file",
+  }
+  .threat.indicator.type = get(_partial_ioc_type_map, [.zeek.intel.seen.indicator_type]) ?? null
+
+  if .zeek.intel.seen.indicator_type == "Intel::ADDR" && .zeek.intel.seen.indicator != null {       
+    .threat.indicator.ip = .zeek.intel.seen.indicator
+    .threat.indicator.type = if is_ipv6!(.threat.indicator.ip) { "ipv6-addr" } else { "ipv4-addr" }                                 
+  }
+
+  if .zeek.intel.seen.indicator_type == "Intel::URL" { 
+      indicator_url = .zeek.intel.seen.indicator
+      # TODO(): parse the uri parts into threat.indicator.url field
+  }
+
+  if .zeek.intel.seen.indicator_type == "Intel::EMAIL" { 
+      .threat.indicator.email.address = .zeek.intel.seen.indicator
+  }
+
+  if .zeek.intel.seen.indicator_type == "Intel::FILE_NAME" { 
+      .threat.indicator.file.name = .zeek.intel.seen.indicator
+  }
+
+  # TODO(): indicator GeoIP enrichment etc.
+
+  del(.zeek.intel.id)

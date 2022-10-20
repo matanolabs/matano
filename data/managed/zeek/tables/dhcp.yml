@@ -1,0 +1,176 @@
+name: dhcp
+schema:
+  ecs_field_names:
+    - client.address
+    - destination.address
+    - destination.ip
+    - destination.port
+    - error.message
+    - event.category
+    - event.id
+    - event.type
+    - network.community_id
+    - network.name
+    - network.protocol
+    - network.transport
+    - related.ip
+    - server.address
+    - source.address
+    - source.ip
+    - source.port
+  fields:
+    - name: zeek
+      type:
+        fields:
+          - name: session_id
+            type: string
+          - name: dhcp
+            type:
+              fields:
+                - name: domain
+                  type: string
+                - name: duration
+                  type: double
+                - name: hostname
+                  type: string
+                - name: client_fqdn
+                  type: string
+                - name: lease_time
+                  type: double
+                - name: address
+                  type:
+                    fields:
+                      - name: assigned
+                        type: string
+                      - name: client
+                        type: string
+                      - name: mac
+                        type: string
+                      - name: requested
+                        type: string
+                      - name: server
+                        type: string
+                    type: struct
+                - name: msg
+                  type:
+                    fields:
+                      - name: types
+                        type:
+                          element: string
+                          type: list
+                      - name: origin
+                        type: string
+                      - name: client
+                        type: string
+                      - name: server
+                        type: string
+                    type: struct
+                - name: software
+                  type:
+                    fields:
+                      - name: client
+                        type: string
+                      - name: server
+                        type: string
+                    type: struct
+                - name: id
+                  type:
+                    fields:
+                      - name: circuit
+                        type: string
+                      - name: remote_agent
+                        type: string
+                      - name: subscriber
+                        type: string
+                    type: struct
+              type: struct
+        type: struct
+transform: |
+  .event.kind = "event"
+  .event.category = ["network"]
+  .event.type = ["connection", "protocol", "info"]
+
+  .network.transport = "udp"
+  .network.protocol = "dhcp"
+
+  if .json.ts == null {
+      abort
+  }
+
+  .zeek.dhcp = object!(del(.json))
+
+  .event.created = .ts
+
+  .zeek.session_ids = del(.zeek.dhcp.uids)
+
+  .zeek.dhcp.address.assigned = del(.zeek.dhcp.assigned_addr)
+
+  .zeek.dhcp.address.client = del(.zeek.dhcp.client_addr)
+
+  .zeek.dhcp.address.mac = del(.zeek.dhcp.mac)
+
+  .zeek.dhcp.address.requested = del(.zeek.dhcp.requested_addr)
+
+  .zeek.dhcp.address.server = del(.zeek.dhcp.server_addr)
+
+  .zeek.dhcp.hostname = del(.zeek.dhcp.host_name)
+
+  .zeek.dhcp.msg.client = del(.zeek.dhcp.client_message)
+
+  .zeek.dhcp.msg.server = del(.zeek.dhcp.server_message)
+
+  .zeek.dhcp.msg.types = del(.zeek.dhcp.msg_types)
+
+  .zeek.dhcp.msg.origin = del(.zeek.dhcp.msg_orig)
+
+  .zeek.dhcp.software.client = del(.zeek.dhcp.client_software)
+
+  .zeek.dhcp.software.server = del(.zeek.dhcp.server_software)
+
+  .zeek.dhcp.id.circuit = del(.zeek.dhcp.circuit_id)
+
+  .zeek.dhcp.id.remote_agent = del(.zeek.dhcp.agent_remote_id)
+
+  .zeek.dhcp.id.subscriber = del(.zeek.dhcp.subscriber_id)
+
+  .source.port = del(.zeek.dhcp.client_port)
+
+  .destination.port = del(.zeek.dhcp.server_port)
+
+  if .zeek.dhcp.domain != null { 
+      .network.name = .zeek.dhcp.domain
+  }
+      
+  if .source.port == null { 
+      .source.port = 68
+  }
+      
+  if .destination.port == null { 
+      .destination.port = 67
+  }
+
+  .source.address = .zeek.dhcp.address.client
+
+  .client.address = .zeek.dhcp.address.client
+
+  .source.ip = .zeek.dhcp.address.client
+
+  .destination.address = .zeek.dhcp.address.server
+
+  .destination.ip = .zeek.dhcp.address.server
+
+  .server.address = .zeek.dhcp.address.server
+
+  if .zeek.dhcp.ts != null {                                               
+    .ts = to_timestamp!(.zeek.dhcp.ts, "seconds") 
+  }
+
+  del(.zeek.dhcp.ts)
+
+  if .zeek.session_ids != null { 
+      .event.id = join(.zeek.session_ids, ",") ?? null # TODO handle ECS abusing arrays
+  }
+
+  .related.ip = unique(filter(flatten([.source.ip, .destination.ip])) -> |_, v| { v != null })
+
+  # TODO(): compute a network community id

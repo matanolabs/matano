@@ -1,0 +1,13 @@
+name: dns
+
+transform: |
+  .zeek.my_custom_field = "my_custom_value"
+
+schema:
+  fields:
+    - name: zeek
+      type:
+        type: struct
+        fields:
+          - name: my_custom_field
+            type: string

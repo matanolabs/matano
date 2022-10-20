@@ -1,0 +1,89 @@
+name: software
+schema:
+  ecs_field_names:
+    - event.category
+    - event.type
+    - host.geo.city_name
+    - host.geo.continent_name
+    - host.geo.country_iso_code
+    - host.geo.country_name
+    - host.geo.location
+    - host.geo.name
+    - host.geo.region_iso_code
+    - host.geo.region_name
+    - network.type
+    - related.ip
+  fields:
+    - name: zeek
+      type:
+        fields:
+          - name: software
+            type:
+              fields:
+                - name: name
+                  type: string
+                - name: type
+                  type: string
+                - name: version
+                  type:
+                    fields:
+                      - name: full
+                        type: string
+                      - name: major
+                        type: long
+                      - name: minor
+                        type: long
+                      - name: minor2
+                        type: long
+                      - name: minor3
+                        type: long
+                      - name: additional
+                        type: string
+                    type: struct
+              type: struct
+        type: struct
+transform: |
+  .event.kind = "event"
+  .event.category = ["network", "file"]
+  .event.type = ["info"]
+
+  if .json.ts == null {
+      abort
+  }
+
+  .zeek.software = object!(del(.json))
+
+  .event.created = .ts
+
+  .host.ip = del(.zeek.software.host)
+
+  .ts = to_timestamp!(.zeek.software.ts, "seconds") 
+
+  if .host.ip != null { 
+      .network.type = if is_ipv6!(.host.ip) { "ipv6" } else { "ipv4" }
+      .related.ip = push(.related.ip, .host.ip)
+      .host.ip = [ .host.ip ]
+  }
+
+  .zeek.software.type = del(.zeek.software.software_type)
+
+  .zeek.software.version.full = del(.zeek.software.unparsed_version)
+
+  .zeek.software = set!(.zeek.software, split("version.major", "."), .zeek.software."version.major")
+  del(.zeek.software."version.major")
+
+  .zeek.software = set!(.zeek.software, split("version.minor", "."), .zeek.software."version.minor")
+  del(.zeek.software."version.minor")
+
+  .zeek.software = set!(.zeek.software, split("version.minor2", "."), .zeek.software."version.minor2")
+  del(.zeek.software."version.minor2")
+
+  .zeek.software = set!(.zeek.software, split("version.minor3", "."), .zeek.software."version.minor3")
+  del(.zeek.software."version.minor3")
+
+  .zeek.software = set!(.zeek.software, split("version.addl", "."), .zeek.software."version.addl")
+  del(.zeek.software."version.addl")
+
+  .zeek.software.version.additional = del(.zeek.software.version.addl)
+
+  del(.zeek.software.ts)

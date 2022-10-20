@@ -1,0 +1,72 @@
+name: pe
+schema:
+  ecs_field_names:
+    - error.message
+    - event.category
+    - event.type
+  fields:
+    - name: zeek
+      type:
+        fields:
+          - name: session_id
+            type: string
+          - name: pe
+            type:
+              fields:
+                - name: client
+                  type: string
+                - name: id
+                  type: string
+                - name: machine
+                  type: string
+                - name: compile_time
+                  type: timestamp
+                - name: os
+                  type: string
+                - name: subsystem
+                  type: string
+                - name: is_exe
+                  type: boolean
+                - name: is_64bit
+                  type: boolean
+                - name: uses_aslr
+                  type: boolean
+                - name: uses_dep
+                  type: boolean
+                - name: uses_code_integrity
+                  type: boolean
+                - name: uses_seh
+                  type: boolean
+                - name: has_import_table
+                  type: boolean
+                - name: has_export_table
+                  type: boolean
+                - name: has_cert_table
+                  type: boolean
+                - name: has_debug_data
+                  type: boolean
+                - name: section_names
+                  type:
+                    element: string
+                    type: list
+              type: struct
+        type: struct
+transform: |
+  .event.kind = "event"
+  .event.category = ["file",]
+  .event.type = ["info"]
+
+  if .json.ts == null {
+    abort
+  }
+
+  .zeek.pe = object!(del(.json))
+
+  .event.created = .ts
+
+  .zeek.pe.compile_time = del(.zeek.pe.compile_ts)
+
+  .ts = to_timestamp!(.zeek.pe.ts, "seconds") 
+  del(.zeek.pe.ts)
+
+  .zeek.pe.compile_time = to_timestamp(.zeek.pe.compile_time, "seconds") ?? null

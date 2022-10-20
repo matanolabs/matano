@@ -1,0 +1,153 @@
+name: mysql
+schema:
+  ecs_field_names:
+    - destination.address
+    - destination.as.number
+    - destination.as.organization.name
+    - destination.geo.city_name
+    - destination.geo.continent_name
+    - destination.geo.country_iso_code
+    - destination.geo.country_name
+    - destination.geo.location
+    - destination.geo.name
+    - destination.geo.region_iso_code
+    - destination.geo.region_name
+    - destination.ip
+    - destination.port
+    - error.message
+    - event.action
+    - event.category
+    - event.id
+    - event.outcome
+    - event.type
+    - network.community_id
+    - network.protocol
+    - network.transport
+    - related.ip
+    - source.address
+    - source.as.number
+    - source.as.organization.name
+    - source.geo.city_name
+    - source.geo.continent_name
+    - source.geo.country_iso_code
+    - source.geo.country_name
+    - source.geo.location
+    - source.geo.name
+    - source.geo.region_iso_code
+    - source.geo.region_name
+    - source.ip
+    - source.port
+  fields:
+    - name: zeek
+      type:
+        fields:
+          - name: session_id
+            type: string
+          - name: mysql
+            type:
+              fields:
+                - name: cmd
+                  type: string
+                - name: arg
+                  type: string
+                - name: success
+                  type: boolean
+                - name: rows
+                  type: int
+                - name: response
+                  type: string
+              type: struct
+        type: struct
+transform: |
+  .event.kind = "event"
+  .event.category = ["network", "database"]
+  .event.type = ["connection", "protocol"]
+
+  .network.transport = "tcp"
+  .network.protocol = "mysql"
+
+  if .json.ts == null { 
+      abort
+  }
+      
+  .zeek.mysql = object!(del(.json))
+
+  .event.created = .ts
+
+  .zeek.mysql, err = set(.zeek.mysql, split("id.orig_p", "."), .zeek.mysql."id.orig_p")
+  del(.zeek.mysql."id.orig_p")
+
+  .zeek.mysql, err = set(.zeek.mysql, split("id.orig_h", "."), .zeek.mysql."id.orig_h")
+  del(.zeek.mysql."id.orig_h")
+
+  .zeek.mysql, err = set(.zeek.mysql, split("id.resp_h", "."), .zeek.mysql."id.resp_h")
+  del(.zeek.mysql."id.resp_h")
+
+  .zeek.mysql, err = set(.zeek.mysql, split("id.resp_p", "."), .zeek.mysql."id.resp_p")
+  del(.zeek.mysql."id.resp_p")
+
+  .source.address = del(.zeek.mysql.id.orig_h)
+
+  .source.port = del(.zeek.mysql.id.orig_p)
+
+  .destination.address = del(.zeek.mysql.id.resp_h)
+
+  .destination.port = del(.zeek.mysql.id.resp_p)
+
+  .zeek.session_id = del(.zeek.mysql.uid)
+
+  .event.id = .zeek.session_id
+
+  .source.ip = .source.address
+
+  .destination.ip = .destination.address
+
+  .event.action = .zeek.mysql.cmd
+
+  .event.outcome = if .zeek.mysql.success == true { "success" } else { "failure" }
+      
+  .ts = to_timestamp!(.zeek.mysql.ts, "seconds") 
+
+  del(.zeek.mysql.ts)
+
+  .related.ip = unique(filter(flatten([.source.ip, .destination.ip])) -> |_, v| { v != null }) 
+
+  .source.as.number = del(.source.as.asn)
+
+  .source.as.organization.name = del(.source.as.organization_name)
+
+  .destination.as.number = del(.destination.as.asn)
+
+  .destination.as.organization.name = del(.destination.as.organization_name)
+
+  if .zeek.mysql.cmd != null && (.zeek.mysql.cmd == "connect" || .zeek.mysql.cmd == "connect_out") { 
+      .event.type = push(.event.type, "access") 
+  }
+
+  if .zeek.mysql.cmd != null && (.zeek.mysql.cmd == "init_db" || .zeek.mysql.cmd == "change_user" || .zeek.mysql.cmd == "set_option" || .zeek.mysql.cmd == "drop_db" || .zeek.mysql.cmd == "create_db" || .zeek.mysql.cmd == "process_kill" || .zeek.mysql.cmd == "delayed_insert") { 
+      .event.type = push(.event.type, "change") 
+  }
+
+      
+  if .zeek.mysql.cmd != null && .zeek.mysql.cmd != "init_db" && .zeek.mysql.cmd != "change_user" && .zeek.mysql.cmd != "set_option" && .zeek.mysql.cmd != "drop_db" && .zeek.mysql.cmd != "create_db" && .zeek.mysql.cmd != "process_kill" && .zeek.mysql.cmd != "delayed_insert" && .zeek.mysql.cmd != "connect" && .zeek.mysql.cmd != "connect_out" { 
+      .event.type = push(.event.type, "info") 
+  }
+
+      
+  if .zeek.mysql.cmd != null && .zeek.mysql.cmd == "connect" { 
+      .event.type = push(.event.type, "start") 
+  }
+
+      
+  if .zeek.mysql.cmd != null && .zeek.mysql.cmd == "connect_out" { 
+      .event.type = push(.event.type, "end") 
+  }
+
+      
+  if .zeek.mysql.cmd != null && (.zeek.mysql.cmd == "connect" || .zeek.mysql.cmd == "connect_out") { 
+      .event.category = push(.event.category, "session") 
+  }
+      
+  # TODO(): add community network id
+
+  del(.zeek.mysql.id)

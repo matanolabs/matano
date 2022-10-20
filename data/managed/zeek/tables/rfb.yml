@@ -1,0 +1,158 @@
+name: rfb
+schema:
+  ecs_field_names:
+    - destination.address
+    - destination.as.number
+    - destination.as.organization.name
+    - destination.geo.city_name
+    - destination.geo.continent_name
+    - destination.geo.country_iso_code
+    - destination.geo.country_name
+    - destination.geo.location
+    - destination.geo.name
+    - destination.geo.region_iso_code
+    - destination.geo.region_name
+    - destination.ip
+    - destination.port
+    - error.message
+    - event.category
+    - event.id
+    - event.type
+    - network.community_id
+    - network.protocol
+    - network.transport
+    - related.ip
+    - source.address
+    - source.as.number
+    - source.as.organization.name
+    - source.geo.city_name
+    - source.geo.continent_name
+    - source.geo.country_iso_code
+    - source.geo.country_name
+    - source.geo.location
+    - source.geo.name
+    - source.geo.region_iso_code
+    - source.geo.region_name
+    - source.ip
+    - source.port
+  fields:
+    - name: zeek
+      type:
+        fields:
+          - name: session_id
+            type: string
+          - name: rfb
+            type:
+              fields:
+                - name: version
+                  type:
+                    fields:
+                      - name: client
+                        type:
+                          fields:
+                            - name: major
+                              type: string
+                            - name: minor
+                              type: string
+                          type: struct
+                      - name: server
+                        type:
+                          fields:
+                            - name: major
+                              type: string
+                            - name: minor
+                              type: string
+                          type: struct
+                    type: struct
+                - name: auth
+                  type:
+                    fields:
+                      - name: success
+                        type: boolean
+                      - name: method
+                        type: string
+                    type: struct
+                - name: share_flag
+                  type: boolean
+                - name: desktop_name
+                  type: string
+                - name: width
+                  type: int
+                - name: height
+                  type: int
+              type: struct
+        type: struct
+transform: |
+  .event.kind = "event"
+  .event.category = ["network",]
+  .event.type = ["connection", "info"]
+
+  .network.transport = "tcp"
+  .network.protocol = "rfb"
+
+  if .json.ts == null { 
+      abort
+  }
+
+      
+  .zeek.rfb = object!(del(.json))
+
+  .event.created = .ts
+
+  .zeek.rfb, err = set(.zeek.rfb, split("id.orig_p", "."), .zeek.rfb."id.orig_p")
+  del(.zeek.rfb."id.orig_p")
+
+  .zeek.rfb, err = set(.zeek.rfb, split("id.orig_h", "."), .zeek.rfb."id.orig_h")
+  del(.zeek.rfb."id.orig_h")
+
+  .zeek.rfb, err = set(.zeek.rfb, split("id.resp_h", "."), .zeek.rfb."id.resp_h")
+  del(.zeek.rfb."id.resp_h")
+
+  .zeek.rfb, err = set(.zeek.rfb, split("id.resp_p", "."), .zeek.rfb."id.resp_p")
+  del(.zeek.rfb."id.resp_p")
+
+  .source.address = del(.zeek.rfb.id.orig_h) || .source.address
+
+  .source.port = del(.zeek.rfb.id.orig_p) || .source.port
+
+  .destination.address = del(.zeek.rfb.id.resp_h) || .destination.address
+
+  .destination.port = del(.zeek.rfb.id.resp_p) || .destination.port
+
+  .zeek.session_id = del(.zeek.rfb.uid) || .zeek.session_id
+
+  .event.id = .zeek.session_id
+
+  .source.ip = .source.address
+
+  .destination.ip = .destination.address
+
+  .zeek.rfb.version.client.major = del(.zeek.rfb.client_major_version)
+
+  .zeek.rfb.version.client.minor = del(.zeek.rfb.client_minor_version)
+
+  .zeek.rfb.version.server.major = del(.zeek.rfb.server_major_version)
+
+  .zeek.rfb.version.server.minor = del(.zeek.rfb.server_minor_version)
+
+  .zeek.rfb.auth.success = del(.zeek.rfb.auth)
+
+  .zeek.rfb.auth.method = del(.zeek.rfb.authentication_method)
+
+  .ts = to_timestamp!(.zeek.rfb.ts, "seconds") 
+
+  del(.zeek.rfb.ts)
+
+  .related.ip = unique(filter(flatten([.source.ip, .destination.ip])) -> |_, v| { v != null }) 
+      
+  .source.as.number = del(.source.as.asn) || .source.as.number
+
+  .source.as.organization.name = del(.source.as.organization_name) || .source.as.organization.name
+
+  .destination.as.number = del(.destination.as.asn) || .destination.as.number
+
+  .destination.as.organization.name = del(.destination.as.organization_name) || .destination.as.organization.name
+
+  # TODO(): add community network id
+
+  del(.zeek.rfb.id)

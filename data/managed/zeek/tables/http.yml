@@ -1,0 +1,240 @@
+name: http
+schema:
+  ecs_field_names:
+    - destination.address
+    - destination.as.number
+    - destination.as.organization.name
+    - destination.geo.city_name
+    - destination.geo.continent_name
+    - destination.geo.country_iso_code
+    - destination.geo.country_name
+    - destination.geo.location
+    - destination.geo.name
+    - destination.geo.region_iso_code
+    - destination.geo.region_name
+    - destination.ip
+    - destination.port
+    - error.message
+    - event.action
+    - event.category
+    - event.id
+    - event.outcome
+    - event.type
+    - http.request.body.bytes
+    - http.request.method
+    - http.request.referrer
+    - http.response.body.bytes
+    - http.response.status_code
+    - http.version
+    - network.community_id
+    - network.transport
+    - related.ip
+    - related.user
+    - source.address
+    - source.as.number
+    - source.as.organization.name
+    - source.geo.city_name
+    - source.geo.continent_name
+    - source.geo.country_iso_code
+    - source.geo.country_name
+    - source.geo.location
+    - source.geo.name
+    - source.geo.region_iso_code
+    - source.geo.region_name
+    - source.ip
+    - source.port
+    - url.domain
+    - url.original
+    - url.password
+    - url.path
+    - url.port
+    - url.username
+    - user.name
+    - user_agent.device.name
+    - user_agent.name
+    - user_agent.original
+    - user_agent.os.family
+    - user_agent.os.full
+    - user_agent.os.kernel
+    - user_agent.os.name
+    - user_agent.os.platform
+    - user_agent.os.version
+    - user_agent.version
+  fields:
+    - name: zeek
+      type:
+        fields:
+          - name: http
+            type:
+              fields:
+                - name: trans_depth
+                  type: int
+                - name: status_msg
+                  type: string
+                - name: info_code
+                  type: int
+                - name: info_msg
+                  type: string
+                - name: tags
+                  type:
+                    element: string
+                    type: list
+                - name: password
+                  type: string
+                - name: captured_password
+                  type: boolean
+                - name: proxied
+                  type:
+                    element: string
+                    type: list
+                - name: range_request
+                  type: boolean
+                - name: client_header_names
+                  type:
+                    element: string
+                    type: list
+                - name: server_header_names
+                  type:
+                    element: string
+                    type: list
+                - name: orig_fuids
+                  type:
+                    element: string
+                    type: list
+                - name: orig_mime_types
+                  type:
+                    element: string
+                    type: list
+                - name: orig_filenames
+                  type:
+                    element: string
+                    type: list
+                - name: resp_fuids
+                  type:
+                    element: string
+                    type: list
+                - name: resp_mime_types
+                  type:
+                    element: string
+                    type: list
+                - name: resp_filenames
+                  type:
+                    element: string
+                    type: list
+                - name: orig_mime_depth
+                  type: int
+                - name: resp_mime_depth
+                  type: int
+              type: struct
+        type: struct
+transform: |
+  .event.kind = "event"
+  .event.category = ["network", "web"]
+  .event.type = ["connection", "protocol"]
+
+  .network.transport = "tcp"
+
+  if .json.ts == null {
+      abort
+  }
+
+  .zeek.http = object!(del(.json))
+
+  .event.created = .ts
+
+  .zeek.http, err = set(.zeek.http, split("id.orig_p", "."), .zeek.http."id.orig_p")
+  del(.zeek.http."id.orig_p")
+
+  .zeek.http, err = set(.zeek.http, split("id.orig_h", "."), .zeek.http."id.orig_h")
+  del(.zeek.http."id.orig_h")
+
+  .zeek.http, err = set(.zeek.http, split("id.resp_h", "."), .zeek.http."id.resp_h")
+  del(.zeek.http."id.resp_h")
+
+  .zeek.http, err = set(.zeek.http, split("id.resp_p", "."), .zeek.http."id.resp_p")
+  del(.zeek.http."id.resp_p")
+
+  .source.address = del(.zeek.http.id.orig_h)
+
+  .source.port = del(.zeek.http.id.orig_p)
+
+  .destination.address = del(.zeek.http.id.resp_h)
+
+  .destination.port = del(.zeek.http.id.resp_p)
+
+  .zeek.session_id = del(.zeek.http.uid)
+
+  .event.id = .zeek.session_id
+
+  .source.ip = .source.address
+
+  .destination.ip = .destination.address
+
+  .http.request.method = del(.zeek.http.method)
+
+  .http.request.referrer = del(.zeek.http.referrer)
+
+  .http.response.status_code = del(.zeek.http.status_code)
+
+  .http.version = del(.zeek.http.version)
+
+  .http.request.body.bytes = del(.zeek.http.request_body_len)
+
+  .http.response.body.bytes = del(.zeek.http.response_body_len)
+
+  # if .zeek.http.uri != null {
+  # TODO(): parse the uri parts into url field
+  # }
+
+  del(.zeek.http.uri)
+
+  .url.domain = del(.zeek.http.host)
+
+  .url.username = del(.zeek.http.username)
+
+  .url.password = del(.zeek.http.password)
+
+  .user_agent.original = del(.zeek.http.user_agent)
+
+  .event.action = .http.request.method
+
+  .user.name = .url.username
+
+  .ts = to_timestamp!(.zeek.http.ts, "seconds")
+
+  del(.zeek.http.ts)
+
+  .source.as.number = del(.source.as.asn)
+
+  .source.as.organization.name = del(.source.as.organization_name)
+
+  .destination.as.number = del(.destination.as.asn)
+
+  .destination.as.organization.name = del(.destination.as.organization_name)
+
+  # TODO(): .user_agent = parse_user_agent!(del(.user_agent.original))
+
+  if .http.response.status_code != null {
+    status_code = int!(.http.response.status_code)
+    .event.outcome = if status_code < 400 {
+      .event.type = push(.event.type, "info")
+      "success"
+    } else {
+      .event.type = push(.event.type, "error")
+      "failure" 
+    }
+  } else {
+    .event.type = push(.event.type, "info")
+  }
+
+
+
+  .related.ip = unique(filter(flatten([.source.ip, .destination.ip])) -> |_, v| { v != null })
+
+  if .url.username != null {
+      .related.user = push(.related.user, .url.username)
+  }
+
+  # TODO(): compute network community id
+
+  del(.zeek.http.id)

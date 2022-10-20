@@ -1,0 +1,246 @@
+name: notice
+schema:
+  ecs_field_names:
+    - destination.address
+    - destination.as.number
+    - destination.as.organization.name
+    - destination.geo.city_name
+    - destination.geo.continent_name
+    - destination.geo.country_iso_code
+    - destination.geo.country_name
+    - destination.geo.location
+    - destination.geo.name
+    - destination.geo.region_iso_code
+    - destination.geo.region_name
+    - destination.ip
+    - destination.port
+    - error.message
+    - event.category
+    - event.id
+    - event.type
+    - file.mime_type
+    - file.size
+    - network.community_id
+    - network.transport
+    - related.ip
+    - rule.description
+    - rule.name
+    - source.address
+    - source.as.number
+    - source.as.organization.name
+    - source.geo.city_name
+    - source.geo.continent_name
+    - source.geo.country_iso_code
+    - source.geo.country_name
+    - source.geo.location
+    - source.geo.name
+    - source.geo.region_iso_code
+    - source.geo.region_name
+    - source.ip
+    - source.port
+  fields:
+    - name: zeek
+      type:
+        fields:
+          - name: session_id
+            type: string
+          - name: notice
+            type:
+              fields:
+                - name: connection_id
+                  type: string
+                - name: icmp_id
+                  type: string
+                - name: file
+                  type:
+                    fields:
+                      - name: id
+                        type: string
+                      - name: parent_id
+                        type: string
+                      - name: source
+                        type: string
+                      - name: mime_type
+                        type: string
+                      - name: is_orig
+                        type: boolean
+                      - name: seen_bytes
+                        type: long
+                      - name: missing_bytes
+                        type: long
+                      - name: overflow_bytes
+                        type: long
+                    type: struct
+                - name: ffile
+                  type:
+                    fields:
+                      - name: total_bytes
+                        type: long
+                    type: struct
+                - name: fuid
+                  type: string
+                - name: note
+                  type: string
+                - name: msg
+                  type: string
+                - name: sub
+                  type: string
+                - name: n
+                  type: long
+                - name: peer_name
+                  type: string
+                - name: peer_descr
+                  type: string
+                - name: actions
+                  type:
+                    element: string
+                    type: list
+                - name: email_body_sections
+                  type:
+                    element: string
+                    type: list
+                - name: email_delay_tokens
+                  type:
+                    element: string
+                    type: list
+                - name: identifier
+                  type: string
+                - name: suppress_for
+                  type: double
+                - name: dropped
+                  type: boolean
+              type: struct
+        type: struct
+transform: |
+  .event.kind = "alert"
+  .event.category = ["intrusion_detection"]
+  .event.type = ["info"]
+
+  if .json.ts == null { 
+      abort
+  }
+      
+  .zeek.notice = object!(del(.json))
+
+  .event.created = .ts
+
+  .zeek.notice, err = set(.zeek.notice, split("id.orig_p", "."), .zeek.notice."id.orig_p")
+  del(.zeek.notice."id.orig_p")
+
+  .zeek.notice, err = set(.zeek.notice, split("id.orig_h", "."), .zeek.notice."id.orig_h")
+  del(.zeek.notice."id.orig_h")
+
+  .zeek.notice, err = set(.zeek.notice, split("id.resp_h", "."), .zeek.notice."id.resp_h")
+  del(.zeek.notice."id.resp_h")
+
+  .zeek.notice, err = set(.zeek.notice, split("id.resp_p", "."), .zeek.notice."id.resp_p")
+  del(.zeek.notice."id.resp_p")
+
+  .source.address = del(.zeek.notice.id.orig_h) || .source.address
+
+  .source.port = del(.zeek.notice.id.orig_p) || .source.port
+
+  .destination.address = del(.zeek.notice.id.resp_h) || .destination.address
+
+  .destination.port = del(.zeek.notice.id.resp_p) || .destination.port
+
+  .zeek.session_id = del(.zeek.notice.uid) || .zeek.session_id
+
+  .event.id = .zeek.session_id
+
+  .source.address = .source.address || del(.zeek.notice.src)
+
+  if .zeek.notice.src == .source.address { 
+      del(.zeek.notice.src)
+  }
+
+  .destination.address = .destination.address || del(.zeek.notice.dst)
+      
+  if .zeek.notice.dst == .destination.address { 
+      del(.zeek.notice.dst)
+  }
+
+      
+  .destination.port = .destination.port || del(.zeek.notice.p)
+
+  if .zeek.notice.p == .destination.port { 
+      del(.zeek.notice.p)
+  }
+
+  .zeek.notice.connnection_id = del(.zeek.notice.conn)
+
+  .zeek.notice.icmp_id = del(.zeek.notice.iconn)
+
+  .network.transport = del(.zeek.notice.proto) || .network.transport
+
+  .zeek.notice, err = set(.zeek.notice, split("f.id", "."), .zeek.notice."f.id")
+  del(.zeek.notice."f.id")
+
+  .zeek.notice, err = set(.zeek.notice, split("f.parent_id", "."), .zeek.notice."f.parent_id")
+  del(.zeek.notice."f.parent_id")
+
+  .zeek.notice, err = set(.zeek.notice, split("f.source", "."), .zeek.notice."f.source")
+  del(.zeek.notice."f.source")
+
+  .zeek.notice, err = set(.zeek.notice, split("f.is_orig", "."), .zeek.notice."f.is_orig")
+  del(.zeek.notice."f.is_orig")
+
+  .zeek.notice, err = set(.zeek.notice, split("f.seen_bytes", "."), .zeek.notice."f.seen_bytes")
+  del(.zeek.notice."f.seen_bytes")
+
+  .zeek.notice, err = set(.zeek.notice, split("f.total_bytes", "."), .zeek.notice."f.total_bytes")
+  del(.zeek.notice."f.total_bytes")
+
+  .zeek.notice.file.id = del(.zeek.notice.f.id)
+
+  .zeek.notice.file.parent_id = del(.zeek.notice.f.parent_id)
+
+  .zeek.notice.file.source = del(.zeek.notice.f.source)
+
+  .zeek.notice.file.is_orig = del(.zeek.notice.f.is_orig)
+
+  .zeek.notice.file.seen_bytes = del(.zeek.notice.f.seen_bytes)
+
+  .zeek.notice.file.total_bytes = del(.zeek.notice.f.total_bytes)
+
+  .zeek.notice.file.mime_type = del(.zeek.notice.file_mime_type)
+
+  .file.size = .zeek.notice.file.total_bytes
+
+  .file.mime_type = .zeek.notice.file.mime_type
+
+  .rule.name = .zeek.notice.note
+
+  .rule.description = .zeek.notice.msg
+
+  .source.ip = .source.address
+
+  .destination.ip = .destination.address
+
+  .ts = to_timestamp!(.zeek.notice.ts, "seconds") 
+
+  del(.zeek.notice.ts)
+
+  .source.as.number = del(.source.as.asn) || .source.as.number
+
+  .source.as.organization.name = del(.source.as.organization_name) || .source.as.organization.name
+
+  .destination.as.number = del(.destination.as.asn) || .destination.as.number
+
+  .destination.as.organization.name = del(.destination.as.organization_name) || .destination.as.organization.name
+
+  .related.ip = unique(filter(flatten([.source.ip, .destination.ip])) -> |_, v| { v != null }) 
+      
+  if .zeek.notice.dropped == false { 
+      .event.type = push(.event.type, "allowed") 
+  }
+
+  if .zeek.notice.dropped == true { 
+      .event.type = push(.event.type, "denied") 
+  }
+      
+  # TODO(): add community network id
+
+  del(.zeek.notice.action)
+  del(.zeek.notice.remote_location)
+  del(.zeek.notice.f)

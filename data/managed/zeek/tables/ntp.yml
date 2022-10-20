@@ -1,0 +1,155 @@
+name: ntp
+schema:
+  ecs_field_names:
+    - destination.address
+    - destination.as.number
+    - destination.as.organization.name
+    - destination.bytes
+    - destination.geo.city_name
+    - destination.geo.continent_name
+    - destination.geo.country_iso_code
+    - destination.geo.country_name
+    - destination.geo.location
+    - destination.geo.name
+    - destination.geo.region_iso_code
+    - destination.geo.region_name
+    - destination.ip
+    - destination.mac
+    - destination.packets
+    - destination.port
+    - error.message
+    - event.category
+    - event.duration
+    - event.id
+    - event.type
+    - network.bytes
+    - network.community_id
+    - network.direction
+    - network.packets
+    - network.protocol
+    - network.transport
+    - network.type
+    - related.ip
+    - source.address
+    - source.as.number
+    - source.as.organization.name
+    - source.bytes
+    - source.geo.city_name
+    - source.geo.continent_name
+    - source.geo.country_iso_code
+    - source.geo.country_name
+    - source.geo.location
+    - source.geo.name
+    - source.geo.region_iso_code
+    - source.geo.region_name
+    - source.ip
+    - source.mac
+    - source.packets
+    - source.port
+  fields:
+    - name: zeek
+      type:
+        fields:
+          - name: session_id
+            type: string
+          - name: ntp
+            type:
+              fields:
+                - name: version
+                  type: int
+                - name: mode
+                  type: int
+                - name: stratum
+                  type: int
+                - name: poll
+                  type: double
+                - name: precision
+                  type: double
+                - name: root_delay
+                  type: double
+                - name: root_disp
+                  type: double
+                - name: ref_id
+                  type: string
+                - name: ref_time
+                  type: timestamp
+                - name: org_time
+                  type: timestamp
+                - name: rec_time
+                  type: timestamp
+                - name: xmt_time
+                  type: timestamp
+                - name: num_exts
+                  type: int
+              type: struct
+        type: struct
+transform: |
+  .event.kind = "event"
+  .event.category = ["network"]
+  .event.type = ["connection", "protocol", "info"]
+
+  .network.transport = "udp"
+  .network.protocol = "ntp"
+
+  if .json.ts == null { 
+      abort
+  }
+
+  .zeek.ntp = object!(del(.json))
+
+  .event.created = .ts
+
+  .zeek.ntp, err = set(.zeek.ntp, split("id.orig_p", "."), .zeek.ntp."id.orig_p")
+  del(.zeek.ntp."id.orig_p")
+
+  .zeek.ntp, err = set(.zeek.ntp, split("id.orig_h", "."), .zeek.ntp."id.orig_h")
+  del(.zeek.ntp."id.orig_h")
+
+  .zeek.ntp, err = set(.zeek.ntp, split("id.resp_h", "."), .zeek.ntp."id.resp_h")
+  del(.zeek.ntp."id.resp_h")
+
+  .zeek.ntp, err = set(.zeek.ntp, split("id.resp_p", "."), .zeek.ntp."id.resp_p")
+  del(.zeek.ntp."id.resp_p")
+
+  .source.address = del(.zeek.ntp.id.orig_h) || .source.address
+
+  .source.port = del(.zeek.ntp.id.orig_p) || .source.port
+
+  .destination.address = del(.zeek.ntp.id.resp_h) || .destination.address
+
+  .destination.port = del(.zeek.ntp.id.resp_p) || .destination.port
+
+  .zeek.session_id = del(.zeek.ntp.uid) || .zeek.session_id
+
+  .source.ip = .source.address
+
+  .destination.ip = .destination.address
+
+  .network.type = if is_ipv6!(.source.ip) { "ipv6" } else { "ipv4" }
+
+  # TODO(): add community network id
+
+  .ts = to_timestamp!(.zeek.ntp.ts, "seconds") 
+
+  .zeek.ntp.ref_time = to_timestamp(.zeek.ntp.ref_time, "seconds") ?? null
+
+  .zeek.ntp.org_time = to_timestamp(.zeek.ntp.org_time, "seconds") ?? null
+
+  .zeek.ntp.rec_time = to_timestamp(.zeek.ntp.rec_time, "seconds") ?? null
+
+  .zeek.ntp.xmt_time = to_timestamp(.zeek.ntp.xmt_time, "seconds") ?? null
+
+  .event.id = .zeek.session_id
+
+  .related.ip = unique(filter(flatten([.source.ip, .destination.ip])) -> |_, v| { v != null }) 
+      
+  .source.as.number = del(.source.as.asn) || .source.as.number
+
+  .source.as.organization.name = del(.source.as.organization_name) || .source.as.organization.name
+
+  .destination.as.number = del(.destination.as.asn) || .destination.as.number
+
+  .destination.as.organization.name = del(.destination.as.organization_name) || .destination.as.organization.name
+
+  del(.zeek.ntp.id)
+  del(.zeek.ntp.ts)

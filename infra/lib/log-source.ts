@@ -6,7 +6,7 @@ import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as sqs from "aws-cdk-lib/aws-sqs";
 import * as sns from "aws-cdk-lib/aws-sns";
 import { MatanoIcebergTable } from "../lib/iceberg";
-import { resolveSchema, serializeToFields, merge, fieldsToSchema } from "./schema";
+import { resolveSchema, serializeToFields, mergeSchema, fieldsToSchema } from "./schema";
 import { SqsSubscription } from "aws-cdk-lib/aws-sns-subscriptions";
 import { SqsEventSource, SqsEventSourceProps } from "aws-cdk-lib/aws-lambda-event-sources";
 import { dataDirPath, fail, mergeDeep, readConfig } from "./utils";
@@ -26,11 +26,19 @@ type ConfigurationInfo = { type: "shared" | "managed" | "user"; relativePath: st
 function mergeManagedConfig(userConfig: any, managedConfig: any, managedLogSourceType: string) {
   const merged = mergeDeep(userConfig, managedConfig);
 
-  if (managedConfig.transform && userConfig.transform) {
+  if (managedConfig.transform != null && userConfig.transform != null) {
     const headerLength = managedConfig.transform.split("\n", 1).shift().length;
     managedConfig.transform += `${"#".repeat(headerLength)}\n`;
     merged.transform = managedConfig.transform + userConfig.transform;
   }
+
+  if (managedConfig.schema?.fields && userConfig.schema?.fields) {
+    const managedSchema = fieldsToSchema(managedConfig.schema?.fields);
+    let mergedSchema = JSON.parse(JSON.stringify(fieldsToSchema(userConfig.schema?.fields)));
+    mergedSchema = mergeSchema(mergedSchema, managedSchema);
+    merged.schema.fields = serializeToFields(mergedSchema);
+  }
+
   return merged;
 }
 
@@ -216,6 +224,13 @@ export class MatanoLogSource extends Construct {
         // merge the shared logsource and table level configs
         const isLogSourceConfig = configInfo.relativePath == "log_source.yml";
         const isTableConfig = configInfo.relativePath.startsWith("tables/");
+
+        if (isTableConfig && configInfo.type == "managed") {
+          // skip managed table configs that haven't been imported by the user
+          // TODO: we should implement non path-based table imports here as well
+          continue;
+        }
+
         if (isLogSourceConfig || isTableConfig) {
           const managedConfig =
             configInfo.type == "managed" || configInfo.type == "shared"
@@ -330,7 +345,7 @@ export class MatanoLogSource extends Construct {
       if (logSourceConfigBase.schema?.fields && this.tablesConfig[tableName].schema?.fields) {
         const logSourceSchema = fieldsToSchema(logSourceConfigBase.schema?.fields ?? []);
         let tableSchema = fieldsToSchema(this.tablesConfig[tableName].schema?.fields ?? []);
-        tableSchema = merge(tableSchema, logSourceSchema);
+        tableSchema = mergeSchema(tableSchema, logSourceSchema);
         merged.schema.fields = serializeToFields(tableSchema);
       }
 

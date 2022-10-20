@@ -1,0 +1,155 @@
+name: files
+schema:
+  ecs_field_names:
+    - client.ip
+    - error.message
+    - event.category
+    - event.id
+    - event.type
+    - file.hash.md5
+    - file.hash.sha1
+    - file.hash.sha256
+    - file.mime_type
+    - file.name
+    - file.size
+    - related.hash
+    - related.ip
+    - server.ip
+  fields:
+    - name: zeek
+      type:
+        fields:
+          - name: session_id
+            type: string
+          - name: files
+            type:
+              fields:
+                - name: fuid
+                  type: string
+                - name: tx_host
+                  type: string
+                - name: rx_host
+                  type: string
+                - name: session_ids
+                  type:
+                    element: string
+                    type: list
+                - name: source
+                  type: string
+                - name: depth
+                  type: long
+                - name: analyzers
+                  type:
+                    element: string
+                    type: list
+                - name: mime_type
+                  type: string
+                - name: filename
+                  type: string
+                - name: local_orig
+                  type: boolean
+                - name: is_orig
+                  type: boolean
+                - name: duration
+                  type: double
+                - name: seen_bytes
+                  type: long
+                - name: total_bytes
+                  type: long
+                - name: missing_bytes
+                  type: long
+                - name: overflow_bytes
+                  type: long
+                - name: timedout
+                  type: boolean
+                - name: parent_fuid
+                  type: string
+                - name: md5
+                  type: string
+                - name: sha1
+                  type: string
+                - name: sha256
+                  type: string
+                - name: extracted
+                  type: string
+                - name: extracted_cutoff
+                  type: boolean
+                - name: extracted_size
+                  type: long
+                - name: entropy
+                  type: double
+              type: struct
+        type: struct
+transform: |
+  .event.kind = "event"
+  .event.category = ["file"]
+  .event.type = ["info"]
+
+  if .json.ts == null {
+      abort
+  }
+
+  .zeek.files = object!(del(.json))
+
+  .event.created = .ts
+
+  .zeek.files.session_ids = del(.zeek.files.conn_uids)
+
+  if .zeek.files.mime_type != null { 
+      .file.mime_type = .zeek.files.mime_type
+  }
+
+  .file.name = del(.zeek.files.filename)
+
+  .file.size = del(.zeek.files.total_bytes)
+
+  if .zeek.files.md5 != null { 
+      .file.hash.md5 = .zeek.files.md5
+  }
+
+  if .zeek.files.sha1 != null { 
+      .file.hash.sha1 = .zeek.files.sha1
+  }
+   
+  if .zeek.files.sha256 != null { 
+      .file.hash.sha256 = .zeek.files.sha256
+  }
+      
+  if .zeek.files.ts != null {                                               
+    .ts = to_timestamp!(.zeek.files.ts, "seconds") 
+  }
+
+  del(.zeek.files.ts)
+
+  if .zeek.files.session_ids != null {                  
+  	.zeek.session_id = array!(.zeek.files.session_ids)[0]                     
+  }
+
+  if .zeek.session_id != null { 
+      .event.id = .zeek.session_id
+  }
+          
+  if .zeek.files.tx_hosts != null {
+    .related.ip = flatten([.related.ip, .zeek.files.tx_hosts])
+    .server.ip = .zeek.files.tx_host = del(.zeek.files.tx_hosts)[0]
+  }
+
+  if .zeek.files.rx_hosts != null {
+    .related.ip = flatten([.related.ip, .zeek.files.rx_hosts])
+    .client.ip = .zeek.files.rx_host = del(.zeek.files.rx_hosts)[0]
+  }
+  .related.ip = unique(.related.ip)
+      
+  if .file.hash.md5 != null { 
+      .related.hash = push(.related.hash, .file.hash.md5) 
+  }
+      
+  if .file.hash.sha1 != null { 
+      .related.hash = push(.related.hash, .file.hash.sha1) 
+  }
+
+  if .file.hash.sha256 != null { 
+      .related.hash = push(.related.hash, .file.hash.sha256) 
+  }
+
+  del(.zeek.files.x509)

@@ -1,0 +1,171 @@
+name: stats
+schema:
+  ecs_field_names:
+    - error.message
+  fields:
+    - name: zeek
+      type:
+        fields:
+          - name: session_id
+            type: string
+          - name: stats
+            type:
+              fields:
+                - name: peer
+                  type: string
+                - name: memory
+                  type: int
+                - name: packets
+                  type:
+                    fields:
+                      - name: processed
+                        type: long
+                      - name: dropped
+                        type: long
+                      - name: received
+                        type: long
+                    type: struct
+                - name: bytes
+                  type:
+                    fields:
+                      - name: received
+                        type: long
+                    type: struct
+                - name: connections
+                  type:
+                    fields:
+                      - name: tcp
+                        type:
+                          fields:
+                            - name: active
+                              type: int
+                            - name: count
+                              type: int
+                          type: struct
+                      - name: udp
+                        type:
+                          fields:
+                            - name: active
+                              type: int
+                            - name: count
+                              type: int
+                          type: struct
+                      - name: icmp
+                        type:
+                          fields:
+                            - name: active
+                              type: int
+                            - name: count
+                              type: int
+                          type: struct
+                    type: struct
+                - name: events
+                  type:
+                    fields:
+                      - name: processed
+                        type: int
+                      - name: queued
+                        type: int
+                    type: struct
+                - name: timers
+                  type:
+                    fields:
+                      - name: count
+                        type: int
+                      - name: active
+                        type: int
+                    type: struct
+                - name: files
+                  type:
+                    fields:
+                      - name: count
+                        type: int
+                      - name: active
+                        type: int
+                    type: struct
+                - name: dns_requests
+                  type:
+                    fields:
+                      - name: count
+                        type: int
+                      - name: active
+                        type: int
+                    type: struct
+                - name: reassembly_size
+                  type:
+                    fields:
+                      - name: tcp
+                        type: int
+                      - name: file
+                        type: int
+                      - name: frag
+                        type: int
+                      - name: unknown
+                        type: int
+                    type: struct
+                - name: timestamp_lag
+                  type: int
+              type: struct
+        type: struct
+transform: |
+  .event.kind = "metric"
+
+  if .json.ts == null { 
+      abort
+  }
+
+  .zeek.stats = del(.json)
+
+  .event.created = .ts
+
+  .zeek.stats.memory = del(.zeek.stats.mem)
+
+  .zeek.stats.packets.processed = del(.zeek.stats.pkts_proc)
+
+  .zeek.stats.packets.dropped = del(.zeek.stats.pkts_dropped)
+
+  .zeek.stats.packets.received = del(.zeek.stats.pkts_link)
+
+  .zeek.stats.bytes.received = del(.zeek.stats.bytes_recv)
+
+  .zeek.stats.connections.tcp.count = del(.zeek.stats.tcp_conns)
+
+  .zeek.stats.connections.tcp.active = del(.zeek.stats.active_tcp_conns)
+
+  .zeek.stats.connections.udp.count = del(.zeek.stats.udp_conns)
+
+  .zeek.stats.connections.udp.active = del(.zeek.stats.active_udp_conns)
+
+  .zeek.stats.connections.icmp.count = del(.zeek.stats.icmp_conns)
+
+  .zeek.stats.connections.icmp.active = del(.zeek.stats.active_icmp_conns)
+
+  .zeek.stats.events.processed = del(.zeek.stats.events_proc)
+
+  .zeek.stats.events.queued = del(.zeek.stats.events_queued)
+
+  .zeek.stats.timers.count = del(.zeek.stats.timers)
+
+  .zeek.stats.timers.active = del(.zeek.stats.active_timers)
+
+  .zeek.stats.files.count = del(.zeek.stats.files)
+
+  .zeek.stats.files.active = del(.zeek.stats.active_files)
+
+  .zeek.stats.dns_requests.count = del(.zeek.stats.dns_requests)
+
+  .zeek.stats.dns_requests.active = del(.zeek.stats.active_dns_requests)
+
+  .zeek.stats.reassembly_size.tcp = del(.zeek.stats.reassem_tcp_size)
+
+  .zeek.stats.reassembly_size.file = del(.zeek.stats.reassem_file_size)
+
+  .zeek.stats.reassembly_size.frag = del(.zeek.stats.reassem_frag_size)
+
+  .zeek.stats.reassembly_size.unknown = del(.zeek.stats.reassem_unknown_size)
+
+  .zeek.stats.timestamp_lag = del(.zeek.stats.pkt_lag)
+
+  .ts = to_timestamp!(.zeek.stats.ts, "seconds") 
+
+  del(.zeek.stats.ts)

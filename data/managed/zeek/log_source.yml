@@ -1,0 +1,146 @@
+ingest:
+  select_table_from_payload_metadata: |
+    if match(.__metadata.s3.key, r'capture_loss\.') {
+      "capture_loss"
+    } else if match(.__metadata.s3.key, r'conn\.') {
+      "connection"
+    } else if match(.__metadata.s3.key, r'dce_rpc\.') {
+      "dce_rpc"
+    } else if match(.__metadata.s3.key, r'dhcp\.') {
+      "dhcp"
+    } else if match(.__metadata.s3.key, r'dnp3\.') {
+      "dnp3"
+    } else if match(.__metadata.s3.key, r'dns\.') {
+      "dns"
+    } else if match(.__metadata.s3.key, r'dpd\.') {
+      "dpd"
+    } else if match(.__metadata.s3.key, r'files\.') {
+      "files"
+    } else if match(.__metadata.s3.key, r'ftp\.') {
+      "ftp"
+    } else if match(.__metadata.s3.key, r'http\.') {
+      "http"
+    } else if match(.__metadata.s3.key, r'intel\.') {
+      "intel"
+    } else if match(.__metadata.s3.key, r'irc\.') {
+      "irc"
+    } else if match(.__metadata.s3.key, r'kerberos\.') {
+      "kerberos"
+    } else if match(.__metadata.s3.key, r'known_certs\.') {
+      "known_certs"
+    } else if match(.__metadata.s3.key, r'known_hosts\.') {
+      "known_hosts"
+    } else if match(.__metadata.s3.key, r'known_services\.') {
+      "known_services"
+    } else if match(.__metadata.s3.key, r'modbus\.') {
+      "modbus"
+    } else if match(.__metadata.s3.key, r'mysql\.') {
+      "mysql"
+    } else if match(.__metadata.s3.key, r'notice\.') {
+      "notice"
+    } else if match(.__metadata.s3.key, r'ntlm\.') {
+      "ntlm"
+    } else if match(.__metadata.s3.key, r'ntp\.') {
+      "ntp"
+    } else if match(.__metadata.s3.key, r'ocsp\.') {
+      "ocsp"
+    } else if match(.__metadata.s3.key, r'pe\.') {
+      "pe"
+    } else if match(.__metadata.s3.key, r'radius\.') {
+      "radius"
+    } else if match(.__metadata.s3.key, r'rdp\.') {
+      "rdp"
+    } else if match(.__metadata.s3.key, r'rfb\.') {
+      "rfb"
+    } else if match(.__metadata.s3.key, r'signature\.') {
+      "signature"
+    } else if match(.__metadata.s3.key, r'sip\.') {
+      "sip"
+    } else if match(.__metadata.s3.key, r'smb_cmd\.') {
+      "smb_cmd"
+    } else if match(.__metadata.s3.key, r'smb_files\.') {
+      "smb_files"
+    } else if match(.__metadata.s3.key, r'smb_mapping\.') {
+      "smb_mapping"
+    } else if match(.__metadata.s3.key, r'smtp\.') {
+      "smtp"
+    } else if match(.__metadata.s3.key, r'snmp\.') {
+      "snmp"
+    } else if match(.__metadata.s3.key, r'socks\.') {
+      "socks"
+    } else if match(.__metadata.s3.key, r'software\.') {
+      "software"
+    } else if match(.__metadata.s3.key, r'ssh\.') {
+      "ssh"
+    } else if match(.__metadata.s3.key, r'ssl\.') {
+      "ssl"
+    } else if match(.__metadata.s3.key, r'stats\.') {
+      "stats"
+    } else if match(.__metadata.s3.key, r'syslog\.') {
+      "syslog"
+    } else if match(.__metadata.s3.key, r'traceroute\.') {
+      "traceroute"
+    } else if match(.__metadata.s3.key, r'tunnel\.') {
+      "tunnel"
+    } else if match(.__metadata.s3.key, r'weird\.') {
+      "weird"
+    } else if match(.__metadata.s3.key, r'x509\.') {
+      "x509"
+    } else {
+      "default" # will error table not found
+    }
+name: zeek
+schema:
+  ecs_field_names:
+    - cloud.account.id
+    - cloud.availability_zone
+    - cloud.instance.id
+    - cloud.instance.name
+    - cloud.machine.type
+    - cloud.project.id
+    - cloud.provider
+    - cloud.region
+    - container.id
+    - container.image.name
+    - container.labels
+    - container.name
+    - ecs.version
+    - event.category
+    - event.created
+    - event.dataset
+    - event.ingested
+    - event.kind
+    - event.module
+    - event.type
+    - host.architecture
+    - host.domain
+    - host.geo.city_name
+    - host.geo.continent_name
+    - host.geo.country_iso_code
+    - host.geo.country_name
+    - host.geo.location
+    - host.geo.name
+    - host.geo.region_iso_code
+    - host.geo.region_name
+    - host.hostname
+    - host.id
+    - host.ip
+    - host.mac
+    - host.name
+    - host.os.family
+    - host.os.kernel
+    - host.os.name
+    - host.os.platform
+    - host.os.version
+    - host.type
+    - log.file.path
+    - network.type
+    - related.ip
+    - tags
+  fields:
+    - name: zeek
+      type:
+        fields:
+          - name: session_id
+            type: string
+        type: struct

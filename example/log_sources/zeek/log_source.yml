@@ -1,0 +1,4 @@
+name: zeek
+
+managed:
+  type: ZEEK

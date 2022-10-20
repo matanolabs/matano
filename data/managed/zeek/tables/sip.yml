@@ -1,0 +1,217 @@
+name: sip
+schema:
+  ecs_field_names:
+    - destination.address
+    - destination.as.number
+    - destination.as.organization.name
+    - destination.geo.city_name
+    - destination.geo.continent_name
+    - destination.geo.country_iso_code
+    - destination.geo.country_name
+    - destination.geo.location
+    - destination.geo.name
+    - destination.geo.region_iso_code
+    - destination.geo.region_name
+    - destination.ip
+    - destination.port
+    - error.message
+    - event.action
+    - event.category
+    - event.id
+    - event.outcome
+    - event.type
+    - network.community_id
+    - network.protocol
+    - network.transport
+    - related.ip
+    - source.address
+    - source.as.number
+    - source.as.organization.name
+    - source.geo.city_name
+    - source.geo.continent_name
+    - source.geo.country_iso_code
+    - source.geo.country_name
+    - source.geo.location
+    - source.geo.name
+    - source.geo.region_iso_code
+    - source.geo.region_name
+    - source.ip
+    - source.port
+    - url.full
+  fields:
+    - name: zeek
+      type:
+        fields:
+          - name: session_id
+            type: string
+          - name: sip
+            type:
+              fields:
+                - name: transaction_depth
+                  type: int
+                - name: sequence
+                  type:
+                    fields:
+                      - name: method
+                        type: string
+                      - name: number
+                        type: string
+                    type: struct
+                - name: uri
+                  type: string
+                - name: date
+                  type: string
+                - name: request
+                  type:
+                    fields:
+                      - name: from
+                        type: string
+                      - name: to
+                        type: string
+                      - name: path
+                        type:
+                          element: string
+                          type: list
+                      - name: body_length
+                        type: long
+                    type: struct
+                - name: response
+                  type:
+                    fields:
+                      - name: from
+                        type: string
+                      - name: to
+                        type: string
+                      - name: path
+                        type:
+                          element: string
+                          type: list
+                      - name: body_length
+                        type: long
+                    type: struct
+                - name: reply_to
+                  type: string
+                - name: call_id
+                  type: string
+                - name: subject
+                  type: string
+                - name: user_agent
+                  type: string
+                - name: status
+                  type:
+                    fields:
+                      - name: code
+                        type: int
+                      - name: msg
+                        type: string
+                    type: struct
+                - name: warning
+                  type: string
+                - name: content_type
+                  type: string
+              type: struct
+        type: struct
+transform: |
+  .event.kind = "event"
+  .event.category = ["network",]
+  .event.type = ["connection", "protocol"]
+
+  .network.transport = "udp"
+  .network.protocol = "sip"
+
+  if .json.ts == null { 
+      abort
+  }
+
+  .zeek.sip = object!(del(.json))
+
+  .zeek.sip, err = set(.zeek.sip, split("id.orig_p", "."), .zeek.sip."id.orig_p")
+  del(.zeek.sip."id.orig_p")
+
+  .zeek.sip, err = set(.zeek.sip, split("id.orig_h", "."), .zeek.sip."id.orig_h")
+  del(.zeek.sip."id.orig_h")
+
+  .zeek.sip, err = set(.zeek.sip, split("id.resp_h", "."), .zeek.sip."id.resp_h")
+  del(.zeek.sip."id.resp_h")
+
+  .zeek.sip, err = set(.zeek.sip, split("id.resp_p", "."), .zeek.sip."id.resp_p")
+  del(.zeek.sip."id.resp_p")
+
+  .source.address = del(.zeek.sip.id.orig_h)
+
+  .source.port = del(.zeek.sip.id.orig_p)
+
+  .destination.address = del(.zeek.sip.id.resp_h)
+
+  .destination.port = del(.zeek.sip.id.resp_p)
+
+  .zeek.session_id = del(.zeek.sip.uid)
+
+  .event.id = .zeek.session_id
+
+  .source.ip = .source.address
+
+  .destination.ip = .destination.address
+
+  .zeek.sip.transaction_depth = del(.zeek.sip.trans_depth)
+
+  .zeek.sip.sequence.method = del(.zeek.sip.method)
+
+  .zeek.sip.request.from = del(.zeek.sip.request_from)
+
+  .zeek.sip.request.to = del(.zeek.sip.request_to)
+
+  .zeek.sip.request.path = del(.zeek.sip.request_path)
+
+  .zeek.sip.request.body_length = del(.zeek.sip.request_body_len)
+
+  .zeek.sip.response.from = del(.zeek.sip.response_from)
+
+  .zeek.sip.response.to = del(.zeek.sip.response_to)
+
+  .zeek.sip.response.path = del(.zeek.sip.response_path)
+
+  .zeek.sip.response.body_length = del(.zeek.sip.response_body_len)
+
+  .zeek.sip.status.code = del(.zeek.sip.status_code)
+
+  .zeek.sip.status.msg = del(.zeek.sip.status_msg)
+
+  .event.action = .zeek.sip.sequence.method
+
+  .url.full = .zeek.sip.uri
+
+  .ts = to_timestamp!(.zeek.sip.ts, "seconds")
+
+  del(.zeek.sip.ts)
+                                                  
+  _grokked, err = parse_grok(.zeek.sip.seq, "%{NUMBER:_seq_num}")  
+  if err == null {                                                            
+      .zeek.sip.sequence.number = _grokked._seq_num                                                            
+  }                                                                        
+
+  del(.zeek.sip.seq)
+
+  .source.as.number = del(.source.as.asn)
+
+  .source.as.organization.name = del(.source.as.organization_name)
+
+  .destination.as.number = del(.destination.as.asn)
+
+  .destination.as.organization.name = del(.destination.as.organization_name)
+
+  .related.ip = unique(filter(flatten([.source.ip, .destination.ip])) -> |_, v| { v != null }) 
+
+  if .zeek.sip.status.code != null {
+    status_code = int!(.zeek.sip.status.code)
+    .event.outcome = if status_code < 400 {
+      "success"
+    } else {
+      .event.type = push(.event.type, "error")
+      "failure" 
+    }
+  }
+
+  # TODO(): add community network id
+
+  del(.zeek.sip.id)

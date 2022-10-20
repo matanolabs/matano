@@ -1,5 +1,5 @@
 aws_account: "946413832404"
-aws_region: "us-west-2"
+aws_region: "us-east-1"
 
 vpc:
   id: vpc-05175918865d89771 # vpc-0ea06dd2385eeb53c

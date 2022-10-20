@@ -1,0 +1,117 @@
+name: weird
+schema:
+  ecs_field_names:
+    - destination.address
+    - destination.as.number
+    - destination.as.organization.name
+    - destination.geo.city_name
+    - destination.geo.continent_name
+    - destination.geo.country_iso_code
+    - destination.geo.country_name
+    - destination.geo.location
+    - destination.geo.name
+    - destination.geo.region_iso_code
+    - destination.geo.region_name
+    - destination.ip
+    - destination.port
+    - event.category
+    - event.id
+    - event.type
+    - related.ip
+    - rule.name
+    - source.address
+    - source.as.number
+    - source.as.organization.name
+    - source.geo.city_name
+    - source.geo.continent_name
+    - source.geo.country_iso_code
+    - source.geo.country_name
+    - source.geo.location
+    - source.geo.name
+    - source.geo.region_iso_code
+    - source.geo.region_name
+    - source.ip
+    - source.port
+  fields:
+    - name: zeek
+      type:
+        fields:
+          - name: session_id
+            type: string
+          - name: weird
+            type:
+              fields:
+                - name: name
+                  type: string
+                - name: additional_info
+                  type: string
+                - name: notice
+                  type: boolean
+                - name: peer
+                  type: string
+                - name: identifier
+                  type: string
+              type: struct
+        type: struct
+transform: |
+  .event.kind = "event"
+  .event.category = ["network"]
+  .event.type = ["info"]
+
+  .event.original = del(.message)
+
+  if .json.ts == null { 
+      abort
+  }
+
+  .zeek.weird = object!(del(.json))
+
+  .event.created = .ts
+
+  .zeek.weird, err = set(.zeek.weird, split("id.orig_p", "."), .zeek.weird."id.orig_p")
+  del(.zeek.weird."id.orig_p")
+
+  .zeek.weird, err = set(.zeek.weird, split("id.orig_h", "."), .zeek.weird."id.orig_h")
+  del(.zeek.weird."id.orig_h")
+
+  .zeek.weird, err = set(.zeek.weird, split("id.resp_h", "."), .zeek.weird."id.resp_h")
+  del(.zeek.weird."id.resp_h")
+
+  .zeek.weird, err = set(.zeek.weird, split("id.resp_p", "."), .zeek.weird."id.resp_p")
+  del(.zeek.weird."id.resp_p")
+
+  .source.address = del(.zeek.weird.id.orig_h)
+
+  .source.port = del(.zeek.weird.id.orig_p)
+
+  .destination.address = del(.zeek.weird.id.resp_h)
+
+  .destination.port = del(.zeek.weird.id.resp_p)
+
+  .zeek.session_id = del(.zeek.weird.uid)
+
+  .event.id = .zeek.session_id
+
+  .source.ip = .source.address
+
+  .destination.ip = .destination.address
+
+  .zeek.weird.additional_info = del(.zeek.weird.addl)
+
+  .rule.name = .zeek.weird.name
+      
+  .ts = to_timestamp!(.zeek.weird.ts, "seconds") 
+
+  del(.zeek.weird.ts)
+
+  .source.as.number = del(.source.as.asn)
+
+  .source.as.organization.name = del(.source.as.organization_name)
+
+  .destination.as.number = del(.destination.as.asn)
+
+  .destination.as.organization.name = del(.destination.as.organization_name)
+
+  .related.ip = unique(filter(flatten([.source.ip, .destination.ip])) -> |_, v| { v != null }) 
+
+  del(.zeek.weird.id)

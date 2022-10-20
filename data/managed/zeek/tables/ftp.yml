@@ -1,0 +1,216 @@
+name: ftp
+schema:
+  ecs_field_names:
+    - destination.address
+    - destination.as.number
+    - destination.as.organization.name
+    - destination.geo.city_name
+    - destination.geo.continent_name
+    - destination.geo.country_iso_code
+    - destination.geo.country_name
+    - destination.geo.location
+    - destination.geo.name
+    - destination.geo.region_iso_code
+    - destination.geo.region_name
+    - destination.ip
+    - destination.port
+    - error.message
+    - event.action
+    - event.category
+    - event.id
+    - event.type
+    - file.mime_type
+    - file.size
+    - network.community_id
+    - network.protocol
+    - network.transport
+    - related.ip
+    - related.user
+    - source.address
+    - source.as.number
+    - source.as.organization.name
+    - source.geo.city_name
+    - source.geo.continent_name
+    - source.geo.country_iso_code
+    - source.geo.country_name
+    - source.geo.location
+    - source.geo.name
+    - source.geo.region_iso_code
+    - source.geo.region_name
+    - source.ip
+    - source.port
+    - user.name
+  fields:
+    - name: zeek
+      type:
+        fields:
+          - name: session_id
+            type: string
+          - name: ftp
+            type:
+              fields:
+                - name: user
+                  type: string
+                - name: password
+                  type: string
+                - name: command
+                  type: string
+                - name: arg
+                  type: string
+                - name: file
+                  type:
+                    fields:
+                      - name: size
+                        type: long
+                      - name: mime_type
+                        type: string
+                      - name: fuid
+                        type: string
+                    type: struct
+                - name: reply
+                  type:
+                    fields:
+                      - name: code
+                        type: int
+                      - name: msg
+                        type: string
+                    type: struct
+                - name: data_channel
+                  type:
+                    fields:
+                      - name: passive
+                        type: boolean
+                      - name: originating_host
+                        type: string
+                      - name: response_host
+                        type: string
+                      - name: response_port
+                        type: int
+                    type: struct
+                - name: cwd
+                  type: string
+                - name: cmdarg
+                  type:
+                    fields:
+                      - name: cmd
+                        type: string
+                      - name: arg
+                        type: string
+                      - name: seq
+                        type: int
+                    type: struct
+                - name: pending_commands
+                  type: int
+                - name: passive
+                  type: boolean
+                - name: capture_password
+                  type: boolean
+                - name: last_auth_requested
+                  type: string
+              type: struct
+        type: struct
+transform: |
+  .event.kind = "event"
+  .event.category = ["network",]
+  .event.type = ["connection", "protocol", "info"]
+
+  .network.transport = "tcp"
+  .network.protocol = "ftp"
+
+  if .json.ts == null {
+    abort
+  }
+
+  .zeek.ftp = object!(del(.json))
+
+  .event.created = .ts
+
+  .zeek.ftp, err = set(.zeek.ftp, split("id.orig_p", "."), .zeek.ftp."id.orig_p")
+  del(.zeek.ftp."id.orig_p")
+
+  .zeek.ftp, err = set(.zeek.ftp, split("id.orig_h", "."), .zeek.ftp."id.orig_h")
+  del(.zeek.ftp."id.orig_h")
+
+  .zeek.ftp, err = set(.zeek.ftp, split("id.resp_h", "."), .zeek.ftp."id.resp_h")
+  del(.zeek.ftp."id.resp_h")
+
+  .zeek.ftp, err = set(.zeek.ftp, split("id.resp_p", "."), .zeek.ftp."id.resp_p")
+  del(.zeek.ftp."id.resp_p")
+
+  .source.address = del(.zeek.ftp.id.orig_h) || .source.address
+
+  .source.port = del(.zeek.ftp.id.orig_p) || .source.port
+
+  .destination.address = del(.zeek.ftp.id.resp_h) || .destination.address
+
+  .destination.port = del(.zeek.ftp.id.resp_p) || .destination.port
+
+  .zeek.session_id = del(.zeek.ftp.uid) || .zeek.session_id
+
+  .event.id = .zeek.session_id
+      
+  .source.ip = .source.address
+
+      
+  .destination.ip = .destination.address
+
+  .user.name = .zeek.ftp.user
+
+  .event.action = .zeek.ftp.command
+      
+  .file.size = del(.zeek.ftp.file_size)
+
+  .file.mime_type = del(.zeek.ftp.mime_type)
+
+  .zeek.ftp.file.uid = del(.zeek.ftp.fuid)
+
+  .zeek.ftp.reply.code = del(.zeek.ftp.reply_code)
+
+  .zeek.ftp.reply.msg = del(.zeek.ftp.reply_msg)
+
+  .zeek.ftp, err = set(.zeek.ftp, split("data_channel.orig_h", "."), .zeek.ftp."data_channel.orig_h")
+  del(.zeek.ftp."data_channel.orig_h")
+
+  .zeek.ftp, err = set(.zeek.ftp, split("data_channel.orig_p", "."), .zeek.ftp."data_channel.orig_p")
+  del(.zeek.ftp."data_channel.orig_p")
+
+  .zeek.ftp, err = set(.zeek.ftp, split("data_channel.resp_h", "."), .zeek.ftp."data_channel.resp_h")
+  del(.zeek.ftp."data_channel.resp_h")
+
+  .zeek.ftp, err = set(.zeek.ftp, split("data_channel.resp_p", "."), .zeek.ftp."data_channel.resp_p")
+  del(.zeek.ftp."data_channel.resp_p")
+
+  .zeek.ftp.data_channel.originating_host = del(.zeek.ftp.data_channel.orig_h)
+
+  .zeek.ftp.data_channel.originating_port = del(.zeek.ftp.data_channel.orig_p)
+
+  .zeek.ftp.data_channel.response_host = del(.zeek.ftp.data_channel.resp_h)
+
+  .zeek.ftp.data_channel.response_port = del(.zeek.ftp.data_channel.resp_p)
+
+  if .zeek.ftp.ts != null {                                               
+    .ts = to_timestamp!(.zeek.ftp.ts, "seconds") 
+  }
+
+  del(.zeek.ftp.ts)
+
+  .zeek.ftp = set!(.zeek.ftp, split("data_channel.passive", "."), .zeek.ftp."data_channel.passive")
+  del(.zeek.ftp."data_channel.passive")
+
+  .related.ip = unique(filter(flatten([.source.ip, .destination.ip])) -> |_, v| { v != null })
+
+  if .user.name != null { 
+      .related.user = push(.related.user, .user.name) 
+  }
+
+  .source.as.number = del(.source.as.asn) || .source.as.number
+
+  .source.as.organization.name = del(.source.as.organization_name) || .source.as.organization.name
+
+  .destination.as.number = del(.destination.as.asn) || .destination.as.number
+
+  .destination.as.organization.name = del(.destination.as.organization_name) || .destination.as.organization.name
+       
+  # TODO(): compute network.community_id
+
+  del(.zeek.ftp.id)

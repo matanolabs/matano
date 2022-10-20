@@ -1,0 +1,136 @@
+name: dnp3
+schema:
+  ecs_field_names:
+    - destination.address
+    - destination.as.number
+    - destination.as.organization.name
+    - destination.bytes
+    - destination.geo.city_name
+    - destination.geo.continent_name
+    - destination.geo.country_iso_code
+    - destination.geo.country_name
+    - destination.geo.location
+    - destination.geo.name
+    - destination.geo.region_iso_code
+    - destination.geo.region_name
+    - destination.ip
+    - destination.port
+    - error.message
+    - event.action
+    - event.category
+    - event.id
+    - event.type
+    - network.community_id
+    - network.protocol
+    - network.transport
+    - related.ip
+    - source.address
+    - source.as.number
+    - source.as.organization.name
+    - source.bytes
+    - source.geo.city_name
+    - source.geo.continent_name
+    - source.geo.country_iso_code
+    - source.geo.country_name
+    - source.geo.location
+    - source.geo.name
+    - source.geo.region_iso_code
+    - source.geo.region_name
+    - source.ip
+    - source.port
+  fields:
+    - name: zeek
+      type:
+        fields:
+          - name: session_id
+            type: string
+          - name: dnp3
+            type:
+              fields:
+                - name: function
+                  type:
+                    fields:
+                      - name: request
+                        type: string
+                      - name: reply
+                        type: string
+                    type: struct
+                - name: id
+                  type: int
+              type: struct
+        type: struct
+transform: |
+  .event.kind = "event"
+  .event.category = ["network",]
+  .event.type = ["connection", "protocol","info"]
+
+  .network.transport = "tcp"
+  .network.protocol = "dnp3"
+
+  .dns.header_flags = []
+
+  if .json.ts == null { 
+      abort
+  }
+
+  .zeek.dnp3 = object!(del(.json))
+
+  .event.created = .ts
+
+  .zeek.dnp3, err = set(.zeek.dnp3, split("id.orig_p", "."), .zeek.dnp3."id.orig_p")
+  del(.zeek.dnp3."id.orig_p")
+
+  .zeek.dnp3, err = set(.zeek.dnp3, split("id.orig_h", "."), .zeek.dnp3."id.orig_h")
+  del(.zeek.dnp3."id.orig_h")
+
+  .zeek.dnp3, err = set(.zeek.dnp3, split("id.resp_h", "."), .zeek.dnp3."id.resp_h")
+  del(.zeek.dnp3."id.resp_h")
+
+  .zeek.dnp3, err = set(.zeek.dnp3, split("id.resp_p", "."), .zeek.dnp3."id.resp_p")
+  del(.zeek.dnp3."id.resp_p")
+
+  .source.address = del(.zeek.dnp3.id.orig_h) || .source.address
+
+  .source.port = del(.zeek.dnp3.id.orig_p) || .source.port
+
+  .destination.address = del(.zeek.dnp3.id.resp_h) || .destination.address
+
+  .destination.port = del(.zeek.dnp3.id.resp_p) || .destination.port
+
+  .zeek.session_id = del(.zeek.dnp3.uid) || .zeek.session_id
+
+  .event.id = .zeek.session_id
+
+  .source.ip = .source.address
+
+  .destination.ip = .destination.address
+
+  .zeek.dnp3.function.request = del(.zeek.dnp3.fc_request)
+
+  .zeek.dnp3.function.reply = del(.zeek.dnp3.fc_reply)
+
+  .zeek.dnp3.id = del(.zeek.dnp3.iin)
+
+  .ts = to_timestamp!(.zeek.dnp3.ts, "seconds") 
+
+  del(.zeek.dnp3.ts)
+
+  .event.action = .zeek.dnp3.function.request
+
+  .event.action = .zeek.dnp3.function.reply || .event.action
+
+  .event.action = downcase!(.event.action)              
+
+  .source.as.number = del(.source.as.asn) || .source.as.number
+
+  .source.as.organization.name = del(.source.as.organization_name) || .source.as.organization.name
+
+  .destination.as.number = del(.destination.as.asn) || .destination.as.number
+
+  .destination.as.organization.name = del(.destination.as.organization_name) || .destination.as.organization.name
+
+  .related.ip = unique(filter(flatten([.source.ip, .destination.ip])) -> |_, v| { v != null }) 
+
+  # TODO(): add community network id
+
+  del(.zeek.dnp3.id)

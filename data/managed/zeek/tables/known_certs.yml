@@ -1,0 +1,81 @@
+name: known_certs
+schema:
+  ecs_field_names:
+    - event.category
+    - event.type
+    - host.geo.city_name
+    - host.geo.continent_name
+    - host.geo.country_iso_code
+    - host.geo.country_name
+    - host.geo.location
+    - host.geo.name
+    - host.geo.region_iso_code
+    - host.geo.region_name
+    - network.type
+    - related.ip
+    - server.geo.city_name
+    - server.geo.continent_name
+    - server.geo.country_iso_code
+    - server.geo.country_name
+    - server.geo.location
+    - server.geo.name
+    - server.geo.region_iso_code
+    - server.geo.region_name
+    - server.ip
+    - server.port
+    - tls.server.issuer
+    - tls.server.subject
+    - tls.server.x509.issuer.common_name
+    - tls.server.x509.issuer.distinguished_name
+    - tls.server.x509.serial_number
+    - tls.server.x509.subject.common_name
+    - tls.server.x509.subject.distinguished_name
+transform: |
+  .event.kind = "event"
+  .event.category = ["network", "file"]
+  .event.type = ["info"]
+
+  if .json.ts == null { 
+      abort
+  }
+
+  .event.created = .ts
+
+  .ts = to_timestamp!(.json.ts, "seconds") 
+
+  .host.ip = del(.json.host)
+
+  if .host.ip != null { 
+    .network.type = if is_ipv6!(.host.ip) { "ipv6" } else { "ipv4" }
+    .related.ip = push(.related.ip, .host.ip)
+    .server = .host
+    .host.ip = [ .host.ip ] 
+  }
+
+  .server.port = del(.json.port_num)
+
+  .server.as.number = del(.server.as.asn)
+
+  .server.as.organization.name = del(.server.as.organization_name)
+
+  .tls.server.x509.subject.distinguished_name = del(.json.subject)
+
+  .tls.server.x509.issuer.distinguished_name = del(.json.issuer_subject)
+
+  .tls.server.x509.serial_number = del(.json.serial)
+
+  .tls.server.x509.subject.distinguished_name = replace(.tls.server.x509.subject.distinguished_name, r'\\,', "") ?? null
+      
+  subject_info = parse_key_value(.tls.server.x509.subject.distinguished_name, "=", ",") ?? {}    
+                              
+  .tls.server.x509.subject.common_name = if subject_info.CN != null { [subject_info.CN] } else { null }
+
+  .tls.server.x509.issuer.distinguished_name = replace(.tls.server.x509.issuer.distinguished_name, r'\\,', "") ?? null
+      
+  issuer_info = parse_key_value(.tls.server.x509.issuer.distinguished_name, "=", ",") ?? {}    
+                              
+  .tls.server.x509.issuer.common_name = if issuer_info.CN != null { [issuer_info.CN] } else { null }                                                            
+
+  .tls.server.issuer = .tls.server.x509.issuer.distinguished_name
+
+  .tls.server.subject = .tls.server.x509.subject.distinguished_name

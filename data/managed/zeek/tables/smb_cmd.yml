@@ -1,0 +1,240 @@
+name: smb_cmd
+schema:
+  ecs_field_names:
+    - destination.address
+    - destination.as.number
+    - destination.as.organization.name
+    - destination.geo.city_name
+    - destination.geo.continent_name
+    - destination.geo.country_iso_code
+    - destination.geo.country_name
+    - destination.geo.location
+    - destination.geo.name
+    - destination.geo.region_iso_code
+    - destination.geo.region_name
+    - destination.ip
+    - destination.port
+    - error.message
+    - event.action
+    - event.category
+    - event.id
+    - event.outcome
+    - event.type
+    - network.community_id
+    - network.protocol
+    - network.transport
+    - related.ip
+    - related.user
+    - source.address
+    - source.as.number
+    - source.as.organization.name
+    - source.geo.city_name
+    - source.geo.continent_name
+    - source.geo.country_iso_code
+    - source.geo.country_name
+    - source.geo.location
+    - source.geo.name
+    - source.geo.region_iso_code
+    - source.geo.region_name
+    - source.ip
+    - source.port
+    - user.name
+  fields:
+    - name: zeek
+      type:
+        fields:
+          - name: session_id
+            type: string
+          - name: smb_cmd
+            type:
+              fields:
+                - name: command
+                  type: string
+                - name: sub_command
+                  type: string
+                - name: argument
+                  type: string
+                - name: status
+                  type: string
+                - name: rtt
+                  type: double
+                - name: version
+                  type: string
+                - name: username
+                  type: string
+                - name: tree
+                  type: string
+                - name: tree_service
+                  type: string
+                - name: file
+                  type:
+                    fields:
+                      - name: name
+                        type: string
+                      - name: action
+                        type: string
+                      - name: uid
+                        type: string
+                      - name: host
+                        type:
+                          fields:
+                            - name: tx
+                              type: string
+                            - name: rx
+                              type: string
+                          type: struct
+                    type: struct
+                - name: smb1_offered_dialects
+                  type: string
+                - name: smb2_offered_dialects
+                  type: int
+              type: struct
+        type: struct
+transform: |
+  .event.kind = "event"
+  .event.category = ["network",]
+  .event.type = ["connection", "protocol",]
+
+  .network.transport = "tcp"
+  .network.protocol = "smb"
+
+  if .json.ts == null { 
+      abort
+  }
+      
+  .zeek.smb_cmd = object!(del(.json))
+
+  .event.created = .ts
+
+  .zeek.smb_cmd, err = set(.zeek.smb_cmd, split("referenced_file.ts", "."), .zeek.smb_cmd."referenced_file.ts")
+  del(.zeek.smb_cmd."referenced_file.ts")
+
+  .zeek.smb_cmd, err = set(.zeek.smb_cmd, split("referenced_file.id.orig_p", "."), .zeek.smb_cmd."referenced_file.id.orig_p")
+  del(.zeek.smb_cmd."referenced_file.id.orig_p")
+
+  .zeek.smb_cmd, err = set(.zeek.smb_cmd, split("referenced_file.id.resp_p", "."), .zeek.smb_cmd."referenced_file.id.resp_p")
+  del(.zeek.smb_cmd."referenced_file.id.resp_p")
+
+  .zeek.smb_cmd, err = set(.zeek.smb_cmd, split("referenced_file.size", "."), .zeek.smb_cmd."referenced_file.size")
+  del(.zeek.smb_cmd."referenced_file.size")
+
+  .zeek.smb_cmd, err = set(.zeek.smb_cmd, split("referenced_file.times.modified", "."), .zeek.smb_cmd."referenced_file.times.modified")
+  del(.zeek.smb_cmd."referenced_file.times.modified")
+
+  .zeek.smb_cmd, err = set(.zeek.smb_cmd, split("referenced_file.times.accessed", "."), .zeek.smb_cmd."referenced_file.times.accessed")
+  del(.zeek.smb_cmd."referenced_file.times.accessed")
+
+  .zeek.smb_cmd, err = set(.zeek.smb_cmd, split("referenced_file.times.created", "."), .zeek.smb_cmd."referenced_file.times.created")
+  del(.zeek.smb_cmd."referenced_file.times.created")
+
+  .zeek.smb_cmd, err = set(.zeek.smb_cmd, split("referenced_file.times.changed", "."), .zeek.smb_cmd."referenced_file.times.changed")
+  del(.zeek.smb_cmd."referenced_file.times.changed")
+
+  .zeek.smb_cmd, err = set(.zeek.smb_cmd, split("referenced_file.uid", "."), .zeek.smb_cmd."referenced_file.uid")
+  del(.zeek.smb_cmd."referenced_file.uid")
+
+  .zeek.smb_cmd, err = set(.zeek.smb_cmd, split("referenced_file.id.orig_h", "."), .zeek.smb_cmd."referenced_file.id.orig_h")
+  del(.zeek.smb_cmd."referenced_file.id.orig_h")
+
+  .zeek.smb_cmd, err = set(.zeek.smb_cmd, split("referenced_file.id.resp_h", "."), .zeek.smb_cmd."referenced_file.id.resp_h")
+  del(.zeek.smb_cmd."referenced_file.id.resp_h")
+
+  .zeek.smb_cmd, err = set(.zeek.smb_cmd, split("referenced_file.action", "."), .zeek.smb_cmd."referenced_file.action")
+  del(.zeek.smb_cmd."referenced_file.action")
+
+  .zeek.smb_cmd, err = set(.zeek.smb_cmd, split("referenced_file.name", "."), .zeek.smb_cmd."referenced_file.name")
+  del(.zeek.smb_cmd."referenced_file.name")
+
+  .zeek.smb_cmd, err = set(.zeek.smb_cmd, split("referenced_file.path", "."), .zeek.smb_cmd."referenced_file.path")
+  del(.zeek.smb_cmd."referenced_file.path")
+
+  del(.zeek.smb_cmd.referenced_file.ts)
+  del(.zeek.smb_cmd.referenced_file.id.orig_p)
+  del(.zeek.smb_cmd.referenced_file.id.resp_p)
+  del(.zeek.smb_cmd.referenced_file.size)
+  del(.zeek.smb_cmd.referenced_file.times.modified)
+  del(.zeek.smb_cmd.referenced_file.times.accessed)
+  del(.zeek.smb_cmd.referenced_file.times.created)
+  del(.zeek.smb_cmd.referenced_file.times.changed)
+
+  if .zeek.smb_cmd.referenced_file.action == null { 
+    del(.zeek.smb_cmd.referenced_file.uid)
+  	del(.zeek.smb_cmd.referenced_file.id.orig_h)
+  	del(.zeek.smb_cmd.referenced_file.id.resp_h)
+  }
+      
+  .zeek.smb_cmd, err = set(.zeek.smb_cmd, split("id.orig_p", "."), .zeek.smb_cmd."id.orig_p")
+  del(.zeek.smb_cmd."id.orig_p")
+
+  .zeek.smb_cmd, err = set(.zeek.smb_cmd, split("id.orig_h", "."), .zeek.smb_cmd."id.orig_h")
+  del(.zeek.smb_cmd."id.orig_h")
+
+  .zeek.smb_cmd, err = set(.zeek.smb_cmd, split("id.resp_h", "."), .zeek.smb_cmd."id.resp_h")
+  del(.zeek.smb_cmd."id.resp_h")
+
+  .zeek.smb_cmd, err = set(.zeek.smb_cmd, split("id.resp_p", "."), .zeek.smb_cmd."id.resp_p")
+  del(.zeek.smb_cmd."id.resp_p")
+
+  .source.address = del(.zeek.smb_cmd.id.orig_h)
+
+  .source.port = del(.zeek.smb_cmd.id.orig_p)
+
+  .destination.address = del(.zeek.smb_cmd.id.resp_h)
+
+  .destination.port = del(.zeek.smb_cmd.id.resp_p)
+
+  .zeek.session_id = del(.zeek.smb_cmd.uid)
+
+  .event.id = .zeek.session_id
+
+  .source.ip = .source.address
+
+  .destination.ip = .destination.address
+
+  .zeek.smb_cmd.file.uid = del(.zeek.smb_cmd.referenced_file.uid)
+
+  .zeek.smb_cmd.file.host.tx = del(.zeek.smb_cmd.referenced_file.id.orig_h)
+
+  .zeek.smb_cmd.file.host.rx = del(.zeek.smb_cmd.referenced_file.id.resp_h)
+
+  .zeek.smb_cmd.file.name = del(.zeek.smb_cmd.referenced_file.name)
+
+  .zeek.smb_cmd.file.path = del(.zeek.smb_cmd.referenced_file.path)
+
+  .zeek.smb_cmd.file.action = del(.zeek.smb_cmd.referenced_file.action)
+
+  .event.action = .zeek.smb_cmd.command
+
+  .user.name = .zeek.smb_cmd.username
+
+  .ts = to_timestamp!(.zeek.smb_cmd.ts, "seconds") 
+
+  del(.zeek.smb_cmd.ts)
+
+  del(.zeek.smb_cmd.referenced_file)
+
+  .source.as.number = del(.source.as.asn)
+
+  .source.as.organization.name = del(.source.as.organization_name)
+
+  .destination.as.number = del(.destination.as.asn)
+
+  .destination.as.organization.name = del(.destination.as.organization_name)
+
+  .related.ip = unique(filter(flatten([.source.ip, .destination.ip])) -> |_, v| { v != null })
+      
+  if .user.name != null { 
+      .related.user = push(.related.user, .user.name) 
+  }
+
+  smb_cmd_status = downcase(.zeek.smb_cmd.status) ?? null
+  if smb_cmd_status != null { 
+    .event.outcome = if smb_cmd_status == "success" { "success" } else {
+      .event.type = push(.event.type, "error")
+      "failure"
+    }
+  }
+   
+  # TODO(): add community network id
+
+  del(.zeek.smb_cmd.id)

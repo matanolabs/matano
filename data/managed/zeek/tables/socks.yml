@@ -1,0 +1,160 @@
+name: socks
+schema:
+  ecs_field_names:
+    - destination.address
+    - destination.as.number
+    - destination.as.organization.name
+    - destination.geo.city_name
+    - destination.geo.continent_name
+    - destination.geo.country_iso_code
+    - destination.geo.country_name
+    - destination.geo.location
+    - destination.geo.name
+    - destination.geo.region_iso_code
+    - destination.geo.region_name
+    - destination.ip
+    - destination.port
+    - event.category
+    - event.id
+    - event.outcome
+    - event.type
+    - network.community_id
+    - network.protocol
+    - network.transport
+    - related.ip
+    - related.user
+    - source.address
+    - source.as.number
+    - source.as.organization.name
+    - source.geo.city_name
+    - source.geo.continent_name
+    - source.geo.country_iso_code
+    - source.geo.country_name
+    - source.geo.location
+    - source.geo.name
+    - source.geo.region_iso_code
+    - source.geo.region_name
+    - source.ip
+    - source.port
+    - user.name
+  fields:
+    - name: zeek
+      type:
+        fields:
+          - name: session_id
+            type: string
+          - name: socks
+            type:
+              fields:
+                - name: version
+                  type: int
+                - name: user
+                  type: string
+                - name: password
+                  type: string
+                - name: status
+                  type: string
+                - name: request
+                  type:
+                    fields:
+                      - name: host
+                        type: string
+                      - name: port
+                        type: int
+                    type: struct
+                - name: bound
+                  type:
+                    fields:
+                      - name: host
+                        type: string
+                      - name: port
+                        type: int
+                    type: struct
+                - name: capture_password
+                  type: boolean
+              type: struct
+        type: struct
+transform: |
+  .event.kind = "event"
+  .event.category = ["network"]
+  .event.type = ["connection", "protocol"]
+
+  .network.transport = "tcp"
+  .network.protocol = "socks"
+
+  if .json.ts == null { 
+      abort
+  }
+
+  .zeek.socks = object!(del(.json))
+
+  .zeek.socks, err = set(.zeek.socks, split("id.orig_p", "."), .zeek.socks."id.orig_p")
+  del(.zeek.socks."id.orig_p")
+
+  .zeek.socks, err = set(.zeek.socks, split("id.orig_h", "."), .zeek.socks."id.orig_h")
+  del(.zeek.socks."id.orig_h")
+
+  .zeek.socks, err = set(.zeek.socks, split("id.resp_h", "."), .zeek.socks."id.resp_h")
+  del(.zeek.socks."id.resp_h")
+
+  .zeek.socks, err = set(.zeek.socks, split("id.resp_p", "."), .zeek.socks."id.resp_p")
+  del(.zeek.socks."id.resp_p")
+
+  .zeek.socks, err = set(.zeek.socks, split("request.name", "."), .zeek.socks."request.name")
+  del(.zeek.socks."request.name")
+
+  .source.address = del(.zeek.socks.id.orig_h)
+
+  .source.port = del(.zeek.socks.id.orig_p)
+
+  .destination.address = del(.zeek.socks.id.resp_h)
+
+  .destination.port = del(.zeek.socks.id.resp_p)
+
+  .zeek.session_id = del(.zeek.socks.uid)
+
+  .event.id = .zeek.session_id
+
+  .source.ip = .source.address
+
+  .destination.ip = .destination.address
+
+  .zeek.socks.request.host = del(.zeek.socks.request.name)
+
+  .zeek.socks.request.port = del(.zeek.socks.request_p)
+
+  .zeek.socks.bound.port = del(.zeek.socks.bound_p)
+
+  .user.name = .zeek.socks.user
+
+  .ts = to_timestamp!(.zeek.socks.ts, "seconds") 
+
+  del(.zeek.socks.ts)
+
+  .zeek.socks = set!(.zeek.socks, split("bound.host", "."), .zeek.socks."bound.host")
+  del(.zeek.socks."bound.host")
+
+  .source.as.number = del(.source.as.asn)
+
+  .source.as.organization.name = del(.source.as.organization_name)
+
+  .destination.as.number = del(.destination.as.asn)
+
+  .destination.as.organization.name = del(.destination.as.organization_name)
+
+  .related.ip = unique(filter(flatten([.source.ip, .destination.ip])) -> |_, v| { v != null }) 
+      
+  if .user.name != null { 
+      .related.user = push(.related.user, .user.name) 
+  }
+
+  if .zeek.socks.status != null { 
+      .event.outcome = if .zeek.socks.status == "succeeded" { "success" } else {
+        .event.type = push(.event.type, "error")
+        "failure"
+      }
+  }
+
+  # TODO(): add community network id
+
+  del(.zeek.socks.id)

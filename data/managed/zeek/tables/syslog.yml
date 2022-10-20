@@ -1,0 +1,120 @@
+name: syslog
+schema:
+  ecs_field_names:
+    - destination.address
+    - destination.as.number
+    - destination.as.organization.name
+    - destination.geo.city_name
+    - destination.geo.continent_name
+    - destination.geo.country_iso_code
+    - destination.geo.country_name
+    - destination.geo.location
+    - destination.geo.name
+    - destination.geo.region_iso_code
+    - destination.geo.region_name
+    - destination.ip
+    - destination.port
+    - error.message
+    - event.id
+    - log.syslog.facility.name
+    - log.syslog.severity.name
+    - message
+    - network.community_id
+    - network.protocol
+    - network.transport
+    - related.ip
+    - source.address
+    - source.as.number
+    - source.as.organization.name
+    - source.geo.city_name
+    - source.geo.continent_name
+    - source.geo.country_iso_code
+    - source.geo.country_name
+    - source.geo.location
+    - source.geo.name
+    - source.geo.region_iso_code
+    - source.geo.region_name
+    - source.ip
+    - source.port
+  fields:
+    - name: zeek
+      type:
+        fields:
+          - name: session_id
+            type: string
+          - name: syslog
+            type:
+              fields:
+                - name: facility
+                  type: string
+                - name: severity
+                  type: string
+                - name: msg
+                  type: string
+              type: struct
+        type: struct
+transform: |
+  .event.kind = "event"
+  .network.protocol = "syslog"                   
+
+  if .json.ts == null { 
+    abort                    
+  }
+
+  .zeek.syslog = object!(del(.json))
+
+  .event.created = .ts
+
+  .zeek.syslog, err = set(.zeek.syslog, split("id.orig_p", "."), .zeek.syslog."id.orig_p")
+  del(.zeek.syslog."id.orig_p")
+
+  .zeek.syslog, err = set(.zeek.syslog, split("id.orig_h", "."), .zeek.syslog."id.orig_h")
+  del(.zeek.syslog."id.orig_h")
+
+  .zeek.syslog, err = set(.zeek.syslog, split("id.resp_h", "."), .zeek.syslog."id.resp_h")
+  del(.zeek.syslog."id.resp_h")
+
+  .zeek.syslog, err = set(.zeek.syslog, split("id.resp_p", "."), .zeek.syslog."id.resp_p")
+  del(.zeek.syslog."id.resp_p")
+
+  .source.address = del(.zeek.syslog.id.orig_h) || .source.address
+
+  .source.port = del(.zeek.syslog.id.orig_p) || .source.port
+
+  .destination.address = del(.zeek.syslog.id.resp_h) || .destination.address
+
+  .destination.port = del(.zeek.syslog.id.resp_p) || .destination.port
+
+  .zeek.session_id = del(.zeek.syslog.uid) || .zeek.session_id
+
+  .event.id = .zeek.session_id
+      
+  .source.ip = .source.address
+
+  .destination.ip = .destination.address
+      
+  .network.transport = del(.zeek.syslog.proto)
+
+  .zeek.syslog.msg = del(.zeek.syslog.message)
+
+  .message = .zeek.syslog.msg
+
+  .log.syslog.facility.name = .zeek.syslog.facility
+      
+  .log.syslog.severity.name = .zeek.syslog.severity
+      
+  .ts = to_timestamp!(.zeek.syslog.ts, "seconds") 
+
+  del(.zeek.syslog.ts)
+
+  .source.as.number = del(.source.as.asn) || .source.as.number
+
+  .source.as.organization.name = del(.source.as.organization_name) || .source.as.organization.name
+
+  .destination.as.number = del(.destination.as.asn) || .destination.as.number
+
+  .destination.as.organization.name = del(.destination.as.organization_name) || .destination.as.organization.name
+
+  .related.ip = unique(filter(flatten([.source.ip, .destination.ip])) -> |_, v| { v != null })
+
+  # TODO(): add network community id

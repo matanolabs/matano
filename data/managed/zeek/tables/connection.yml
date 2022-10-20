@@ -1,0 +1,323 @@
+name: connection
+schema:
+  ecs_field_names:
+    - destination.address
+    - destination.as.number
+    - destination.as.organization.name
+    - destination.bytes
+    - destination.geo.city_name
+    - destination.geo.continent_name
+    - destination.geo.country_iso_code
+    - destination.geo.country_name
+    - destination.geo.location
+    - destination.geo.name
+    - destination.geo.region_iso_code
+    - destination.geo.region_name
+    - destination.ip
+    - destination.mac
+    - destination.packets
+    - destination.port
+    - error.message
+    - event.category
+    - event.duration
+    - event.id
+    - event.type
+    - network.bytes
+    - network.community_id
+    - network.direction
+    - network.packets
+    - network.protocol
+    - network.transport
+    - related.ip
+    - source.address
+    - source.as.number
+    - source.as.organization.name
+    - source.bytes
+    - source.geo.city_name
+    - source.geo.continent_name
+    - source.geo.country_iso_code
+    - source.geo.country_name
+    - source.geo.location
+    - source.geo.name
+    - source.geo.region_iso_code
+    - source.geo.region_name
+    - source.ip
+    - source.mac
+    - source.packets
+    - source.port
+  fields:
+    - name: zeek
+      type:
+        fields:
+          - name: session_id
+            type: string
+          - name: connection
+            type:
+              fields:
+                - name: local_orig
+                  type: boolean
+                - name: local_resp
+                  type: boolean
+                - name: missed_bytes
+                  type: long
+                - name: state
+                  type: string
+                - name: state_message
+                  type: string
+                - name: icmp
+                  type:
+                    fields:
+                      - name: type
+                        type: int
+                      - name: code
+                        type: int
+                    type: struct
+                - name: history
+                  type: string
+                - name: vlan
+                  type: int
+                - name: inner_vlan
+                  type: int
+              type: struct
+        type: struct
+transform: |
+  .event.category = ["network"]
+  .event.kind = "event"
+
+  if .json.ts == null {
+      abort
+  }
+
+  .zeek.connection = object!(del(.json))
+
+  .event.created = .ts
+
+  .zeek.connection, err = set(.zeek.connection, split("id.orig_p", "."), .zeek.connection."id.orig_p")
+  if err == null { 
+      del(.zeek.connection."id.orig_p")
+  }
+
+  .zeek.connection, err = set(.zeek.connection, split("id.orig_h", "."), .zeek.connection."id.orig_h")
+  if err == null { 
+      del(.zeek.connection."id.orig_h")
+  }
+
+  .zeek.connection, err = set(.zeek.connection, split("id.resp_h", "."), .zeek.connection."id.resp_h")
+  if err == null { 
+      del(.zeek.connection."id.resp_h")
+  }
+
+  .zeek.connection, err = set(.zeek.connection, split("id.resp_p", "."), .zeek.connection."id.resp_p")
+  if err == null { 
+      del(.zeek.connection."id.resp_p")
+  }
+
+  .source.address = del(.zeek.connection.id.orig_h)
+
+  .source.port = del(.zeek.connection.id.orig_p)
+
+  .destination.address = del(.zeek.connection.id.resp_h)
+
+  .destination.port = del(.zeek.connection.id.resp_p)
+
+  .network.transport = del(.zeek.connection.proto)
+
+  .network.protocol = del(.zeek.connection.service)
+
+  .zeek.session_id = del(.zeek.connection.uid)
+
+  .source.bytes = del(.zeek.connection.orig_ip_bytes)
+
+  .destination.bytes = del(.zeek.connection.resp_ip_bytes)
+
+  .source.packets = del(.zeek.connection.orig_pkts)
+
+  .destination.packets = del(.zeek.connection.resp_pkts)
+
+  .zeek.connection.state = del(.zeek.connection.conn_state)
+
+  .source.mac = del(.zeek.connection.orig_l2_addr)
+
+  .destination.mac = del(.zeek.connection.resp_l2_addr)
+
+  if .network.transport == "icmp" { 
+      .zeek.connection.icmp.type = del(.source.port)
+  }
+
+      
+  if .network.transport == "icmp" { 
+      .zeek.connection.icmp.code = del(.destination.port)
+  }
+
+      
+  if .source.address != null { 
+      .source.ip = .source.address
+  }
+
+      
+  if .destination.address != null { 
+      .destination.ip = .destination.address
+  }
+
+  # TODO(): community ids...
+      
+  if .zeek.connection.ts != null {                                               
+    .ts = to_timestamp!(.zeek.connection.ts, "seconds") 
+  }
+
+  del(.zeek.connection.ts)
+
+  if .zeek.session_id != null { 
+      .event.id = .zeek.session_id
+  }
+
+  conn_duration = del(.zeek.connection.duration)
+  if conn_duration != null {    
+    scale = 1000000000                             
+    .event.duration = to_int(round(to_float!(conn_duration) * scale))      
+  }
+
+  .tags = []
+  if .zeek.connection.local_orig != null { 
+      .tags = push(.tags, "local_orig") 
+  } 
+  if .zeek.connection.local_resp != null { 
+      .tags = push(.tags, "local_resp") 
+  }
+
+  .related.ip = unique(filter(flatten([.source.ip, .destination.ip])) -> |_, v| { v != null })
+
+  .network.packets = {
+    .source.packets + .destination.packets
+  } ?? null                     
+
+  .network.bytes = {
+    .source.bytes + .destination.bytes
+  } ?? null
+       
+  local_orig = .zeek.connection.local_orig
+  local_resp = .zeek.connection.local_resp
+  if local_orig == true && local_resp == true {
+    .network.direction = "internal"
+  } else if local_orig == true && local_resp == false {
+    .network.direction = "outbound"
+  } else if local_orig == false && local_resp == true {
+    .network.direction = "inbound"
+  } else if local_orig == false && local_resp == false {
+    .network.direction = "external"
+  }
+
+  .source.as.number = del(.source.as.asn)
+
+  .source.as.organization.name = del(.source.as.organization_name)
+
+  .destination.as.number = del(.destination.as.asn)
+
+  .destination.as.organization.name = del(.destination.as.organization_name)
+             
+  conn_state_info_map = {
+    "S0": {
+      "message": "Connection attempt seen, no reply.",
+      "types": [
+        "connection",
+        "start"
+      ]
+    },
+    "S1": {
+      "message": "Connection established, not terminated.",
+      "types": [
+        "connection",
+        "start"
+      ]
+    },
+    "SF": {
+      "message": "Normal establishment and termination.",
+      "types": [
+        "connection",
+        "start",
+        "end"
+      ]
+    },
+    "REJ": {
+      "message": "Connection attempt rejected.",
+      "types": [
+        "connection",
+        "start",
+        "denied"
+      ]
+    },
+    "S2": {
+      "message": "Connection established and close attempt by originator seen (but no reply from responder).",
+      "types": [
+        "connection",
+        "info"
+      ]
+    },
+    "S3": {
+      "message": "Connection established and close attempt by responder seen (but no reply from originator).",
+      "types": [
+        "connection",
+        "info"
+      ]
+    },
+    "RSTO": {
+      "message": "Connection established, originator aborted (sent a RST).",
+      "types": [
+        "connection",
+        "info"
+      ]
+    },
+    "RSTR": {
+      "message": "Responder sent a RST.",
+      "types": [
+        "connection",
+        "info"
+      ]
+    },
+    "RSTOS0": {
+      "message": "Originator sent a SYN followed by a RST, we never saw a SYN-ACK from the responder.",
+      "types": [
+        "connection",
+        "info"
+      ]
+    },
+    "RSTRH": {
+      "message": "Responder sent a SYN ACK followed by a RST, we never saw a SYN from the (purported) originator.",
+      "types": [
+        "connection",
+        "info"
+      ]
+    },
+    "SH": {
+      "message": "Originator sent a SYN followed by a FIN, we never saw a SYN ACK from the responder (hence the connection was 'half' open).",
+      "types": [
+        "connection",
+        "info"
+      ]
+    },
+    "SHR": {
+      "message": "Responder sent a SYN ACK followed by a FIN, we never saw a SYN from the originator.",
+      "types": [
+        "connection",
+        "info"
+      ]
+    },
+    "OTH": {
+      "message": "No SYN seen, just midstream traffic (a 'partial connection' that was not later closed).",
+      "types": [
+        "connection",
+        "info"
+      ]
+    }
+  }
+     
+  if .zeek.connection.state != null {
+    conn_state_info = get(conn_state_info_map, [.zeek.connection.state]) ?? {}
+    .zeek.connection.state_message = conn_state_info.message
+    .event.type = conn_state_info.types
+  }
+
+  del(.zeek.connection.id)
+  del(.zeek.connection.orig_bytes)
+  del(.zeek.connection.resp_bytes)
+  del(.zeek.connection.tunnel_parents)

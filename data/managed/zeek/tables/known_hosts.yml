@@ -1,0 +1,37 @@
+name: known_hosts
+schema:
+  ecs_field_names:
+    - event.category
+    - event.type
+    - host.geo.city_name
+    - host.geo.continent_name
+    - host.geo.country_iso_code
+    - host.geo.country_name
+    - host.geo.location
+    - host.geo.name
+    - host.geo.region_iso_code
+    - host.geo.region_name
+    - network.type
+    - related.ip
+transform: |
+  .event.kind = "event"
+  .event.category = ["network", "host"]
+  .event.type = ["info"]
+
+  .dns.header_flags = []
+
+  if .json.ts == null { 
+      abort
+  }
+
+  .ts = to_timestamp!(.json.ts, "seconds") 
+
+  .host.ip = del(.json.host) || .host.ip
+
+  if .host.ip != null { 
+    .network.type = if is_ipv6!(.host.ip) { "ipv6" } else { "ipv4" }
+    .related.ip = push(.related.ip, .host.ip) 
+    .host.ip = [ .host.ip ]
+  }
+
+  del(.json)

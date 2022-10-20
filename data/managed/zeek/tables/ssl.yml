@@ -1,0 +1,432 @@
+name: ssl
+schema:
+  ecs_field_names:
+    - client.address
+    - destination.address
+    - destination.as.number
+    - destination.as.organization.name
+    - destination.geo.city_name
+    - destination.geo.continent_name
+    - destination.geo.country_iso_code
+    - destination.geo.country_name
+    - destination.geo.location
+    - destination.geo.name
+    - destination.geo.region_iso_code
+    - destination.geo.region_name
+    - destination.ip
+    - destination.port
+    - error.message
+    - event.category
+    - event.id
+    - event.type
+    - network.community_id
+    - network.transport
+    - related.hash
+    - related.ip
+    - server.address
+    - source.address
+    - source.as.number
+    - source.as.organization.name
+    - source.geo.city_name
+    - source.geo.continent_name
+    - source.geo.country_iso_code
+    - source.geo.country_name
+    - source.geo.location
+    - source.geo.name
+    - source.geo.region_iso_code
+    - source.geo.region_name
+    - source.ip
+    - source.port
+    - tls.cipher
+    - tls.client.issuer
+    - tls.client.ja3
+    - tls.client.x509.subject.common_name
+    - tls.client.x509.subject.country
+    - tls.client.x509.subject.locality
+    - tls.client.x509.subject.organization
+    - tls.client.x509.subject.organizational_unit
+    - tls.client.x509.subject.state_or_province
+    - tls.curve
+    - tls.established
+    - tls.resumed
+    - tls.server.hash.sha1
+    - tls.server.issuer
+    - tls.server.ja3s
+    - tls.server.not_after
+    - tls.server.not_before
+    - tls.server.subject
+    - tls.server.x509.issuer.common_name
+    - tls.server.x509.issuer.country
+    - tls.server.x509.issuer.distinguished_name
+    - tls.server.x509.issuer.locality
+    - tls.server.x509.issuer.organization
+    - tls.server.x509.issuer.organizational_unit
+    - tls.server.x509.issuer.state_or_province
+    - tls.server.x509.subject.common_name
+    - tls.server.x509.subject.country
+    - tls.server.x509.subject.locality
+    - tls.server.x509.subject.organization
+    - tls.server.x509.subject.organizational_unit
+    - tls.server.x509.subject.state_or_province
+    - tls.version
+    - tls.version_protocol
+  fields:
+    - name: zeek
+      type:
+        fields:
+          - name: session_id
+            type: string
+          - name: ssl
+            type:
+              fields:
+                - name: version
+                  type: string
+                - name: cipher
+                  type: string
+                - name: curve
+                  type: string
+                - name: resumed
+                  type: boolean
+                - name: next_protocol
+                  type: string
+                - name: established
+                  type: boolean
+                - name: validation
+                  type:
+                    fields:
+                      - name: status
+                        type: string
+                      - name: code
+                        type: string
+                    type: struct
+                - name: last_alert
+                  type: string
+                - name: server
+                  type:
+                    fields:
+                      - name: name
+                        type: string
+                      - name: cert_chain
+                        type: string
+                      - name: cert_chain_fuids
+                        type:
+                          element: string
+                          type: list
+                      - name: issuer
+                        type:
+                          fields:
+                            - name: common_name
+                              type: string
+                            - name: country
+                              type: string
+                            - name: locality
+                              type: string
+                            - name: organization
+                              type: string
+                            - name: organizational_unit
+                              type: string
+                            - name: state
+                              type: string
+                          type: struct
+                      - name: subject
+                        type:
+                          fields:
+                            - name: common_name
+                              type: string
+                            - name: country
+                              type: string
+                            - name: locality
+                              type: string
+                            - name: organization
+                              type: string
+                            - name: organizational_unit
+                              type: string
+                            - name: state
+                              type: string
+                          type: struct
+                    type: struct
+                - name: client
+                  type:
+                    fields:
+                      - name: cert_chain
+                        type: string
+                      - name: cert_chain_fuids
+                        type:
+                          element: string
+                          type: list
+                      - name: issuer
+                        type:
+                          fields:
+                            - name: common_name
+                              type: string
+                            - name: country
+                              type: string
+                            - name: locality
+                              type: string
+                            - name: organization
+                              type: string
+                            - name: organizational_unit
+                              type: string
+                            - name: state
+                              type: string
+                          type: struct
+                      - name: subject
+                        type:
+                          fields:
+                            - name: common_name
+                              type: string
+                            - name: country
+                              type: string
+                            - name: locality
+                              type: string
+                            - name: organization
+                              type: string
+                            - name: organizational_unit
+                              type: string
+                            - name: state
+                              type: string
+                          type: struct
+                    type: struct
+              type: struct
+        type: struct
+transform: |
+  .event.kind = "event"
+  .event.category = ["network",]
+  .event.type = ["connection", "protocol"]
+
+  .network.transport = "tcp"
+
+  if .json.ts == null {
+    abort
+  }
+
+  .zeek.ssl = object!(del(.json))
+
+  .event.created = .ts
+
+  .zeek.ssl, err = set(.zeek.ssl, split("id.orig_p", "."), .zeek.ssl."id.orig_p")
+  del(.zeek.ssl."id.orig_p")
+
+  .zeek.ssl, err = set(.zeek.ssl, split("id.orig_h", "."), .zeek.ssl."id.orig_h")
+  del(.zeek.ssl."id.orig_h")
+
+  .zeek.ssl, err = set(.zeek.ssl, split("id.resp_h", "."), .zeek.ssl."id.resp_h")
+  del(.zeek.ssl."id.resp_h")
+
+  .zeek.ssl, err = set(.zeek.ssl, split("id.resp_p", "."), .zeek.ssl."id.resp_p")
+  del(.zeek.ssl."id.resp_p")
+
+  .source.address = del(.zeek.ssl.id.orig_h) || .source.address
+
+  .source.port = del(.zeek.ssl.id.orig_p) || .source.port
+
+  .destination.address = del(.zeek.ssl.id.resp_h) || .destination.address
+
+  .destination.port = del(.zeek.ssl.id.resp_p) || .destination.port
+
+  .zeek.session_id = del(.zeek.ssl.uid) || .zeek.session_id
+
+  .event.id = .zeek.session_id
+    
+  .source.ip = .source.address
+
+  .client.address = .source.address
+      
+  .server.address = .destination.ip = .destination.address
+      
+  .zeek.ssl.server.name = del(.zeek.ssl.server_name)
+
+  .zeek.ssl.server.cert_chain = del(.zeek.ssl.cert_chain)
+
+  .zeek.ssl.server.cert_chain_fuids = del(.zeek.ssl.cert_chain_fuids)
+
+  .zeek.ssl.client.cert_chain = del(.zeek.ssl.client_cert_chain)
+
+  .zeek.ssl.client.cert_chain_fuids = del(.zeek.ssl.client_cert_chain_fuids)
+
+  .zeek.ssl.validation.status = del(.zeek.ssl.validation_status)
+
+  .zeek.ssl.validation.code = del(.zeek.ssl.validation_code)
+
+  .ts = to_timestamp!(.zeek.ssl.ts, "seconds")
+
+  del(.zeek.ssl.ts)
+
+  .tls.server.not_after = del(.zeek.ssl.not_valid_after)
+
+  .tls.server.not_before = del(.zeek.ssl.not_valid_before)
+
+  .tls.server.not_before = to_timestamp(.tls.server.not_before, "seconds") ?? null
+
+  .tls.server.not_after = to_timestamp(.tls.server.not_after, "seconds") ?? null
+
+  .source.as.number = del(.source.as.asn) || .source.as.number
+
+  .source.as.organization.name = del(.source.as.organization_name) || .source.as.organization.name
+
+  .destination.as.number = del(.destination.as.asn) || .destination.as.number
+
+  .destination.as.organization.name = del(.destination.as.organization_name) || .destination.as.organization.name
+        
+  .zeek.ssl.issuer = replace(.zeek.ssl.issuer, r'\\,', "") ?? null
+      
+  .zeek.ssl.server.issuer = parse_key_value(.zeek.ssl.issuer, "=", ",") ?? {}                   
+
+  .tls.server.issuer = del(.zeek.ssl.issuer)
+
+  .zeek.ssl.server.issuer.country = del(.zeek.ssl.server.issuer.C)
+
+  .tls.server.hash.sha1 = del(.zeek.ssl.resp_certificate_sha1)
+
+  .tls.server.hash.sha1 = upcase(.tls.server.hash.sha1) ?? null                   
+
+  .tls.server.x509.issuer.country = .zeek.ssl.server.issuer.country
+
+  .zeek.ssl.server.issuer.common_name = del(.zeek.ssl.server.issuer.CN)
+
+  .tls.server.x509.issuer.common_name = .zeek.ssl.server.issuer.common_name
+
+  .zeek.ssl.server.issuer.locality = del(.zeek.ssl.server.issuer.L)
+
+  .tls.server.x509.issuer.locality = .zeek.ssl.server.issuer.locality
+
+  .zeek.ssl.server.issuer.organization = del(.zeek.ssl.server.issuer.O)
+
+  .tls.server.x509.issuer.organization = .zeek.ssl.server.issuer.organization
+
+  .zeek.ssl.server.issuer.organizational_unit = del(.zeek.ssl.server.issuer.OU)
+
+  .tls.server.x509.issuer.organizational_unit = .zeek.ssl.server.issuer.organizational_unit
+
+  .zeek.ssl.server.issuer.state = del(.zeek.ssl.server.issuer.ST)
+
+  .tls.server.x509.issuer.state_or_province = .zeek.ssl.server.issuer.state                     
+
+  .zeek.ssl.subject = replace(.zeek.ssl.subject, r'\\,', "") ?? null
+      
+  .zeek.ssl.server.subject = parse_key_value(.zeek.ssl.subject, "=", ",") ?? {} 
+             
+  .tls.server.subject = del(.zeek.ssl.subject)
+
+  .zeek.ssl.server.subject.country = del(.zeek.ssl.server.subject.C)
+
+  .tls.server.x509.subject.country = .zeek.ssl.server.subject.country
+
+  .zeek.ssl.server.subject.common_name = del(.zeek.ssl.server.subject.CN)
+
+  .tls.server.x509.subject.common_name = .zeek.ssl.server.subject.common_name
+
+  .zeek.ssl.server.subject.locality = del(.zeek.ssl.server.subject.L)
+
+  .tls.server.x509.subject.locality = .zeek.ssl.server.subject.locality
+
+  .zeek.ssl.server.subject.organization = del(.zeek.ssl.server.subject.O)
+
+  .tls.server.x509.subject.organization = .zeek.ssl.server.subject.organization
+
+  .zeek.ssl.server.subject.organizational_unit = del(.zeek.ssl.server.subject.OU)
+
+  .tls.server.x509.subject.organizational_unit = .zeek.ssl.server.subject.organizational_unit
+
+  .zeek.ssl.server.subject.state = del(.zeek.ssl.server.subject.ST)
+
+  .tls.server.x509.subject.state_or_province = .zeek.ssl.server.subject.state
+
+  .zeek.ssl.client_issuer = replace(.zeek.ssl.client_issuer, r'\\,', "") ?? null
+      
+  .zeek.ssl.client.issuer = parse_key_value(.zeek.ssl.client_issuer, "=", ",") ?? {} 
+
+  .tls.client.issuer = del(.zeek.ssl.client_issuer)
+
+  .zeek.ssl.client.issuer.country = del(.zeek.ssl.client.issuer.C)
+
+  .tls.client.x509.issuer.country = .zeek.ssl.client.issuer.country
+
+  .zeek.ssl.client.issuer.common_name = del(.zeek.ssl.client.issuer.CN)
+
+  .tls.client.x509.issuer.common_name = .zeek.ssl.client.issuer.common_name
+
+  .zeek.ssl.client.issuer.locality = del(.zeek.ssl.client.issuer.L)
+
+  .tls.client.x509.issuer.locality = .zeek.ssl.client.issuer.locality
+
+  .zeek.ssl.client.issuer.organization = del(.zeek.ssl.client.issuer.O)
+
+  .tls.client.x509.issuer.organization = .zeek.ssl.client.issuer.organization
+
+  .zeek.ssl.client.issuer.organizational_unit = del(.zeek.ssl.client.issuer.OU)
+
+  .tls.client.x509.issuer.organizational_unit = .zeek.ssl.client.issuer.organizational_unit
+
+  .zeek.ssl.client.issuer.state = del(.zeek.ssl.client.issuer.ST)
+
+  .tls.client.x509.issuer.state_or_province = .zeek.ssl.client.issuer.state
+
+  .zeek.ssl.client_subject = replace(.zeek.ssl.client_subject, r'\\,', "") ?? null
+      
+  .zeek.ssl.client.subject = parse_key_value(.zeek.ssl.client_subject, "=", ",") ?? {}                  
+
+  del(.zeek.ssl.client_subject)
+
+  .zeek.ssl.client.subject.country = del(.zeek.ssl.client.subject.C)
+
+  .tls.client.x509.subject.country = .zeek.ssl.client.subject.country
+
+  .zeek.ssl.client.subject.common_name = del(.zeek.ssl.client.subject.CN)
+
+  .tls.client.x509.subject.common_name = .zeek.ssl.client.subject.common_name
+
+  .zeek.ssl.client.subject.locality = del(.zeek.ssl.client.subject.L)
+
+  .tls.client.x509.subject.locality = .zeek.ssl.client.subject.locality
+
+  .zeek.ssl.client.subject.organization = del(.zeek.ssl.client.subject.O)
+
+  .tls.client.x509.subject.organization = .zeek.ssl.client.subject.organization
+
+  .zeek.ssl.client.subject.organizational_unit = del(.zeek.ssl.client.subject.OU)
+
+  .tls.client.x509.subject.organizational_unit = .zeek.ssl.client.subject.organizational_unit
+
+  .zeek.ssl.client.subject.state = del(.zeek.ssl.client.subject.ST)
+
+  .tls.client.x509.subject.state_or_province = .zeek.ssl.client.subject.state
+
+  .tls.client.x509.subject = map_values(compact(.tls.client.x509.subject)) -> |v| { [v] }
+  .tls.server.x509.subject = map_values(compact(.tls.server.x509.subject)) -> |v| { [v] }
+  .tls.client.x509.issuer = map_values(compact(.tls.client.x509.issuer)) -> |v| { [v] }
+  .tls.server.x509.issuer = map_values(compact(.tls.server.x509.issuer)) -> |v| { [v] }
+
+  .tls.cipher = .zeek.ssl.cipher
+
+  .tls.curve = .zeek.ssl.curve
+
+  .tls.established = to_bool(.zeek.ssl.established) ?? null                                              
+
+  .tls.resumed = to_bool(.zeek.ssl.resumed) ?? null                                         
+
+  parts = split(.zeek.ssl.version, "v") ?? []
+  if length(parts) == 2 {
+    .tls.version, err = if (parts[0] == "SSL") { parts[1] + ".0" } else {
+      { slice(parts[1], 0, 1) + "." + slice(parts[1], 1) } ?? "invalid"
+    }
+    .tls.version_protocol = downcase!(parts[0])
+  }                     
+
+  .tls.client.ja3 = del(.zeek.ssl.ja3)
+
+  .tls.server.ja3s = del(.zeek.ssl.ja3s)
+
+  .related.ip = unique(filter(flatten([.source.ip, .destination.ip])) -> |_, v| { v != null })
+      
+  if .tls.server.ja3s != null { 
+      .related.hash = push(.related.hash, .tls.server.ja3s) 
+  }
+
+  if .tls.client.ja3 != null { 
+      .related.hash = push(.related.hash, .tls.client.ja3) 
+  }
+
+  # TODO(): add network community id                      
+      
+  del(.zeek.ssl.id)

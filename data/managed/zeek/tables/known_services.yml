@@ -1,0 +1,64 @@
+name: known_services
+schema:
+  ecs_field_names:
+    - event.category
+    - event.type
+    - host.geo.city_name
+    - host.geo.continent_name
+    - host.geo.country_iso_code
+    - host.geo.country_name
+    - host.geo.location
+    - host.geo.name
+    - host.geo.region_iso_code
+    - host.geo.region_name
+    - network.application
+    - network.transport
+    - network.type
+    - related.ip
+    - server.geo.city_name
+    - server.geo.continent_name
+    - server.geo.country_iso_code
+    - server.geo.country_name
+    - server.geo.location
+    - server.geo.name
+    - server.geo.region_iso_code
+    - server.geo.region_name
+    - server.ip
+    - server.port
+transform: |
+  .event.kind = "event"
+  .event.category = ["network"]
+  .event.type = ["info"]
+
+  .dns.header_flags = []
+
+  if .json.ts == null { 
+      abort
+  }
+
+  .event.created = .ts
+
+  .ts = to_timestamp!(.json.ts, "seconds") 
+
+  .host.ip = del(.json.host) || .host.ip
+
+  if .host.ip != null { 
+    .network.type = if is_ipv6!(.host.ip) { "ipv6" } else { "ipv4" }
+    .related.ip = push(.related.ip, .host.ip)
+    .server = .host
+    .host.ip = [ .host.ip ]
+  }
+
+  .server.port = del(.json.port_num) || .server.port
+
+  .server.as.number = del(.server.as.asn) || .server.as.number
+
+  .server.as.organization.name = del(.server.as.organization_name) || .server.as.organization.name
+
+  .network.transport = del(.json.port_proto) || .network.transport
+
+  if .json.service != null {
+     .network.application = downcase!(.json.service[0])
+  }
+
+  del(.json)

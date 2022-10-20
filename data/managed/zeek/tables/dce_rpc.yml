@@ -1,0 +1,120 @@
+name: dce_rpc
+schema:
+  ecs_field_names:
+    - destination.address
+    - destination.as.number
+    - destination.as.organization.name
+    - destination.bytes
+    - destination.geo.city_name
+    - destination.geo.continent_name
+    - destination.geo.country_iso_code
+    - destination.geo.country_name
+    - destination.geo.location
+    - destination.geo.name
+    - destination.geo.region_iso_code
+    - destination.geo.region_name
+    - destination.ip
+    - destination.port
+    - error.message
+    - event.action
+    - event.category
+    - event.id
+    - event.type
+    - network.community_id
+    - network.protocol
+    - network.transport
+    - related.ip
+    - source.address
+    - source.as.number
+    - source.as.organization.name
+    - source.bytes
+    - source.geo.city_name
+    - source.geo.continent_name
+    - source.geo.country_iso_code
+    - source.geo.country_name
+    - source.geo.location
+    - source.geo.name
+    - source.geo.region_iso_code
+    - source.geo.region_name
+    - source.ip
+    - source.port
+  fields:
+    - name: zeek
+      type:
+        fields:
+          - name: dce_rpc
+            type:
+              fields:
+                - name: rtt
+                  type: double
+                - name: named_pipe
+                  type: string
+                - name: endpoint
+                  type: string
+                - name: operation
+                  type: string
+              type: struct
+        type: struct
+transform: |
+  .event.kind = "event"
+  .event.category = ["network",]
+  .event.type = ["connection", "protocol", "info"]
+
+  .network.transport = "tcp"
+  .network.protocol = "dce_rpc"
+
+  if .json.ts == null {
+      abort
+  }
+
+  .zeek.dce_rpc = object!(del(.json))
+
+  .event.created = .ts
+
+  .zeek.dce_rpc, err = set(.zeek.dce_rpc, split("id.orig_p", "."), .zeek.dce_rpc."id.orig_p")
+  del(.zeek.dce_rpc."id.orig_p")
+
+  .zeek.dce_rpc, err = set(.zeek.dce_rpc, split("id.orig_h", "."), .zeek.dce_rpc."id.orig_h")
+  del(.zeek.dce_rpc."id.orig_h")
+
+  .zeek.dce_rpc, err = set(.zeek.dce_rpc, split("id.resp_h", "."), .zeek.dce_rpc."id.resp_h")
+  del(.zeek.dce_rpc."id.resp_h")
+
+  .zeek.dce_rpc, err = set(.zeek.dce_rpc, split("id.resp_p", "."), .zeek.dce_rpc."id.resp_p")
+  del(.zeek.dce_rpc."id.resp_p")
+
+  .source.address = del(.zeek.dce_rpc.id.orig_h) || .source.address
+
+  .source.port = del(.zeek.dce_rpc.id.orig_p) || .source.port
+
+  .destination.address = del(.zeek.dce_rpc.id.resp_h) || .destination.address
+
+  .destination.port = del(.zeek.dce_rpc.id.resp_p) || .destination.port
+
+  .zeek.session_id = del(.zeek.dce_rpc.uid) || .zeek.session_id
+
+  .event.id = .zeek.session_id
+
+  .source.ip = .source.address
+
+  .destination.ip = .destination.address
+
+  .ts = to_timestamp!(.zeek.dce_rpc.ts, "seconds") 
+
+  del(.zeek.dce_rpc.ts)
+
+  .related.ip = unique(filter(flatten([.source.ip, .destination.ip])) -> |_, v| { v != null })
+
+  .source.as.number = del(.source.as.asn) || .source.as.number
+
+  .source.as.organization.name = del(.source.as.organization_name) || .source.as.organization.name
+      
+  .destination.as.number = del(.destination.as.asn) || .destination.as.number
+
+  .destination.as.organization.name = del(.destination.as.organization_name) || .destination.as.organization.name
+
+  .event.action = .zeek.dce_rpc.operation
+             
+  # TODO(): add community network id                      
+
+  del(.zeek.dce_rpc.id)

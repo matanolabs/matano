@@ -1,0 +1,184 @@
+name: rdp
+schema:
+  ecs_field_names:
+    - destination.address
+    - destination.as.number
+    - destination.as.organization.name
+    - destination.geo.city_name
+    - destination.geo.continent_name
+    - destination.geo.country_iso_code
+    - destination.geo.country_name
+    - destination.geo.location
+    - destination.geo.name
+    - destination.geo.region_iso_code
+    - destination.geo.region_name
+    - destination.ip
+    - destination.port
+    - error.message
+    - event.category
+    - event.id
+    - event.type
+    - network.community_id
+    - network.protocol
+    - network.transport
+    - related.ip
+    - source.address
+    - source.as.number
+    - source.as.organization.name
+    - source.geo.city_name
+    - source.geo.continent_name
+    - source.geo.country_iso_code
+    - source.geo.country_name
+    - source.geo.location
+    - source.geo.name
+    - source.geo.region_iso_code
+    - source.geo.region_name
+    - source.ip
+    - source.port
+    - tls.established
+  fields:
+    - name: zeek
+      type:
+        fields:
+          - name: session_id
+            type: string
+          - name: rdp
+            type:
+              fields:
+                - name: cookie
+                  type: string
+                - name: result
+                  type: string
+                - name: security_protocol
+                  type: string
+                - name: keyboard_layout
+                  type: string
+                - name: client
+                  type:
+                    fields:
+                      - name: build
+                        type: string
+                      - name: client_name
+                        type: string
+                      - name: product_id
+                        type: string
+                    type: struct
+                - name: desktop
+                  type:
+                    fields:
+                      - name: width
+                        type: int
+                      - name: height
+                        type: int
+                      - name: color_depth
+                        type: string
+                    type: struct
+                - name: cert
+                  type:
+                    fields:
+                      - name: type
+                        type: string
+                      - name: count
+                        type: int
+                      - name: permanent
+                        type: boolean
+                    type: struct
+                - name: encryption
+                  type:
+                    fields:
+                      - name: level
+                        type: string
+                      - name: method
+                        type: string
+                    type: struct
+                - name: done
+                  type: boolean
+                - name: ssl
+                  type: boolean
+              type: struct
+        type: struct
+transform: |
+  .event.kind = "event"
+  .event.category = ["network",]
+  .event.type = ["protocol", "info"]
+
+  .network.transport = "tcp"
+  .network.protocol = "rdp"
+
+  if .json.ts == null {
+      abort
+  }
+
+  .zeek.rdp = object!(del(.json))
+
+  .event.created = .ts
+
+  .zeek.rdp, err = set(.zeek.rdp, split("id.orig_p", "."), .zeek.rdp."id.orig_p")
+  del(.zeek.rdp."id.orig_p")
+
+  .zeek.rdp, err = set(.zeek.rdp, split("id.orig_h", "."), .zeek.rdp."id.orig_h")
+  del(.zeek.rdp."id.orig_h")
+
+  .zeek.rdp, err = set(.zeek.rdp, split("id.resp_h", "."), .zeek.rdp."id.resp_h")
+  del(.zeek.rdp."id.resp_h")
+
+  .zeek.rdp, err = set(.zeek.rdp, split("id.resp_p", "."), .zeek.rdp."id.resp_p")
+  del(.zeek.rdp."id.resp_p")
+
+  .source.address = del(.zeek.rdp.id.orig_h) || .source.address
+
+  .source.port = del(.zeek.rdp.id.orig_p) || .source.port
+
+  .destination.address = del(.zeek.rdp.id.resp_h) || .destination.address
+
+  .destination.port = del(.zeek.rdp.id.resp_p) || .destination.port
+
+  .zeek.session_id = del(.zeek.rdp.uid) || .zeek.session_id
+
+  .event.id = .zeek.session_id
+      
+  .source.ip = .source.address
+      
+  .destination.ip = .destination.address
+      
+  .zeek.rdp.client.build = del(.zeek.rdp.client_build)
+
+  .zeek.rdp.client.name = del(.zeek.rdp.client_name)
+
+  .zeek.rdp.client.product_id = del(.zeek.rdp.client_dig_product_id)
+
+  .zeek.rdp.desktop.width = del(.zeek.rdp.desktop_width)
+
+  .zeek.rdp.desktop.height = del(.zeek.rdp.desktop_height)
+
+  .zeek.rdp.desktop.color_depth = del(.zeek.rdp.requested_color_depth)
+
+  .zeek.rdp.cert.type = del(.zeek.rdp.cert_type)
+
+  .zeek.rdp.cert.count = del(.zeek.rdp.cert_count)
+
+  .zeek.rdp.cert.permanent = del(.zeek.rdp.cert_permanent)
+
+  .zeek.rdp.encryption.level = del(.zeek.rdp.encryption_level)
+
+  .zeek.rdp.encryption.method = del(.zeek.rdp.encryption_method)
+
+  .ts = to_timestamp!(.zeek.rdp.ts, "seconds") 
+
+  del(.zeek.rdp.ts)
+
+  .tls.established = to_bool(.zeek.rdp.ssl) ?? null                                            
+
+  .source.as.number = del(.source.as.asn) || .source.as.number
+
+  .source.as.organization.name = del(.source.as.organization_name) || .source.as.organization.name
+
+  .destination.as.number = del(.destination.as.asn) || .destination.as.number
+
+  .destination.as.organization.name = del(.destination.as.organization_name) || .destination.as.organization.name
+
+  .related.ip = unique(filter(flatten([.source.ip, .destination.ip])) -> |_, v| { v != null }) 
+
+  # TODO(): add network community id
+
+  del(.zeek.rdp.id)

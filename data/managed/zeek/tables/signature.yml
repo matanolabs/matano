@@ -1,0 +1,120 @@
+name: signature
+schema:
+  ecs_field_names:
+    - destination.address
+    - destination.as.number
+    - destination.as.organization.name
+    - destination.bytes
+    - destination.geo.city_name
+    - destination.geo.continent_name
+    - destination.geo.country_iso_code
+    - destination.geo.country_name
+    - destination.geo.location
+    - destination.geo.name
+    - destination.geo.region_iso_code
+    - destination.geo.region_name
+    - destination.ip
+    - destination.mac
+    - destination.packets
+    - destination.port
+    - error.message
+    - event.category
+    - event.duration
+    - event.id
+    - event.type
+    - network.bytes
+    - network.community_id
+    - network.direction
+    - network.packets
+    - network.protocol
+    - network.transport
+    - network.type
+    - related.ip
+    - rule.description
+    - rule.id
+    - source.address
+    - source.as.number
+    - source.as.organization.name
+    - source.bytes
+    - source.geo.city_name
+    - source.geo.continent_name
+    - source.geo.country_iso_code
+    - source.geo.country_name
+    - source.geo.location
+    - source.geo.name
+    - source.geo.region_iso_code
+    - source.geo.region_name
+    - source.ip
+    - source.mac
+    - source.packets
+    - source.port
+  fields:
+    - name: zeek
+      type:
+        fields:
+          - name: session_id
+            type: string
+          - name: signature
+            type:
+              fields:
+                - name: note
+                  type: string
+                - name: sig_id
+                  type: string
+                - name: event_msg
+                  type: string
+                - name: sub_msg
+                  type: string
+                - name: sig_count
+                  type: int
+                - name: host_count
+                  type: int
+              type: struct
+        type: struct
+transform: |
+  .event.kind = "alert"
+  .event.category = ["network"]
+
+  if .json.ts == null {
+    abort
+  }
+
+  .zeek.signature = object!(del(.json))
+
+  .event.created = .ts
+
+  .source.address = del(.zeek.signature.src_addr) || .source.address
+
+  .source.port = del(.zeek.signature.src_port) || .source.port
+
+  .destination.address = del(.zeek.signature.dst_addr) || .destination.address
+
+  .destination.port = del(.zeek.signature.dst_port) || .destination.port
+
+  .zeek.session_id = del(.zeek.signature.uid) || .zeek.session_id
+
+  .rule.id = del(.zeek.signature.sig_id)
+
+  .rule.description = del(.zeek.signature.event_msg)
+
+  .source.ip = .source.address
+      
+  .destination.ip = .destination.address
+      
+  .ts = to_timestamp!(.zeek.signature.ts, "seconds") 
+
+  .event.id = .zeek.session_id
+
+  .network.type = if is_ipv6!(.source.ip) { "ipv6" } else { "ipv4" }
+
+  .related.ip = unique(filter(flatten([.source.ip, .destination.ip])) -> |_, v| { v != null })
+
+  .source.as.number = del(.source.as.asn) || .source.as.number
+
+  .source.as.organization.name = del(.source.as.organization_name) || .source.as.organization.name
+
+  .destination.as.number = del(.destination.as.asn) || .destination.as.number
+
+  .destination.as.organization.name = del(.destination.as.organization_name) || .destination.as.organization.name
+
+  del(.zeek.signature.ts)

@@ -1,0 +1,158 @@
+name: ntlm
+schema:
+  ecs_field_names:
+    - destination.address
+    - destination.as.number
+    - destination.as.organization.name
+    - destination.geo.city_name
+    - destination.geo.continent_name
+    - destination.geo.country_iso_code
+    - destination.geo.country_name
+    - destination.geo.location
+    - destination.geo.name
+    - destination.geo.region_iso_code
+    - destination.geo.region_name
+    - destination.ip
+    - destination.port
+    - error.message
+    - event.category
+    - event.id
+    - event.outcome
+    - event.type
+    - file.path
+    - network.community_id
+    - network.protocol
+    - network.transport
+    - related.ip
+    - related.user
+    - source.address
+    - source.as.number
+    - source.as.organization.name
+    - source.geo.city_name
+    - source.geo.continent_name
+    - source.geo.country_iso_code
+    - source.geo.country_name
+    - source.geo.location
+    - source.geo.name
+    - source.geo.region_iso_code
+    - source.geo.region_name
+    - source.ip
+    - source.port
+    - user.domain
+    - user.name
+  fields:
+    - name: zeek
+      type:
+        fields:
+          - name: session_id
+            type: string
+          - name: ntlm
+            type:
+              fields:
+                - name: domain
+                  type: string
+                - name: hostname
+                  type: string
+                - name: success
+                  type: boolean
+                - name: username
+                  type: string
+                - name: server
+                  type:
+                    fields:
+                      - name: name
+                        type:
+                          fields:
+                            - name: dns
+                              type: string
+                            - name: netbios
+                              type: string
+                            - name: tree
+                              type: string
+                          type: struct
+                    type: struct
+              type: struct
+        type: struct
+transform: |
+  .event.kind = "event"
+  .event.category = ["network", "authentication"]
+  .event.type = ["connection", "info",]
+
+  .network.transport = "tcp"
+  .network.protocol = "ntlm"
+
+  if .json.ts == null { 
+    abort
+  }
+      
+  .zeek.ntlm = object!(del(.json))
+
+  .event.created = .ts
+
+  .zeek.ntlm, err = set(.zeek.ntlm, split("id.orig_p", "."), .zeek.ntlm."id.orig_p")
+  del(.zeek.ntlm."id.orig_p")
+
+  .zeek.ntlm, err = set(.zeek.ntlm, split("id.orig_h", "."), .zeek.ntlm."id.orig_h")
+  del(.zeek.ntlm."id.orig_h")
+
+  .zeek.ntlm, err = set(.zeek.ntlm, split("id.resp_h", "."), .zeek.ntlm."id.resp_h")
+  del(.zeek.ntlm."id.resp_h")
+
+  .zeek.ntlm, err = set(.zeek.ntlm, split("id.resp_p", "."), .zeek.ntlm."id.resp_p")
+  del(.zeek.ntlm."id.resp_p")
+
+  .source.address = del(.zeek.ntlm.id.orig_h) || .source.address
+
+  .source.port = del(.zeek.ntlm.id.orig_p) || .source.port
+
+  .destination.address = del(.zeek.ntlm.id.resp_h) || .destination.address
+
+  .destination.port = del(.zeek.ntlm.id.resp_p) || .destination.port
+
+  .zeek.session_id = del(.zeek.ntlm.uid) || .zeek.session_id
+
+  .zeek.ntlm.domain = del(.zeek.ntlm.domainname)
+
+  .zeek.ntlm.server.name.dns = del(.zeek.ntlm.server_dns_computer_name)
+
+  .zeek.ntlm.server.name.netbios = del(.zeek.ntlm.server_nb_computer_name)
+
+  .zeek.ntlm.server.name.tree = del(.zeek.ntlm.server_tree_name)
+
+  .user.name = .zeek.ntlm.username
+
+  .user.domain = .zeek.ntlm.domain
+      
+  .event.id = .zeek.session_id
+      
+  .source.ip = .source.address
+      
+  .destination.ip = .destination.address
+    
+
+  if .zeek.ntlm.success != null {
+    .event.outcome = if .zeek.ntlm.success == true { "success" } else { "failure" }
+  }
+
+  .ts = to_timestamp!(.zeek.ntlm.ts, "seconds") 
+
+  del(.zeek.ntlm.ts)
+
+  .related.ip = unique(filter(flatten([.source.ip, .destination.ip])) -> |_, v| { v != null })
+      
+  if .user.name != null { 
+      .related.user = push(.related.user, .user.name) 
+  }
+
+  .source.as.number = del(.source.as.asn) || .source.as.number
+
+  .source.as.organization.name = del(.source.as.organization_name) || .source.as.organization.name
+
+  .destination.as.number = del(.destination.as.asn) || .destination.as.number
+
+  .destination.as.organization.name = del(.destination.as.organization_name) || .destination.as.organization.name
+
+
+  # TODO: add community network id
+
+  del(.zeek.ntlm.id)

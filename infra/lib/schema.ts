@@ -11,36 +11,51 @@ function isObject(v: any): boolean {
   return typeof v === "object" && !Array.isArray(v) && v !== null;
 }
 
-function deepen(obj: any) {
-  const result: any = {};
-
-  // For each object path (property key) in the object
-  for (const objectPath in obj) {
-    // Split path into component parts
-    const parts = objectPath.split(".");
-
-    // Create sub-objects along path as needed
-    let target = result;
-    while (parts.length > 1) {
-      const part = parts.shift()!;
-      target = target[part] = target[part] || {};
-    }
-
-    // Set value at end of path
-    target[parts[0]] = obj[objectPath];
-  }
-
-  return result;
+function isNumeric(s: string) {
+  return /^\d+$/.test(s);
 }
 
-export function merge(a: any, b: any, inputPath: string[] | undefined = undefined) {
-  /** merges b into a */
+function zip<A, B>(a: A[], b: B[]): [A, B][] {
+  return a.map((k, i) => [k, b[i]]);
+}
+
+function deepen(j: any) {
+  const d: any = {};
+  for (let [key, value] of Object.entries(j)) {
+    let s = d;
+    const tokens: any[] = key.match(/\w+/g) ?? [];
+    for (let [zeroedIndex, [token, nextToken]] of zip(tokens, [...tokens.slice(1), value]).entries()) {
+      const index = zeroedIndex + 1;
+      value = index == tokens.length ? nextToken : isNumeric(nextToken) ? [] : {};
+      if (Array.isArray(s)) {
+        token = parseInt(token);
+        while (token >= s.length) {
+          s.push(value);
+        }
+      } else if (!(token in s)) {
+        s[token] = value;
+      }
+      s = s[token];
+    }
+  }
+  return d;
+}
+
+export function mergeSchema(a: any, b: any, inputPath: string[] | undefined = undefined) {
+  /** mergeSchemas b into a */
   const path: string[] = inputPath || [];
 
   for (const key in b) {
     if (a.hasOwnProperty(key)) {
       if (isObject(a[key]) && isObject(b[key])) {
-        merge(a[key], b[key], [...path, key]);
+        mergeSchema(a[key], b[key], [...path, key]);
+      } else if (Array.isArray(a[key]) && Array.isArray(b[key])) {
+        if (a[key].length != b[key].length) {
+          throw new Error(`Cannot merge schemas at ${path.join(".")}.${key}: array lengths differ`);
+        }
+        for (const [i, [aItem, bItem]] of zip<any, any>(a[key], b[key]).entries()) {
+          a[key][i] = mergeSchema(aItem, bItem, [...path, `${key}`]);
+        }
       } else if (a[key] == b[key]) {
         // do nothing
       } else {
@@ -54,22 +69,37 @@ export function merge(a: any, b: any, inputPath: string[] | undefined = undefine
   return a;
 }
 
-const deepGet = (obj: any, keys: string | (string | number)[], delimiter = ".") => {
+const deepFind = (obj: any, keys: string | (string | number)[], delimiter = ".") => {
   if (isString(keys)) {
     keys = keys.split(delimiter);
   }
-  return keys.reduce((xs, x) => (xs && xs[x] ? xs[x] : null), obj);
+
+  return keys.reduce(
+    ({ path, value }, x) => {
+      if (value == null) return { value: undefined };
+      if (Array.isArray(value)) {
+        path += "[0]";
+        value = value[0];
+      }
+      value = value[x];
+      return { path: value ? (path ? `${path}.${x}` : `${x}`) : undefined, value };
+    },
+    { path: "", value: obj } as {
+      path?: string;
+      value: any;
+    }
+  );
 };
 
 const DEFAULT_ECS_FIELD_NAMES: string[] = ["ts", "labels", "tags"];
 
-export function fieldsToSchema(fields: string[]) {
+export function fieldsToSchema(fields: any[]) {
   const reducer = (acc: any, item: any) => {
     acc[item.name] = isObject(item.type)
       ? item.type.type == "struct"
         ? fieldsToSchema(item.type.fields)
         : item.type.type == "list"
-        ? [item["type"]["element"]]
+        ? [fieldsToSchema([{"name": "$element", "type": item["type"]["element"]}])["$element"]]
         : "UNKNOWN"
       : item.type;
     return acc;
@@ -105,7 +135,7 @@ export function serializeToFields(schema: Record<string, any>): any[] {
     type: isObject(v)
       ? { type: "struct", fields: serializeToFields(v) }
       : Array.isArray(v)
-      ? { type: "list", element: v[0] }
+      ? { type: "list", element: serializeToFields({"$element": v[0]})[0]["type"] }
       : v,
   }));
 }
@@ -118,21 +148,22 @@ export function resolveSchema(ecsFieldNames?: string[], customFields?: any[]) {
   const allEcsFieldNames = [...DEFAULT_ECS_FIELD_NAMES, ...(ecsFieldNames ?? [])];
 
   const relevantEcsSchema = allEcsFieldNames.reduce((acc, fieldName) => {
-    let field = deepGet(baseEcsSchema, fieldName);
-    if (field == null) {
+    let { path, value: field } = deepFind(baseEcsSchema, fieldName);
+    if (path == null) {
       throw new Error(`Field ${fieldName} not found in ECS schema`);
     }
-    return merge(acc, deepen({ [fieldName]: field }));
+    return mergeSchema(acc, deepen({ [path]: field }));
   }, {} as Record<string, any>);
 
   let customSchema = fieldsToSchema(customFields ?? []);
   const customFieldNames = getDottedFieldPaths(customFields ?? []);
   for (const customFieldName of customFieldNames) {
-    if (deepGet(baseEcsSchema, customFieldName) != null) {
-      throw new Error(`Custom field conflicts with ECS field: ${customFieldName}`);
+    let { path } = deepFind(baseEcsSchema, customFieldName);
+    if (path != null) {
+      throw new Error(`Custom field conflicts with ECS field: ${path}`);
     }
   }
-  customSchema = merge(customSchema, relevantEcsSchema);
+  customSchema = mergeSchema(customSchema, relevantEcsSchema);
 
   return { type: "struct", fields: serializeToFields(customSchema) };
 }

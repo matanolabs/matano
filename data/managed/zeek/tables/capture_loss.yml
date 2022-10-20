@@ -1,0 +1,43 @@
+name: capture_loss
+schema:
+  ecs_field_names:
+    - error.message
+    - event.type
+  fields:
+    - name: zeek
+      type:
+        fields:
+          - name: capture_loss
+            type:
+              fields:
+                - name: ts_delta
+                  type: double
+                - name: peer
+                  type: string
+                - name: gaps
+                  type: int
+                - name: acks
+                  type: int
+                - name: percent_lost
+                  type: double
+              type: struct
+        type: struct
+transform: |
+  .event.kind = "metric"
+  .event.type = ["info"]
+
+  if .json.ts == null { 
+      abort
+  }
+
+  .zeek.capture_loss = del(.json)
+
+  .event.created = .ts
+
+  .ts = to_timestamp!(.zeek.capture_loss.ts, "seconds") 
+
+  del(.zeek.capture_loss.ts)
+
+  if .zeek.percent_lost != null {                      
+    .zeek.percent_lost = to_int!(.zeek.percent_lost) 
+  }
