@@ -61,6 +61,7 @@ export interface LogSourceConfig {
   };
   ingest?: {
     select_table_from_payload_metadata?: string;
+    compression: string;
     s3_source?: {
       bucket_name?: string;
       key_prefix?: string;
@@ -275,6 +276,7 @@ export class MatanoLogSource extends Construct {
       // config that only applies to log sources, and not tables
       name: this.logSourceConfig.name,
       ingest: {
+        compression: this.logSourceConfig.ingest?.compression,
         select_table_from_payload_metadata: this.logSourceConfig.ingest?.select_table_from_payload_metadata,
       },
       managed: this.logSourceConfig.managed,

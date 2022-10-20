@@ -353,6 +353,25 @@ async fn read_lines_s3<'a>(
         .unwrap()
         .to_string();
 
+    let user_compression = LOG_SOURCES_CONFIG.with(|c| {
+        let log_sources_config = c.borrow();
+
+        (*log_sources_config)
+            .get(log_source)
+            .unwrap()
+            .base
+            .get_string("ingest.compression")
+            .ok()
+    });
+    let compression = user_compression.map(|s| {
+        info!("Getting user compression from: {}", s);
+        match s.to_lowercase().as_str() {
+            "gzip" => Compression::Gzip,
+            "zstd" => Compression::Zstd,
+            _ => Compression::Auto
+        }
+    });
+
     let compression = compression.unwrap_or(Compression::Auto);
     let compression = match compression {
         Compression::Auto => infer_compression(
