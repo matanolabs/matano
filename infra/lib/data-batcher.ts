@@ -14,11 +14,15 @@ interface DataBatcherProps {
 }
 
 export class DataBatcher extends Construct {
+  outputDLQ: sqs.Queue;
   outputQueue: sqs.Queue;
   constructor(scope: Construct, id: string, props: DataBatcherProps) {
     super(scope, id);
 
-    this.outputQueue = new sqs.Queue(this, "DataBatcherOutputQueue");
+    this.outputDLQ = new sqs.Queue(this, "DataBacherOutputDLQ");
+    this.outputQueue = new sqs.Queue(this, "DataBatcherOutputQueue", {
+      deadLetterQueue: { queue: this.outputDLQ, maxReceiveCount: 3 },
+    });
 
     const lambdaFunc = new lambda.Function(this, "DataBatcherProcessorFunction", {
       code: getLocalAsset("DataBatcherProcessorFunction"),
