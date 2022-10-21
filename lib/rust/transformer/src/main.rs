@@ -306,9 +306,38 @@ pub fn vrl<'a>(
     })
 }
 
+fn get_log_source_from_key(key: &str) -> Option<String> {
+    LOG_SOURCES_CONFIG.with(|c| {
+        let log_sources_config = c.borrow();
+
+        // TODO: @shaeq: optimize?
+        // Try get from BYOB or else assume managed and get from path
+        let ret = (*log_sources_config)
+            .iter()
+            .find(|(_, v)| {
+                v.base
+                    .get_string("ingest.s3_source.key_prefix")
+                    .map(|prefix| key.starts_with(prefix.as_str()))
+                    .unwrap_or(false)
+            })
+            .map(|r| r.0.to_owned())
+            .or_else(|| {
+                let ls = key
+                    .split(std::path::MAIN_SEPARATOR)
+                    .next()
+                    .unwrap()
+                    .to_string();
+                log_sources_config.contains_key(&ls).then_some(ls)
+            });
+        debug!("Got log source: {:?} from key: {}", ret, key);
+        ret
+    })
+}
+
 async fn read_lines_s3<'a>(
     s3: &aws_sdk_s3::Client,
     r: &DataBatcherRequestItem,
+    log_source: &String,
     compression: Option<Compression>,
 ) -> Result<(
     config::Config,
@@ -345,14 +374,6 @@ async fn read_lines_s3<'a>(
     // let reader =
     //     StreamReader::new(stream::iter(Some(first)).chain(reader));
 
-    // TODO: fix for BYOB @shaeq
-    let log_source = &r
-        .key
-        .split(std::path::MAIN_SEPARATOR)
-        .next()
-        .unwrap()
-        .to_string();
-
     let user_compression = LOG_SOURCES_CONFIG.with(|c| {
         let log_sources_config = c.borrow();
 
@@ -368,7 +389,7 @@ async fn read_lines_s3<'a>(
         match s.to_lowercase().as_str() {
             "gzip" => Compression::Gzip,
             "zstd" => Compression::Zstd,
-            _ => Compression::Auto
+            _ => Compression::Auto,
         }
     });
 
@@ -512,32 +533,19 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
             data_batcher_request_items
         })
         .filter(|d| d.size > 0)
-        .filter(|d| {
-            // TODO(shaeq): needs to handle non matano managed sources, BYOB
-            let is_relevant = d.is_matano_managed_resource()
-                && LOG_SOURCES_CONFIG.with(|c| {
-                    let log_sources_config = c.borrow();
-                    let log_source = &d
-                        .key
-                        .split(std::path::MAIN_SEPARATOR)
-                        .next()
-                        .unwrap()
-                        .to_string();
-                    (*log_sources_config).contains_key(log_source)
-                });
-
-            if !is_relevant {
-                println!("Skipping non-relevant S3 object: {:?}", d);
+        .filter_map(|d| {
+            let log_source = get_log_source_from_key(&d.key);
+            if log_source.is_none() {
+                info!("Skipping irrelevant S3 object: {:?}", d);
             }
-
-            is_relevant
+            log_source.map(|ls| (d, ls))
         })
         .collect::<Vec<_>>();
 
     info!(
         "Processing {} files from S3, of total size {} bytes",
         s3_download_items.len(),
-        s3_download_items.iter().map(|d| d.size).sum::<i32>()
+        s3_download_items.iter().map(|(d, _)| d.size).sum::<i32>()
     );
 
     let config = aws_config::load_from_env().await;
@@ -548,14 +556,14 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
 
     let transformed_lines_streams = s3_download_items
         .iter()
-        .map(|item| {
+        .map(|(item, log_source)| {
             let s3 = &s3;
 
             async move {
                 let (table_config, raw_lines): (
                     _,
                     Pin<Box<dyn Stream<Item = Result<Value, anyhow::Error>> + Send>>,
-                ) = read_lines_s3(s3, &item, None).await.unwrap();
+                ) = read_lines_s3(s3, &item, log_source, None).await.unwrap();
 
                 let reader = raw_lines;
 

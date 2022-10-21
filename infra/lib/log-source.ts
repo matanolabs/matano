@@ -277,6 +277,7 @@ export class MatanoLogSource extends Construct {
       name: this.logSourceConfig.name,
       ingest: {
         compression: this.logSourceConfig.ingest?.compression,
+        s3_source: this.logSourceConfig?.ingest?.s3_source,
         select_table_from_payload_metadata: this.logSourceConfig.ingest?.select_table_from_payload_metadata,
       },
       managed: this.logSourceConfig.managed,
