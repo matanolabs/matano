@@ -33,7 +33,7 @@ import { Bucket } from "aws-cdk-lib/aws-s3";
 import { DataBatcher } from "../lib/data-batcher";
 import { RustFunctionLayer } from "../lib/rust-function-layer";
 import { LayerVersion } from "aws-cdk-lib/aws-lambda";
-import { LakeIngestion } from "../lib/lake-ingestion";
+import { LakeWriter } from "../lib/lake-writer";
 import { Transformer } from "../lib/transformer";
 
 import { SqsSubscription } from "aws-cdk-lib/aws-sns-subscriptions";
@@ -60,16 +60,16 @@ export class DPMainStack extends MatanoStack {
       s3Bucket: props.matanoSourcesBucket,
     });
 
-    const matanoAlerting = new MatanoAlerting(this, "MatanoAlerting", {});
+    const matanoAlerting = new MatanoAlerting(this, "Alerting", {});
 
-    const detections = new MatanoDetections(this, "MatanoDetections", {
+    const detections = new MatanoDetections(this, "Detections", {
       alertingSnsTopic: matanoAlerting.alertingTopic,
       realtimeTopic: props.realtimeBucketTopic,
       matanoSourcesBucketName: props.matanoSourcesBucket.bucket.bucketName,
     });
     this.addConfigFile("detections_config.json", JSON.stringify(detections.detectionConfigs));
 
-    const lakeIngestion = new LakeIngestion(this, "LakeIngestion", {
+    const lakeWriter = new LakeWriter(this, "LakeWriter", {
       outputBucketName: props.lakeStorageBucket.bucket.bucketName,
       outputObjectPrefix: "lake",
     });
@@ -78,22 +78,21 @@ export class DPMainStack extends MatanoStack {
     for (const logSourceConfigPath of logSourceConfigPaths) {
       const logSource = new MatanoLogSource(
         this,
-        `MatanoLogSource${path.relative(logSourcesDirectory, logSourceConfigPath)}`,
+        `MatanoLogs${path.relative(logSourcesDirectory, logSourceConfigPath)}`,
         {
           configPath: logSourceConfigPath,
           realtimeTopic: props.realtimeBucketTopic,
-          lakeIngestionLambda: lakeIngestion.lakeIngestionLambda,
+          lakeWriterLambda: lakeWriter.lakeWriterLambda,
         }
       );
-      (logSource.node.id as any) = `MatanoLogSource${logSource.logSourceLevelConfig
+      (logSource.node.id as any) = `MatanoLogs${logSource.logSourceLevelConfig
         .name!.split("_")
-        .map((substr) => substr.charAt(0).toUpperCase() + substr.slice(1))
-        .join("_")}`; // TODO(shaeq): fix this
+        .map((substr) => substr.charAt(0).toUpperCase() + substr.slice(1))}`; // TODO(shaeq): fix this
       logSources.push(logSource);
     }
 
     // Not a log source but just use it to represent
-    const matanoAlertsSource = new MatanoLogSource(this, "MatanoAlertsIcebergTable", {
+    const matanoAlertsSource = new MatanoLogSource(this, "Alerts", {
       config: {
         name: "matano_alerts",
         managed: {
@@ -102,7 +101,7 @@ export class DPMainStack extends MatanoStack {
         },
       },
       realtimeTopic: props.realtimeBucketTopic,
-      lakeIngestionLambda: lakeIngestion.alertsLakeIngestionLambda,
+      lakeWriterLambda: lakeWriter.alertsLakeWriterLambda,
     });
     logSources.push(matanoAlertsSource);
 
@@ -146,7 +145,7 @@ export class DPMainStack extends MatanoStack {
       .reduce((prev, cur) => prev + JSON.stringify(cur), "");
     const schemasHash = md5Hash(allResolvedSchemasHashStr);
 
-    const schemasCR = new MatanoSchemas(this, "MatanoSchemasCustomResource", {
+    const schemasCR = new MatanoSchemas(this, "SchemasCustomResource", {
       schemaOutputPath: schemasHash,
       tables: resolvedTableNames,
     });
@@ -155,7 +154,7 @@ export class DPMainStack extends MatanoStack {
       schemasCR.node.addDependency(logSource);
     }
 
-    const schemasLayer = new lambda.LayerVersion(this, "MatanoSchemasLayer", {
+    const schemasLayer = new lambda.LayerVersion(this, "SchemasLayer", {
       compatibleRuntimes: MATANO_USED_RUNTIMES,
       code: lambda.Code.fromBucket(this.cdkAssetsBucket, schemasHash + ".zip"),
     });
@@ -180,22 +179,22 @@ export class DPMainStack extends MatanoStack {
       lakeStorageBucket: props.lakeStorageBucket,
     });
 
-    lakeIngestion.alertsLakeIngestionLambda.addEnvironment(
+    lakeWriter.alertsLakeWriterLambda.addEnvironment(
       "ALERT_HELPER_FUNCTION_NAME",
       icebergMetadata.alertsHelperFunction.functionName
     );
-    icebergMetadata.alertsHelperFunction.grantInvoke(lakeIngestion.alertsLakeIngestionLambda);
+    icebergMetadata.alertsHelperFunction.grantInvoke(lakeWriter.alertsLakeWriterLambda);
 
     const configLayer = new lambda.LayerVersion(this, "ConfigurationLayer", {
       code: lambda.Code.fromAsset(this.configTempDir),
       description: "A layer for static Matano configurations.",
     });
 
-    lakeIngestion.alertsLakeIngestionLambda.addLayers(schemasLayer);
+    lakeWriter.alertsLakeWriterLambda.addLayers(schemasLayer);
 
     detections.detectionFunction.addLayers(configLayer);
 
-    this.humanCfnOutput("MatanoAlertingSnsTopicArn", {
+    this.humanCfnOutput("AlertingSnsTopicArn", {
       value: matanoAlerting.alertingTopic.topicArn,
       description:
         "The ARN of the SNS topic used for Matano alerts. See https://www.matano.dev/docs/detections/alerting",

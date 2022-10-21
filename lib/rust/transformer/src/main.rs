@@ -19,6 +19,7 @@ use std::sync::Arc;
 use std::thread;
 use std::time::Instant;
 use tokio::fs;
+use tokio::io::AsyncBufReadExt;
 use tokio::io::AsyncReadExt;
 use tokio::task::spawn_blocking;
 use walkdir::WalkDir;
@@ -180,6 +181,18 @@ pub enum Compression {
     Zstd,
 }
 
+impl Compression {
+    fn from_str(s: &str) -> anyhow::Result<Self> {
+        match s {
+            "infer" | "auto" => Ok(Self::Auto),
+            "none" => Ok(Self::None),
+            "gzip" | "gz" => Ok(Self::Gzip),
+            "zstd" | "zst" => Ok(Self::Zstd),
+            _ => Err(anyhow!("Unknown compression type {}", s)),
+        }
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<(), LambdaError> {
     setup_logging();
@@ -192,7 +205,8 @@ async fn main() -> Result<(), LambdaError> {
     Ok(())
 }
 
-fn infer_compression(
+async fn infer_compression(
+    reader: &mut tokio::io::BufReader<impl tokio::io::AsyncRead + Unpin>,
     content_encoding: Option<&str>,
     content_type: Option<&str>,
     key: &str,
@@ -201,7 +215,7 @@ fn infer_compression(
         .extension()
         .and_then(std::ffi::OsStr::to_str);
 
-    content_encoding
+    let inferred_from_file_meta = content_encoding
         .and_then(|encoding| match encoding {
             "gzip" => Some(Compression::Gzip),
             "zstd" => Some(Compression::Zstd),
@@ -220,7 +234,25 @@ fn infer_compression(
                 "zst" => Some(Compression::Zstd),
                 _ => None,
             })
-        })
+        });
+
+    match inferred_from_file_meta {
+        Some(compression) => {
+            debug!("Inferred compression from file metadata: {:?}", compression);
+            Some(compression)
+        }
+        None => {
+            let buf = reader.fill_buf().await.unwrap();
+            let inferred_compression = infer::get(buf)
+                .and_then(|kind| Compression::from_str(kind.extension()).ok())
+                .or(Some(Compression::None));
+            debug!(
+                "Inferred compression from bytes: {:?}",
+                inferred_compression
+            );
+            inferred_compression
+        }
+    }
 }
 
 pub fn vrl<'a>(
@@ -374,32 +406,48 @@ async fn read_lines_s3<'a>(
     // let reader =
     //     StreamReader::new(stream::iter(Some(first)).chain(reader));
 
-    let user_compression = LOG_SOURCES_CONFIG.with(|c| {
-        let log_sources_config = c.borrow();
+    // TODO: fix for BYOB @shaeq
+    let log_source = &r
+        .key
+        .split(std::path::MAIN_SEPARATOR)
+        .next()
+        .unwrap()
+        .to_string();
 
-        (*log_sources_config)
-            .get(log_source)
-            .unwrap()
-            .base
-            .get_string("ingest.compression")
-            .ok()
-    });
-    let compression = user_compression.map(|s| {
-        info!("Getting user compression from: {}", s);
-        match s.to_lowercase().as_str() {
-            "gzip" => Compression::Gzip,
-            "zstd" => Compression::Zstd,
-            _ => Compression::Auto,
-        }
-    });
+    // let user_compression = LOG_SOURCES_CONFIG.with(|c| {
+    //     let log_sources_config = c.borrow();
 
-    let compression = compression.unwrap_or(Compression::Auto);
+    //     (*log_sources_config)
+    //         .get(log_source)
+    //         .unwrap()
+    //         .base
+    //         .get_string("ingest.compression")
+    //         .ok()
+    // });
+    // let compression = user_compression.map(|s| {
+    //     match Compression::from_str(s.to_lowercase().as_str()) {
+    //         Ok(c) => {
+    //             debug!("Using compression from configuration: {:?}", c);
+    //             c
+    //         },
+    //         Err(e) => {
+    //             error!("Error parsing compression: {}", e);
+    //             Compression::Auto
+    //         }
+    //     }
+    // });
+
+    // let compression = compression.unwrap_or(Compression::Auto);
+    let compression = Compression::Auto;
+
     let compression = match compression {
         Compression::Auto => infer_compression(
+            &mut reader,
             obj.content_encoding.as_deref(),
             obj.content_type.as_deref(),
             &r.key,
         )
+        .await
         .unwrap_or(Compression::None),
         _ => compression,
     };

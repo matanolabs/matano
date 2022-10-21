@@ -20,6 +20,7 @@ async-compression = { version = "0.3.14", default-features = false, features = [
   "zstd",
   "stream",
 ] }
+infer = "0.9.0"
 arrow2 = { git = "https://github.com/jorgecarleitao/arrow2", features = [
   "io_avro",
   "io_avro_async",

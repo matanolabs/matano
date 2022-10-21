@@ -26,7 +26,7 @@ export class Transformer extends Construct {
       setupLogging: true,
     });
 
-    this.transformerLambda = new lambda.Function(this, "Lambda", {
+    this.transformerLambda = new lambda.Function(this, "Function", {
       code: lambda.Code.fromAsset(props.logSourcesConfigurationPath),
       handler: "main",
       memorySize: 3008,

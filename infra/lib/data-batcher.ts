@@ -19,12 +19,12 @@ export class DataBatcher extends Construct {
   constructor(scope: Construct, id: string, props: DataBatcherProps) {
     super(scope, id);
 
-    this.outputDLQ = new sqs.Queue(this, "DataBacherOutputDLQ");
-    this.outputQueue = new sqs.Queue(this, "DataBatcherOutputQueue", {
+    this.outputDLQ = new sqs.Queue(this, "OutputDLQ");
+    this.outputQueue = new sqs.Queue(this, "OutputQueue", {
       deadLetterQueue: { queue: this.outputDLQ, maxReceiveCount: 3 },
     });
 
-    const lambdaFunc = new lambda.Function(this, "DataBatcherProcessorFunction", {
+    const lambdaFunc = new lambda.Function(this, "Function", {
       code: getLocalAsset("DataBatcherProcessorFunction"),
       handler: "index.handler",
       runtime: lambda.Runtime.NODEJS_16_X,

@@ -51,7 +51,7 @@ export class SchemasProvider extends Construct {
   constructor(scope: Construct, id: string, props: SchemasProviderProps) {
     super(scope, id);
 
-    const providerFunc = new lambda.Function(this, "MatanoSchemasCRProviderFunc", {
+    const providerFunc = new lambda.Function(this, "Function", {
       runtime: lambda.Runtime.JAVA_11,
       handler: "com.matano.iceberg.MatanoSchemasLayerCustomResource::handleRequest",
       memorySize: 1024,
@@ -68,7 +68,7 @@ export class SchemasProvider extends Construct {
       ],
     });
 
-    this.provider = new cr.Provider(this, "MatanoSchemasCRProvider", {
+    this.provider = new cr.Provider(this, "Default", {
       onEventHandler: providerFunc,
     });
   }
@@ -83,7 +83,7 @@ export class MatanoIcebergTable extends Construct {
   constructor(scope: Construct, id: string, props: MatanoIcebergTableProps) {
     super(scope, id);
 
-    const resource = new CustomResource(this, "Resource", {
+    const resource = new CustomResource(this, "Default", {
       serviceToken: IcebergTableProvider.getOrCreate(this, {}),
       resourceType: "Custom::MatanoIcebergTable",
       properties: {
@@ -110,7 +110,7 @@ export class IcebergTableProvider extends Construct {
   constructor(scope: Construct, id: string, props: IcebergTableProviderProps) {
     super(scope, id);
 
-    const providerFunc = new lambda.Function(this, "MatanoIcebergCRProviderFunc", {
+    const providerFunc = new lambda.Function(this, "Function", {
       runtime: lambda.Runtime.JAVA_11,
       handler: "com.matano.iceberg.MatanoIcebergTableCustomResource::handleRequest",
       description: "This function provides the Cloudformation custom resource for a Matano log source Iceberg table.",
@@ -128,7 +128,7 @@ export class IcebergTableProvider extends Construct {
       ],
     });
 
-    this.provider = new cr.Provider(this, "MatanoIcebergTableCrProvider", {
+    this.provider = new cr.Provider(this, "Default", {
       onEventHandler: providerFunc,
     });
   }
@@ -142,12 +142,12 @@ export class IcebergMetadata extends Construct {
   constructor(scope: Construct, id: string, props: IcebergMetadataProps) {
     super(scope, id);
 
-    const duplicatesTable = new ddb.Table(this, "IcebergMetadataDuplicatesTable", {
+    const duplicatesTable = new ddb.Table(this, "DuplicatesTable", {
       partitionKey: { name: "sequencer", type: ddb.AttributeType.STRING },
       timeToLiveAttribute: "ttl",
     });
 
-    const lambdaFunction = new lambda.Function(this, "MatanoIcebergMetadataWriterFunction", {
+    const lambdaFunction = new lambda.Function(this, "WriterFunction", {
       description: "This function ingests written input files into an Iceberg table.",
       runtime: lambda.Runtime.JAVA_11,
       memorySize: 512,
@@ -171,7 +171,7 @@ export class IcebergMetadata extends Construct {
     const eventSource = new SqsEventSource(props.lakeStorageBucket.queue, {});
     lambdaFunction.addEventSource(eventSource);
 
-    this.alertsHelperFunction = new lambda.Function(this, "MatanoAlertsIcebergHelper", {
+    this.alertsHelperFunction = new lambda.Function(this, "IcebergHelper", {
       description: "JVM Iceberg helper for alerting.",
       runtime: lambda.Runtime.JAVA_11,
       memorySize: 1500,

@@ -14,7 +14,7 @@ export class MatanoAlerting extends Construct {
   constructor(scope: Construct, id: string, props: MatanoAlertingProps) {
     super(scope, id);
 
-    this.alertingTopic = new sns.Topic(this, "MatanoAlertingTopic", {
+    this.alertingTopic = new sns.Topic(this, "Topic", {
       displayName: "MatanoAlertingTopic",
     });
   }

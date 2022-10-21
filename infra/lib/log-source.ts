@@ -88,7 +88,7 @@ interface MatanoLogSourceProps {
   config?: LogSourceConfig;
   configPath?: string;
   realtimeTopic: sns.Topic;
-  lakeIngestionLambda: lambda.Function;
+  lakeWriterLambda: lambda.Function;
   eventSourceProps?: SqsEventSourceProps;
 }
 
@@ -108,32 +108,32 @@ export interface MatanoTableProps {
   tableName: string;
   schema: any;
   realtimeTopic: sns.Topic;
-  lakeIngestionLambda: lambda.Function;
+  lakeWriterLambda: lambda.Function;
   eventSourceProps?: SqsEventSourceProps;
 }
 export class MatanoTable extends Construct {
   constructor(scope: Construct, id: string, props: MatanoTableProps) {
     super(scope, id);
-    const matanoIcebergTable = new MatanoIcebergTable(this, `Table`, {
+    const matanoIcebergTable = new MatanoIcebergTable(this, `Default`, {
       tableName: props.tableName,
       schema: props.schema,
     });
 
-    const ingestionDlq = new sqs.Queue(this, `LakeIngestionDLQ`, {
+    const lakeWriterDlq = new sqs.Queue(this, `LakeWriterDLQ`, {
       removalPolicy: cdk.RemovalPolicy.RETAIN,
     });
 
-    const ingestionQueue = new sqs.Queue(this, `LakeIngestionQueue`, {
+    const lakeWriterQueue = new sqs.Queue(this, `LakeWriterQueue`, {
       deadLetterQueue: {
-        queue: ingestionDlq,
+        queue: lakeWriterDlq,
         maxReceiveCount: 3,
       },
       removalPolicy: cdk.RemovalPolicy.RETAIN,
-      visibilityTimeout: cdk.Duration.seconds(Math.max(props.lakeIngestionLambda.timeout!.toSeconds(), 30)),
+      visibilityTimeout: cdk.Duration.seconds(Math.max(props.lakeWriterLambda.timeout!.toSeconds(), 30)),
     });
 
     props.realtimeTopic.addSubscription(
-      new SqsSubscription(ingestionQueue, {
+      new SqsSubscription(lakeWriterQueue, {
         rawMessageDelivery: true,
         filterPolicy: {
           resolved_table_name: sns.SubscriptionFilter.stringFilter({ allowlist: [props.tableName] }),
@@ -141,8 +141,8 @@ export class MatanoTable extends Construct {
       })
     );
 
-    props.lakeIngestionLambda.addEventSource(
-      new SqsEventSource(ingestionQueue, {
+    props.lakeWriterLambda.addEventSource(
+      new SqsEventSource(lakeWriterQueue, {
         batchSize: 10,
         maxBatchingWindow: cdk.Duration.seconds(20),
         ...props.eventSourceProps,
@@ -295,7 +295,6 @@ export class MatanoLogSource extends Construct {
         compression: this.logSourceConfig.ingest?.compression,
         s3_source: this.logSourceConfig?.ingest?.s3_source,
         select_table_from_payload_metadata: this.logSourceConfig.ingest?.select_table_from_payload_metadata,
-        s3_source: this.logSourceConfig.ingest?.s3_source,
       },
       managed: this.logSourceConfig.managed,
     };
@@ -361,11 +360,11 @@ export class MatanoLogSource extends Construct {
 
       const formattedName = merged.name.charAt(0).toUpperCase() + merged.name.slice(1);
 
-      new MatanoTable(this, `${resolvedTableName}MatanoTable`, {
+      new MatanoTable(this, `${formattedName}Table`, {
         tableName: resolvedTableName,
         schema: tableSchema,
         realtimeTopic: props.realtimeTopic,
-        lakeIngestionLambda: props.lakeIngestionLambda,
+        lakeWriterLambda: props.lakeWriterLambda,
       });
     }
   }

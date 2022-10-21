@@ -28,26 +28,23 @@ export class MatanoDetections extends Construct {
   constructor(scope: Construct, id: string, props: MatanoDetectionsProps) {
     super(scope, id);
 
-    const remoteCacheTable = new ddb.Table(this, "MatanoDetectionsRemoteCacheTable", {
+    const remoteCacheTable = new ddb.Table(this, "RemoteCacheTable", {
       partitionKey: { name: "pk", type: ddb.AttributeType.STRING },
       sortKey: { name: "sk1", type: ddb.AttributeType.STRING },
       timeToLiveAttribute: "ttl",
     });
 
     const matanoUserDirectory = (cdk.Stack.of(this) as MatanoStack).matanoUserDirectory;
-    const detectionsCommonAssetName = "MatanoDetectionsCommonLayer";
 
-    const detectionsLayer = new lambda.LayerVersion(this, detectionsCommonAssetName, {
+    const detectionsLayer = new lambda.LayerVersion(this, "CommonLayer", {
       compatibleRuntimes: [lambda.Runtime.PYTHON_3_9],
-      code: getLocalAsset(detectionsCommonAssetName),
+      code: getLocalAsset("MatanoDetectionsCommonLayer"),
     });
 
     const detectionsDirectory = path.join(matanoUserDirectory, "detections");
     const detectionNames = getDirectories(detectionsDirectory);
 
-    const detectionsFuncAssetName = "MatanoDetectionFunction";
-
-    this.detectionFunction = new lambda.Function(this, detectionsFuncAssetName, {
+    this.detectionFunction = new lambda.Function(this, "Function", {
       handler: "detection.common.handler",
       description: `Matano managed detections function.`,
       runtime: lambda.Runtime.PYTHON_3_9,
@@ -71,8 +68,8 @@ export class MatanoDetections extends Construct {
     remoteCacheTable.grantReadWriteData(this.detectionFunction);
     props.alertingSnsTopic.grantPublish(this.detectionFunction);
 
-    const detectionDLQ = new sqs.Queue(this, "DetectionsDLQ");
-    this.detectionsQueue = new sqs.Queue(this, "DetectionsQueue", {
+    const detectionDLQ = new sqs.Queue(this, "DLQ");
+    this.detectionsQueue = new sqs.Queue(this, "Queue", {
       deadLetterQueue: { queue: detectionDLQ, maxReceiveCount: 3 },
     });
 

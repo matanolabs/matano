@@ -5,6 +5,7 @@ import { IConstruct, Construct } from "constructs";
 import * as cdk from "aws-cdk-lib";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
+import { FriendlyNamingAspect } from "./aspects/naming";
 
 // from https://github.com/capralifecycle/liflig-cdk/blob/master/src/tags.ts
 export function tagResources(scope: Construct, tags: (stack: cdk.Stack) => Record<string, string>): void {
@@ -26,7 +27,11 @@ export function tagResources(scope: Construct, tags: (stack: cdk.Stack) => Recor
   });
 }
 
-export interface MatanoConfiguration {}
+export interface MatanoConfiguration {
+  aws_account: string | undefined;
+  aws_region: string | undefined;
+  project_label: string | undefined;
+}
 
 export type MatanoConfig = MatanoConfiguration;
 export class MatanoConfiguration {
@@ -55,6 +60,8 @@ export class MatanoStack extends cdk.Stack {
         cdk.DefaultStackSynthesizer.DEFAULT_QUALIFIER,
     });
     this.cdkAssetsBucket = s3.Bucket.fromBucketName(this, "cdkAssetsBucket", this.cdkAssetsBucketName);
+
+    cdk.Aspects.of(this).add(new FriendlyNamingAspect());
   }
 
   humanCfnOutput(name: string, props: cdk.CfnOutputProps) {

@@ -51,7 +51,7 @@ export class S3BucketWithNotifications extends Construct {
     );
 
     this.bucket.addEventNotification(
-      props.eventType ?? s3.EventType.OBJECT_CREATED_PUT,
+      props.eventType ?? s3.EventType.OBJECT_CREATED,
       new s3n.SnsDestination(this.topic),
       ...(props.s3Filters ?? [])
     );

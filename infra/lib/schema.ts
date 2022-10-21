@@ -99,7 +99,7 @@ export function fieldsToSchema(fields: any[]) {
       ? item.type.type == "struct"
         ? fieldsToSchema(item.type.fields)
         : item.type.type == "list"
-        ? [fieldsToSchema([{"name": "$element", "type": item["type"]["element"]}])["$element"]]
+        ? [fieldsToSchema([{ name: "$element", type: item["type"]["element"] }])["$element"]]
         : "UNKNOWN"
       : item.type;
     return acc;
@@ -135,7 +135,7 @@ export function serializeToFields(schema: Record<string, any>): any[] {
     type: isObject(v)
       ? { type: "struct", fields: serializeToFields(v) }
       : Array.isArray(v)
-      ? { type: "list", element: serializeToFields({"$element": v[0]})[0]["type"] }
+      ? { type: "list", element: serializeToFields({ $element: v[0] })[0]["type"] }
       : v,
   }));
 }
