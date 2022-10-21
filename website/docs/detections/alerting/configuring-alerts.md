@@ -35,7 +35,7 @@ alert:
 
 The alert threshold specifies how many rule matches are needed to create an alert. For example, if you set the alert threshold to 10, ten rule matches will be required within the deduplication window for an alert to be created.
 
-You can configure a deduplication window per detection by using the `alert.threshold` key in your `detection.yml`.
+You can configure an alert threshold per detection by using the `alert.threshold` key in your `detection.yml`.
 
 ```yml
 alert:

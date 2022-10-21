@@ -3,7 +3,7 @@ title: Remote cache
 sidebar_position: 3
 ---
 
-You can use a _remote cache_ in your detections to persist and retrieve values by a key. This gives you a powerful way to be able to retain context across your detections.
+You can use a _remote cache_ in your detections to persist and retrieve values by a key. This gives you a powerful way to be able to retain context and perform correlation across your detections.
 
 ## Types supported by the remote cache
 

@@ -11,7 +11,7 @@ By default, a log source will use the [**Elastic Common Schema (ECS)**](https://
 
 Matano encourages you to normalize your log data to ECS, so you can best analyze, and correlate the data represented in your events.
 
-Matano can ingest from sources that use already use ECS, like Beats processors, without requiring transformation. Otherwise, you can use a [pre-built Matano transformation](#) to normalize data from a supported source to ECS or write your [own transformation](#) to normalize log data.
+Matano can ingest from sources that use already use ECS, like Beats processors, without requiring transformation. Otherwise, you can use a [pre-built Matano transformation](./managed-log-sources/index.mdx) to normalize data from a supported source to ECS or write your [own transformation](./transformation.md) to normalize log data.
 
 Matano currently supports ECS version **8.3.1**.
 
@@ -21,7 +21,7 @@ If your log source is supported by Matano, you should use a [Matano managed log 
 
 ## Defining a custom schema
 
-If you aren't using a Matano [managed log source](#), you must provide the schema for your log source.
+If you aren't using a Matano [managed log source](./managed-log-sources/index.mdx), you must provide the schema for your log source.
 
 ## Specifying ECS fields
 
@@ -56,4 +56,4 @@ schema:
 
 These fields will be merged with ECS fields in the final log source schema.
 
-The schema configuration follows the [Apache Iceberg schema format](https://iceberg.apache.org/spec/#schemas) in JSON/YAML format. See a [complete specification here](https://iceberg.apache.org/spec/#schemas).
+The schema configuration follows the [Apache Iceberg schema format](https://iceberg.apache.org/spec/#schemas) in JSON/YAML format. See a [complete specification here](https://iceberg.apache.org/spec/#schemas). You can omit id and required fields as Matano will automically populate them.

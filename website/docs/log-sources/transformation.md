@@ -3,7 +3,7 @@ title: Transformation
 sidebar_position: 3
 ---
 
-Matano allows you to transform your data into a normalized form. The transformation is specified using the Vector ReMap Language (VRL).
+Matano allows you to transform your data into a normalized form. The transformation is specified using the [Vector ReMap Language (VRL)](https://vector.dev/docs/reference/vrl/).
 
 ### Using Matano managed log sources
 

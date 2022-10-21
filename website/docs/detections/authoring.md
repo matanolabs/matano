@@ -22,6 +22,8 @@ _Detection scripts_ are Python programs containing the logic of your detection. 
 
 Inside the detection script, you define the following functions:
 
+#### Detect function
+
 The `detect` function is the python function that is invoked for your detection. The function will be invoked with a data record.
 
 The function has the following signature:
@@ -30,6 +32,27 @@ The function has the following signature:
 def detect(record) -> bool | None:
     ...
 ```
+
+#### Title function
+
+You can implement a `title` function to format the title if an alert is created using Python.
+
+```python
+def title(record) -> str
+  user_name = record.get("user", {}).get("name")
+  return f"{user_name} - Elevated login failures"
+```
+
+#### Dedupe function
+
+You can implement a `dedupe` function to return a _dedupe string_ that will be used to group rule matches into alerts.
+
+```python
+def dedupe(record) -> str
+  return record.get("user", {}).get("name")
+```
+
+Read more about [alert deduplication in _Configuring Alerts_](./alerting/configuring-alerts.md#deduplicating-alerts).
 
 ### Returning values from your detection
 
