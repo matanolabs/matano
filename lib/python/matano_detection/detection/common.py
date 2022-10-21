@@ -1,5 +1,6 @@
 import asyncio
 import base64
+import concurrent.futures
 import importlib
 import json
 import logging
@@ -60,6 +61,8 @@ async def ensure_clients():
         s3_async = await s3_async.__aenter__()
         sns = await sns.__aenter__()
 
+
+THREAD_EXECUTOR = concurrent.futures.ThreadPoolExecutor(max_workers=12)
 
 DETECTION_CONFIGS = None
 TABLE_DETECTION_CONFIG = None
@@ -126,15 +129,41 @@ def handler(event, context):
         _load_table_detection_config()
 
     alert_responses = []
+    future_map = {}
+    errors = []
     detection_run_count = 0
     with timers.get_timer("process"):
         for record_data in get_records(event):
-            for response in run_detections(record_data):
+            detection_configs = TABLE_DETECTION_CONFIG[record_data.table_name]
+            for detection_config in detection_configs:
+                # Using for IO, not at all perfect but can't know if IO or CPU, at least give it some parallelism.
+                future = THREAD_EXECUTOR.submit(
+                    run_detection, record_data, detection_config
+                )
+                future_map[future] = {
+                    "record_data": record_data,
+                    "detection_name": detection_config["detection"]["name"],
+                }
                 detection_run_count += 1
+
+        for fut in concurrent.futures.as_completed(future_map):
+            try:
+                response = fut.result()
                 if response:
                     alert_responses.append(response)
+            except Exception as e:
+                context = future_map[fut]
+                errors.append(
+                    {
+                        **context,
+                        "error": e,
+                    }
+                )
 
     event_loop.run_until_complete(process_responses(alert_responses))
+    if errors:
+        # TODO: send errors
+        logger.warn(f"Resulted in {len(errors)} errors from user detections")
 
     debug_metrics(record_data.record_idx, detection_run_count)
 
@@ -172,33 +201,30 @@ def get_records(event):
             yield RecordData(record, record_idx, s3_bucket, s3_key, table_name)
 
 
-def run_detections(record_data: RecordData):
-    configs = TABLE_DETECTION_CONFIG[record_data.table_name]
+def run_detection(record_data: RecordData, detection_config):
+    detection, detection_module = (
+        detection_config["detection"],
+        detection_config["module"],
+    )
+    detection_name = detection["name"]
 
-    for detection_config in configs:
-        detection, detection_module = (
-            detection_config["detection"],
-            detection_config["module"],
+    alert_response = detection_module.detect(record_data.record)
+
+    if not alert_response:
+        return False
+    else:
+        default_alert_title = detection_name
+        alert_title = (
+            safe_call(detection_module, "title", record_data.record)
+            or default_alert_title
         )
-        detection_name = detection["name"]
-
-        alert_response = detection_module.detect(record_data.record)
-
-        if not alert_response:
-            yield False
-        else:
-            default_alert_title = detection_name
-            alert_title = (
-                safe_call(detection_module, "title", record_data.record)
-                or default_alert_title
-            )
-            alert_dedupe = safe_call(detection_module, "dedupe", record_data.record)
-            yield {
-                "title": alert_title,
-                "dedupe": alert_dedupe,
-                "detection": detection,
-                "record_data": record_data,
-            }
+        alert_dedupe = safe_call(detection_module, "dedupe", record_data.record)
+        return {
+            "title": alert_title,
+            "dedupe": alert_dedupe,
+            "detection": detection,
+            "record_data": record_data,
+        }
 
 
 def create_alert(alert_response):
