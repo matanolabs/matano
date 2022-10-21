@@ -5,6 +5,7 @@ mod avro;
 mod models;
 use ::value::value::timestamp_to_string;
 use aws_sdk_sns::model::MessageAttributeValue;
+use chrono::Utc;
 use http::{HeaderMap, HeaderValue};
 use std::borrow::Borrow;
 use std::cell::RefCell;
@@ -278,7 +279,7 @@ pub fn vrl<'a>(
             },
             None => match vrl::compile(&program, &vrl_stdlib::all()) {
                 Ok(result) => {
-                    println!(
+                    debug!(
                         "Compiled a vrl program ({}), took {:?}",
                         program
                             .lines()
@@ -366,11 +367,10 @@ fn get_log_source_from_key(key: &str) -> Option<String> {
     })
 }
 
-async fn read_lines_s3<'a>(
+async fn read_events_s3<'a>(
     s3: &aws_sdk_s3::Client,
     r: &DataBatcherRequestItem,
     log_source: &String,
-    compression: Option<Compression>,
 ) -> Result<(
     config::Config,
     Pin<Box<dyn Stream<Item = Result<Value>> + Send>>,
@@ -406,40 +406,7 @@ async fn read_lines_s3<'a>(
     // let reader =
     //     StreamReader::new(stream::iter(Some(first)).chain(reader));
 
-    // TODO: fix for BYOB @shaeq
-    let log_source = &r
-        .key
-        .split(std::path::MAIN_SEPARATOR)
-        .next()
-        .unwrap()
-        .to_string();
-
-    // let user_compression = LOG_SOURCES_CONFIG.with(|c| {
-    //     let log_sources_config = c.borrow();
-
-    //     (*log_sources_config)
-    //         .get(log_source)
-    //         .unwrap()
-    //         .base
-    //         .get_string("ingest.compression")
-    //         .ok()
-    // });
-    // let compression = user_compression.map(|s| {
-    //     match Compression::from_str(s.to_lowercase().as_str()) {
-    //         Ok(c) => {
-    //             debug!("Using compression from configuration: {:?}", c);
-    //             c
-    //         },
-    //         Err(e) => {
-    //             error!("Error parsing compression: {}", e);
-    //             Compression::Auto
-    //         }
-    //     }
-    // });
-
-    // let compression = compression.unwrap_or(Compression::Auto);
     let compression = Compression::Auto;
-
     let compression = match compression {
         Compression::Auto => infer_compression(
             &mut reader,
@@ -541,7 +508,8 @@ async fn read_lines_s3<'a>(
 
             // println!("{}", file_string);
             let mut value = value!({ "__raw": file_string });
-            let (expanded_records, _) = vrl(&prog, &mut value)?;
+            let (expanded_records, _) = vrl(&prog, &mut value)
+                .map_err(|e| anyhow!(e).context("Failed to expand records"))?;
             println!("Expanded records from payload: took {:?}", start.elapsed(),);
             let expanded_records = match expanded_records {
                 Value::Array(records) => records,
@@ -562,7 +530,68 @@ async fn read_lines_s3<'a>(
             .boxed(),
     };
 
-    Ok((table_config, lines))
+    let is_from_cloudwatch_log_subscription = table_config
+        .get_bool("ingest.s3_source.is_from_cloudwatch_log_subscription")
+        .ok()
+        .unwrap_or(false);
+
+    let events: Pin<Box<dyn Stream<Item = Result<Value>> + Send>> =
+        if is_from_cloudwatch_log_subscription {
+            Box::pin(lines.flat_map_unordered(50, |v| {
+                // TODO: c'mon dont do this in VRL...
+                let v = v.and_then(|mut v| {
+                    vrl(r#". = parse_json!(string!(.))"#, &mut v)?;
+                    Ok(v)
+                });
+
+                match v {
+                    Ok(Value::Object(mut line)) => {
+                        let log_events = line
+                            .remove("logEvents")
+                            .ok_or(anyhow!(
+                                "logEvents not found in cloudwatch log subscription payload"
+                            ))
+                            .unwrap();
+
+                        match log_events {
+                            Value::Array(log_events) => {
+                                let log_events = log_events.into_iter().map(|mut v| {
+                                    let ts = v.as_object_mut_unwrap().remove("timestamp").unwrap();
+                                    let message =
+                                        v.as_object_mut_unwrap().remove("message").unwrap();
+                                    value!({ "ts": ts, "message": message })
+                                });
+                                Box::pin(stream! {
+                                    for log_event in log_events {
+                                        yield Ok(log_event);
+                                    }
+                                })
+                                    as Pin<Box<dyn Stream<Item = Result<Value>> + Send>>
+                            }
+                            _ => unreachable!(),
+                        }
+                    }
+                    Ok(_) => unreachable!(),
+                    Err(e) => Box::pin(stream! {
+                            yield Err(e);
+                    })
+                        as Pin<Box<dyn Stream<Item = Result<Value>> + Send>>,
+                }
+            }))
+        } else {
+            lines
+                .map_ok(|line| {
+                    let now = Value::Timestamp(Utc::now());
+                    match line {
+                        Value::Object(_) => value!({ "ts": now, "json": line }),
+                        Value::Bytes(_) => value!({ "ts": now, "message": line }),
+                        _ => unimplemented!("Unsupported line type"),
+                    }
+                })
+                .boxed()
+        };
+
+    Ok((table_config, events))
 }
 
 pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
@@ -611,7 +640,7 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
                 let (table_config, raw_lines): (
                     _,
                     Pin<Box<dyn Stream<Item = Result<Value, anyhow::Error>> + Send>>,
-                ) = read_lines_s3(s3, &item, log_source, None).await.unwrap();
+                ) = read_events_s3(s3, &item, log_source).await.unwrap();
 
                 let reader = raw_lines;
 
@@ -622,6 +651,10 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
                     r#"
 if .message != null {{
     .json, err = parse_json(string!(.message))
+    if !is_object(.json) {{
+        del(.json)
+        err = "Failed to parse message as JSON object"
+    }}
     if err == null {{
         del(.message)
     }}
@@ -635,7 +668,7 @@ if .message != null {{
 del(.json)
 
 . = compact(.)
-.ecs.version = "8.3.1"
+.ecs.version = "8.5.0"
                     "#,
                     transform_expr
                 );
@@ -652,11 +685,9 @@ del(.json)
                                     .into_par_iter()
                                     .map(|r| match r {
                                         Ok(line) => {
-                                            let mut v = match line {
-                                                Value::Object(_) => value!({ "json": line }),
-                                                Value::Bytes(_) => value!({ "message": line }),
-                                                _ => unimplemented!()
-                                            };
+                                            let mut v = line;
+
+                                            // println!("v: {:?}", v);
 
                                             match vrl(&wrapped_transform_expr, &mut v).map_err(|e| {
                                                 anyhow!("Failed to transform: {}", e)
@@ -677,7 +708,7 @@ del(.json)
                             })
                             .await;
 
-                            println!("Transformed lines: took {:?}", start.elapsed());
+                            debug!("Transformed lines: took {:?}", start.elapsed());
                             Some(stream::iter(transformed_lines))
                         }
                     })

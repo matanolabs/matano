@@ -2,6 +2,8 @@ name: aws_cloudtrail
 
 managed:
   type: AWS_CLOUDTRAIL
-
-transform: |
-  .mycustomlogfield = "CUSTOM_LOG_SOURCE"
+## --- ONLY uncomment below if using Cloudtrail->Cloudwatch Log Subscription delivered to S3 through Kinesis Firehose ---
+# ingest:
+#   expand_records_from_payload: null # assuming Firehose writes JSONL, unlike the JSON records from direct Cloudtrail-S3 integration, so need to set this to null
+#   s3_source:
+#     is_from_cloudwatch_log_subscription: true # will automatically parse CWL-subscription formatted messages
