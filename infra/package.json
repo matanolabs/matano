@@ -16,6 +16,7 @@
     "@types/jest": "^26.0.10",
     "@types/node": "^12",
     "@types/prettier": "^2.6.3",
+    "@types/uuid": "^8.3.4",
     "jest": "^26.4.2",
     "toml": "^3.0.0",
     "ts-jest": "^26.2.0"
@@ -32,8 +33,8 @@
     "source-map-support": "^0.5.16",
     "ts-node": "^10.0.0",
     "typescript": "^4.7",
-    "yaml": "^2.1.1",
-    "uuid": "^8.3.2"
+    "uuid": "^8.3.2",
+    "yaml": "^2.1.1"
   },
   "prettier": {
     "printWidth": 120
