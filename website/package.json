@@ -49,6 +49,9 @@
       "last 1 safari version"
     ]
   },
+  "prettier": {
+    "tabWidth": 2
+  },
   "engines": {
     "node": ">=16.14"
   }

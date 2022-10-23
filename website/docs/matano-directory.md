@@ -33,6 +33,8 @@ This file stores environment specific values for your Matano deployment (such as
 
 ### Log sources directory (`log_sources`)
 
+**To learn more about configuring log sources, visit [_Log source configuration_](./log-sources/configuration.md).**
+
 The log sources directory contains definitions and configuration for each log source you ingest into Matano.
 
 The directory has the following format:

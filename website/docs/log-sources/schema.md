@@ -1,6 +1,6 @@
 ---
 title: Log source schema
-sidebar_position: 4
+sidebar_position: 5
 ---
 
 You define the shape of your log source's data by defining a _schema_.
