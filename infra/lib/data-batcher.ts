@@ -8,6 +8,7 @@ import * as lambda from "aws-cdk-lib/aws-lambda";
 import { S3BucketWithNotifications } from "./s3-bucket-notifs";
 import { SqsEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
 import { getLocalAsset, getLocalAssetPath } from "./utils";
+import { RustFunctionCode } from "./rust-function-layer";
 
 interface DataBatcherProps {
   s3Bucket: S3BucketWithNotifications;
@@ -16,6 +17,7 @@ interface DataBatcherProps {
 export class DataBatcher extends Construct {
   outputDLQ: sqs.Queue;
   outputQueue: sqs.Queue;
+  batcherFunction: lambda.Function;
   constructor(scope: Construct, id: string, props: DataBatcherProps) {
     super(scope, id);
 
@@ -24,14 +26,14 @@ export class DataBatcher extends Construct {
       deadLetterQueue: { queue: this.outputDLQ, maxReceiveCount: 3 },
     });
 
-    const lambdaFunc = new lambda.Function(this, "Function", {
-      code: getLocalAsset("DataBatcherProcessorFunction"),
-      handler: "index.handler",
-      runtime: lambda.Runtime.NODEJS_16_X,
+    this.batcherFunction = new lambda.Function(this, "Function", {
+      code: RustFunctionCode.assetCode({ package: "data_batcher" }),
+      handler: "main",
+      runtime: lambda.Runtime.PROVIDED_AL2,
       timeout: cdk.Duration.seconds(10),
       environment: {
+        RUST_LOG: "warn,data_batcher=info",
         OUTPUT_QUEUE_URL: this.outputQueue.queueUrl,
-        AWS_NODEJS_CONNECTION_REUSE_ENABLED: "1",
       },
     });
 
@@ -40,7 +42,7 @@ export class DataBatcher extends Construct {
       maxBatchingWindow: cdk.Duration.seconds(1),
       reportBatchItemFailures: true,
     });
-    lambdaFunc.addEventSource(sqsEventSource);
-    this.outputQueue.grantSendMessages(lambdaFunc);
+    this.batcherFunction.addEventSource(sqsEventSource);
+    this.outputQueue.grantSendMessages(this.batcherFunction);
   }
 }

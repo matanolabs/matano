@@ -369,7 +369,7 @@ fn get_log_source_from_key(key: &str) -> Option<String> {
 
 async fn read_events_s3<'a>(
     s3: &aws_sdk_s3::Client,
-    r: &DataBatcherRequestItem,
+    r: &DataBatcherOutputRecord,
     log_source: &String,
 ) -> Result<(
     config::Config,
@@ -603,7 +603,7 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
         .iter()
         .flat_map(|record| {
             let body = record.body.as_ref().expect("SQS message body is required");
-            let data_batcher_request_items: Vec<DataBatcherRequestItem> = serde_json::from_str(
+            let data_batcher_request_items: Vec<DataBatcherOutputRecord> = serde_json::from_str(
                 &body,
             )
             .expect("Could not deserialize SQS message body as list of DataBatcherRequestItems.");
@@ -622,7 +622,7 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
     info!(
         "Processing {} files from S3, of total size {} bytes",
         s3_download_items.len(),
-        s3_download_items.iter().map(|(d, _)| d.size).sum::<i32>()
+        s3_download_items.iter().map(|(d, _)| d.size).sum::<i64>()
     );
 
     let config = aws_config::load_from_env().await;

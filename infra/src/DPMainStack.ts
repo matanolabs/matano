@@ -56,10 +56,6 @@ export class DPMainStack extends MatanoStack {
     const logSourcesDirectory = path.join(this.matanoUserDirectory, "log_sources");
     const logSourceConfigPaths = getDirectories(logSourcesDirectory).map((d) => path.join(logSourcesDirectory, d));
 
-    const rawDataBatcher = new DataBatcher(this, "DataBatcher", {
-      s3Bucket: props.matanoSourcesBucket,
-    });
-
     const matanoAlerting = new MatanoAlerting(this, "Alerting", {});
 
     const detections = new MatanoDetections(this, "Detections", {
@@ -161,6 +157,10 @@ export class DPMainStack extends MatanoStack {
 
     schemasLayer.node.addDependency(schemasCR);
 
+    const rawDataBatcher = new DataBatcher(this, "DataBatcher", {
+      s3Bucket: props.matanoSourcesBucket,
+    });
+
     const transformer = new Transformer(this, "Transformer", {
       realtimeBucketName: props.realtimeBucket.bucketName,
       realtimeTopic: props.realtimeBucketTopic,
@@ -193,6 +193,7 @@ export class DPMainStack extends MatanoStack {
     lakeWriter.alertsLakeWriterLambda.addLayers(schemasLayer);
 
     detections.detectionFunction.addLayers(configLayer);
+    rawDataBatcher.batcherFunction.addLayers(configLayer);
 
     this.humanCfnOutput("AlertingSnsTopicArn", {
       value: matanoAlerting.alertingTopic.topicArn,

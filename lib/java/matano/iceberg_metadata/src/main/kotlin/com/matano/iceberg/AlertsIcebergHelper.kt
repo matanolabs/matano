@@ -106,7 +106,7 @@ class AlertsIcebergHelper : RequestStreamHandler {
             TableIdentifier.of(Namespace.of(IcebergMetadataWriter.MATANO_NAMESPACE), MATANO_ALERTS_TABLE_NAME)
         )
         val now = LocalDateTime.now().atOffset(ZoneOffset.UTC)
-        val days = (0..7).map { dn ->
+        val days = (0..1).map { dn ->
             now.minusDays(dn.toLong()).toLocalDate().format(DateTimeFormatter.ISO_LOCAL_DATE)
         }
 

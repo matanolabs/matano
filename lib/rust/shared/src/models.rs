@@ -1,11 +1,12 @@
 use serde::{Deserialize, Serialize};
 
-/// This is a made-up example of what a response structure may look like.
-/// There is no restriction on what it can be. The runtime requires responses
-/// to be serialized into json. The runtime pays no attention
-/// to the contents of the response payload.
-#[derive(Debug, Serialize)]
-pub struct SuccessResponse {
-    pub req_id: String,
-    pub msg: String,
+// todo: handle key as urlencoded_string, plus AWS encodes spaces as `+` rather than `%20`
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct DataBatcherOutputRecord {
+    pub bucket: String,
+    pub key: String,
+    pub size: i64,
+    pub sequencer: String,
+    #[serde(skip)]
+    pub log_source: String,
 }
