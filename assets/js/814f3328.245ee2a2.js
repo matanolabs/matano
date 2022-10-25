@@ -1,1 +1,0 @@
-"use strict";(self.webpackChunk_matano_website=self.webpackChunk_matano_website||[]).push([[2535],{45641:e=>{e.exports=JSON.parse('{"title":"Recent posts","items":[{"title":"Serverless asynchronous Iceberg data ingestion","permalink":"/blog/2022/09/13/ingesting-data-iceberg"},{"title":"Announcing Matano","permalink":"/blog/2022/08/11/announcing-matano"}]}')}}]);
