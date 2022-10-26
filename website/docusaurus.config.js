@@ -52,7 +52,10 @@ const config = {
           editUrl: "https://github.com/matanolabs/matano/tree/main/website/",
         },
         theme: {
-          customCss: [require.resolve("./src/css/custom.css"), require.resolve("./src/css/styles.scss")],
+          customCss: [
+            require.resolve("./src/css/custom.css"),
+            require.resolve("./src/css/styles.scss"),
+          ],
         },
       }),
     ],
@@ -212,6 +215,7 @@ const config = {
         darkTheme: darkCodeTheme,
         additionalLanguages: ["kotlin"],
       },
+      metadata: [{ name: "twitter:site", content: "@matanolabs" }],
     }),
 };
 

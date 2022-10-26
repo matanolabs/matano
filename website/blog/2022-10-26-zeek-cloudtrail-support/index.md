@@ -8,6 +8,8 @@ import sgImg from "./sg.png";
 
 <head>
   <meta property="og:image" content={"https://matano.dev/" + sgImg} />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:creator" content="@AhmedSamrose" />
 </head>
 
 We're adding support for the first two managed log sources to Matano: AWS CloudTrail and Zeek. Now you can analyze your AWS events and network traffic in Matano without having to define any schemas or parsers.

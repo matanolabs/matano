@@ -7,7 +7,9 @@ keywords: ["apache-iceberg", "iceberg", "serverless", "big data"]
 import coverImg from "./cover.png";
 
 <head>
-  <meta property="og:image" content={coverImg} />
+  <meta property="og:image" content={"https://matano.dev/" + coverImg} />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:creator" content="@AhmedSamrose" />
 </head>
 
 Matano relies on Apache Iceberg as its main data lake and store. To ingest data into Matano Iceberg tables, we rely on a unique design that keeps the system both realtime and serverless.
