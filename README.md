@@ -100,7 +100,33 @@ The interactive CLI wizard will walk you through getting started by generating a
   <img src="assets/matano-init.gif" width="750">
 </div>
 
+<br>
 Initial deployment takes a few minutes.
+
+### Directory structure
+
+Once initialized, your [Matano directory](https://www.matano.dev/docs/matano-directory) is used to control & manage all resources in your project e.g. log sources, detections, and other configuration. It is structured as follows:
+
+```bash
+➜  example-matano-dir git:(main) tree
+├── detections
+│   └── aws_root_credentials
+│       ├── detect.py
+│       └── detection.yml
+├── log_sources
+│   ├── cloudtrail
+│   │   ├── log_source.yml
+│   │   └── tables
+│   │       └── default.yml
+│   └── zeek
+│       ├── log_source.yml
+│       └── tables
+│           └── dns.yml
+├── matano.config.yml
+└── matano.context.json
+```
+
+When onboarding a new log source or authoring a detection, run `matano deploy` from anywhere in your project to deploy the changes to your account.
 
 ## Documentation
 
