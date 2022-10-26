@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<svg viewBox="0 0 70 70" xmlns="http://www.w3.org/2000/svg" xmlns:bx="https://boxy-svg.com">
-  <rect data-v-fde0c5aa="" fill="#2D67E4" width="70" height="70" class="logo-background-square" style="" bx:origin="0.498057 0.500714"/>
-  <g data-v-fde0c5aa="" id="644b9720-9743-45b3-a6f4-afa7d513fa7b" stroke="none" fill="#FEE6FE" transform="matrix(1.507862, 0, 0, 1.507862, 10.763767, 10.923788)">
-    <path d="M0 32h32V0H0v32zm19.377-19.492l6.936-6.936v20.855h-6.936V12.508zM5.688 5.572l6.936 6.936v13.919H5.688V5.572z"/>
-  </g>
-</svg>

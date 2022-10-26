@@ -1,9 +1,0 @@
-.features {
-  @apply flex flex-col items-center pt-20;
-  width: 100%;
-}
-
-.featureSvg {
-  height: 200px;
-  width: 200px;
-}

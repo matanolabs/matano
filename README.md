@@ -1,5 +1,5 @@
 <div align="center">
-    <a href="https://www.matano.dev"><img src="website/src/assets/cover.svg" width=500></a>
+    <a href="https://www.matano.dev"><img src="assets/cover.svg" width=500></a>
     <h3>The open-source security lake platform for AWS.</h3>
 </div>
 
@@ -35,7 +35,7 @@ Matano is an open source security lake platform for AWS. It lets you ingest peta
 
 <div align="center">
   <br>
-  <img src="website/src/assets/diagram.png" width="1000">
+  <img src="assets/diagram.png" width="1000">
 </div>
 
 ## Features
@@ -97,7 +97,7 @@ To get started with Matano, run the `matano init` command. Make sure you have AW
 The interactive CLI wizard will walk you through getting started by generating an initial [Matano directory](https://www.matano.dev/docs/matano-directory) for you, initializing your AWS account, and deploying Matano into your AWS account.
 
 <div align="center">
-  <img src="website/src/assets/matano-init.gif" width="750">
+  <img src="assets/matano-init.gif" width="750">
 </div>
 
 Initial deployment takes a few minutes.
