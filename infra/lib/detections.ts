@@ -32,6 +32,7 @@ export class MatanoDetections extends Construct {
       partitionKey: { name: "pk", type: ddb.AttributeType.STRING },
       sortKey: { name: "sk1", type: ddb.AttributeType.STRING },
       timeToLiveAttribute: "ttl",
+      billingMode: ddb.BillingMode.PAY_PER_REQUEST,
     });
 
     const matanoUserDirectory = (cdk.Stack.of(this) as MatanoStack).matanoUserDirectory;

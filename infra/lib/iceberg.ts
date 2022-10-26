@@ -145,6 +145,7 @@ export class IcebergMetadata extends Construct {
     const duplicatesTable = new ddb.Table(this, "DuplicatesTable", {
       partitionKey: { name: "sequencer", type: ddb.AttributeType.STRING },
       timeToLiveAttribute: "ttl",
+      billingMode: ddb.BillingMode.PAY_PER_REQUEST,
     });
 
     const lambdaFunction = new lambda.Function(this, "WriterFunction", {
