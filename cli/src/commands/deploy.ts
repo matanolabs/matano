@@ -59,6 +59,7 @@ export default class Deploy extends BaseCommand {
       cdkArgs.push("--profile", awsProfile);
     }
 
+    const matanoConfig = readConfig(matanoUserDirectory, "matano.config.yml");
     const matanoContext = JSON.parse(fs.readFileSync(path.resolve(matanoUserDirectory, "matano.context.json"), "utf8"));
 
     const cdkContext: Record<string, any> = {
@@ -79,6 +80,7 @@ export default class Deploy extends BaseCommand {
       env: {
         MATANO_CDK_ACCOUNT: awsAccountId,
         MATANO_CDK_REGION: awsRegion,
+        MATANO_PROJECT_LABEL: matanoConfig.project_label,
         FORCE_COLOR: "1",
         DEBUG: "-agent-base", // superflous logs
       },

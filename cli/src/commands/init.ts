@@ -164,7 +164,7 @@ export default class Init extends BaseCommand {
     spinner2.succeed(chalk.bold.greenBright("Successfully deployed Matano."));
 
     this.log("\n" + chalk.yellowBright("· Here are some useful values to get you started:") + "");
-    const cfnOutputs = await Info.retrieveCfnOutputs(awsAccountId, awsRegion, awsProfile);
+    const cfnOutputs = await Info.retrieveCfnOutputs(matanoUserDirectory, awsAccountId, awsRegion, awsProfile);
     Info.renderOutputsTable(cfnOutputs);
   }
 }

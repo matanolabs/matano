@@ -3,6 +3,7 @@ import chalk from "chalk";
 import { Command, Flags, Errors } from "@oclif/core";
 import { isMatanoDirectory, readConfig } from "./util";
 import { CLIError } from "@oclif/core/lib/errors";
+import { execSync } from "child_process";
 
 export class BaseCLIError extends CLIError {
   constructor(error: string | Error, options?: { exit?: number | false } & Errors.PrettyPrintableError) {
@@ -51,7 +52,20 @@ export default abstract class BaseCommand extends Command {
         suggestions: ["Make sure the directory specified by `--user-directory` is a valid matano directory."],
       });
     }
-    if (!userDir && !isMatanoDirectory(defaultUserDir)) {
+
+    let matanoDirFoundFromGit = null;
+    try {
+      const gitRoot = execSync("git rev-parse --show-toplevel", { encoding: "utf8" }).toString().trim();
+      matanoDirFoundFromGit = path.dirname(
+        execSync(`find ${gitRoot} -maxdepth 3 -iname "*matano.config.yml" | head -n 1`, {
+          encoding: "utf-8",
+        }).toString()
+      );
+    } catch (err) {
+      // do nothing
+    }
+
+    if (!userDir && !matanoDirFoundFromGit && !isMatanoDirectory(defaultUserDir)) {
       this.error("No Matano user directory found.", {
         suggestions: [
           "Specify a directory using `--user-directory`.",
@@ -59,7 +73,7 @@ export default abstract class BaseCommand extends Command {
         ],
       });
     }
-    return path.resolve(userDir ?? defaultUserDir);
+    return path.resolve(userDir ?? matanoDirFoundFromGit ?? defaultUserDir);
   }
 
   validateGetAwsRegionAccount(flags: any, userDirectory: string) {

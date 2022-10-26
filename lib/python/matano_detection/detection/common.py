@@ -9,7 +9,7 @@ import time
 from collections import defaultdict
 from dataclasses import dataclass
 from io import BytesIO
-from typing import Any
+from typing import Any, Iterable
 from uuid import uuid4
 
 import aiobotocore
@@ -21,7 +21,7 @@ import fastavro
 import jsonlines
 import pyston_lite
 from detection.cache import RemoteCache
-from detection.util import ALERT_ECS_FIELDS, Timers, json_dumps_dt, timing
+from detection.util import ALERT_ECS_FIELDS, DeepDict, Timers, json_dumps_dt, timing
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -73,7 +73,7 @@ LOADED_PYSTON = False
 timers = Timers()
 
 
-def remote_cache(namespace: str, ttl: int = 3600):
+def remotecache(namespace: str, ttl: int = 3600):
     return RemoteCache(ddb, os.environ["REMOTE_CACHE_TABLE_NAME"], namespace, ttl)
 
 
@@ -98,13 +98,20 @@ def _load_table_detection_config():
     TABLE_DETECTION_CONFIG = ret
 
 
-@dataclass
 class RecordData:
+    __slots__ = "record", "record_idx", "s3_bucket", "s3_key", "table_name"
     record: Any
     record_idx: int
     s3_bucket: str
     s3_key: str
     table_name: str
+
+    def __init__(self, record, record_idx, s3_bucket, s3_key, table_name):
+        self.record = DeepDict(record)
+        self.record_idx = record_idx
+        self.s3_bucket = s3_bucket
+        self.s3_key = s3_key
+        self.table_name = table_name
 
     def record_reference(self):
         ref = f"{self.s3_bucket}#{self.s3_key}#{self.record_idx}"
@@ -165,10 +172,10 @@ def handler(event, context):
         # TODO: send errors
         logger.warn(f"Resulted in {len(errors)} errors from user detections")
 
-    debug_metrics(record_data.record_idx, detection_run_count)
+    debug_metrics(record_data.record_idx + 1, detection_run_count, len(alert_responses))
 
 
-def debug_metrics(record_count, detection_run_count):
+def debug_metrics(record_count, detection_run_count, alert_count):
     processing_time = timers.get_timer("process").elapsed
     dl_time = timers.get_timer("data_download").elapsed
 
@@ -176,7 +183,7 @@ def debug_metrics(record_count, detection_run_count):
         0 if record_count == 0 else processing_time / detection_run_count
     )
     logger.info(
-        f"Took {processing_time} seconds, processed {record_count} records, ran {detection_run_count} detections, an average time of {avg_detection_run_time} seconds per detection run"
+        f"Took {processing_time} seconds, processed {record_count} records, ran {detection_run_count} detections, an average time of {avg_detection_run_time} seconds per detection run, generating {alert_count} alerts"
     )
     logger.info(f"Downloading took: {dl_time} seconds")
 
@@ -252,8 +259,8 @@ def create_alert(alert_response):
                     "name": detection_name,
                     "threshold": detection.get("alert", {}).get("threshold"),
                     "deduplication_window": detection.get("alert", {}).get(
-                        "deduplication_window"
-                    ),
+                        "deduplication_window_minutes"
+                    ) * 60,
                     "match": {
                         "id": str(uuid4()),
                     },

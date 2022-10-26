@@ -1,4 +1,5 @@
 import * as fs from "fs";
+import * as fse from "fs-extra";
 import * as path from "path";
 import { Construct } from "constructs";
 import * as cdk from "aws-cdk-lib";
@@ -53,6 +54,28 @@ export class MatanoDetections extends Construct {
         exclude: ["*.pyc"],
         bundling: {
           image: lambda.Runtime.PYTHON_3_9.bundlingImage,
+          local: {
+            // attempts local bundling first, if it fails, then executes docker based build
+            tryBundle(outputDir: string) {
+              try {
+                const targetDirectory = `${outputDir}`;
+                if (!fs.existsSync(targetDirectory)) {
+                  fs.mkdirSync(targetDirectory, {
+                    recursive: true,
+                  });
+                }
+                fse.copySync(detectionsDirectory, targetDirectory, {
+                  overwrite: true,
+                  errorOnExist: false,
+                  recursive: true,
+                });
+              } catch (error) {
+                console.error("Error with local bundling", error);
+                return false;
+              }
+              return true;
+            },
+          },
           command: ["bash", "-c", `cp -rT /asset-input/ /asset-output`],
         },
       }),

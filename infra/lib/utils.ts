@@ -113,3 +113,37 @@ export function fromEntries<T>(entries: IterableIterator<[string, T]>): Record<s
   }
   return result;
 }
+
+const isLower = (c: string | undefined) => c && c == c.toLowerCase();
+export function validateProjectLabel(projectLabel: string) {
+  const KEBAB_CASE_REGEX = /^([a-z](?![\d])|[\d](?![a-z]))+(-?([a-z](?![\d])|[\d](?![a-z])))*$|^$/;
+
+  if (projectLabel.includes("matano")) {
+    throw new Error(
+      `Project label contains a reserved keyword, try renaming to: ${projectLabel
+        .split("-")
+        .filter((p) => !p.includes("matano"))
+        .join("-")}`
+    );
+  }
+  if (
+    !(
+      projectLabel.match(KEBAB_CASE_REGEX) &&
+      projectLabel.length >= 5 &&
+      projectLabel.length <= 15 &&
+      isLower(projectLabel)
+    )
+  ) {
+    throw new Error(
+      `Invalid project_label: ${projectLabel}, must be kebab-cased and only contain lowercase letters and numbers, and be 5-15 characters long (e.g. my-org-${Math.random()
+        .toString()
+        .slice(2, 5)})`
+    );
+  }
+}
+
+export const stackNameWithLabel = (name: string) => {
+  const projectLabel = process.env.MATANO_PROJECT_LABEL;
+  if (projectLabel != null) validateProjectLabel(projectLabel);
+  return `${name}${projectLabel ? `-${projectLabel}` : ""}`;
+};

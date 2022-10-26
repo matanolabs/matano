@@ -530,9 +530,17 @@ async fn read_events_s3<'a>(
             .boxed(),
     };
 
-    let is_from_cloudwatch_log_subscription = table_config
-        .get_bool("ingest.s3_source.is_from_cloudwatch_log_subscription")
-        .ok()
+    let is_from_cloudwatch_log_subscription = LOG_SOURCES_CONFIG
+        .with(|c| {
+            let log_sources_config = c.borrow();
+
+            (*log_sources_config)
+                .get(log_source)
+                .unwrap()
+                .base
+                .get_bool("ingest.s3_source.is_from_cloudwatch_log_subscription")
+                .ok()
+        })
         .unwrap_or(false);
 
     let events: Pin<Box<dyn Stream<Item = Result<Value>> + Send>> =
@@ -540,7 +548,7 @@ async fn read_events_s3<'a>(
             Box::pin(lines.flat_map_unordered(50, |v| {
                 // TODO: c'mon dont do this in VRL...
                 let v = v.and_then(|mut v| {
-                    vrl(r#". = parse_json!(string!(.))"#, &mut v)?;
+                    vrl(r#". = if is_string(.) { parse_json!(string!(.)) } else { object(.) }"#, &mut v).map_err(|e| anyhow!("Invaid format of cloudwatch log subscription line: {}", e))?;
                     Ok(v)
                 });
 

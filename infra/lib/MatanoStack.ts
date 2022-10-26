@@ -31,6 +31,7 @@ export interface MatanoConfiguration {
   aws_account: string | undefined;
   aws_region: string | undefined;
   project_label: string | undefined;
+  is_production: boolean | undefined;
 }
 
 export type MatanoConfig = MatanoConfiguration;

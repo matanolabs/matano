@@ -49,3 +49,37 @@ export const AWS_REGIONS = [
   "us-west-1",
   "us-west-2",
 ];
+
+// TODO(shaeq): don't duplicate code between infra and cli?
+const isLower = (c: string | undefined) => c && c == c.toLowerCase();
+export function validateProjectLabel(projectLabel: string) {
+  const KEBAB_CASE_REGEX = /^([a-z](?![\d])|[\d](?![a-z]))+(-?([a-z](?![\d])|[\d](?![a-z])))*$|^$/;
+
+  if (projectLabel.includes("matano")) {
+    throw new Error(
+      `Project label contains a reserved keyword, try renaming to: ${projectLabel
+        .split("-")
+        .filter((p) => !p.includes("matano"))
+        .join("-")}`
+    );
+  }
+  if (
+    !(
+      projectLabel.match(KEBAB_CASE_REGEX) &&
+      projectLabel.length >= 5 &&
+      projectLabel.length <= 15 &&
+      isLower(projectLabel)
+    )
+  ) {
+    throw new Error(
+      `Invalid project_label: ${projectLabel}, must be kebab-cased and only contain lowercase letters and numbers, and be 5-15 characters long (e.g. my-org-${Math.random()
+        .toString()
+        .slice(2, 5)})`
+    );
+  }
+}
+
+export const stackNameWithLabel = (name: string, projectLabel: string) => {
+  if (projectLabel != null) validateProjectLabel(projectLabel);
+  return `${name}${projectLabel ? `-${projectLabel}` : ""}`;
+};

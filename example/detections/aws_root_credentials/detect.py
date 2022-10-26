@@ -1,12 +1,5 @@
-import ipaddress
-import re
-from fnmatch import fnmatch
-
-
-def detect(record):
+def detect(event):
     return (
-        record.get("aws", {}).get("cloudtrail", {}).get("user_identity", {}).get("type")
-        == "Root"
-        and not record.get("aws", {}).get("cloudtrail", {}).get("event_type")
-        == "AwsServiceEvent"
+        event.deepget("aws.cloudtrail.user_identity.type") == "Root"
+        and not event.deepget("aws.cloudtrail.event_type") == "AwsServiceEvent"
     )

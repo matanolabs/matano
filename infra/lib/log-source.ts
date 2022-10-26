@@ -69,11 +69,11 @@ export interface LogSourceConfig {
   };
   ingest?: {
     select_table_from_payload_metadata?: string;
+    expand_records_from_payload?: string;
     compression: string;
     s3_source?: {
       bucket_name?: string;
       key_prefix?: string;
-      expand_records_from_object?: string;
     };
   };
   transform?: string;

@@ -2,8 +2,30 @@ name: aws_cloudtrail
 
 managed:
   type: AWS_CLOUDTRAIL
-## --- ONLY uncomment below if using Cloudtrail->Cloudwatch Log Subscription delivered to S3 through Kinesis Firehose ---
+
+# --- ONLY uncomment below if using Cloudtrail->Cloudwatch Log Subscription delivered to S3 through Kinesis Firehose ---
 # ingest:
-#   expand_records_from_payload: null # assuming Firehose writes JSONL, unlike the JSON records from direct Cloudtrail-S3 integration, so need to set this to null
+#   expand_records_from_payload:
+#     | # assuming Firehose writes concatened JSON, unlike the JSON records from direct Cloudtrail-S3 integration, so need to break manually
+#     parts = split(.__raw, "}{") ?? [.__raw]
+#     parts_len = length(parts)
+#     last_index = parts_len - 1
+#     new_parts = []
+#     for_each(parts) -> |_index, value|{
+#       if (_index == 0) {
+#         value = join!([value,"}"])
+#         new_parts = push(new_parts, value)
+#       } else if (_index == last_index){
+#         value = join!(["{", value])
+#         new_parts = push(new_parts, value)
+#       } else {
+#         value = join!(["{", value,"}"])
+#         new_parts = push(new_parts, value)
+#       }
+#     }
+
+#     map_values(new_parts) -> |s| {
+#       parse_json!(s)
+#     }
 #   s3_source:
 #     is_from_cloudwatch_log_subscription: true # will automatically parse CWL-subscription formatted messages

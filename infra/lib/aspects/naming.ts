@@ -7,8 +7,7 @@ import * as sqs from "aws-cdk-lib/aws-sqs";
 import * as sns from "aws-cdk-lib/aws-sns";
 import * as ddb from "aws-cdk-lib/aws-dynamodb";
 
-import { HumanHasher } from "../humanhash";
-import { md5Hash } from "../utils";
+import { md5Hash, validateProjectLabel } from "../utils";
 
 import { Token } from "aws-cdk-lib";
 import { MatanoStack } from "../MatanoStack";
@@ -30,8 +29,6 @@ function isNumeric(str: string) {
 
 const isUpper = (c: string | undefined) => c && c == c.toUpperCase();
 const isLower = (c: string | undefined) => c && c == c.toLowerCase();
-
-const hasher = new HumanHasher();
 
 function cdkPathPascalToKebabSmart(str: string) {
   str = str
@@ -79,25 +76,6 @@ function cdkPathPascalToKebabSmart(str: string) {
   return name;
 }
 
-function validateProjectLabel(projectLabel: string) {
-  const KEBAB_CASE_REGEX = /^([a-z](?![\d])|[\d](?![a-z]))+(-?([a-z](?![\d])|[\d](?![a-z])))*$|^$/;
-
-  if (projectLabel.includes("matano")) {
-    throw new Error(
-      `Project label contains a reserved keyword, try renaming to: ${projectLabel
-        .split("-")
-        .filter((p) => !p.includes("matano"))
-        .join("-")}`
-    );
-  }
-  return (
-    projectLabel.match(KEBAB_CASE_REGEX) &&
-    projectLabel.length >= 5 &&
-    projectLabel.length <= 15 &&
-    isLower(projectLabel)
-  );
-}
-
 const enabledResources = [
   lambda.CfnFunction,
   ddb.CfnTable,
@@ -105,6 +83,7 @@ const enabledResources = [
   sns.CfnTopic,
   s3.CfnBucket, // unique
 ];
+
 const defaultNameField = "name";
 const maxResourceNameLengths = {
   "AWS::Lambda::Function": 64,
@@ -144,13 +123,7 @@ function rename(node: IConstruct, resourceName: string, resourceTypeFullName: st
     return resourceName;
   }
 
-  if (!validateProjectLabel(projectLabel)) {
-    throw new Error(
-      `Invalid project_label: ${projectLabel}, must be kebab-cased and only contain lowercase letters and numbers, and be 5-15 characters long (e.g. my-org-${Math.random()
-        .toString()
-        .slice(2, 5)})`
-    );
-  }
+  validateProjectLabel(projectLabel);
 
   const accountId = node.node.tryGetContext("matanoAwsAccountId");
   const regionName = node.node.tryGetContext("matanoAwsRegion");
@@ -167,7 +140,7 @@ function rename(node: IConstruct, resourceName: string, resourceTypeFullName: st
 
   const uniqueNecessary = ["AWS::S3::Bucket"].includes(resourceTypeFullName);
   const uniqueSuffix = uniqueNecessary
-    ? [`${hasher.humanize(md5Hash(`${accountId}#${regionName}#${node.node.addr}`), 3)}`]
+    ? [`${md5Hash(`${accountId}#${regionName}#${node.node.addr}`).slice(0, 6)}`]
     : [];
   const uniqueSuffixStr = uniqueSuffix.join("-");
 
@@ -182,10 +155,17 @@ function rename(node: IConstruct, resourceName: string, resourceTypeFullName: st
   const maxLength = maxResourceNameLengths[resourceTypeFullName as any]!!;
   if (renamedResourceName.length > maxLength) {
     const extraPart = renamedResourceName.slice(maxLength);
-    renamedResourceName = `${removeSuffix(renamedResourceName.slice(0, maxLength - 6), "-")}-${md5Hash(extraPart).slice(
+    renamedResourceName = `${removeSuffix(renamedResourceName.slice(0, maxLength - 7), "-")}-${md5Hash(extraPart).slice(
       0,
-      5
+      6
     )}`;
+  }
+
+  // should be other aspect, but enforce deletion policy's based on production flag for stateful resources
+  const isProd = (cdk.Stack.of(node) as MatanoStack).matanoConfig.is_production ?? false;
+  const statefulResourceTypes = ["AWS::S3::Bucket", "AWS::DynamoDB::Table", "AWS::SQS::Queue"];
+  if (statefulResourceTypes.includes(resourceTypeFullName)) {
+    (node as cdk.CfnResource).applyRemovalPolicy(isProd ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY);
   }
 
   // console.log(`Renaming ${resourceTypeFullName} ${resourceName} to ${renamedResourceName}`); // from path ${node.node.path}`);

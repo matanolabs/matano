@@ -92,8 +92,7 @@ pub async fn process_alerts(s3: aws_sdk_s3::Client, data: Vec<Vec<u8>>) -> Resul
         let matano_rule_match_id = get_av_path(new_value, "matano.alert.rule.match.id");
         let matano_rule_match_id_s = cast_av_str(matano_rule_match_id).unwrap();
 
-        let deduplication_window =
-            get_av_path(&new_value, "matano.alert.rule.deduplication_window");
+        let deduplication_window = get_av_path(&new_value, "matano.alert.rule.deduplication_window");
         let deduplication_window_micros: i64 =
             (cast_av_int(deduplication_window).unwrap_or(1) * 1000000).into();
 

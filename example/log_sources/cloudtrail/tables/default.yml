@@ -1,2 +1,5 @@
+name: default
+
 transform: |
-  .mytablefield = "CUSTOM_TABLE"
+  # add any additional table-level transformations here e.g.
+  # .my_field = "my_value"

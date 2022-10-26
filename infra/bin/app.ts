@@ -5,6 +5,7 @@ import * as cdk from "aws-cdk-lib";
 import { DPCommonStack } from "../src/DPCommonStack";
 import { DPMainStack } from "../src/DPMainStack";
 import { tagResources } from "../lib/MatanoStack";
+import { stackNameWithLabel } from "../lib/utils";
 
 const app = new cdk.App();
 
@@ -14,12 +15,12 @@ const env = {
 };
 
 const dpCommonStack = new DPCommonStack(app, "DPCommonStack", {
-  stackName: "MatanoDPCommonStack",
+  stackName: stackNameWithLabel("MatanoDPCommonStack"),
   env,
 });
 
 const dpMainStack = new DPMainStack(app, "DPMainStack", {
-  stackName: "MatanoDPMainStack",
+  stackName: stackNameWithLabel("MatanoDPMainStack"),
   env,
   matanoSourcesBucket: dpCommonStack.matanoIngestionBucket,
   lakeStorageBucket: dpCommonStack.matanoLakeStorageBucket,

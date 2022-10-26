@@ -7,7 +7,7 @@ import { Mode } from "aws-cdk/lib/api/plugin/credential-provider-source";
 import * as cxapi from "@aws-cdk/cx-api";
 import { CloudFormation } from "aws-sdk";
 import Table from "tty-table";
-import { promiseTimeout } from "../util";
+import { promiseTimeout, readConfig, stackNameWithLabel } from "../util";
 
 function isInteractive({ stream = process.stdout } = {}) {
   return Boolean(stream && stream.isTTY && process.env.TERM !== "dumb" && !("CI" in process.env));
@@ -53,15 +53,23 @@ export default class Info extends BaseCommand {
       }));
   }
 
-  static async retrieveCfnOutputs(awsAccountId: string, awsRegion: string, awsProfile?: string) {
+  static async retrieveCfnOutputs(
+    matanoUserDirectory: string,
+    awsAccountId: string,
+    awsRegion: string,
+    awsProfile?: string
+  ) {
     const sdkProvider = await SdkProvider.withAwsCliCompatibleDefaults({ profile: awsProfile });
     const cfn = (
       await sdkProvider.forEnvironment(cxapi.EnvironmentUtils.make(awsAccountId, awsRegion), Mode.ForReading, {})
     ).sdk.cloudFormation();
 
+    const matanoConfig = readConfig(matanoUserDirectory, "matano.config.yml");
+    const projectLabel = matanoConfig.project_label;
+
     const [o1, o2] = await Promise.all([
-      this.getCfnOutputs(cfn, "MatanoDPCommonStack"),
-      this.getCfnOutputs(cfn, "MatanoDPMainStack"),
+      this.getCfnOutputs(cfn, stackNameWithLabel("MatanoDPCommonStack", projectLabel)),
+      this.getCfnOutputs(cfn, stackNameWithLabel("MatanoDPMainStack", projectLabel)),
     ]);
     const outputs = [...o1, ...o2];
     return outputs;
@@ -90,14 +98,14 @@ export default class Info extends BaseCommand {
         value: "value",
         alias: chalk.bold.cyanBright("Value"),
         align: "left",
-        width: "30%",
+        width: "50%",
         color: "yellow",
       },
       {
         value: "description",
         alias: chalk.bold.cyanBright("Description"),
         align: "left",
-        width: "50%",
+        width: "30%",
       },
     ];
     const options: Table.Options = {};
@@ -115,7 +123,7 @@ export default class Info extends BaseCommand {
     const spinner = ora("Retrieving Matano deployment information...").start();
     let cfnOutputs;
     try {
-      cfnOutputs = await Info.retrieveCfnOutputs(awsAccountId, awsRegion, awsProfile);
+      cfnOutputs = await Info.retrieveCfnOutputs(matanoUserDirectory, awsAccountId, awsRegion, awsProfile);
     } catch (error) {
       spinner.stop();
       throw error;

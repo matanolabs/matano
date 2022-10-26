@@ -17,7 +17,10 @@ impl TryIntoAvro<apache_avro::types::Value> for Value {
     fn try_into(self) -> Result<apache_avro::types::Value, Self::Error> {
         match self {
             Self::Boolean(v) => Ok(apache_avro::types::Value::from(v)),
-            Self::Integer(v) => Ok(apache_avro::types::Value::from(v)),
+            Self::Integer(v) => Ok(apache_avro::types::Value::from(match i32::try_from(v) {
+                Ok(v_32) => apache_avro::types::Value::from(v_32),
+                Err(_) => apache_avro::types::Value::from(v),
+            })),
             Self::Float(v) => Ok(apache_avro::types::Value::from(v.into_inner())),
             Self::Bytes(v) => Ok(apache_avro::types::Value::from(
                 String::from_utf8(v.to_vec()).map_err(Self::Error::ConvertToUtf8)?,

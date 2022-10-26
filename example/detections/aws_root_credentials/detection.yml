@@ -1,13 +1,33 @@
-# This file was generated from a Sigma rule
-
-author: vitaliy0x1
-date: "2020-01-21"
-description: Detects AWS root account usage
 id: 8ad1600d-e9dc-4251-b0ee-a65268f29add
-level: medium
+created: 2022/10/23
+name: aws_root_credentials
+display_name: AWS Root Credentials Change
+description: Detects AWS root account usage
+
+enabled: true
+
 references:
   - https://docs.aws.amazon.com/IAM/latest/UserGuide/id_root-user.html
-status: experimental
+false_positives:
+  - >
+    Legitimate AWS root account usage by a trusted user.
+    See https://docs.aws.amazon.com/general/latest/gr/aws_tasks-that-require-root.html
+    for AWS tasks that require AWS account root user credentials.
 
-name: "aws_root_credentials"
-tables: ["aws_cloudtrail"]
+reports:
+  attack:
+    - ta0002:t1059
+
+alert:
+  severity: medium
+  threshold_count: 1
+  deduplication_window_minutes: 60
+
+tables:
+  - aws_cloudtrail
+
+modified: 2022/10/23
+tags:
+  - aws
+  - cloud
+  - monitoring

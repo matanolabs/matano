@@ -344,13 +344,13 @@ def dedupe(record) -> str:
 
 You can use a deduplication window to add rule matches to an existing alert within a time duration. During this window, rule matches will not create new alerts but instead be appended to the existing alert for the detection (and dedupe).
 
-You can specify a max deduplication window of **1 day (86400 seconds)**.
+You can specify a max deduplication window of **1 day (1440 minutes)**.
 
-You can configure a deduplication window per detection by using the `alert.deduplication_window` key in your `detection.yml`. Specify the value in **seconds**.
+You can configure a deduplication window per detection by using the `alert.deduplication_window_minutes` key in your `detection.yml`. Specify the value in **minutes**.
 
 ```yml
 alert:
-  deduplication_window: 21600
+  deduplication_window_minutes: 5
 ```
 
 ### Alert threshold

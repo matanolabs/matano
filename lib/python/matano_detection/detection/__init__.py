@@ -1,1 +1,1 @@
-from .common import remote_cache
+from .common import remotecache

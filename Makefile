@@ -27,7 +27,7 @@ build-rust:
 build-jvm:
 	cd lib/java/matano && ./gradlew release
 
-build-assets: build-nodejs build-python build-rust build-jvm
+build-assets: build-python build-nodejs build-rust build-jvm
 
 package: build-cli build-infra build-assets
 	cd scripts/packaging && npm install pkg@5.8.0 && cd ${CURDIR} && node scripts/packaging/build.js
