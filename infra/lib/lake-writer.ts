@@ -33,6 +33,8 @@ export class LakeWriter extends Construct {
           resources: ["*"],
         }),
       ],
+      // prevent concurrency
+      reservedConcurrentExecutions: 1,
     });
 
     this.alertsLakeWriterLambda = new lambda.Function(this, "AlertsFunction", {
