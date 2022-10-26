@@ -16,6 +16,8 @@ We're adding support for the first two managed log sources to Matano: AWS CloudT
 
 <!-- truncate -->
 
+![](./sg.png)
+
 ## What's new
 
 We want to make analyzing all your data in Matano as easy as possible. Managed log sources in Matano come with predefined parsers, schemas, and configurations that make ingesting logs as easy as a few lines of configuration. Now, we're launching managed log source support for two popular log sources: AWS CloudTrail and Zeek.
