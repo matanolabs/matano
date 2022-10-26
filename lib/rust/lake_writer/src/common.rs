@@ -74,7 +74,7 @@ pub fn serialize_arrow_parquet(
 pub async fn write_arrow_to_s3_parquet(
     s3: aws_sdk_s3::Client,
     table_name: String,
-    partition_day: String,
+    partition_hour: String,
     field: arrow2::datatypes::Field,
     arrays: Vec<Box<dyn arrow2::array::Array>>,
 ) -> Result<(String, String, usize)> {
@@ -85,12 +85,13 @@ pub async fn write_arrow_to_s3_parquet(
     let bucket = std::env::var("OUT_BUCKET_NAME")?;
     let key_prefix = std::env::var("OUT_KEY_PREFIX")?;
 
-    // lake/TABLE_NAME/data/ts_day=2022-07-05/<file>.parquet
+    // lake/TABLE_NAME/data/ts_hour=2022-07-05-00/partition_hour=2022-07-05-00/<file>.parquet
     let key = format!(
-        "{}/{}/data/ts_day={}/{}.parquet",
+        "{}/{}/data/ts_hour={}/partition_hour={}/{}.parquet",
         key_prefix,
         table_name,
-        partition_day,
+        partition_hour,
+        partition_hour,
         Uuid::new_v4()
     );
     println!("Writing to: {}", key);
@@ -106,5 +107,5 @@ pub async fn write_arrow_to_s3_parquet(
         .await?;
     println!("Upload took: {:.2?}", ws1.elapsed());
 
-    Ok((partition_day, key, file_length))
+    Ok((partition_hour, key, file_length))
 }

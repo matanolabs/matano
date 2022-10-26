@@ -666,6 +666,7 @@ if .message != null {{
 
 {}
 del(.json)
+.partition_hour = format_timestamp!(.ts, "%Y-%m-%d-%H")
 
 . = compact(.)
 .ecs.version = "8.5.0"
@@ -760,7 +761,6 @@ del(.json)
         .map(|(resolved_table_name, (table_config, stream))| {
             let s3 = &s3;
             let sns = &sns;
-            let num_rows_to_infer_schema = 100;
 
             async move {
                 let mut reader = stream.map(|(_, value)| value);

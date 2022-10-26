@@ -15,7 +15,7 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.time.LocalDateTime
 import java.time.ZoneOffset
-import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 
 data class AlertsIcebergHelperRequest(
     val operation: String,
@@ -25,7 +25,7 @@ data class AlertsIcebergHelperRequest(
 data class IcebergCommitRequestItem(
     val old_key: String?,
     val new_key: String,
-    val ts_day: String,
+    val ts_hour: String,
     val file_size_bytes: Int
 )
 
@@ -69,7 +69,7 @@ class AlertsIcebergHelper : RequestStreamHandler {
         for (item in payload) {
             val newPath = lakePath(item.new_key)
             val newDataFile = DataFiles.builder(partition)
-                .withPartitionPath("ts_day=${item.ts_day}")
+                .withPartitionPath("ts_hour=${item.ts_hour}/partition_hour=${item.ts_hour}")
                 // .withPath(newPath)
                 // TODO: this call and calls for file sizes could be avoided by passing into lambda
                 .withMetrics(readParquetMetrics(newPath, table))
@@ -79,7 +79,7 @@ class AlertsIcebergHelper : RequestStreamHandler {
             if (item.old_key != null) {
                 val oldPath = lakePath(item.old_key)
                 val oldDataFile = DataFiles.builder(partition)
-                    .withPartitionPath("ts_day=${item.ts_day}")
+                    .withPartitionPath("ts_hour=${item.ts_hour}/partition_hour=${item.ts_hour}")
                     .withInputFile(table.io().newInputFile(oldPath))
                     .withMetrics(readParquetMetrics(oldPath, table)) // TODO: avoid, need to return to Rust and pass back from readFiles
 //                        .withPath(lakePath(item.old_path))
@@ -106,16 +106,16 @@ class AlertsIcebergHelper : RequestStreamHandler {
             TableIdentifier.of(Namespace.of(IcebergMetadataWriter.MATANO_NAMESPACE), MATANO_ALERTS_TABLE_NAME)
         )
         val now = LocalDateTime.now().atOffset(ZoneOffset.UTC)
-        val days = (0..1).map { dn ->
-            now.minusDays(dn.toLong()).toLocalDate().format(DateTimeFormatter.ISO_LOCAL_DATE)
-        }
+        val nowHours = now.truncatedTo(ChronoUnit.HOURS)
+        val twentyFourHoursAgoEpochHours = (nowHours.minusHours(24).toEpochSecond() / 3600).toInt()
+        val nowEpochHours = (nowHours.toEpochSecond() / 3600).toInt()
 
         val files = table
             .newScan()
             .filter(
-                Expressions.`in`(
-                    Expressions.day<String>("ts"),
-                    days
+                Expressions.and(
+                    Expressions.greaterThanOrEqual(Expressions.hour("ts"), twentyFourHoursAgoEpochHours),
+                    Expressions.lessThanOrEqual(Expressions.hour("ts"), nowEpochHours)
                 )
             )
             .planFiles()

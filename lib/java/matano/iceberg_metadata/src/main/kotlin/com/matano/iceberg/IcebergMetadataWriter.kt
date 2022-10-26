@@ -18,6 +18,9 @@ import org.apache.iceberg.catalog.Namespace
 import org.apache.iceberg.catalog.TableIdentifier
 import org.apache.iceberg.parquet.ParquetUtil
 import org.slf4j.LoggerFactory
+import java.time.LocalDateTime
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 import java.util.concurrent.ConcurrentHashMap
 
 class LazyConcurrentMap<K, V>(
@@ -40,11 +43,19 @@ fun main(args: Array<String>) {
 
 class IcebergMetadataWriter {
     private val logger = LoggerFactory.getLogger(this::class.java)
+    val hourFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd-HH")
 
     val icebergCatalog = createIcebergCatalog()
     inner class TableObj(tableName: String) {
         val table: Table = icebergCatalog.loadTable(TableIdentifier.of(Namespace.of(MATANO_NAMESPACE), tableName))
         val appendFiles: AppendFiles = table.newAppend()
+    }
+
+    fun dtToHours(s: String): Int {
+        // s: 2022-10-24-11
+        val dt = LocalDateTime.parse(s, hourFormatter)
+        val hours = dt.atOffset(ZoneOffset.UTC).toEpochSecond() / 3600
+        return hours.toInt()
     }
 
     private fun createIcebergCatalog(): Catalog {
@@ -53,11 +64,13 @@ class IcebergMetadataWriter {
         return CachingCatalog.wrap(glueCatalog)
     }
 
-    private fun parseObjectKey(key: String): Pair<String, String> {
-        // lake/TABLE_NAME/data/ts_day=2022-07-05/<file>.parquet
+    fun parseObjectKey(key: String): Pair<String, String> {
+        // lake/TABLE_NAME/data/ts_hour=2022-07-05/partition_hour=2022-07-05/<file>.parquet
         val parts = key.split("/")
         val tableName = parts[1]
-        val partitionPath = parts[3]
+        val partitionValue = parts[3].substring(8)
+        val intPartitionvalue = dtToHours(partitionValue)
+        val partitionPath = "ts_hour=$intPartitionvalue/partition_hour=$partitionValue"
         logger.info("Using table: $tableName")
         return Pair(tableName, partitionPath)
     }
@@ -107,7 +120,10 @@ class IcebergMetadataWriter {
         val icebergTable = tableObj!!.table
 
         val metrics = readParquetMetrics(s3Path, icebergTable)
-        val partition = PartitionSpec.builderFor(icebergTable.schema()).day(TIMESTAMP_COLUMN_NAME).build()
+        val partition = PartitionSpec.builderFor(icebergTable.schema())
+            .hour(TIMESTAMP_COLUMN_NAME)
+            .identity("partition_hour")
+            .build()
         val dataFile = DataFiles.builder(partition)
             .withPartitionPath(partitionPath)
             .withPath(s3Path)

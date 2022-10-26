@@ -162,7 +162,10 @@ class MatanoIcebergTableCustomResource {
         val icebergSchema = RelaxedIcebergSchemaParser.fromJson(inputSchema)
 
         val tableId = TableIdentifier.of(Namespace.of(MATANO_NAMESPACE), logSourceName)
-        val partition = PartitionSpec.builderFor(icebergSchema).day(TIMESTAMP_COLUMN_NAME).build()
+        val partition = PartitionSpec.builderFor(icebergSchema)
+            .hour(TIMESTAMP_COLUMN_NAME)
+            .identity("partition_hour")
+            .build()
         val table = icebergCatalog.createTable(
             tableId,
             icebergSchema,

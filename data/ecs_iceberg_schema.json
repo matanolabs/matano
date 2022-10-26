@@ -6,6 +6,10 @@
       "type": "timestamp"
     },
     {
+      "name": "partition_hour",
+      "type": "string"
+    },
+    {
       "name": "labels",
       "type": "string"
     },

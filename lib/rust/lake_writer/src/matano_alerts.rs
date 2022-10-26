@@ -337,7 +337,7 @@ pub async fn process_alerts(s3: aws_sdk_s3::Client, data: Vec<Vec<u8>>) -> Resul
             |(old_key, (partition, new_key, file_size_bytes))| IcebergCommitRequestItem {
                 old_key,
                 new_key,
-                ts_day: partition,
+                ts_hour: partition,
                 file_size_bytes,
             },
         )
@@ -510,10 +510,10 @@ async fn get_existing_values(
         .map(|(_, key)| {
             let partition = key
                 .split("/")
-                .find(|p| p.starts_with("ts_day="))
+                .find(|p| p.starts_with("ts_hour="))
                 .unwrap()
                 .trim_matches('/')
-                .replace("ts_day=", "");
+                .replace("ts_hour=", "");
             (Some(key.clone()), partition)
         })
         .collect::<Vec<_>>();
@@ -654,11 +654,7 @@ async fn get_iceberg_read_files() -> Result<Vec<(String, String)>> {
 
     let func_resp_payload = func_resp.expect("Read files Function didn't return payload!");
     let read_files: Vec<String> = serde_json::from_slice(func_resp_payload.as_slice())?;
-    let read_files = read_files
-        .into_iter()
-        .take(1)
-        .map(parse_s3_uri)
-        .collect::<Vec<_>>();
+    let read_files = read_files.into_iter().map(parse_s3_uri).collect::<Vec<_>>();
 
     Ok(read_files)
 }
@@ -844,6 +840,6 @@ struct NewAlertData {
 struct IcebergCommitRequestItem {
     old_key: Option<String>,
     new_key: String,
-    ts_day: String,
+    ts_hour: String,
     file_size_bytes: usize,
 }

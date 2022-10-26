@@ -83,7 +83,7 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
         .collect::<Vec<_>>();
 
     if downloads.len() == 0 {
-        println!("Empty event, returning...");
+        info!("Empty event, returning...");
         return Ok(());
     }
 
@@ -96,8 +96,6 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
     info!("Starting {} downloads from S3", downloads.len());
 
     let s3 = S3_CLIENT.get().await.clone();
-
-    println!("GOT HERE???");
 
     let start = Instant::now();
 
@@ -221,7 +219,6 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
 
     let chunks_ref = Arc::try_unwrap(chunks_ref).map_err(|e| anyhow!("fail get rowgroups"))?;
     let chunks = Mutex::into_inner(chunks_ref)?;
-    dbg!(chunks.len());
 
     if chunks.len() == 0 {
         return Ok(());
@@ -232,8 +229,8 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
 
     let (field, arrays) = struct_wrap_arrow2_for_ffi(schema, chunks);
     // TODO: fix to use correct partition (@shaeq)
-    let partition_day = chrono::offset::Utc::now().date_naive().to_string();
-    write_arrow_to_s3_parquet(s3, resolved_table_name, partition_day, field, arrays).await?;
+    let partition_hour = chrono::offset::Utc::now().format("%Y-%m-%d-%H").to_string();
+    write_arrow_to_s3_parquet(s3, resolved_table_name, partition_hour, field, arrays).await?;
 
     println!("----------------  Call took {:.2?}", start.elapsed());
 
