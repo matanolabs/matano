@@ -39,6 +39,7 @@ import { Transformer } from "../lib/transformer";
 import { SqsSubscription } from "aws-cdk-lib/aws-sns-subscriptions";
 import { MatanoAlerting } from "../lib/alerting";
 import { MatanoS3Sources } from "../lib/s3-sources";
+import { IcebergMaintenance } from "../lib/iceberg-maintenance";
 
 interface DPMainStackProps extends MatanoStackProps {
   matanoSourcesBucket: S3BucketWithNotifications;
@@ -194,6 +195,10 @@ export class DPMainStack extends MatanoStack {
 
     detections.detectionFunction.addLayers(configLayer);
     rawDataBatcher.batcherFunction.addLayers(configLayer);
+
+    new IcebergMaintenance(this, "MatanoIcebergMaintenance", {
+      tableNames: resolvedTableNames,
+    });
 
     this.humanCfnOutput("AlertingSnsTopicArn", {
       value: matanoAlerting.alertingTopic.topicArn,

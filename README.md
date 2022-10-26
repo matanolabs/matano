@@ -287,7 +287,7 @@ Your `detect` function must return a boolean `True` to signal an alert. A return
 You can implement a `title` function to format the title if an alert is created using Python.
 
 ```python
-def title(record) -> str
+def title(record) -> str:
   user_name = record.get("user", {}).get("name")
   return f"{user_name} - Elevated login failures"
 ```
@@ -297,7 +297,7 @@ def title(record) -> str
 You can implement a `dedupe` function to return a _dedupe string_ that will be used to group rule matches into alerts.
 
 ```python
-def dedupe(record) -> str
+def dedupe(record) -> str:
   return record.get("user", {}).get("name")
 ```
 
