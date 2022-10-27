@@ -9,9 +9,11 @@ import * as tasks from "aws-cdk-lib/aws-stepfunctions-tasks";
 
 const helperFunctionCode = `
 from datetime import datetime, timedelta
+import dateutil.parser
+
 def handler(event, context):
     if time := event.get("time"):
-        dt = datetime.strptime(time, "%Y-%m-%dT%H:%M:%S.%fZ")
+        dt = dateutil.parser.parse(time)
     else:
         dt = datetime.now()
     dt_hour_ago = dt - timedelta(hours=1)
