@@ -29,7 +29,9 @@ build-jvm:
 
 build-assets: build-python build-nodejs build-rust build-jvm
 
-package: build-cli build-infra build-assets
+build-all: build-cli build-infra build-assets
+
+package: build-all
 	cd scripts/packaging && npm install pkg@5.8.0 && cd ${CURDIR} && node scripts/packaging/build.js
 
 local-install: build-cli

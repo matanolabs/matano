@@ -1,0 +1,48 @@
+name: "pr-build"
+
+on:
+  workflow_dispatch:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # Clone repository
+      - uses: actions/checkout@v2
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: 1.63
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: lib/rust
+
+      - uses: actions/setup-java@v3
+        with:
+          distribution: corretto
+          java-version: 11
+
+      - uses: gradle/gradle-build-action@v2
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - run: |
+          python -m pip install cargo-lambda
+
+      - name: Build
+        shell: bash
+        run: |
+          make -j package
+
+      # - uses: actions/upload-artifact@v3
+      #   with:
+      #     name: build-assets
+      #     path: "matano*.sh*"

@@ -1,5 +1,8 @@
 name: "nightly-release"
 
+env:
+  MTN_GPG_SIGN: "1"
+
 on:
   workflow_dispatch:
   schedule:

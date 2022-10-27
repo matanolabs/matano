@@ -138,7 +138,7 @@ async function main() {
 
     execSync(`cp ${archiveName} ${projDir}`);
 
-    if (process.env.CI) {
+    if (process.env.MTN_GPG_SIGN) {
       console.log("GPG Signing artifact...");
       execSync(`gpg --output ${archiveName}.sig --detach-sig ${archiveName}`);
       execSync(`cp ${archiveName}.sig ${projDir}`);

@@ -21,6 +21,7 @@ oclif.manifest.json
 test
 __pycache__
 *build*
+!pr-build.yml
 local-assets/**
 !scripts/**/*.js
 scripts/packaging/package*.json
