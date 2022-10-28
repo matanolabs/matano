@@ -2,28 +2,30 @@ package com.matano.iceberg
 
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.events.CloudFormationCustomResourceEvent
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.PropertyNamingStrategies
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.annotation.JsonNaming
+import com.fasterxml.jackson.databind.deser.std.StdNodeBasedDeserializer
 import com.fasterxml.jackson.databind.node.BooleanNode
 import com.fasterxml.jackson.databind.node.IntNode
 import com.fasterxml.jackson.databind.node.ObjectNode
+import com.fasterxml.jackson.module.kotlin.convertValue
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import net.lingala.zip4j.ZipFile
 import org.apache.iceberg.PartitionSpec
+import org.apache.iceberg.Schema
 import org.apache.iceberg.SchemaParser
-import org.apache.iceberg.avro.AvroSchemaUtil
 import org.apache.iceberg.aws.glue.GlueCatalog
 import org.apache.iceberg.catalog.Namespace
 import org.apache.iceberg.catalog.TableIdentifier
-import org.apache.iceberg.parquet.ParquetSchemaUtil
+import org.apache.iceberg.expressions.Expressions
+import org.apache.iceberg.expressions.UnboundTerm
 import org.apache.iceberg.types.TypeUtil
 import org.slf4j.LoggerFactory
-import software.amazon.awssdk.services.s3.S3Client
-import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.io.path.createTempDirectory
-import kotlin.io.path.writeText
+import java.util.regex.Pattern
 
 fun main() {
 }
@@ -61,74 +63,32 @@ fun convertCfnSchema(node: JsonNode) {
     processCfnNode("", node, node as ObjectNode)
 }
 
-data class SchemasLayerCRProps(val tables: List<String>)
+data class MatanoPartitionSpec(
+    val column: String,
+    val transform: String = "identity"
+)
 
-class MatanoSchemasLayerCustomResource {
-    private val logger = LoggerFactory.getLogger(this::class.java)
-
-    val icebergCatalog = MatanoIcebergTableCustomResource.createIcebergCatalog()
-    val mapper = jacksonObjectMapper()
-
-    val s3: S3Client = S3Client.create()
-
-    fun handleRequest(event: CloudFormationCustomResourceEvent, context: Context): Map<*, *>? {
-        val res = when (event.requestType) {
-            "Create" -> create(event, context)
-            "Update" -> update(event, context)
-            "Delete" -> delete(event, context)
-            else -> throw RuntimeException("Unexpected request type: ${event.requestType}.")
-        }
-        return if (res == null) null else mapper.convertValue(res, Map::class.java)
+class SchemaDeserializer : StdNodeBasedDeserializer<Schema>(Schema::class.java) {
+    override fun convert(root: JsonNode, ctxt: DeserializationContext): Schema {
+        convertCfnSchema(root)
+        return RelaxedIcebergSchemaParser.fromJson(root)
     }
+}
 
-    private fun doWork(logSources: List<String>, outputPath: String) {
-        val tempDir = createTempDirectory().resolve("schemas")
-        val outFileName = "$outputPath.zip" // UUID.randomUUID().toString() + "zip"
-        val outZipFile = ZipFile(tempDir.resolve(outFileName).toFile())
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class MatanoTableRequest(
+    val tableName: String,
+    @JsonDeserialize(using = SchemaDeserializer::class)
+    val schema: Schema,
+    val partitions: List<MatanoPartitionSpec>,
+    val tableProperties: Map<String, String>
+)
 
-        for (logSource in logSources) {
-            val tableId = TableIdentifier.of(Namespace.of(MatanoIcebergTableCustomResource.MATANO_NAMESPACE), logSource)
-            val table = icebergCatalog.loadTable(tableId)
-            val icebergSchema = table.schema()
-            val avroSchema = AvroSchemaUtil.convert(icebergSchema.asStruct(), logSource)
-            val parquetSchema = ParquetSchemaUtil.convert(icebergSchema, logSource)
-
-            val logSourceSubDir = tempDir.resolve(logSource)
-            logSourceSubDir.toFile().mkdirs()
-            logSourceSubDir.resolve("iceberg_schema.json").writeText(SchemaParser.toJson(icebergSchema))
-            logSourceSubDir.resolve("avro_schema.avsc").writeText(avroSchema.toString())
-            writeParquetSchema(logSourceSubDir.resolve("metadata.parquet").toAbsolutePath().toString(), parquetSchema)
-        }
-        outZipFile.addFolder(tempDir.toFile())
-
-        s3.putObject({ b -> b.bucket(System.getenv("ASSETS_BUCKET_NAME")).key("$outputPath.zip") }, outZipFile.file.toPath())
-    }
-
-    fun create(event: CloudFormationCustomResourceEvent, context: Context): CfnResponse? {
-        logger.info("Received event: ${mapper.writeValueAsString(event)}")
-        val logSources = event.resourceProperties["logSources"] as List<String>
-        val schemaOutputPath = event.resourceProperties["schemaOutputPath"] as String
-
-        doWork(logSources, schemaOutputPath)
-
-        val physicalId = UUID.randomUUID().toString()
-        logger.info("Returning with physical resource ID: $physicalId")
-        return CfnResponse(PhysicalResourceId = physicalId)
-    }
-
-    fun update(event: CloudFormationCustomResourceEvent, context: Context): CfnResponse? {
-        logger.info("Received event: ${mapper.writeValueAsString(event)}")
-
-        val logSources = event.resourceProperties["logSources"] as List<String>
-        val schemaOutputPath = event.resourceProperties["schemaOutputPath"] as String
-
-        doWork(logSources, schemaOutputPath)
-        return null
-    }
-
-    fun delete(event: CloudFormationCustomResourceEvent, context: Context): CfnResponse? {
-        logger.info("Received event: ${mapper.writeValueAsString(event)}")
-        return null
+sealed interface MatanoIcebergTransform {
+    companion object {
+        object Identity : MatanoIcebergTransform
+        object Hour : MatanoIcebergTransform
+        class Bucket(val width: Int) : MatanoIcebergTransform
     }
 }
 
@@ -152,48 +112,82 @@ class MatanoIcebergTableCustomResource {
         return mapper.valueToTree<JsonNode>(rawValue).apply { convertCfnSchema(this) }
     }
 
+    private val ICEBERG_HAS_WIDTH = Pattern.compile("(\\w+)\\[(\\d+)\\]")
+
+    fun parseTransform(s: String): MatanoIcebergTransform {
+        return when {
+            s == "identity" -> MatanoIcebergTransform.Companion.Identity
+            s == "hour" -> MatanoIcebergTransform.Companion.Hour
+            s.startsWith("bucket") -> {
+                val widthMatcher = ICEBERG_HAS_WIDTH.matcher(s)
+                if (widthMatcher.matches()) {
+                    val parsedWidth = widthMatcher.group(2).toInt()
+                    MatanoIcebergTransform.Companion.Bucket(parsedWidth)
+                } else {
+                    throw RuntimeException("Invalid bucket transform: $s")
+                }
+            }
+            else -> throw RuntimeException("Unsupported partition transform: $s")
+        }
+    }
+
+    fun createIcebergTerm(partition: MatanoPartitionSpec): UnboundTerm<Any> {
+        return when (val parsedTransform = parseTransform(partition.transform)) {
+            is MatanoIcebergTransform.Companion.Identity -> Expressions.ref(partition.column)
+            is MatanoIcebergTransform.Companion.Hour -> Expressions.hour(partition.column)
+            is MatanoIcebergTransform.Companion.Bucket -> Expressions.bucket(partition.column, parsedTransform.width)
+        }
+    }
+
+    fun createIcebergPartitionSpec(partitions: List<MatanoPartitionSpec>, icebergSchema: Schema): PartitionSpec {
+        val builder = PartitionSpec.builderFor(icebergSchema)
+        if (partitions.find { p -> p.column == "ts" } == null) {
+            throw RuntimeException("Must contain ts partition")
+        }
+        // move ts to front
+        val newPartitions = partitions.sortedBy { p -> p.column != "ts" }
+        for (partition in newPartitions) {
+            when (val parsedTransform = parseTransform(partition.transform)) {
+                is MatanoIcebergTransform.Companion.Identity -> builder.identity(partition.column)
+                is MatanoIcebergTransform.Companion.Hour -> builder.hour(partition.column)
+                is MatanoIcebergTransform.Companion.Bucket -> builder.bucket(partition.column, parsedTransform.width)
+            }
+        }
+        return builder.build()
+    }
+
     fun create(event: CloudFormationCustomResourceEvent, context: Context): CfnResponse? {
         logger.info("Received event: ${mapper.writeValueAsString(event)}")
-        println("Received event: ${mapper.writeValueAsString(event)}")
 
-        val logSourceName = event.resourceProperties["logSourceName"] as String
-        val schemaRaw = event.resourceProperties["schema"] ?: throw RuntimeException("`schema` cannot be null.")
-        val inputSchema = readCfnSchema(schemaRaw)
-        val icebergSchema = RelaxedIcebergSchemaParser.fromJson(inputSchema)
+        val requestProps = mapper.convertValue<MatanoTableRequest>(event.resourceProperties)
+        val tableProperties = requestProps.tableProperties
 
-        val tableId = TableIdentifier.of(Namespace.of(MATANO_NAMESPACE), logSourceName)
-        val partition = PartitionSpec.builderFor(icebergSchema)
-            .hour(TIMESTAMP_COLUMN_NAME)
-            .identity("partition_hour")
-            .build()
+        val tableId = TableIdentifier.of(Namespace.of(MATANO_NAMESPACE), requestProps.tableName)
+        val partition = createIcebergPartitionSpec(requestProps.partitions, requestProps.schema)
+        logger.info("Using partition: $partition")
         val table = icebergCatalog.createTable(
             tableId,
-            icebergSchema,
+            requestProps.schema,
             partition,
-            mapOf(
-                "format-version" to "2"
-            )
+            tableProperties
         )
         logger.info("Successfully created table.")
-        return CfnResponse(PhysicalResourceId = logSourceName)
+        return CfnResponse(PhysicalResourceId = requestProps.tableName)
     }
 
     fun update(event: CloudFormationCustomResourceEvent, context: Context): CfnResponse? {
         logger.info("Received event: ${mapper.writeValueAsString(event)}")
 
-        val logSourceName = event.resourceProperties["logSourceName"] as String
-        val schemaRaw = event.resourceProperties["schema"] ?: throw RuntimeException("`schema` cannot be null.")
-        val inputSchema = readCfnSchema(schemaRaw)
-        val requestIcebergSchema = RelaxedIcebergSchemaParser.fromJson(inputSchema)
+        val newProps = mapper.convertValue<MatanoTableRequest>(event.resourceProperties)
 
-        val tableId = TableIdentifier.of(Namespace.of(MATANO_NAMESPACE), logSourceName)
+        val tableId = TableIdentifier.of(Namespace.of(MATANO_NAMESPACE), newProps.tableName)
         val table = icebergCatalog.loadTable(tableId)
         val existingSchema = table.schema()
 
         val highestExistingId = TypeUtil.indexById(existingSchema.asStruct()).keys.max()
         val newIdCounter = AtomicInteger(highestExistingId + 1)
 
-        val resolvedNewSchema = TypeUtil.assignFreshIds(requestIcebergSchema, existingSchema) { newIdCounter.incrementAndGet() }
+        val resolvedNewSchema = TypeUtil.assignFreshIds(newProps.schema, existingSchema) { newIdCounter.incrementAndGet() }
         logger.info("Using resolved schema:")
         logger.info(SchemaParser.toJson(resolvedNewSchema))
 
@@ -201,18 +195,67 @@ class MatanoIcebergTableCustomResource {
             .unionByNameWith(resolvedNewSchema)
             .setIdentifierFields(resolvedNewSchema.identifierFieldNames())
         val updateSchema = updateSchemaReq.apply()
-        if (!existingSchema.sameSchema(updateSchema)) {
+        val shouldUpdateSchema = !existingSchema.sameSchema(updateSchema)
+
+        val oldInputPartitions = event.oldResourceProperties["partitions"]?.let { mapper.convertValue<List<MatanoPartitionSpec>>(it) } ?: listOf()
+        val newInputPartitions = newProps.partitions
+
+        val shouldUpdatePartitions = oldInputPartitions != newInputPartitions
+
+        if (shouldUpdateSchema && shouldUpdatePartitions) {
+            throw RuntimeException("Cannot update schema and partitions in the same operation.")
+        }
+
+        if (shouldUpdateSchema) {
             logger.info("Extending schema of ${table.name()}")
             updateSchemaReq.commit()
         }
+
+        if (shouldUpdatePartitions) {
+            logger.info("Updating partitions of ${table.name()}")
+            val update = table.updateSpec()
+
+            val oldFields = oldInputPartitions.toSet()
+            val newFields = newInputPartitions.toSet()
+
+            val additions = newFields - oldFields
+            val removals = oldFields - newFields
+
+            for (addition in additions) {
+                val term = createIcebergTerm(addition)
+                update.addField(addition.column, term)
+            }
+            for (removal in removals) {
+                update.removeField(removal.column)
+            }
+            update.commit()
+        }
+
+        val oldProperties = table.properties().toMap()
+        val newProperties = newProps.tableProperties
+
+        if (newProperties != oldProperties) {
+            logger.info("Updating table Properties")
+            val update = table.updateProperties()
+            val modifications = newProperties.filter { (k, v) -> !oldProperties.containsKey(k) || oldProperties[k] != v }
+            val removals = oldProperties.filterKeys { k -> !newProperties.containsKey(k) }
+
+            logger.info("Modifications: $modifications")
+            logger.info("Removals: $removals")
+
+            modifications.forEach { (k, v) -> update.set(k, v) }
+            removals.keys.forEach { update.remove(it) }
+            update.commit()
+        }
+
         return null
     }
 
     fun delete(event: CloudFormationCustomResourceEvent, context: Context): CfnResponse? {
         logger.info("Received event: ${mapper.writeValueAsString(event)}")
 
-        val logSourceName = event.resourceProperties["logSourceName"] as String
-        val tableId = TableIdentifier.of(Namespace.of(MATANO_NAMESPACE), logSourceName)
+        val tableName = event.resourceProperties["tableName"] as String
+        val tableId = TableIdentifier.of(Namespace.of(MATANO_NAMESPACE), tableName)
         val dropped = try {
             icebergCatalog.dropTable(tableId, false)
         } catch (e: software.amazon.awssdk.services.s3.model.NoSuchKeyException) {

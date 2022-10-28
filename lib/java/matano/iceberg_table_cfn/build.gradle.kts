@@ -71,6 +71,7 @@ sourceSets.main {
     resources {
         srcDir(Paths.get(project.rootDir.absolutePath, "../../../data"))
         include("*.json")
+        include("log4j2.xml")
     }
 }
 

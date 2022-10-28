@@ -110,6 +110,7 @@ export interface MatanoTableProps {
   realtimeTopic: sns.Topic;
   lakeWriterLambda: lambda.Function;
   eventSourceProps?: SqsEventSourceProps;
+  partitions?: string[];
 }
 export class MatanoTable extends Construct {
   constructor(scope: Construct, id: string, props: MatanoTableProps) {
@@ -117,6 +118,7 @@ export class MatanoTable extends Construct {
     const matanoIcebergTable = new MatanoIcebergTable(this, `Default`, {
       tableName: props.tableName,
       schema: props.schema,
+      partitions: props.partitions,
     });
 
     const lakeWriterDlq = new sqs.Queue(this, `LakeWriterDLQ`, {
@@ -350,13 +352,15 @@ export class MatanoLogSource extends Construct {
 
       let tableSchema = resolveSchema(merged.schema?.ecs_field_names, merged.schema?.fields);
       // partial sort to move ts to top
-      tableSchema.fields = sortBy(tableSchema.fields, (e) => e.name, ["ts"]);
+      tableSchema.fields = sortBy(tableSchema.fields, (e) => e.name, ["ts", "partition_hour"]);
 
       this.tablesSchemas[tableName] = tableSchema;
       merged.schema.fields = tableSchema.fields; // store the resolved fields & schema in the config
 
       this.tablesConfig[tableName] = merged;
-      const resolvedTableName = this.tablesConfig[tableName].resolved_name;
+      const tableConfig = this.tablesConfig[tableName];
+      const resolvedTableName = tableConfig.resolved_name;
+      const userPartitions = tableConfig.partitions;
 
       const formattedName = merged.name.charAt(0).toUpperCase() + merged.name.slice(1);
 

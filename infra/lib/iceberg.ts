@@ -77,18 +77,36 @@ export class SchemasProvider extends Construct {
 interface MatanoIcebergTableProps {
   tableName: string;
   schema: Record<string, any>;
+  partitions?: any[];
 }
 
 export class MatanoIcebergTable extends Construct {
   constructor(scope: Construct, id: string, props: MatanoIcebergTableProps) {
     super(scope, id);
 
+    const partitions: any[] = [{ column: "ts", transform: "hour" }];
+
+    for (const userPartition of props.partitions ?? []) {
+      partitions.push(userPartition);
+    }
+
+    const tableProperties = {
+      "format-version": "2",
+      "write.parquet.compression-codec": "zstd",
+      "write.avro.compression-codec": "zstd",
+      "write.metadata.delete-after-commit.enabled": "true",
+      write_compression: "zstd",
+    };
+
     const resource = new CustomResource(this, "Default", {
       serviceToken: IcebergTableProvider.getOrCreate(this, {}),
       resourceType: "Custom::MatanoIcebergTable",
       properties: {
         logSourceName: props.tableName,
+        tableName: props.tableName,
         schema: props.schema,
+        partitions: partitions,
+        tableProperties,
       },
     });
   }
