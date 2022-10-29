@@ -18,8 +18,12 @@ def handler(event, context):
     else:
         dt = datetime.now()
     dt_hour_ago = dt - timedelta(hours=1)
-    ret = dt_hour_ago.strftime("%Y-%m-%d-%H")
-    return f"'{ret}'"
+    partition_hour = dt_hour_ago.strftime("%Y-%m-%d-%H")
+    return {
+      "partition_hour": partition_hour,
+      "current_hour_ts": dt.strftime("%Y-%m-%d %H:00:00"),
+      "prev_hour_ts": dt_hour_ago.strftime("%Y-%m-%d %H:00:00"),
+    }
 `;
 
 interface IcebergCompactionProps {
@@ -38,10 +42,8 @@ class IcebergCompaction extends Construct {
 
     const getPartitionHour = new tasks.LambdaInvoke(this, "Get Partition Hour", {
       lambdaFunction: compactionHelperFunction,
-      resultPath: "$.partition_hour",
-      resultSelector: {
-        value: sfn.JsonPath.stringAt("$.Payload"),
-      },
+      resultPath: "$.partition",
+      payloadResponseOnly: true,
     });
 
     const inputPass = new sfn.Pass(this, "Add Table Names", {
@@ -53,12 +55,13 @@ class IcebergCompaction extends Construct {
       itemsPath: sfn.JsonPath.stringAt("$.table_names"),
       parameters: {
         table_name: sfn.JsonPath.stringAt("$$.Map.Item.Value"),
-        partition_hour: sfn.JsonPath.stringAt("$.partition_hour"),
+        partition: sfn.JsonPath.objectAt("$.partition"),
       },
     });
 
-    const optimizeQueryString = "OPTIMIZE matano.{} REWRITE DATA USING BIN_PACK WHERE partition_hour={};";
-    const optimizeQueryFormatStr = `States.Format('${optimizeQueryString}', $.table_name, $.partition_hour.value)`;
+    const optimizeQueryString =
+      "OPTIMIZE matano.{} REWRITE DATA USING BIN_PACK WHERE timestamp \\'{}\\' > ts and ts >= timestamp \\'{}\\' and partition_hour=\\'{}\\';";
+    const optimizeQueryFormatStr = `States.Format('${optimizeQueryString}', $.table_name, $.partition.current_hour_ts, $.partition.prev_hour_ts , $.partition.partition_hour)`;
 
     const compactionQuery = new tasks.AthenaStartQueryExecution(this, "Compaction Query", {
       integrationPattern: sfn.IntegrationPattern.RUN_JOB,
