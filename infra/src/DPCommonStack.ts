@@ -1,6 +1,8 @@
 import { Construct } from "constructs";
 import * as cdk from "aws-cdk-lib";
+import * as s3 from "aws-cdk-lib/aws-s3";
 import * as glue from "aws-cdk-lib/aws-glue";
+import * as athena from "aws-cdk-lib/aws-athena";
 import { MatanoStack, MatanoStackProps } from "../lib/MatanoStack";
 import { S3BucketWithNotifications } from "../lib/s3-bucket-notifs";
 import { Bucket } from "aws-cdk-lib/aws-s3";
@@ -39,6 +41,20 @@ export class DPCommonStack extends MatanoStack {
         locationUri: `s3://${this.matanoLakeStorageBucket.bucket.bucketName}/lake`,
       },
       catalogId: cdk.Aws.ACCOUNT_ID,
+    });
+
+    const matanoAthenaResultsBucket = new s3.Bucket(this, "MatanoAthenaResults");
+    const matanoAthenaWorkgroup = new athena.CfnWorkGroup(this, "MatanoAthenaWorkGroup", {
+      name: "matano",
+      description: "[Matano] Matano Athena Work Group.",
+      workGroupConfiguration: {
+        engineVersion: {
+          selectedEngineVersion: "Athena engine version 2",
+        },
+        resultConfiguration: {
+          outputLocation: `s3://${matanoAthenaResultsBucket.bucketName}/results`,
+        },
+      },
     });
 
     this.humanCfnOutput("MatanoIngestionS3BucketName", {

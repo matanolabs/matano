@@ -6,6 +6,7 @@ import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as sfn from "aws-cdk-lib/aws-stepfunctions";
 import * as tasks from "aws-cdk-lib/aws-stepfunctions-tasks";
+import { getLocalAsset } from "./utils";
 
 const helperFunctionCode = `
 from datetime import datetime, timedelta
@@ -62,7 +63,7 @@ class IcebergCompaction extends Construct {
     const compactionQuery = new tasks.AthenaStartQueryExecution(this, "Compaction Query", {
       integrationPattern: sfn.IntegrationPattern.RUN_JOB,
       queryString: sfn.JsonPath.stringAt(optimizeQueryFormatStr),
-      workGroup: "primary",
+      workGroup: "matano",
     });
 
     queryMap.iterator(compactionQuery);
@@ -94,6 +95,68 @@ class IcebergCompaction extends Construct {
   }
 }
 
+class IcebergExpireSnapshots extends Construct {
+  constructor(scope: Construct, id: string, props: IcebergMaintenanceProps) {
+    super(scope, id);
+
+    const inputPass = new sfn.Pass(this, "Add Table Names", {
+      result: sfn.Result.fromArray(props.tableNames),
+      resultPath: "$.table_names",
+    });
+
+    const queryMap = new sfn.Map(this, "Expire Snapshots Map", {
+      itemsPath: sfn.JsonPath.stringAt("$.table_names"),
+      parameters: {
+        time: sfn.JsonPath.stringAt("$.time"),
+        table_name: sfn.JsonPath.stringAt("$$.Map.Item.Value"),
+      },
+      maxConcurrency: 25,
+    });
+
+    const expireSnapshotsFunc = new lambda.Function(this, "IcebergExpireSnapshots", {
+      description: "[Matano] Expires snapshots for an iceberg table.",
+      runtime: lambda.Runtime.JAVA_11,
+      memorySize: 650,
+      timeout: cdk.Duration.minutes(14),
+      handler: "com.matano.iceberg.ExpireSnapshotsHandler::handleRequest",
+      code: getLocalAsset("iceberg_metadata"),
+    });
+
+    // TODO: scope down
+    expireSnapshotsFunc.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ["glue:*", "s3:*"],
+        resources: ["*"],
+      })
+    );
+
+    const expireSnapshotsInvoke = new tasks.LambdaInvoke(this, "Expire Table Snapshots", {
+      lambdaFunction: expireSnapshotsFunc,
+    });
+
+    queryMap.iterator(expireSnapshotsInvoke);
+
+    const chain = inputPass.next(queryMap);
+
+    const stateMachine = new sfn.StateMachine(this, "Default", {
+      definition: chain,
+    });
+
+    const smScheduleRule = new events.Rule(this, "MatanoIcebergExpireSnapshotsRule", {
+      description: "[Matano] Schedules the Iceberg expire snapshots workflow.",
+      schedule: events.Schedule.rate(cdk.Duration.days(1)),
+    });
+
+    smScheduleRule.addTarget(
+      new SfnStateMachine(stateMachine, {
+        input: events.RuleTargetInput.fromObject({
+          time: events.EventField.time,
+        }),
+      })
+    );
+  }
+}
+
 interface IcebergMaintenanceProps {
   tableNames: string[];
 }
@@ -103,6 +166,10 @@ export class IcebergMaintenance extends Construct {
     super(scope, id);
 
     new IcebergCompaction(this, "Compaction", {
+      ...props,
+    });
+
+    new IcebergExpireSnapshots(this, "ExpireSnapshots", {
       ...props,
     });
   }

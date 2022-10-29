@@ -191,6 +191,7 @@ export class DPMainStack extends MatanoStack {
       description: "A layer for static Matano configurations.",
     });
 
+    lakeWriter.lakeWriterLambda.addLayers(schemasLayer);
     lakeWriter.alertsLakeWriterLambda.addLayers(schemasLayer);
 
     detections.detectionFunction.addLayers(configLayer);
