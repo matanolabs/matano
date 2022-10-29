@@ -1,5 +1,5 @@
 use crate::{
-    common::{struct_wrap_arrow2_for_ffi, write_arrow_to_s3_parquet},
+    common::{load_table_arrow_schema, struct_wrap_arrow2_for_ffi, write_arrow_to_s3_parquet},
     ALERTS_TABLE_NAME, AWS_CONFIG,
 };
 use anyhow::{anyhow, Result};
@@ -28,6 +28,8 @@ use std::{
 
 lazy_static! {
     static ref ALERTS_AVRO_SCHEMA: apache_avro::Schema = get_alerts_avro_schema().unwrap();
+    static ref ALERTS_ARROW_SCHEMA: arrow2::datatypes::Schema =
+        load_table_arrow_schema("matano_alerts").unwrap();
     static ref LAMBDA_CLIENT: AsyncOnce<aws_sdk_lambda::Client> =
         AsyncOnce::new(async { aws_sdk_lambda::Client::new(AWS_CONFIG.get().await) });
 }
@@ -92,7 +94,8 @@ pub async fn process_alerts(s3: aws_sdk_s3::Client, data: Vec<Vec<u8>>) -> Resul
         let matano_rule_match_id = get_av_path(new_value, "matano.alert.rule.match.id");
         let matano_rule_match_id_s = cast_av_str(matano_rule_match_id).unwrap();
 
-        let deduplication_window = get_av_path(&new_value, "matano.alert.rule.deduplication_window");
+        let deduplication_window =
+            get_av_path(&new_value, "matano.alert.rule.deduplication_window");
         let deduplication_window_micros: i64 =
             (cast_av_int(deduplication_window).unwrap_or(1) * 1000000).into();
 
@@ -288,8 +291,6 @@ pub async fn process_alerts(s3: aws_sdk_s3::Client, data: Vec<Vec<u8>>) -> Resul
     let st11 = std::time::Instant::now();
     let final_data = partition_data
         .map(|((old_key, partition), partition_values)| {
-            use arrow2::io::avro::read::infer_schema;
-
             // encode values to avro using apache_avro
             let mut writer = apache_avro::Writer::new(&ALERTS_AVRO_SCHEMA, Vec::new());
             writer.extend(partition_values).unwrap();
@@ -298,7 +299,7 @@ pub async fn process_alerts(s3: aws_sdk_s3::Client, data: Vec<Vec<u8>>) -> Resul
             // then read back using arrow2 into arrow
             let mut data_r = std::io::Cursor::new(data);
             let metadata = arrow2::io::avro::avro_schema::read::read_metadata(&mut data_r).unwrap();
-            let schema = infer_schema(&metadata.record).unwrap();
+            let schema = &ALERTS_ARROW_SCHEMA;
             let chunks =
                 arrow2::io::avro::read::Reader::new(data_r, metadata, schema.fields.clone(), None)
                     .map(|c| c.unwrap())

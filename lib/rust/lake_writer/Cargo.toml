@@ -59,5 +59,5 @@ tikv-jemallocator = { version = "0.5.0" }
 # avro-schema = {version = "0.3.0", features = ["full"]}
 # avro-rs = "0.13.0"
 async-stream = { version = "0.3.3" }               # NEED THIS or parquet2 fails compile
-parquet = "22.0.0"
-arrow = { version = "22.0.0", features = ["ffi"] }
+parquet = "25.0.0"
+arrow = { version = "25.0.0", features = ["ffi"] }

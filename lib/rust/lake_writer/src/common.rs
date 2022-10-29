@@ -6,7 +6,7 @@ use log::{error, info};
 use parquet::arrow::arrow_writer::ArrowWriter;
 use parquet::basic::Compression;
 use parquet::file::properties::WriterProperties;
-use std::{time::Instant, vec};
+use std::{path::Path, time::Instant, vec};
 use uuid::Uuid;
 
 pub fn struct_wrap_arrow2_for_ffi(
@@ -108,4 +108,14 @@ pub async fn write_arrow_to_s3_parquet(
     println!("Upload took: {:.2?}", ws1.elapsed());
 
     Ok((partition_hour, key, file_length))
+}
+
+pub fn load_table_arrow_schema(table_name: &str) -> Result<arrow2::datatypes::Schema> {
+    let schema_path = Path::new("/opt/schemas")
+        .join(table_name)
+        .join("metadata.parquet");
+    let mut schema_file = std::fs::File::open(schema_path)?;
+    let meta = arrow2::io::parquet::read::read_metadata(&mut schema_file)?;
+    let schema = arrow2::io::parquet::read::infer_schema(&meta)?;
+    Ok(schema)
 }

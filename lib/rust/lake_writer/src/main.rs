@@ -1,4 +1,5 @@
 use arrow2::datatypes::Field;
+use arrow2::datatypes::Schema;
 use async_once::AsyncOnce;
 use aws_config::SdkConfig;
 use futures::future::join_all;
@@ -7,6 +8,8 @@ use serde::{Deserialize, Serialize};
 use shared::*;
 use uuid::Uuid;
 
+use std::collections::HashMap;
+use std::path::Path;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::{time::Instant, vec};
@@ -23,6 +26,7 @@ use anyhow::{anyhow, Result};
 // use tokio_stream::StreamExt;
 use futures::StreamExt;
 
+use arrow2::datatypes::DataType;
 use arrow2::io::avro::avro_schema::file::Block;
 use arrow2::io::avro::avro_schema::read_async::{block_stream, decompress_block, read_metadata};
 use arrow2::io::avro::read::{deserialize, infer_schema};
@@ -33,7 +37,7 @@ use tokio_util::compat::TokioAsyncReadCompatExt;
 
 mod common;
 mod matano_alerts;
-use common::write_arrow_to_s3_parquet;
+use common::{load_table_arrow_schema, write_arrow_to_s3_parquet};
 
 use crate::common::struct_wrap_arrow2_for_ffi;
 
@@ -47,6 +51,8 @@ lazy_static! {
         AsyncOnce::new(async { aws_config::load_from_env().await });
     static ref S3_CLIENT: AsyncOnce<aws_sdk_s3::Client> =
         AsyncOnce::new(async { aws_sdk_s3::Client::new(AWS_CONFIG.get().await) });
+    static ref TABLE_SCHEMA_MAP: Arc<Mutex<HashMap<String, Schema>>> =
+        Arc::new(Mutex::new(HashMap::new()));
 }
 
 #[tokio::main]
@@ -92,6 +98,12 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
         .map(|m| m.resolved_table_name.clone())
         .unwrap();
     info!("Processing for table: {}", resolved_table_name);
+
+    let mut table_schema_map = TABLE_SCHEMA_MAP.lock().unwrap();
+    let table_schema = table_schema_map
+        .entry(resolved_table_name.clone())
+        .or_insert_with_key(|k| load_table_arrow_schema(k).unwrap());
+    let table_schema_ref = Arc::new(table_schema.clone());
 
     info!("Starting {} downloads from S3", downloads.len());
 
@@ -140,6 +152,7 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
         let alert_blocks_ref = alert_blocks_ref.clone();
         let pool_ref = pool_ref.clone();
         let resolved_table_name = resolved_table_name.clone();
+        let table_schema = table_schema_ref.clone();
 
         async move {
             if resolved_table_name == ALERTS_TABLE_NAME {
@@ -153,8 +166,7 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
             };
 
             let metadata = read_metadata(reader).await.unwrap();
-            let schema = infer_schema(&metadata.record).unwrap();
-            let schema_copy = schema.clone();
+            let schema = table_schema.clone();
 
             // // TODO move out
             let projection = Arc::new(schema.fields.iter().map(|_| true).collect::<Vec<_>>());
@@ -189,21 +201,18 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
 
                     let mut chunks = chunks_ref.lock().unwrap();
                     chunks.push(chunk);
-                    println!(
-                        "$$$$$$$$$$$$$$$$$$$$$$$$$$$$  THREAD Call took {:.2?}",
-                        st1.elapsed()
-                    );
+                    info!("Thread Call took {:.2?}", st1.elapsed());
                     ()
                 });
                 async {}
             });
 
             fut.await;
-            Some(schema_copy)
+            Some(())
         }
     });
 
-    let res = join_all(work_futures).await;
+    join_all(work_futures).await;
 
     let pool = pool_ref.clone();
     pool.join();
@@ -225,9 +234,7 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
     }
 
     println!("Writing...");
-    let schema = res.first().unwrap().as_ref().unwrap();
-
-    let (field, arrays) = struct_wrap_arrow2_for_ffi(schema, chunks);
+    let (field, arrays) = struct_wrap_arrow2_for_ffi(&table_schema, chunks);
     // TODO: fix to use correct partition (@shaeq)
     let partition_hour = chrono::offset::Utc::now().format("%Y-%m-%d-%H").to_string();
     write_arrow_to_s3_parquet(s3, resolved_table_name, partition_hour, field, arrays).await?;
