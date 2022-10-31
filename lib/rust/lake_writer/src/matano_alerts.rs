@@ -37,7 +37,7 @@ lazy_static! {
 /// Here's what we do:
 /// 1. Pass in new data, a list of avro files representing new rule matches.
 /// 2. Read the data into avro values using apache_avro.
-/// 3. Load the last 7 days' matano_alerts data as avro values by:
+/// 3. Load the last 1 days' matano_alerts data as avro values by:
 ///     1. Invoking the helper Iceberg function to get the list of files using JVM Iceberg API.
 ///     2. Downloading those parquet files and read them as chunks using arrow2.
 ///     3. Converting them to avro using arrow2 and serializing them.
@@ -77,7 +77,7 @@ pub async fn process_alerts(s3: aws_sdk_s3::Client, data: Vec<Vec<u8>>) -> Resul
     info!("Loaded existing values.");
 
     let now = chrono::Utc::now();
-    let now_ts_day = now.date_naive().format("%Y-%m-%d").to_string();
+    let now_ts_hour = now.date_naive().format("%Y-%m-%d-%H").to_string();
     let current_micros = now.timestamp_micros();
 
     let mut new_value_agg = HashMap::<(MaybeString, MaybeString), NewAlertData>::new();
@@ -273,18 +273,18 @@ pub async fn process_alerts(s3: aws_sdk_s3::Client, data: Vec<Vec<u8>>) -> Resul
     let mut partition_data = existing_values_vecs;
     let existing_partition = partition_data
         .iter_mut()
-        .find(|((_, partition), _)| partition == &now_ts_day);
+        .find(|((_, partition), _)| partition == &now_ts_hour);
     if let Some((_, e_vec)) = existing_partition {
         e_vec.extend(new_values);
     } else {
-        partition_data.push(((None, now_ts_day.clone()), new_values));
+        partition_data.push(((None, now_ts_hour.clone()), new_values));
     }
 
     let mut upload_join_handles = Vec::with_capacity(partition_data.len());
 
     // filter out unchanged partitions
     let partition_data = partition_data.into_iter().filter(|((_, partition), _)| {
-        partition == &now_ts_day || modified_partitions.contains(partition)
+        partition == &now_ts_hour || modified_partitions.contains(partition)
     });
 
     info!("Writing final values to parquet...");
