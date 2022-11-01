@@ -5,7 +5,7 @@ import * as glue from "aws-cdk-lib/aws-glue";
 import * as athena from "aws-cdk-lib/aws-athena";
 import { MatanoStack, MatanoStackProps } from "../lib/MatanoStack";
 import { S3BucketWithNotifications } from "../lib/s3-bucket-notifs";
-import { Bucket } from "aws-cdk-lib/aws-s3";
+import { Bucket, BlockPublicAccess } from "aws-cdk-lib/aws-s3";
 import { Topic } from "aws-cdk-lib/aws-sns";
 
 export const MATANO_DATABASE_NAME = "matano";
@@ -19,17 +19,25 @@ export class DPCommonStack extends MatanoStack {
   constructor(scope: Construct, id: string, props: DPCommonStackProps) {
     super(scope, id, props);
 
-    // Only one prefix rule allowed for filter
-    this.matanoIngestionBucket = new S3BucketWithNotifications(this, "MatanoIngestionBucket", {});
+    this.matanoIngestionBucket = new S3BucketWithNotifications(this, "MatanoIngestionBucket", {
+      bucketProps: {
+        blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
+      }
+    });
 
     this.matanoLakeStorageBucket = new S3BucketWithNotifications(this, "MatanoLakeStorageBucket", {
+      bucketProps: {
+        blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
+      },
       queueProps: {
         visibilityTimeout: cdk.Duration.seconds(185),
       },
       s3Filters: [{ prefix: "lake", suffix: "parquet" }],
     });
 
-    this.realtimeBucket = new Bucket(this, "MatanoRealtimeBucket");
+    this.realtimeBucket = new Bucket(this, "MatanoRealtimeBucket", {
+      blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
+    });
     this.realtimeBucketTopic = new Topic(this, "MatanoRealtimeBucketNotifications", {
       displayName: "MatanoRealtimeBucketNotifications",
     });
