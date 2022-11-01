@@ -45,6 +45,7 @@ serde_yaml = "0.9"
 log = "^0.4"
 time = "0.3.7"
 lazy_static = "1.4.0"
+async_once = "0.2.6"
 itertools = "0.10.3"
 tracing-subscriber = { version = "0.3.8", features = ["env-filter"] }
 tracing = { version = "0.1.30", features = ["log"] }

@@ -58,8 +58,11 @@ use rayon::prelude::*;
 use shared::*;
 
 use anyhow::{anyhow, Result};
+use async_once::AsyncOnce;
+use lazy_static::lazy_static;
 
 use ::value::{Secrets, Value};
+use aws_config::SdkConfig;
 use aws_lambda_events::event::sqs::{SqsEvent, SqsMessage};
 use lambda_runtime::{run, service_fn, Context, Error as LambdaError, LambdaEvent};
 use log::{debug, error, info, warn};
@@ -70,6 +73,15 @@ use crate::arrow::{coerce_data_type, type_to_schema};
 use crate::avro::TryIntoAvro;
 
 use config::{Config, ConfigError, Environment, File};
+
+lazy_static! {
+    static ref AWS_CONFIG: AsyncOnce<SdkConfig> =
+        AsyncOnce::new(async { aws_config::load_from_env().await });
+    static ref S3_CLIENT: AsyncOnce<aws_sdk_s3::Client> =
+        AsyncOnce::new(async { aws_sdk_s3::Client::new(AWS_CONFIG.get().await) });
+    static ref SNS_CLIENT: AsyncOnce<aws_sdk_sns::Client> =
+        AsyncOnce::new(async { aws_sdk_sns::Client::new(AWS_CONFIG.get().await) });
+}
 
 thread_local! {
     pub static RUNTIME: RefCell<Runtime> = RefCell::new(Runtime::new(state::Runtime::default()));
@@ -633,9 +645,8 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
         s3_download_items.iter().map(|(d, _)| d.size).sum::<i64>()
     );
 
-    let config = aws_config::load_from_env().await;
-    let s3 = aws_sdk_s3::Client::new(&config);
-    let sns = aws_sdk_sns::Client::new(&config);
+    let s3 = S3_CLIENT.get().await;
+    let sns = SNS_CLIENT.get().await;
 
     println!("current_num_threads() = {}", rayon::current_num_threads());
 
