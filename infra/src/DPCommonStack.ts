@@ -22,7 +22,7 @@ export class DPCommonStack extends MatanoStack {
     this.matanoIngestionBucket = new S3BucketWithNotifications(this, "MatanoIngestionBucket", {
       bucketProps: {
         blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
-      }
+      },
     });
 
     this.matanoLakeStorageBucket = new S3BucketWithNotifications(this, "MatanoLakeStorageBucket", {
@@ -79,5 +79,6 @@ export class DPCommonStack extends MatanoStack {
 
     // important: to prevent output deletion
     this.exportValue(this.matanoIngestionBucket.topic.topicArn);
+    this.exportValue(this.matanoIngestionBucket.bucket.bucketArn);
   }
 }

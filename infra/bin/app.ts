@@ -28,6 +28,12 @@ const dpMainStack = new DPMainStack(app, "DPMainStack", {
   realtimeBucketTopic: dpCommonStack.realtimeBucketTopic,
 });
 
+const userAwsTags = dpMainStack.userAwsTags ?? {};
+if (userAwsTags.constructor !== Object || !Object.values(userAwsTags).every((x) => typeof x === "string")) {
+  throw new Error("Custom AWS tags must be key value object of strings.");
+}
+
 tagResources(app, () => ({
+  ...userAwsTags,
   "matano:managed": "true",
 }));
