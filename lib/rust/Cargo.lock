@@ -336,9 +336,9 @@ dependencies = [
 
 [[package]]
 name = "async-trait"
-version = "0.1.57"
+version = "0.1.58"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "76464446b8bc32758d7e88ee1a804d9914cd9b1cb264c029899680b0be29826f"
+checksum = "1e805d94e6b5001b651426cf4cd446b1ab5f319d27bab5c644f61de0a804360c"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -580,6 +580,29 @@ dependencies = [
  "tokio-stream",
  "tower",
  "tracing",
+]
+
+[[package]]
+name = "aws-sdk-secretsmanager"
+version = "0.19.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2d316904b1586d8d9747df7df9c7758db8b21e22d4b0dc1d27950dae486a7e9a"
+dependencies = [
+ "aws-endpoint 0.49.0",
+ "aws-http 0.49.0",
+ "aws-sig-auth 0.49.0",
+ "aws-smithy-async 0.49.0",
+ "aws-smithy-client 0.49.0",
+ "aws-smithy-http 0.49.0",
+ "aws-smithy-http-tower 0.49.0",
+ "aws-smithy-json 0.49.0",
+ "aws-smithy-types 0.49.0",
+ "aws-types 0.49.0",
+ "bytes 1.2.1",
+ "fastrand",
+ "http",
+ "tokio-stream",
+ "tower",
 ]
 
 [[package]]
@@ -1839,6 +1862,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "enum_dispatch"
+version = "0.3.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0eb359f1476bf611266ac1f5355bc14aeca37b299d0ebccc038ee7058891c9cb"
+dependencies = [
+ "once_cell",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "ethnum"
 version = "1.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2217,7 +2252,7 @@ dependencies = [
  "hyper",
  "log",
  "rustls 0.19.1",
- "rustls-native-certs",
+ "rustls-native-certs 0.5.0",
  "tokio",
  "tokio-rustls 0.22.0",
  "webpki 0.21.4",
@@ -2618,6 +2653,40 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "abb12e687cfb44aa40f41fc3978ef76448f9b6038cad6aef4259d3c095a2382e"
 dependencies = [
  "cfg-if",
+]
+
+[[package]]
+name = "log_puller"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-stream",
+ "async-trait",
+ "async_once",
+ "aws-config 0.49.0",
+ "aws-sdk-s3 0.19.0",
+ "aws-sdk-secretsmanager",
+ "aws_lambda_events 0.6.3",
+ "chrono",
+ "enum_dispatch",
+ "futures",
+ "futures-util",
+ "lambda_runtime",
+ "lazy_static 1.4.0",
+ "log",
+ "regex",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "serde_yaml 0.9.10",
+ "shared",
+ "tokio",
+ "tokio-util 0.7.3",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
+ "walkdir",
+ "zstd",
 ]
 
 [[package]]
@@ -3440,7 +3509,8 @@ dependencies = [
  "percent-encoding",
  "pin-project-lite",
  "rustls 0.20.3",
- "rustls-pemfile",
+ "rustls-native-certs 0.6.2",
+ "rustls-pemfile 0.2.1",
  "serde",
  "serde_json",
  "serde_urlencoded",
@@ -3564,10 +3634,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustls-native-certs"
+version = "0.6.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0167bac7a9f490495f3c33013e7722b53cb087ecbe082fb0c6387c96f634ea50"
+dependencies = [
+ "openssl-probe",
+ "rustls-pemfile 1.0.1",
+ "schannel",
+ "security-framework",
+]
+
+[[package]]
 name = "rustls-pemfile"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5eebeaeb360c87bfb72e84abdb3447159c0eaececf1bef2aecd65a8be949d1c9"
+dependencies = [
+ "base64",
+]
+
+[[package]]
+name = "rustls-pemfile"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0864aeff53f8c05aa08d86e5ef839d3dfcf07aeba2db32f12db0ef716e87bd55"
 dependencies = [
  "base64",
 ]
@@ -3864,6 +3955,7 @@ version = "0.1.0"
 dependencies = [
  "rayon",
  "serde",
+ "serde_json",
  "tokio",
  "tracing",
  "tracing-subscriber",

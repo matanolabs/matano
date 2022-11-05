@@ -14,3 +14,32 @@ pub fn setup_logging() {
         .without_time()
         .init();
 }
+
+pub trait JsonValueExt {
+    fn into_array(self) -> Option<Vec<serde_json::Value>>;
+    fn into_object(self) -> Option<serde_json::Map<String, serde_json::Value>>;
+    fn into_str(self) -> Option<String>;
+}
+
+impl JsonValueExt for serde_json::Value {
+    fn into_array(self) -> Option<Vec<serde_json::Value>> {
+        match self {
+            serde_json::Value::Array(arr) => Some(arr),
+            _ => None,
+        }
+    }
+
+    fn into_object(self) -> Option<serde_json::Map<String, serde_json::Value>> {
+        match self {
+            serde_json::Value::Object(map) => Some(map),
+            _ => None,
+        }
+    }
+
+    fn into_str(self) -> Option<String> {
+        match self {
+            serde_json::Value::String(s) => Some(s),
+            _ => None,
+        }
+    }
+}
