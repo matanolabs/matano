@@ -180,9 +180,10 @@ export class DPMainStack extends MatanoStack {
       })
     );
     
-    for (const sqsQueue of sqsSources.outputQueues) {
+    for (const sqsIngestionQueue of sqsSources.ingestionQueues) {
       transformer.transformerLambda.addEventSource(
-        new SqsEventSource(sqsQueue, {
+        new SqsEventSource(sqsIngestionQueue, {
+          enabled: false,
           batchSize: 10000,
           maxBatchingWindow: cdk.Duration.seconds(1),
         })

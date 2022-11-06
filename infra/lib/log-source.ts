@@ -72,7 +72,6 @@ export interface LogSourceConfig {
     expand_records_from_payload?: string;
     compression: string;
     s3_source?: {
-      enabled?: boolean,
       bucket_name?: string;
       key_prefix?: string;
     };

@@ -7,7 +7,7 @@ interface MatanoSQSSourcesProps {
 }
 
 export class MatanoSQSSources extends Construct {
-  outputQueues: sqs.Queue[] = [];
+  ingestionQueues: sqs.Queue[] = [];
   constructor(scope: Construct, id: string, props: MatanoSQSSourcesProps) {
     super(scope, id);
 
@@ -15,12 +15,12 @@ export class MatanoSQSSources extends Construct {
       const name = logSource.name.split("_")
         .map((substr) => substr.charAt(0).toUpperCase() + substr.slice(1));
 
-      const outputDLQ = new sqs.Queue(this, `${name}OutputDLQ`);
-      const outputQueue = new sqs.Queue(this, `${name}OutputQueue`, {
-        deadLetterQueue: { queue: outputDLQ, maxReceiveCount: 3 },
+      const ingestionDLQ = new sqs.Queue(this, `${name}IngestionDLQ`);
+      const ingestionQueue = new sqs.Queue(this, `${name}IngestionQueue`, {
+        deadLetterQueue: { queue: ingestionDLQ, maxReceiveCount: 3 },
       });
 
-      this.outputQueues.push(outputQueue);
+      this.ingestionQueues.push(ingestionQueue);
     }
   }
 }
