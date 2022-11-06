@@ -72,9 +72,13 @@ export interface LogSourceConfig {
     expand_records_from_payload?: string;
     compression: string;
     s3_source?: {
+      enabled?: boolean,
       bucket_name?: string;
       key_prefix?: string;
     };
+    sqs_source?: {
+      enabled?: boolean
+    }
   };
   transform?: string;
   managed?: {
@@ -296,6 +300,7 @@ export class MatanoLogSource extends Construct {
       ingest: {
         compression: this.logSourceConfig.ingest?.compression,
         s3_source: this.logSourceConfig?.ingest?.s3_source,
+        sqs_source: this.logSourceConfig?.ingest?.sqs_source,
         select_table_from_payload_metadata: this.logSourceConfig.ingest?.select_table_from_payload_metadata,
       },
       managed: this.logSourceConfig.managed,
