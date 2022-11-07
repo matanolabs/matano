@@ -87,7 +87,7 @@ pub async fn write_arrow_to_s3_parquet(
 
     // lake/TABLE_NAME/data/ts_hour=2022-07-05-00/partition_hour=2022-07-05-00/<file>.parquet
     let key = format!(
-        "{}/{}/data/ts_hour={}/partition_hour={}/{}.parquet",
+        "{}/{}/data/ts_hour={}/partition_hour={}/{}_mtn_append.zstd.parquet",
         key_prefix,
         table_name,
         partition_hour,

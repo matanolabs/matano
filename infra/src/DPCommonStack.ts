@@ -32,7 +32,7 @@ export class DPCommonStack extends MatanoStack {
       queueProps: {
         visibilityTimeout: cdk.Duration.seconds(185),
       },
-      s3Filters: [{ prefix: "lake", suffix: "parquet" }],
+      s3Filters: [{ prefix: "lake", suffix: "mtn_append.zstd.parquet" }],
     });
 
     this.realtimeBucket = new Bucket(this, "MatanoRealtimeBucket", {
