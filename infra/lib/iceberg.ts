@@ -84,7 +84,10 @@ export class MatanoIcebergTable extends Construct {
   constructor(scope: Construct, id: string, props: MatanoIcebergTableProps) {
     super(scope, id);
 
-    const partitions: any[] = [{ column: "ts", transform: "hour" }];
+    const partitions: any[] = [
+      { column: "ts", transform: "hour" },
+      { column: "partition_hour", transform: "identity" },
+    ];
 
     for (const userPartition of props.partitions ?? []) {
       partitions.push(userPartition);
