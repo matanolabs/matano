@@ -77,7 +77,7 @@ pub async fn process_alerts(s3: aws_sdk_s3::Client, data: Vec<Vec<u8>>) -> Resul
     info!("Loaded existing values.");
 
     let now = chrono::Utc::now();
-    let now_ts_hour = now.date_naive().format("%Y-%m-%d-%H").to_string();
+    let now_ts_hour = now.format("%Y-%m-%d-%H").to_string();
     let current_micros = now.timestamp_micros();
 
     let mut new_value_agg = HashMap::<(MaybeString, MaybeString), NewAlertData>::new();
