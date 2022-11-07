@@ -25,7 +25,6 @@ import {
 import { S3BucketWithNotifications } from "../lib/s3-bucket-notifs";
 import { MatanoLogSource, LogSourceConfig } from "../lib/log-source";
 import { MatanoDetections } from "../lib/detections";
-import { DockerImage } from "aws-cdk-lib";
 import { SqsEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
 import { execSync } from "child_process";
 import { SecurityGroup, SubnetType } from "aws-cdk-lib/aws-ec2";
@@ -40,6 +39,7 @@ import { SqsSubscription } from "aws-cdk-lib/aws-sns-subscriptions";
 import { MatanoAlerting } from "../lib/alerting";
 import { MatanoS3Sources } from "../lib/s3-sources";
 import { IcebergMaintenance } from "../lib/iceberg-maintenance";
+import { MatanoSQSSources } from "../lib/sqs-sources";
 
 interface DPMainStackProps extends MatanoStackProps {
   matanoSourcesBucket: S3BucketWithNotifications;
@@ -137,6 +137,10 @@ export class DPMainStack extends MatanoStack {
       sourcesIngestionTopic: props.matanoSourcesBucket.topic,
     });
 
+    const sqsSources = new MatanoSQSSources(this, "SQSIngestionLogSources", {
+      logSources: logSources.filter((ls) => ls.name !== "matano_alerts" && ls.logSourceConfig?.ingest?.sqs_source?.enabled === true),
+    });
+
     const allResolvedSchemasHashStr = logSources
       .flatMap((ls) => Object.values(ls.tablesSchemas))
       .reduce((prev, cur) => prev + JSON.stringify(cur), "");
@@ -175,6 +179,16 @@ export class DPMainStack extends MatanoStack {
         batchSize: 1,
       })
     );
+    
+    for (const sqsIngestionQueue of sqsSources.ingestionQueues) {
+      transformer.transformerLambda.addEventSource(
+        new SqsEventSource(sqsIngestionQueue, {
+          enabled: false,
+          batchSize: 10000,
+          maxBatchingWindow: cdk.Duration.seconds(1),
+        })
+      );
+    }
 
     const icebergMetadata = new IcebergMetadata(this, "IcebergMetadata", {
       lakeStorageBucket: props.lakeStorageBucket,

@@ -51,7 +51,9 @@ export class DPCommonStack extends MatanoStack {
       catalogId: cdk.Aws.ACCOUNT_ID,
     });
 
-    const matanoAthenaResultsBucket = new s3.Bucket(this, "MatanoAthenaResults");
+    const matanoAthenaResultsBucket = new s3.Bucket(this, "MatanoAthenaResults", {
+      blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
+    });
     const matanoAthenaWorkgroup = new athena.CfnWorkGroup(this, "MatanoAthenaWorkGroup", {
       name: "matano",
       description: "[Matano] Matano Athena Work Group.",
