@@ -61,15 +61,16 @@ class AlertsIcebergHelper : RequestStreamHandler {
             TableIdentifier.of(Namespace.of(IcebergMetadataWriter.MATANO_NAMESPACE), MATANO_ALERTS_TABLE_NAME)
         )
         val transaction = table.newTransaction()
-        val partition = PartitionSpec.builderFor(table.schema()).day(IcebergMetadataWriter.TIMESTAMP_COLUMN_NAME).build()
+        val partition = table.spec()
 
         val lakeStorageBucket = System.getenv("MATANO_ICEBERG_BUCKET")
         val lakePath = { key: String -> "s3://$lakeStorageBucket/$key" }
 
         for (item in payload) {
+            val partitionTsHourInt = dtToHours(item.ts_hour)
             val newPath = lakePath(item.new_key)
             val newDataFile = DataFiles.builder(partition)
-                .withPartitionPath("ts_hour=${item.ts_hour}/partition_hour=${item.ts_hour}")
+                .withPartitionPath("ts_hour=$partitionTsHourInt/partition_hour=$partitionTsHourInt")
                 // .withPath(newPath)
                 // TODO: this call and calls for file sizes could be avoided by passing into lambda
                 .withMetrics(readParquetMetrics(newPath, table))
@@ -79,7 +80,7 @@ class AlertsIcebergHelper : RequestStreamHandler {
             if (item.old_key != null) {
                 val oldPath = lakePath(item.old_key)
                 val oldDataFile = DataFiles.builder(partition)
-                    .withPartitionPath("ts_hour=${item.ts_hour}/partition_hour=${item.ts_hour}")
+                    .withPartitionPath("ts_hour=$partitionTsHourInt/partition_hour=$partitionTsHourInt")
                     .withInputFile(table.io().newInputFile(oldPath))
                     .withMetrics(readParquetMetrics(oldPath, table)) // TODO: avoid, need to return to Rust and pass back from readFiles
 //                        .withPath(lakePath(item.old_path))

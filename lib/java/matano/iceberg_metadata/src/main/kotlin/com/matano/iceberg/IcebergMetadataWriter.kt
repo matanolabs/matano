@@ -41,21 +41,20 @@ class IcebergMetadataHandler : RequestHandler<SQSEvent, Void?> {
 fun main(args: Array<String>) {
 }
 
+fun dtToHours(s: String): Int {
+    // s: 2022-10-24-11
+    val dt = LocalDateTime.parse(s, DateTimeFormatter.ofPattern("yyyy-MM-dd-HH"))
+    val hours = dt.atOffset(ZoneOffset.UTC).toEpochSecond() / 3600
+    return hours.toInt()
+}
+
 class IcebergMetadataWriter {
     private val logger = LoggerFactory.getLogger(this::class.java)
-    val hourFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd-HH")
 
     val icebergCatalog = createIcebergCatalog()
     inner class TableObj(tableName: String) {
         val table: Table = icebergCatalog.loadTable(TableIdentifier.of(Namespace.of(MATANO_NAMESPACE), tableName))
         val appendFiles: AppendFiles = table.newAppend()
-    }
-
-    fun dtToHours(s: String): Int {
-        // s: 2022-10-24-11
-        val dt = LocalDateTime.parse(s, hourFormatter)
-        val hours = dt.atOffset(ZoneOffset.UTC).toEpochSecond() / 3600
-        return hours.toInt()
     }
 
     private fun createIcebergCatalog(): Catalog {
@@ -120,10 +119,7 @@ class IcebergMetadataWriter {
         val icebergTable = tableObj!!.table
 
         val metrics = readParquetMetrics(s3Path, icebergTable)
-        val partition = PartitionSpec.builderFor(icebergTable.schema())
-            .hour(TIMESTAMP_COLUMN_NAME)
-            .identity("partition_hour")
-            .build()
+        val partition = icebergTable.spec()
         val dataFile = DataFiles.builder(partition)
             .withPartitionPath(partitionPath)
             .withPath(s3Path)
