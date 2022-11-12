@@ -68,7 +68,7 @@ data class MatanoPartitionSpec(
     val transform: String = "identity"
 )
 
-class SchemaDeserializer : StdNodeBasedDeserializer<Schema>(Schema::class.java) {
+class RelaxedIcebergSchemaDeserializer : StdNodeBasedDeserializer<Schema>(Schema::class.java) {
     override fun convert(root: JsonNode, ctxt: DeserializationContext): Schema {
         convertCfnSchema(root)
         return RelaxedIcebergSchemaParser.fromJson(root)
@@ -78,10 +78,10 @@ class SchemaDeserializer : StdNodeBasedDeserializer<Schema>(Schema::class.java) 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class MatanoTableRequest(
     val tableName: String,
-    @JsonDeserialize(using = SchemaDeserializer::class)
+    @JsonDeserialize(using = RelaxedIcebergSchemaDeserializer::class)
     val schema: Schema,
-    val partitions: List<MatanoPartitionSpec>,
-    val tableProperties: Map<String, String>
+    val partitions: List<MatanoPartitionSpec> = listOf(),
+    val tableProperties: Map<String, String> = mapOf()
 )
 
 sealed interface MatanoIcebergTransform {
@@ -92,12 +92,7 @@ sealed interface MatanoIcebergTransform {
     }
 }
 
-class MatanoIcebergTableCustomResource {
-    private val logger = LoggerFactory.getLogger(this::class.java)
-
-    val icebergCatalog = createIcebergCatalog()
-    val mapper = jacksonObjectMapper()
-
+interface CFNCustomResource {
     fun handleRequest(event: CloudFormationCustomResourceEvent, context: Context): Map<*, *>? {
         val res = when (event.requestType) {
             "Create" -> create(event, context)
@@ -107,10 +102,22 @@ class MatanoIcebergTableCustomResource {
         }
         return if (res == null) null else mapper.convertValue(res, Map::class.java)
     }
-
-    private fun readCfnSchema(rawValue: Any): JsonNode {
-        return mapper.valueToTree<JsonNode>(rawValue).apply { convertCfnSchema(this) }
+    fun create(event: CloudFormationCustomResourceEvent, context: Context): CfnResponse?
+    fun update(event: CloudFormationCustomResourceEvent, context: Context): CfnResponse?
+    fun delete(event: CloudFormationCustomResourceEvent, context: Context): CfnResponse? {
+        return null
     }
+
+    companion object {
+        val mapper = jacksonObjectMapper()
+    }
+}
+
+class MatanoIcebergTableCustomResource : CFNCustomResource {
+    private val logger = LoggerFactory.getLogger(this::class.java)
+
+    val icebergCatalog = createIcebergCatalog()
+    val mapper = CFNCustomResource.mapper
 
     private val ICEBERG_HAS_WIDTH = Pattern.compile("(\\w+)\\[(\\d+)\\]")
 
@@ -141,9 +148,6 @@ class MatanoIcebergTableCustomResource {
 
     fun createIcebergPartitionSpec(partitions: List<MatanoPartitionSpec>, icebergSchema: Schema): PartitionSpec {
         val builder = PartitionSpec.builderFor(icebergSchema)
-        if (partitions.find { p -> p.column == "ts" } == null) {
-            throw RuntimeException("Must contain ts partition")
-        }
         // move ts to front
         val newPartitions = partitions.sortedBy { p -> p.column != "ts" }
         for (partition in newPartitions) {
@@ -156,14 +160,14 @@ class MatanoIcebergTableCustomResource {
         return builder.build()
     }
 
-    fun create(event: CloudFormationCustomResourceEvent, context: Context): CfnResponse? {
+    override fun create(event: CloudFormationCustomResourceEvent, context: Context): CfnResponse? {
         logger.info("Received event: ${mapper.writeValueAsString(event)}")
 
         val requestProps = mapper.convertValue<MatanoTableRequest>(event.resourceProperties)
         val tableProperties = requestProps.tableProperties
 
         val tableId = TableIdentifier.of(Namespace.of(MATANO_NAMESPACE), requestProps.tableName)
-        val partition = createIcebergPartitionSpec(requestProps.partitions, requestProps.schema)
+        val partition = if (requestProps.partitions.isEmpty()) PartitionSpec.unpartitioned() else createIcebergPartitionSpec(requestProps.partitions, requestProps.schema)
         logger.info("Using partition: $partition")
         val table = icebergCatalog.createTable(
             tableId,
@@ -175,7 +179,7 @@ class MatanoIcebergTableCustomResource {
         return CfnResponse(PhysicalResourceId = requestProps.tableName)
     }
 
-    fun update(event: CloudFormationCustomResourceEvent, context: Context): CfnResponse? {
+    override fun update(event: CloudFormationCustomResourceEvent, context: Context): CfnResponse? {
         logger.info("Received event: ${mapper.writeValueAsString(event)}")
 
         val newProps = mapper.convertValue<MatanoTableRequest>(event.resourceProperties)
@@ -251,7 +255,7 @@ class MatanoIcebergTableCustomResource {
         return null
     }
 
-    fun delete(event: CloudFormationCustomResourceEvent, context: Context): CfnResponse? {
+    override fun delete(event: CloudFormationCustomResourceEvent, context: Context): CfnResponse? {
         logger.info("Received event: ${mapper.writeValueAsString(event)}")
 
         val tableName = event.resourceProperties["tableName"] as String

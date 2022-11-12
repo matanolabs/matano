@@ -1,6 +1,6 @@
 import * as path from "path";
 import * as crypto from "crypto";
-import * as fs from "fs";
+import * as fs from "fs-extra";
 import * as YAML from "yaml";
 import { Construct } from "constructs";
 import * as cdk from "aws-cdk-lib";
@@ -40,6 +40,7 @@ import { MatanoAlerting } from "../lib/alerting";
 import { MatanoS3Sources } from "../lib/s3-sources";
 import { IcebergMaintenance } from "../lib/iceberg-maintenance";
 import { MatanoSQSSources } from "../lib/sqs-sources";
+import { Enrichment } from "../lib/enrichment";
 
 interface DPMainStackProps extends MatanoStackProps {
   matanoSourcesBucket: S3BucketWithNotifications;
@@ -138,7 +139,9 @@ export class DPMainStack extends MatanoStack {
     });
 
     const sqsSources = new MatanoSQSSources(this, "SQSIngestionLogSources", {
-      logSources: logSources.filter((ls) => ls.name !== "matano_alerts" && ls.logSourceConfig?.ingest?.sqs_source?.enabled === true),
+      logSources: logSources.filter(
+        (ls) => ls.name !== "matano_alerts" && ls.logSourceConfig?.ingest?.sqs_source?.enabled === true
+      ),
     });
 
     const allResolvedSchemasHashStr = logSources
@@ -179,7 +182,7 @@ export class DPMainStack extends MatanoStack {
         batchSize: 1,
       })
     );
-    
+
     for (const sqsIngestionQueue of sqsSources.ingestionQueues) {
       transformer.transformerLambda.addEventSource(
         new SqsEventSource(sqsIngestionQueue, {
@@ -200,6 +203,20 @@ export class DPMainStack extends MatanoStack {
     );
     icebergMetadata.alertsHelperFunction.grantInvoke(lakeWriter.alertsLakeWriterLambda);
 
+    const userEnrichmentDir = path.join(this.matanoUserDirectory, "enrichment");
+    let enrichment: Enrichment | undefined = undefined;
+    if (fs.existsSync(userEnrichmentDir)) {
+      enrichment = new Enrichment(this, "Enrichment", {
+        lakeStorageBucket: props.lakeStorageBucket.bucket,
+      });
+
+      this.addConfigDir(userEnrichmentDir, "enrichment", {
+        filter: (s, _) => {
+          return fs.lstatSync(s).isDirectory() || s.endsWith(".yml");
+        },
+      });
+    }
+
     const configLayer = new lambda.LayerVersion(this, "ConfigurationLayer", {
       code: lambda.Code.fromAsset(this.configTempDir),
       description: "A layer for static Matano configurations.",
@@ -210,6 +227,8 @@ export class DPMainStack extends MatanoStack {
 
     detections.detectionFunction.addLayers(configLayer);
     rawDataBatcher.batcherFunction.addLayers(configLayer);
+
+    enrichment?.bindLayers(configLayer);
 
     new IcebergMaintenance(this, "MatanoIcebergMaintenance", {
       tableNames: resolvedTableNames,
@@ -236,5 +255,11 @@ export class DPMainStack extends MatanoStack {
     const filePath = path.join(this.configTempDir, "config", fileSubpath);
     fs.mkdirSync(path.dirname(filePath), { recursive: true });
     fs.writeFileSync(filePath, content);
+  }
+
+  private addConfigDir(srcDir: string, destSubDir: string, opts?: fs.CopyOptionsSync) {
+    const destDir = path.join(this.configTempDir, "config", destSubDir);
+    fs.mkdirSync(destDir, { recursive: true });
+    fs.copySync(srcDir, destDir, opts);
   }
 }

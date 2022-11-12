@@ -27,6 +27,7 @@ lint:
         - "**/gradlew"
         - "**/package.json"
         - "**/tsconfig.json"
+        - "**/enrichment/**"
   enabled:
     - ktlint@0.47.1
     - actionlint@1.6.21

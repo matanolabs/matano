@@ -9,6 +9,7 @@ plugins {
 subprojects {
     repositories {
         mavenCentral()
+        maven(url = "https://jitpack.io")
     }
     val subproject = this
     tasks {

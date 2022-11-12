@@ -140,12 +140,13 @@ export function serializeToFields(schema: Record<string, any>): any[] {
   }));
 }
 
-export function resolveSchema(ecsFieldNames?: string[], customFields?: any[]) {
+export function resolveSchema(ecsFieldNames?: string[], customFields?: any[], noDefaultEcsFields = false) {
   const baseEcsSchema = fieldsToSchema(
     JSON.parse(fs.readFileSync(path.join(dataDirPath, "ecs_iceberg_schema.json")).toString())["fields"]
   );
 
-  const allEcsFieldNames = [...DEFAULT_ECS_FIELD_NAMES, ...(ecsFieldNames ?? [])];
+  const defaultEcsFieldNames = noDefaultEcsFields ? [] : DEFAULT_ECS_FIELD_NAMES;
+  const allEcsFieldNames = [...defaultEcsFieldNames, ...(ecsFieldNames ?? [])];
 
   const relevantEcsSchema = allEcsFieldNames.reduce((acc, fieldName) => {
     let { path, value: field } = deepFind(baseEcsSchema, fieldName);

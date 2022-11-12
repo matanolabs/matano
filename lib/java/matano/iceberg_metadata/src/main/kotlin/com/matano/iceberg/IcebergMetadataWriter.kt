@@ -106,7 +106,7 @@ class IcebergMetadataWriter {
 
         val (tableName, partitionPath) = parseObjectKey(s3ObjectKey)
 
-        if (tableName == "matano_alerts") {
+        if (tableName == "matano_alerts" || tableName.startsWith("enrich")) {
             return
         }
 

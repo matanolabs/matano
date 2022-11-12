@@ -76,8 +76,8 @@ export interface LogSourceConfig {
       key_prefix?: string;
     };
     sqs_source?: {
-      enabled?: boolean
-    }
+      enabled?: boolean;
+    };
   };
   transform?: string;
   managed?: {
@@ -118,10 +118,16 @@ export interface MatanoTableProps {
 export class MatanoTable extends Construct {
   constructor(scope: Construct, id: string, props: MatanoTableProps) {
     super(scope, id);
+
+    const partitions: any[] = [
+      { column: "ts", transform: "hour" },
+      { column: "partition_hour", transform: "identity" },
+    ];
+
     const matanoIcebergTable = new MatanoIcebergTable(this, `Default`, {
       tableName: props.tableName,
       schema: props.schema,
-      partitions: props.partitions,
+      partitions,
     });
 
     const lakeWriterDlq = new sqs.Queue(this, `LakeWriterDLQ`, {

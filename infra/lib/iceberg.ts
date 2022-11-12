@@ -84,15 +84,6 @@ export class MatanoIcebergTable extends Construct {
   constructor(scope: Construct, id: string, props: MatanoIcebergTableProps) {
     super(scope, id);
 
-    const partitions: any[] = [
-      { column: "ts", transform: "hour" },
-      { column: "partition_hour", transform: "identity" },
-    ];
-
-    for (const userPartition of props.partitions ?? []) {
-      partitions.push(userPartition);
-    }
-
     const tableProperties = {
       "format-version": "2",
       "write.parquet.compression-codec": "zstd",
@@ -108,7 +99,7 @@ export class MatanoIcebergTable extends Construct {
         logSourceName: props.tableName,
         tableName: props.tableName,
         schema: props.schema,
-        partitions: partitions,
+        partitions: props.partitions,
         tableProperties,
       },
     });
