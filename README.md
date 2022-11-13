@@ -146,7 +146,7 @@ When you use S3 ingestion, Matano ingests data from your log source using an S3 
 
 Matano creates a managed S3 bucket for you to use for S3 ingestion. You can use this bucket to ingest data into Matano.
 
-When sending data to the Matano provided sources bucket, upload files to the `/data/<log_source_name>` prefix where `log_source_name` is the name of your log source that you specified in your `log_source.yml` file.
+When sending data to the Matano provided sources bucket, upload files to the `/<log_source_name>` prefix where `log_source_name` is the name of your log source that you specified in your `log_source.yml` file.
 
 #### Bringing your own bucket
 
@@ -258,6 +258,28 @@ schema:
 These fields will be merged with ECS fields in the final log source schema.
 
 The schema configuration follows the [Apache Iceberg schema format](https://iceberg.apache.org/spec/#schemas) in JSON/YAML format.
+
+## Matano tables
+
+[**Read the complete docs on tables**](https://www.matano.dev/docs/tables/overview).
+
+All Matano log data is stored as Apaches Iceberg tables, with data stored in Parquet files on S3. You can query and interact with these like any other Iceberg table, using Athena, Spark, or any other technology supporting Iceberg.
+
+## Partitioning
+
+Matano log tables are partitioned **hourly** by time (on the `ts` column). Matano tables use Apache Iceberg [hidden partitioning](https://iceberg.apache.org/docs/latest/partitioning/) so you don't need to manually specify the hour partition. Instead, if you specify a predicate on the `ts` column, that will be automatically mapped to the corresponding partition by Iceberg.
+
+## Querying a Matano table
+
+You can query a Matano table from Athena using the following syntax:
+
+```sql
+SELECT * FROM matano.table_name [WHERE predicate]
+```
+
+## Optimization and Iceberg Table maintenance
+
+Apache Iceberg tables require regular table maintenance to ensure optimal performance and cost efficiency. Matano automatically performs Iceberg table maintenance, including rewriting data files (compaction), expiring snapshots, and rewriting manifests. The maintenance is run asynchronously every hour on each partition. For more information, see [this blog post](/blog/2022/11/04/automated-iceberg-table-maintenance).
 
 ## Detections
 
