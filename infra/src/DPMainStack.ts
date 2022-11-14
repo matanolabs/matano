@@ -222,7 +222,8 @@ export class DPMainStack extends MatanoStack {
 
     const userEnrichmentDir = path.join(this.matanoUserDirectory, "enrichment");
     let enrichment: Enrichment | undefined = undefined;
-    if (fs.existsSync(userEnrichmentDir)) {
+    const usesEnrichment = fs.existsSync(userEnrichmentDir);
+    if (usesEnrichment) {
       enrichment = new Enrichment(this, "Enrichment", {
         lakeStorageBucket: props.lakeStorageBucket.bucket,
       });
@@ -247,8 +248,14 @@ export class DPMainStack extends MatanoStack {
 
     enrichment?.bindLayers(configLayer);
 
+    const allIcebergTableNames = [...resolvedTableNames];
+    if (usesEnrichment) {
+      const enrichTableNames = Object.keys(enrichment!!.enrichmentConfigs).map((n) => `enrich_${n}`);
+      allIcebergTableNames.push(...enrichTableNames);
+    }
+
     new IcebergMaintenance(this, "MatanoIcebergMaintenance", {
-      tableNames: resolvedTableNames,
+      tableNames: allIcebergTableNames,
     });
 
     this.humanCfnOutput("AlertingSnsTopicArn", {
