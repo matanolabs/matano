@@ -194,10 +194,14 @@ class EnrichmentIcebergSyncer {
             .withMetrics(writer.metrics())
             .build()
 
+        // Unfortunately have to double scan (IceberGenerics.read does one internally but doesn't expose).
         val currentFiles = icebergTable.newScan().planWith(planExecutorService).planFiles().map { it.file() }
-        icebergTable.newOverwrite().apply {
-            currentFiles.forEach { deleteFile(it) }
-        }.addFile(dataFile).commit()
+        val currentSnapshotId = icebergTable.currentSnapshot().snapshotId()
+        icebergTable.newRewrite()
+            .scanManifestsWith(planExecutorService)
+            .validateFromSnapshot(currentSnapshotId)
+            .rewriteFiles(currentFiles.toSet(), setOf(dataFile))
+            .commit()
     }
 }
 

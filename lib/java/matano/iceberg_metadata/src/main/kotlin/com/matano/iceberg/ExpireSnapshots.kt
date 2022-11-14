@@ -19,8 +19,8 @@ data class ExpireSnapshotsRequest(val time: String, val table_name: String)
 class ExpireSnapshotsHandler : RequestStreamHandler {
     val expireSnapshots = ExpireSnapshots()
     val mapper = jacksonObjectMapper()
-    override fun handleRequest(input: InputStream?, output: OutputStream?, context: Context?) {
-        val event = mapper.readValue<ExpireSnapshotsRequest>(input!!)
+    override fun handleRequest(input: InputStream, output: OutputStream, context: Context?) {
+        val event = mapper.readValue<ExpireSnapshotsRequest>(input)
         expireSnapshots.handle(event)
     }
 }
