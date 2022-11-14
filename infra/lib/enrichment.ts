@@ -73,14 +73,16 @@ export class EnrichmentTable extends Construct {
   }
 }
 
+type EnrichConfig = { enrichConfig: any; dataFilePath?: string };
 export class Enrichment extends Construct {
   enrichmentIngestorFunc: lambda.Function;
   enrichmentSyncerFunc: lambda.Function;
+  enrichmentConfigs: Record<string, EnrichConfig>;
 
   constructor(scope: Construct, id: string, props: EnrichmentProps) {
     super(scope, id);
 
-    const enrichmentConfigs = this.loadEnrichmentTables();
+    this.enrichmentConfigs = this.loadEnrichmentTables();
     const enrichmentIngestionBucket = new S3BucketWithNotifications(this, "Ingestion", {
       queueProps: {
         visibilityTimeout: cdk.Duration.seconds(310),
@@ -156,7 +158,7 @@ export class Enrichment extends Construct {
       schedule: events.Schedule.rate(cdk.Duration.minutes(3)),
     });
 
-    for (const [tableName, { enrichConfig, dataFilePath }] of Object.entries(enrichmentConfigs)) {
+    for (const [tableName, { enrichConfig, dataFilePath }] of Object.entries(this.enrichmentConfigs)) {
       new EnrichmentTable(this, `EnrichTable-${tableName}`, {
         enrichConfig,
         dataFilePath,
@@ -167,7 +169,7 @@ export class Enrichment extends Construct {
     }
   }
 
-  loadEnrichmentTables(): { enrichConfig: any; dataFilePath?: string }[] {
+  loadEnrichmentTables(): Record<string, EnrichConfig> {
     const stack = cdk.Stack.of(this) as MatanoStack;
     const enrichmentDir = path.resolve(stack.matanoUserDirectory, "enrichment");
     const entries = fs.readdirSync(enrichmentDir).map((tableSubDir) => {

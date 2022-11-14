@@ -160,6 +160,65 @@ class IcebergExpireSnapshots extends Construct {
   }
 }
 
+class IcebergRewriteManifests extends Construct {
+  constructor(scope: Construct, id: string, props: IcebergMaintenanceProps) {
+    super(scope, id);
+
+    const inputPass = new sfn.Pass(this, "Add Table Names", {
+      result: sfn.Result.fromArray(props.tableNames),
+      resultPath: "$.table_names",
+    });
+
+    const queryMap = new sfn.Map(this, "Rewrite Manifests Map", {
+      itemsPath: sfn.JsonPath.stringAt("$.table_names"),
+      parameters: {
+        table_name: sfn.JsonPath.stringAt("$$.Map.Item.Value"),
+      },
+      maxConcurrency: 25,
+    });
+
+    const rewriteManifestsFunc = new lambda.Function(this, "RewriteManifests", {
+      description: "[Matano] Rewrites manifests for an iceberg table.",
+      runtime: lambda.Runtime.JAVA_11,
+      memorySize: 1024,
+      timeout: cdk.Duration.minutes(14),
+      handler: "com.matano.iceberg.RewriteManifestsHandler::handleRequest",
+      code: getLocalAsset("iceberg_metadata"),
+    });
+
+    // TODO: scope down
+    rewriteManifestsFunc.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ["glue:*", "s3:*"],
+        resources: ["*"],
+      })
+    );
+
+    const rewriteManifestsInvoke = new tasks.LambdaInvoke(this, "Rewrite Manifests", {
+      lambdaFunction: rewriteManifestsFunc,
+    });
+
+    queryMap.iterator(rewriteManifestsInvoke);
+
+    const chain = inputPass.next(queryMap);
+
+    const stateMachine = new sfn.StateMachine(this, "Default", {
+      definition: chain,
+    });
+
+    const smScheduleRule = new events.Rule(this, "MatanoRewriteManifestsRule", {
+      description: "[Matano] Schedules the Iceberg rewrite manifests workflow.",
+      schedule: events.Schedule.rate(cdk.Duration.hours(1)),
+    });
+
+    smScheduleRule.addTarget(
+      new SfnStateMachine(stateMachine, {
+        input: events.RuleTargetInput.fromObject({}),
+      })
+    );
+  }
+}
+
 interface IcebergMaintenanceProps {
   tableNames: string[];
 }
@@ -170,9 +229,14 @@ export class IcebergMaintenance extends Construct {
 
     new IcebergCompaction(this, "Compaction", {
       ...props,
+      tableNames: props.tableNames.filter((n) => !n.startsWith("enrich_")),
     });
 
     new IcebergExpireSnapshots(this, "ExpireSnapshots", {
+      ...props,
+    });
+
+    new IcebergRewriteManifests(this, "RewriteManifests", {
       ...props,
     });
   }
