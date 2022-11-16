@@ -12,6 +12,7 @@ interface TransformerProps {
   matanoSourcesBucketName: string;
   logSourcesConfigurationPath: string;
   schemasLayer: lambda.LayerVersion;
+  sqsMetadata: string;
 }
 
 export class Transformer extends Construct {
@@ -37,6 +38,7 @@ export class Transformer extends Construct {
         MATANO_SOURCES_BUCKET: props.matanoSourcesBucketName,
         MATANO_REALTIME_BUCKET_NAME: props.realtimeBucketName,
         MATANO_REALTIME_TOPIC_ARN: props.realtimeTopic.topicArn,
+        SQS_METADATA: props.sqsMetadata,
       },
       layers: [this.rustFunctionLayer.layer, props.schemasLayer],
       timeout: cdk.Duration.seconds(30),

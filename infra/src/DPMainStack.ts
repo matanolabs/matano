@@ -39,8 +39,8 @@ import { SqsSubscription } from "aws-cdk-lib/aws-sns-subscriptions";
 import { MatanoAlerting } from "../lib/alerting";
 import { MatanoS3Sources } from "../lib/s3-sources";
 import { IcebergMaintenance } from "../lib/iceberg-maintenance";
-import { MatanoSQSSource } from "../lib/sqs-source";
 import { Enrichment } from "../lib/enrichment";
+import { MatanoSQSSources } from "../lib/sqs-sources";
 
 interface DPMainStackProps extends MatanoStackProps {
   matanoSourcesBucket: S3BucketWithNotifications;
@@ -133,32 +133,16 @@ export class DPMainStack extends MatanoStack {
       }
     }
 
-    // TODO(kai): Refactor S3 Source to be atomic like SQS, leverage logSources.filter to generate buckets if conditional "!== matano_alerts" is true. 
-    // Enables future ingestion support in the same loop for optimization (kafka, kinesis/ddb streams, sns)
     new MatanoS3Sources(this, "CustomIngestionLogSources", {
       logSources: logSources.filter((ls) => ls.name !== "matano_alerts"),
       sourcesIngestionTopic: props.matanoSourcesBucket.topic,
     });
 
-    let sqsSources: MatanoSQSSource[] = [];
-
-    logSources.filter((ls) => {
-      if (ls.name !== "matano_alerts") {
-        const logSourceName = ls.name.split("_")
-          .map((substr) => substr.charAt(0).toUpperCase() + substr.slice(1));
-
-        if (ls.logSourceConfig?.ingest?.sqs_source?.enabled === true) {
-          for (const table in resolvedLogSourceConfigs[ls.name].tables) {
-            const tableName = table.charAt(0).toUpperCase() + table.slice(1);
-
-            sqsSources.push(
-              new MatanoSQSSource(this, `${ls.name}${table}MatanoSQSSource`, {
-                logSourceName: `${logSourceName}${tableName}`
-              })
-            );
-          }
-        }
-      }
+    const sqsSources = new MatanoSQSSources(this, "SQSIngestionLogSources", {
+      logSources: logSources.filter(
+        (ls) => ls.name !== "matano_alerts" && ls.logSourceConfig?.ingest?.sqs_source?.enabled === true,
+      ),
+      resolvedLogSourceConfigs: resolvedLogSourceConfigs
     });
 
     const allResolvedSchemasHashStr = logSources
@@ -192,7 +176,9 @@ export class DPMainStack extends MatanoStack {
       matanoSourcesBucketName: props.matanoSourcesBucket.bucket.bucketName,
       logSourcesConfigurationPath: path.join(this.configTempDir, "config"), // TODO: weird fix later (@shaeq)
       schemasLayer: schemasLayer,
+      sqsMetadata: sqsSources.sqsMetadata
     });
+    transformer.node.addDependency(sqsSources);
 
     transformer.transformerLambda.addEventSource(
       new SqsEventSource(rawDataBatcher.outputQueue, {
@@ -200,9 +186,9 @@ export class DPMainStack extends MatanoStack {
       })
     );
     
-    for (const sqsIngestionQueue of sqsSources) {
+    for (const sqsSource of sqsSources.ingestionQueues) {
       transformer.transformerLambda.addEventSource(
-        new SqsEventSource(sqsIngestionQueue.ingestionQueue, {
+        new SqsEventSource(sqsSource, {
           enabled: false,
           batchSize: 10000,
           maxBatchingWindow: cdk.Duration.seconds(1),
