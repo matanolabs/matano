@@ -1,5 +1,5 @@
 <div align="center">
-    <a href="https://www.matano.dev"><img src="assets/cover.svg" width=500></a>
+    <a href="https://www.matano.dev"><img src="assets/cover.png" width=500></a>
     <h3>The open-source security lake platform for AWS.</h3>
 </div>
 
