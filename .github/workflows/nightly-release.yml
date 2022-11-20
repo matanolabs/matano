@@ -10,7 +10,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-4-cores
     steps:
       # Clone repository
       - uses: actions/checkout@v2
@@ -59,7 +59,7 @@ jobs:
           path: "matano*.sh*"
 
   release:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-4-cores
     needs: build
     steps:
       - uses: actions/download-artifact@v3
