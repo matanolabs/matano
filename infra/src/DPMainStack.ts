@@ -140,8 +140,9 @@ export class DPMainStack extends MatanoStack {
 
     const sqsSources = new MatanoSQSSources(this, "SQSIngestionLogSources", {
       logSources: logSources.filter(
-        (ls) => ls.name !== "matano_alerts" && ls.logSourceConfig?.ingest?.sqs_source?.enabled === true
+        (ls) => ls.name !== "matano_alerts" && ls.logSourceConfig?.ingest?.sqs_source?.enabled === true,
       ),
+      resolvedLogSourceConfigs: resolvedLogSourceConfigs
     });
 
     const allResolvedSchemasHashStr = logSources
@@ -175,17 +176,19 @@ export class DPMainStack extends MatanoStack {
       matanoSourcesBucketName: props.matanoSourcesBucket.bucket.bucketName,
       logSourcesConfigurationPath: path.join(this.configTempDir, "config"), // TODO: weird fix later (@shaeq)
       schemasLayer: schemasLayer,
+      sqsMetadata: sqsSources.sqsMetadata
     });
+    transformer.node.addDependency(sqsSources);
 
     transformer.transformerLambda.addEventSource(
       new SqsEventSource(rawDataBatcher.outputQueue, {
         batchSize: 1,
       })
     );
-
-    for (const sqsIngestionQueue of sqsSources.ingestionQueues) {
+    
+    for (const sqsSource of sqsSources.ingestionQueues) {
       transformer.transformerLambda.addEventSource(
-        new SqsEventSource(sqsIngestionQueue, {
+        new SqsEventSource(sqsSource, {
           enabled: false,
           batchSize: 10000,
           maxBatchingWindow: cdk.Duration.seconds(1),
