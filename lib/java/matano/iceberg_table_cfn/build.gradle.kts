@@ -20,8 +20,6 @@ dependencies {
     implementation("com.fasterxml.jackson.core:jackson-annotations:2.13.3")
     implementation("com.fasterxml.jackson.core:jackson-databind:2.13.3")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.13.3")
-    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.13.3")
-    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-csv:2.13.3")
 
     implementation("org.apache.logging.log4j:log4j-core:2.17.2")
     implementation("org.apache.logging.log4j:log4j-api:2.17.2")
@@ -32,10 +30,8 @@ dependencies {
     implementation("org.apache.iceberg:iceberg-api:0.14.1")
     implementation("org.apache.iceberg:iceberg-core:0.14.1")
     implementation("org.apache.iceberg:iceberg-common:0.14.1")
-    implementation("org.apache.iceberg:iceberg-data:0.14.1")
     implementation("org.apache.iceberg:iceberg-parquet:0.14.1")
     implementation("org.apache.iceberg:iceberg-aws:0.14.1")
-    implementation("org.apache.parquet:parquet-avro:1.12.3")
     implementation("org.apache.hadoop:hadoop-common:3.3.3") {
         exclude("org.slf4j")
     }

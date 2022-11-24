@@ -14,7 +14,6 @@ import * as sns from "aws-cdk-lib/aws-sns";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import { IcebergMetadata, MatanoIcebergTable, MatanoSchemas } from "../lib/iceberg";
 import {
-  fromEntries,
   getDirectories,
   getLocalAssetPath,
   makeTempDir,
@@ -49,6 +48,11 @@ interface DPMainStackProps extends MatanoStackProps {
   realtimeBucketTopic: sns.Topic;
 }
 
+const MATANO_LOG_PARTITION_SPEC = [
+  { column: "ts", transform: "hour" },
+  { column: "partition_hour", transform: "identity" },
+];
+
 export class DPMainStack extends MatanoStack {
   configTempDir: string;
   constructor(scope: Construct, id: string, props: DPMainStackProps) {
@@ -79,6 +83,7 @@ export class DPMainStack extends MatanoStack {
         `MatanoLogs${path.relative(logSourcesDirectory, logSourceConfigPath)}`,
         {
           configPath: logSourceConfigPath,
+          partitions: MATANO_LOG_PARTITION_SPEC,
           realtimeTopic: props.realtimeBucketTopic,
           lakeWriterLambda: lakeWriter.lakeWriterLambda,
         }
@@ -98,21 +103,57 @@ export class DPMainStack extends MatanoStack {
           properties: {},
         },
       },
+      partitions: MATANO_LOG_PARTITION_SPEC,
       realtimeTopic: props.realtimeBucketTopic,
       lakeWriterLambda: lakeWriter.alertsLakeWriterLambda,
     });
     logSources.push(matanoAlertsSource);
 
-    const resolvedLogSourceConfigs: Record<string, any> = fromEntries(
+    new MatanoS3Sources(this, "CustomIngestionLogSources", {
+      logSources: logSources.filter((ls) => ls.isDataLogSource),
+      sourcesIngestionTopic: props.matanoSourcesBucket.topic,
+    });
+
+    const rawDataBatcher = new DataBatcher(this, "DataBatcher", {
+      s3Bucket: props.matanoSourcesBucket,
+    });
+
+    const icebergMetadata = new IcebergMetadata(this, "IcebergMetadata", {
+      lakeStorageBucket: props.lakeStorageBucket,
+    });
+
+    lakeWriter.alertsLakeWriterLambda.addEnvironment(
+      "ALERT_HELPER_FUNCTION_NAME",
+      icebergMetadata.alertsHelperFunction.functionName
+    );
+    icebergMetadata.alertsHelperFunction.grantInvoke(lakeWriter.alertsLakeWriterLambda);
+
+    const userEnrichmentDir = path.join(this.matanoUserDirectory, "enrichment");
+    let enrichment: Enrichment | undefined = undefined;
+    const usesEnrichment = fs.existsSync(userEnrichmentDir);
+    if (usesEnrichment) {
+      enrichment = new Enrichment(this, "Enrichment", {
+        lakeStorageBucket: props.lakeStorageBucket.bucket,
+        enrichmentIngestionBucket: props.matanoSourcesBucket.bucket,
+        realtimeTopic: props.realtimeBucketTopic,
+        lakeWriterLambda: lakeWriter.lakeWriterLambda,
+      });
+
+      this.addConfigDir(userEnrichmentDir, "enrichment", {
+        filter: (s, _) => {
+          return fs.lstatSync(s).isDirectory() || s.endsWith(".yml");
+        },
+      });
+      const enrichmentLogSources = Object.values(enrichment.enrichmentLogSources);
+      logSources.push(...enrichmentLogSources);
+    }
+
+    const resolvedLogSourceConfigs: Record<string, any> = Object.fromEntries(
       logSources.map((ls) => [
         ls.logSourceConfig.name,
         { base: ls.logSourceLevelConfig, tables: ls.tablesConfig },
       ]) as any
     );
-
-    const resolvedTableNames = logSources.flatMap((ls) => {
-      return Object.values(ls.tablesConfig).map((t) => t.resolved_name);
-    });
 
     for (const logSource in resolvedLogSourceConfigs) {
       this.addConfigFile(
@@ -133,16 +174,40 @@ export class DPMainStack extends MatanoStack {
       }
     }
 
-    new MatanoS3Sources(this, "CustomIngestionLogSources", {
-      logSources: logSources.filter((ls) => ls.name !== "matano_alerts"),
-      sourcesIngestionTopic: props.matanoSourcesBucket.topic,
-    });
-
     const sqsSources = new MatanoSQSSources(this, "SQSIngestionLogSources", {
       logSources: logSources.filter(
-        (ls) => ls.name !== "matano_alerts" && ls.logSourceConfig?.ingest?.sqs_source?.enabled === true,
+        (ls) => ls.isDataLogSource && ls.logSourceConfig?.ingest?.sqs_source?.enabled === true
       ),
       resolvedLogSourceConfigs: resolvedLogSourceConfigs
+    });
+
+    const transformer = new Transformer(this, "Transformer", {
+      realtimeBucketName: props.realtimeBucket.bucketName,
+      realtimeTopic: props.realtimeBucketTopic,
+      matanoSourcesBucketName: props.matanoSourcesBucket.bucket.bucketName,
+      logSourcesConfigurationPath: path.join(this.configTempDir, "config"), // TODO: weird fix later (@shaeq)
+      sqsMetadata: sqsSources.sqsMetadata
+    });
+    transformer.node.addDependency(sqsSources);
+
+    transformer.transformerLambda.addEventSource(
+      new SqsEventSource(rawDataBatcher.outputQueue, {
+        batchSize: 1,
+      })
+    );
+
+    for (const sqsSource of sqsSources.ingestionQueues) {
+      transformer.transformerLambda.addEventSource(
+        new SqsEventSource(sqsSource, {
+          enabled: false,
+          batchSize: 10000,
+          maxBatchingWindow: cdk.Duration.seconds(1),
+        })
+      );
+    }
+
+    const resolvedTableNames = logSources.flatMap((ls) => {
+      return Object.values(ls.tablesConfig).map((t) => t.resolved_name);
     });
 
     const allResolvedSchemasHashStr = logSources
@@ -166,61 +231,6 @@ export class DPMainStack extends MatanoStack {
 
     schemasLayer.node.addDependency(schemasCR);
 
-    const rawDataBatcher = new DataBatcher(this, "DataBatcher", {
-      s3Bucket: props.matanoSourcesBucket,
-    });
-
-    const transformer = new Transformer(this, "Transformer", {
-      realtimeBucketName: props.realtimeBucket.bucketName,
-      realtimeTopic: props.realtimeBucketTopic,
-      matanoSourcesBucketName: props.matanoSourcesBucket.bucket.bucketName,
-      logSourcesConfigurationPath: path.join(this.configTempDir, "config"), // TODO: weird fix later (@shaeq)
-      schemasLayer: schemasLayer,
-      sqsMetadata: sqsSources.sqsMetadata
-    });
-    transformer.node.addDependency(sqsSources);
-
-    transformer.transformerLambda.addEventSource(
-      new SqsEventSource(rawDataBatcher.outputQueue, {
-        batchSize: 1,
-      })
-    );
-    
-    for (const sqsSource of sqsSources.ingestionQueues) {
-      transformer.transformerLambda.addEventSource(
-        new SqsEventSource(sqsSource, {
-          enabled: false,
-          batchSize: 10000,
-          maxBatchingWindow: cdk.Duration.seconds(1),
-        })
-      );
-    }
-
-    const icebergMetadata = new IcebergMetadata(this, "IcebergMetadata", {
-      lakeStorageBucket: props.lakeStorageBucket,
-    });
-
-    lakeWriter.alertsLakeWriterLambda.addEnvironment(
-      "ALERT_HELPER_FUNCTION_NAME",
-      icebergMetadata.alertsHelperFunction.functionName
-    );
-    icebergMetadata.alertsHelperFunction.grantInvoke(lakeWriter.alertsLakeWriterLambda);
-
-    const userEnrichmentDir = path.join(this.matanoUserDirectory, "enrichment");
-    let enrichment: Enrichment | undefined = undefined;
-    const usesEnrichment = fs.existsSync(userEnrichmentDir);
-    if (usesEnrichment) {
-      enrichment = new Enrichment(this, "Enrichment", {
-        lakeStorageBucket: props.lakeStorageBucket.bucket,
-      });
-
-      this.addConfigDir(userEnrichmentDir, "enrichment", {
-        filter: (s, _) => {
-          return fs.lstatSync(s).isDirectory() || s.endsWith(".yml");
-        },
-      });
-    }
-
     const configLayer = new lambda.LayerVersion(this, "ConfigurationLayer", {
       code: lambda.Code.fromAsset(this.configTempDir),
       description: "A layer for static Matano configurations.",
@@ -228,10 +238,11 @@ export class DPMainStack extends MatanoStack {
 
     lakeWriter.lakeWriterLambda.addLayers(schemasLayer);
     lakeWriter.alertsLakeWriterLambda.addLayers(schemasLayer);
+    transformer.transformerLambda.addLayers(schemasLayer);
 
     detections.detectionFunction.addLayers(configLayer);
     rawDataBatcher.batcherFunction.addLayers(configLayer);
-
+    icebergMetadata.metadataWriterFunction.addLayers(configLayer);
     enrichment?.bindLayers(configLayer);
 
     const allIcebergTableNames = [...resolvedTableNames];

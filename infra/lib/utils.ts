@@ -106,14 +106,6 @@ export function commonPathPrefix(paths: string[], sep = "/") {
   return prefix;
 }
 
-export function fromEntries<T>(entries: IterableIterator<[string, T]>): Record<string, T> {
-  const result: Record<string, T> = {};
-  for (const [key, value] of entries) {
-    result[key] = value;
-  }
-  return result;
-}
-
 const isLower = (c: string | undefined) => c && c == c.toLowerCase();
 export function validateProjectLabel(projectLabel: string) {
   const KEBAB_CASE_REGEX = /^([a-z](?![\d])|[\d](?![a-z]))+(-?([a-z](?![\d])|[\d](?![a-z])))*$|^$/;

@@ -92,6 +92,8 @@ interface MatanoLogSourceProps {
   configPath?: string;
   realtimeTopic: sns.Topic;
   lakeWriterLambda: lambda.Function;
+  partitions?: any[];
+  noDefaultEcsFields?: boolean;
   eventSourceProps?: SqsEventSourceProps;
 }
 
@@ -113,21 +115,17 @@ export interface MatanoTableProps {
   realtimeTopic: sns.Topic;
   lakeWriterLambda: lambda.Function;
   eventSourceProps?: SqsEventSourceProps;
-  partitions?: string[];
+  partitions?: any[];
 }
 export class MatanoTable extends Construct {
+  icebergTable: MatanoIcebergTable;
   constructor(scope: Construct, id: string, props: MatanoTableProps) {
     super(scope, id);
 
-    const partitions: any[] = [
-      { column: "ts", transform: "hour" },
-      { column: "partition_hour", transform: "identity" },
-    ];
-
-    const matanoIcebergTable = new MatanoIcebergTable(this, `Default`, {
+    this.icebergTable = new MatanoIcebergTable(this, `Default`, {
       tableName: props.tableName,
       schema: props.schema,
-      partitions,
+      partitions: props.partitions,
     });
 
     const lakeWriterDlq = new sqs.Queue(this, `LakeWriterDLQ`, {
@@ -169,6 +167,7 @@ export class MatanoLogSource extends Construct {
   logSourceLevelConfig: Partial<LogSourceConfig>;
   tablesSchemas: Record<string, any> = {};
   tablesConfig: Record<string, Record<string, any>> = {};
+  matanoTable: MatanoTable;
 
   constructor(scope: Construct, id: string, props: MatanoLogSourceProps) {
     super(scope, id);
@@ -182,6 +181,10 @@ export class MatanoLogSource extends Construct {
       const managedConf = readConfig(MANAGED_LOG_SOURCES_DIR, "matano_alerts/log_source.yml");
       this.logSourceConfig = mergeDeep(logSourceConfig, managedConf);
       this.tablesConfig["matano_alerts"] = {};
+    }
+
+    if (props.config?.name.startsWith("enrich_")) {
+      this.tablesConfig[props.config.name] = {};
     }
 
     const { name: logSourceName, ingest: ingestConfig } = logSourceConfig;
@@ -311,7 +314,11 @@ export class MatanoLogSource extends Construct {
       managed: this.logSourceConfig.managed,
     };
     this.logSourceLevelConfig = logSourceLevelConfig;
-    this.schema = resolveSchema(this.logSourceConfig.schema?.ecs_field_names, this.logSourceConfig.schema?.fields);
+    this.schema = resolveSchema(
+      this.logSourceConfig.schema?.ecs_field_names,
+      this.logSourceConfig.schema?.fields,
+      props.noDefaultEcsFields
+    );
 
     const logSourceConfigToMerge = diff(this.logSourceConfig, logSourceLevelConfig);
     if (Object.keys(this.tablesConfig).length == 0) {
@@ -360,7 +367,7 @@ export class MatanoLogSource extends Construct {
         merged.schema.fields = serializeToFields(tableSchema);
       }
 
-      let tableSchema = resolveSchema(merged.schema?.ecs_field_names, merged.schema?.fields);
+      let tableSchema = resolveSchema(merged.schema?.ecs_field_names, merged.schema?.fields, props.noDefaultEcsFields);
       // partial sort to move ts to top
       tableSchema.fields = sortBy(tableSchema.fields, (e) => e.name, ["ts", "partition_hour"]);
 
@@ -370,17 +377,21 @@ export class MatanoLogSource extends Construct {
       this.tablesConfig[tableName] = merged;
       const tableConfig = this.tablesConfig[tableName];
       const resolvedTableName = tableConfig.resolved_name;
-      const userPartitions = tableConfig.partitions;
 
       const formattedName = merged.name.charAt(0).toUpperCase() + merged.name.slice(1);
 
-      new MatanoTable(this, `${formattedName}Table`, {
+      this.matanoTable = new MatanoTable(this, `${formattedName}Table`, {
         tableName: resolvedTableName,
         schema: tableSchema,
         realtimeTopic: props.realtimeTopic,
         lakeWriterLambda: props.lakeWriterLambda,
+        partitions: props.partitions,
       });
     }
+  }
+
+  get isDataLogSource() {
+    return this.name !== "matano_alerts" && !this.name.startsWith("enrich_");
   }
 }
 
@@ -388,8 +399,10 @@ function sortBy<T, U>(arr: T[], elemFn: (e: T) => U, orderList: U[]) {
   let ret: T[] = [];
   for (const orderKey of orderList) {
     const elemIdx = arr.findIndex((e) => elemFn(e) === orderKey);
-    ret.push(arr[elemIdx]);
-    arr.splice(elemIdx, 1);
+    if (elemIdx !== -1) {
+      ret.push(arr[elemIdx]);
+      arr.splice(elemIdx, 1);
+    }
   }
   for (const remainingElem of arr) {
     ret.push(remainingElem);

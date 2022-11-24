@@ -183,27 +183,16 @@ class MatanoIcebergTableCustomResource : CFNCustomResource {
         logger.info("Received event: ${mapper.writeValueAsString(event)}")
 
         val newProps = mapper.convertValue<MatanoTableRequest>(event.resourceProperties)
+        val oldProps = mapper.convertValue<MatanoTableRequest>(event.oldResourceProperties)
 
         val tableId = TableIdentifier.of(Namespace.of(MATANO_NAMESPACE), newProps.tableName)
         val table = icebergCatalog.loadTable(tableId)
         val existingSchema = table.schema()
 
-        val highestExistingId = TypeUtil.indexById(existingSchema.asStruct()).keys.max()
-        val newIdCounter = AtomicInteger(highestExistingId + 1)
+        val shouldUpdateSchema = oldProps.schema != newProps.schema
 
-        val resolvedNewSchema = TypeUtil.assignFreshIds(newProps.schema, existingSchema) { newIdCounter.incrementAndGet() }
-        logger.info("Using resolved schema:")
-        logger.info(SchemaParser.toJson(resolvedNewSchema))
-
-        val updateSchemaReq = table.updateSchema()
-            .unionByNameWith(resolvedNewSchema)
-            .setIdentifierFields(resolvedNewSchema.identifierFieldNames())
-        val updateSchema = updateSchemaReq.apply()
-        val shouldUpdateSchema = !existingSchema.sameSchema(updateSchema)
-
-        val oldInputPartitions = event.oldResourceProperties["partitions"]?.let { mapper.convertValue<List<MatanoPartitionSpec>>(it) } ?: listOf()
+        val oldInputPartitions = oldProps.partitions
         val newInputPartitions = newProps.partitions
-
         val shouldUpdatePartitions = oldInputPartitions != newInputPartitions
 
         if (shouldUpdateSchema && shouldUpdatePartitions) {
@@ -211,8 +200,22 @@ class MatanoIcebergTableCustomResource : CFNCustomResource {
         }
 
         if (shouldUpdateSchema) {
-            logger.info("Extending schema of ${table.name()}")
-            updateSchemaReq.commit()
+            logger.info("Updating schema of ${table.name()}")
+
+            val highestExistingId = TypeUtil.indexById(existingSchema.asStruct()).keys.max()
+            val newIdCounter = AtomicInteger(highestExistingId + 1)
+
+            val resolvedNewSchema = TypeUtil.assignFreshIds(newProps.schema, existingSchema) { newIdCounter.incrementAndGet() }
+            logger.info("Using resolved schema:")
+            logger.info(SchemaParser.toJson(resolvedNewSchema))
+
+            val updateSchemaReq = table.updateSchema()
+                .unionByNameWith(resolvedNewSchema)
+                .setIdentifierFields(resolvedNewSchema.identifierFieldNames())
+            val updateSchema = updateSchemaReq.apply()
+            if (!updateSchema.sameSchema(existingSchema)) {
+                updateSchemaReq.commit()
+            }
         }
 
         if (shouldUpdatePartitions) {
@@ -236,7 +239,7 @@ class MatanoIcebergTableCustomResource : CFNCustomResource {
         }
 
         val oldProperties = table.properties().toMap()
-        val newProperties = newProps.tableProperties
+        val newProperties = newProps.tableProperties.filterKeys { it != "format-version" }
 
         if (newProperties != oldProperties) {
             logger.info("Updating table Properties")

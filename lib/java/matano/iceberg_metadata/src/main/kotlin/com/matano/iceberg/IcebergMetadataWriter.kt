@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+import java.util.Optional
 import java.util.concurrent.ConcurrentHashMap
 
 class LazyConcurrentMap<K, V>(
@@ -52,15 +53,16 @@ class IcebergMetadataWriter {
     private val logger = LoggerFactory.getLogger(this::class.java)
 
     val icebergCatalog = createIcebergCatalog()
+    val enrichmentMetadataWriter = EnrichmentMetadataWriter(loadEnrichmentConfiguration())
+
     inner class TableObj(tableName: String) {
         val table: Table = icebergCatalog.loadTable(TableIdentifier.of(Namespace.of(MATANO_NAMESPACE), tableName))
         val appendFiles: AppendFiles = table.newAppend()
-    }
-
-    private fun createIcebergCatalog(): Catalog {
-        val glueCatalog = GlueCatalog()
-            .apply { initialize("glue_catalog", icebergProperties) }
-        return CachingCatalog.wrap(glueCatalog)
+        var overwriteFiles = Optional.empty<OverwriteFiles>()
+            get() {
+                field = Optional.of(table.newOverwrite())
+                return field
+            }
     }
 
     fun parseObjectKey(key: String): Pair<String, String> {
@@ -81,13 +83,16 @@ class IcebergMetadataWriter {
                 launch(Dispatchers.IO) { processRecord(record, tableObjs) }
             }
         }
-        println("Committing...")
+        logger.info("Committing...")
         runBlocking {
             for (tableObj in tableObjs.values) {
-                launch(Dispatchers.IO) { tableObj.appendFiles.commit() }
+                launch(Dispatchers.IO) {
+                    tableObj.appendFiles.commit()
+                    tableObj.overwriteFiles.ifPresent { it.commit() }
+                }
             }
         }
-        println("DONE!")
+        logger.info("DONE!")
     }
 
     fun readParquetMetrics(s3Path: String, table: Table): Metrics {
@@ -106,7 +111,7 @@ class IcebergMetadataWriter {
 
         val (tableName, partitionPath) = parseObjectKey(s3ObjectKey)
 
-        if (tableName == "matano_alerts" || tableName.startsWith("enrich")) {
+        if (tableName == "matano_alerts") {
             return
         }
 
@@ -115,19 +120,28 @@ class IcebergMetadataWriter {
             return
         }
 
-        val tableObj = tableObjs[tableName]
-        val icebergTable = tableObj!!.table
+        val tableObj = tableObjs[tableName] ?: throw RuntimeException("table must exist.")
+        val icebergTable = tableObj.table
+
+        val isEnrichmentTable = icebergTable.name().split(".").last().startsWith("enrich_")
 
         val metrics = readParquetMetrics(s3Path, icebergTable)
         val partition = icebergTable.spec()
         val dataFile = DataFiles.builder(partition)
-            .withPartitionPath(partitionPath)
+            .apply {
+                if (partition.isPartitioned) { this.withPartitionPath(partitionPath) }
+            }
             .withPath(s3Path)
             .withFileSizeInBytes(s3ObjectSize)
             .withFormat("PARQUET")
             .withMetrics(metrics)
             .build()
-        tableObj.appendFiles.appendFile(dataFile)
+
+        if (isEnrichmentTable) {
+            enrichmentMetadataWriter.doMetadataWrite(icebergTable, dataFile, tableObj.appendFiles, { tableObj.overwriteFiles.get() })
+        } else {
+            tableObj.appendFiles.appendFile(dataFile)
+        }
     }
 
     fun checkDuplicate(sequencer: String): Boolean {
@@ -160,5 +174,10 @@ class IcebergMetadataWriter {
             "fs.s3a.path.style.access" to "true"
         )
         private val ddb = AmazonDynamoDBClientBuilder.defaultClient()
+
+        fun createIcebergCatalog(): Catalog {
+            val glueCatalog = GlueCatalog().apply { initialize("glue_catalog", icebergProperties) }
+            return CachingCatalog.wrap(glueCatalog)
+        }
     }
 }

@@ -151,6 +151,7 @@ interface IcebergMetadataProps {
 }
 export class IcebergMetadata extends Construct {
   alertsHelperFunction: lambda.Function;
+  metadataWriterFunction: lambda.Function;
   constructor(scope: Construct, id: string, props: IcebergMetadataProps) {
     super(scope, id);
 
@@ -160,10 +161,10 @@ export class IcebergMetadata extends Construct {
       billingMode: ddb.BillingMode.PAY_PER_REQUEST,
     });
 
-    const lambdaFunction = new lambda.Function(this, "WriterFunction", {
+    this.metadataWriterFunction = new lambda.Function(this, "WriterFunction", {
       description: "This function ingests written input files into an Iceberg table.",
       runtime: lambda.Runtime.JAVA_11,
-      memorySize: 512,
+      memorySize: 1024,
       handler: "com.matano.iceberg.IcebergMetadataHandler::handleRequest",
       timeout: cdk.Duration.minutes(3),
       environment: {
@@ -179,10 +180,10 @@ export class IcebergMetadata extends Construct {
       ],
     });
 
-    duplicatesTable.grantReadWriteData(lambdaFunction);
+    duplicatesTable.grantReadWriteData(this.metadataWriterFunction);
 
     const eventSource = new SqsEventSource(props.lakeStorageBucket.queue, {});
-    lambdaFunction.addEventSource(eventSource);
+    this.metadataWriterFunction.addEventSource(eventSource);
 
     this.alertsHelperFunction = new lambda.Function(this, "IcebergHelper", {
       description: "JVM Iceberg helper for alerting.",

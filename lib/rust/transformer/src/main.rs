@@ -379,6 +379,59 @@ fn get_log_source_from_key(key: &str) -> Option<String> {
     })
 }
 
+const TRANSFORM_JSON_PARSE: &str = r#"
+if .message != null {{
+    .json, err = parse_json(string!(.message))
+    if !is_object(.json) {{
+        del(.json)
+        err = "Failed to parse message as JSON object"
+    }}
+    if err == null {{
+        del(.message)
+    }}
+}}
+
+"#;
+
+const TRANSFORM_RELATED: &str = r#"
+
+.related.ip = []
+.related.hash = []
+.related.user = []
+
+"#;
+const TRANSFORM_PASSTHROUGH_JSON: &str = ". = object!(del(.json))\n";
+
+const TRANSFORM_BASE_FOOTER: &str = r#"
+
+del(.json)
+. = compact(.)
+"#;
+
+const TRANSFORM_DATA_FOOTER: &str = r#"
+
+.partition_hour = format_timestamp!(.ts, "%Y-%m-%d-%H")
+.ecs.version = "8.5.0"
+
+"#;
+
+fn format_transform_expr(transform_expr: &str, is_passthrough: bool) -> String {
+    let mut ret = String::with_capacity(65 + transform_expr.len());
+    ret.push_str(TRANSFORM_JSON_PARSE);
+    if !is_passthrough {
+        ret.push_str(TRANSFORM_RELATED);
+    }
+    if is_passthrough {
+        ret.push_str(TRANSFORM_PASSTHROUGH_JSON)
+    }
+    ret.push_str(transform_expr);
+    ret.push_str(TRANSFORM_BASE_FOOTER);
+    if !is_passthrough {
+        ret.push_str(TRANSFORM_DATA_FOOTER);
+    }
+    return ret;
+}
+
 async fn read_events_s3<'a>(
     s3: &aws_sdk_s3::Client,
     r: &DataBatcherOutputRecord,
@@ -401,22 +454,6 @@ async fn read_events_s3<'a>(
     let mut obj = res?;
 
     let mut reader = tokio::io::BufReader::new(obj.body.into_async_read());
-
-    // let start = Instant::now();
-    // let first = if let Some(first) = reader.next().await {
-    //     println!("First byte: {:#?}", first);
-    //     first
-    // } else {
-    //     return Ok(FramedRead::new(tokio::io::empty(), LinesCodec::new())
-    //         .map_ok(|line|  Value::from(line.as_bytes()))
-    //         .map_err(|e| anyhow!(e))
-    //         .boxed());
-    // };
-    // println!("Finished reading first byte: took {:?}", start.elapsed());
-    // let start = Instant::now();
-
-    // let reader =
-    //     StreamReader::new(stream::iter(Some(first)).chain(reader));
 
     let compression = Compression::Auto;
     let compression = match compression {
@@ -560,7 +597,13 @@ async fn read_events_s3<'a>(
             Box::pin(lines.flat_map_unordered(50, |v| {
                 // TODO: c'mon dont do this in VRL...
                 let v = v.and_then(|mut v| {
-                    vrl(r#". = if is_string(.) { parse_json!(string!(.)) } else { object(.) }"#, &mut v).map_err(|e| anyhow!("Invaid format of cloudwatch log subscription line: {}", e))?;
+                    vrl(
+                        r#". = if is_string(.) { parse_json!(string!(.)) } else { object(.) }"#,
+                        &mut v,
+                    )
+                    .map_err(|e| {
+                        anyhow!("Invaid format of cloudwatch log subscription line: {}", e)
+                    })?;
                     Ok(v)
                 });
 
@@ -664,34 +707,7 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
                 let reader = raw_lines;
 
                 let transform_expr = table_config.get_string("transform").unwrap_or_default();
-
-                // TODO: fix for non json, object check
-                let wrapped_transform_expr = format!(
-                    r#"
-if .message != null {{
-    .json, err = parse_json(string!(.message))
-    if !is_object(.json) {{
-        del(.json)
-        err = "Failed to parse message as JSON object"
-    }}
-    if err == null {{
-        del(.message)
-    }}
-}}
-
-.related.ip = []
-.related.hash = []
-.related.user = []
-
-{}
-del(.json)
-.partition_hour = format_timestamp!(.ts, "%Y-%m-%d-%H")
-
-. = compact(.)
-.ecs.version = "8.5.0"
-                    "#,
-                    transform_expr
-                );
+                let wrapped_transform_expr = format_transform_expr(&transform_expr, log_source.starts_with("enrich_"));
 
                 let transformed_lines_as_json = reader
                     .chunks(400)

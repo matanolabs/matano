@@ -4,6 +4,7 @@ import * as YAML from "yaml";
 import { Construct, Node } from "constructs";
 import * as cdk from "aws-cdk-lib";
 import * as s3 from "aws-cdk-lib/aws-s3";
+import * as sns from "aws-cdk-lib/aws-sns";
 import * as events from "aws-cdk-lib/aws-events";
 import { SqsQueue as SqsQueueTarget } from "aws-cdk-lib/aws-events-targets";
 import * as lambda from "aws-cdk-lib/aws-lambda";
@@ -16,9 +17,13 @@ import { SqsEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
 import { MatanoStack } from "./MatanoStack";
 import { MatanoIcebergTable } from "./iceberg";
 import { resolveSchema } from "./schema";
+import { MatanoLogSource } from "./log-source";
 
 interface EnrichmentProps {
   lakeStorageBucket: s3.IBucket;
+  enrichmentIngestionBucket: s3.IBucket;
+  realtimeTopic: sns.Topic;
+  lakeWriterLambda: lambda.Function;
 }
 
 interface EnrichmentCRProps {
@@ -32,34 +37,39 @@ interface EnrichmentTableProps {
   enrichmentIngestionBucket: s3.IBucket;
   enrichmentSyncerQueue: sqs.IQueue;
   dynamicScheduleRule: events.Rule;
+  realtimeTopic: sns.Topic;
+  lakeWriterLambda: lambda.Function;
   dataFilePath?: any;
 }
 
 export class EnrichmentTable extends Construct {
+  logSource: MatanoLogSource;
   constructor(scope: Construct, id: string, props: EnrichmentTableProps) {
     super(scope, id);
 
     const tableName = props.enrichConfig.name;
+    const enrichTableName = `enrich_${tableName}`;
 
-    const resolvedSchema = resolveSchema([], props.enrichConfig.schema.fields, true);
-
-    const icebergTable = new MatanoIcebergTable(this, `IcebergTable`, {
-      tableName: `enrich_${tableName}`,
-      schema: resolvedSchema,
+    const lsConfig = convertEnrichToLogSourceConfig(props.enrichConfig);
+    this.logSource = new MatanoLogSource(this, `LogSource`, {
+      config: lsConfig,
+      realtimeTopic: props.realtimeTopic,
+      lakeWriterLambda: props.lakeWriterLambda,
+      noDefaultEcsFields: true,
     });
 
     if (props.enrichConfig.enrichment_type === "static") {
       const dataFileDir = path.resolve(props.dataFilePath!!, "..");
       // Scrappy way to do static table w/o a custom resource. TODO: maybe change to CR
-      const deploy = new s3deploy.BucketDeployment(this, `s3deploy-${tableName}`, {
+      const deploy = new s3deploy.BucketDeployment(this, `s3deploy`, {
         sources: [s3deploy.Source.asset(dataFileDir)],
         destinationBucket: props.enrichmentIngestionBucket,
-        destinationKeyPrefix: `${tableName}`,
+        destinationKeyPrefix: enrichTableName,
         memoryLimit: 256,
         exclude: ["*"],
         include: ["data.json"],
       });
-      deploy.node.addDependency(icebergTable);
+      deploy.node.addDependency(this.logSource.matanoTable.icebergTable);
     } else {
       props.dynamicScheduleRule.addTarget(
         new SqsQueueTarget(props.enrichmentSyncerQueue, {
@@ -75,40 +85,17 @@ export class EnrichmentTable extends Construct {
 
 type EnrichConfig = { enrichConfig: any; dataFilePath?: string };
 export class Enrichment extends Construct {
-  enrichmentIngestorFunc: lambda.Function;
   enrichmentSyncerFunc: lambda.Function;
   enrichmentConfigs: Record<string, EnrichConfig>;
+  enrichmentLogSources: Record<string, MatanoLogSource> = {};
 
   constructor(scope: Construct, id: string, props: EnrichmentProps) {
     super(scope, id);
 
     this.enrichmentConfigs = this.loadEnrichmentTables();
-    const enrichmentIngestionBucket = new S3BucketWithNotifications(this, "Ingestion", {
-      queueProps: {
-        visibilityTimeout: cdk.Duration.seconds(310),
-      },
-    });
 
     const enrichmentTablesBucket = new s3.Bucket(this, "EnrichmentTables", {
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
-    });
-
-    this.enrichmentIngestorFunc = new lambda.Function(this, "Ingestor", {
-      description: "[Matano] Ingests enrichment table data",
-      runtime: lambda.Runtime.JAVA_11,
-      handler: "com.matano.iceberg.EnrichmentIngestorHandler::handleRequest",
-      memorySize: 1024,
-      timeout: cdk.Duration.minutes(5),
-      environment: {
-        ENRICHMENT_TABLES_BUCKET: enrichmentTablesBucket.bucketName,
-      },
-      initialPolicy: [
-        new iam.PolicyStatement({
-          actions: ["glue:*"],
-          resources: ["*"],
-        }),
-      ],
-      code: getLocalAsset("iceberg_table_cfn"),
     });
 
     this.enrichmentSyncerFunc = new lambda.Function(this, "Syncer", {
@@ -129,17 +116,8 @@ export class Enrichment extends Construct {
       code: getLocalAsset("iceberg_table_cfn"),
     });
 
-    props.lakeStorageBucket.grantReadWrite(this.enrichmentIngestorFunc);
     props.lakeStorageBucket.grantReadWrite(this.enrichmentSyncerFunc);
-    enrichmentIngestionBucket.bucket.grantRead(this.enrichmentIngestorFunc);
     enrichmentTablesBucket.grantWrite(this.enrichmentSyncerFunc);
-
-    this.enrichmentIngestorFunc.addEventSource(
-      new SqsEventSource(enrichmentIngestionBucket.queue, {
-        batchSize: 1000,
-        maxBatchingWindow: cdk.Duration.seconds(10),
-      })
-    );
 
     const enrichmentSyncerDLQ = new sqs.Queue(this, "SyncerDLQ");
     const enrichmentSyncerQueue = new sqs.Queue(this, "SyncerQueue", {
@@ -159,13 +137,16 @@ export class Enrichment extends Construct {
     });
 
     for (const [tableName, { enrichConfig, dataFilePath }] of Object.entries(this.enrichmentConfigs)) {
-      new EnrichmentTable(this, `EnrichTable-${tableName}`, {
+      const enrichTable = new EnrichmentTable(this, `EnrichTable-${tableName}`, {
         enrichConfig,
         dataFilePath,
-        enrichmentIngestionBucket: enrichmentIngestionBucket.bucket,
+        enrichmentIngestionBucket: props.enrichmentIngestionBucket,
         enrichmentSyncerQueue,
         dynamicScheduleRule: scheduleRule,
+        realtimeTopic: props.realtimeTopic,
+        lakeWriterLambda: props.lakeWriterLambda,
       });
+      this.enrichmentLogSources[tableName] = enrichTable.logSource;
     }
   }
 
@@ -197,8 +178,20 @@ export class Enrichment extends Construct {
   }
 
   bindLayers(...layers: lambda.ILayerVersion[]) {
-    for (const func of [this.enrichmentIngestorFunc, this.enrichmentSyncerFunc]) {
+    for (const func of [this.enrichmentSyncerFunc]) {
       func.addLayers(...layers);
     }
   }
+}
+
+export function convertEnrichToLogSourceConfig(enrichConfig: any) {
+  const ret = {
+    name: `enrich_${enrichConfig.name}`,
+    transform: enrichConfig.transform,
+    schema: {
+      fields: enrichConfig.schema.fields,
+    },
+  };
+
+  return ret;
 }
