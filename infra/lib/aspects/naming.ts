@@ -6,6 +6,8 @@ import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as sqs from "aws-cdk-lib/aws-sqs";
 import * as sns from "aws-cdk-lib/aws-sns";
 import * as ddb from "aws-cdk-lib/aws-dynamodb";
+import * as sfn from "aws-cdk-lib/aws-stepfunctions";
+import * as events from "aws-cdk-lib/aws-events";
 
 import { md5Hash, validateProjectLabel } from "../utils";
 
@@ -81,6 +83,8 @@ const enabledResources = [
   ddb.CfnTable,
   sqs.CfnQueue,
   sns.CfnTopic,
+  sfn.CfnStateMachine,
+  events.CfnRule,
   s3.CfnBucket, // unique
 ];
 
@@ -90,6 +94,8 @@ const maxResourceNameLengths = {
   "AWS::DynamoDB::Table": 255,
   "AWS::SQS::Queue": 80,
   "AWS::SNS::Topic": 256,
+  "AWS::StepFunctions::StateMachine": 80,
+  "AWS::Events::Rule": 64,
   "AWS::S3::Bucket": 63,
 } as Record<string, number>;
 
@@ -159,13 +165,6 @@ function rename(node: IConstruct, resourceName: string, resourceTypeFullName: st
       0,
       6
     )}`;
-  }
-
-  // should be other aspect, but enforce deletion policy's based on production flag for stateful resources
-  const isProd = (cdk.Stack.of(node) as MatanoStack).matanoConfig.is_production ?? false;
-  const statefulResourceTypes = ["AWS::S3::Bucket", "AWS::DynamoDB::Table", "AWS::SQS::Queue"];
-  if (statefulResourceTypes.includes(resourceTypeFullName)) {
-    (node as cdk.CfnResource).applyRemovalPolicy(isProd ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY);
   }
 
   // console.log(`Renaming ${resourceTypeFullName} ${resourceName} to ${renamedResourceName}`); // from path ${node.node.path}`);

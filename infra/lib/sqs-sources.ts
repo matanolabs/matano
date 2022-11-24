@@ -1,6 +1,7 @@
 import { Construct } from "constructs";
 import * as sqs from "aws-cdk-lib/aws-sqs";
 import { MatanoLogSource } from "./log-source";
+import { matanoResourceToCdkName } from "./utils";
 
 interface MatanoSQSSourcesProps {
   logSources: MatanoLogSource[];
@@ -16,28 +17,28 @@ export class MatanoSQSSources extends Construct {
 
     const logSources = props.logSources;
     const resolvedLogSourceConfigs = props.resolvedLogSourceConfigs;
-    let sqsMetadata: Map<string, string[]> = new Map<string, string[]>();
+    let sqsMetadata: Map<string, string> = new Map<string, string>();
 
-    for (const ls of logSources) {
-      for (const table in resolvedLogSourceConfigs[ls.name].tables) {
+    // The resolved table name is:
+    // 1) <log_source_name>_<table_name>
+    // 2) OR if table_name == default: <log_source_name>
+    const resolvedTableNames: string[] = Object.values(resolvedLogSourceConfigs).flatMap((c) =>
+      Object.values(c.tables).map((t: any) => t.resolved_name)
+    );
 
-        const lsName = ls.name.split("_")
-          .map((substr) => substr.charAt(0).toUpperCase() + substr.slice(1));
+    for (const resolvedTableName of resolvedTableNames) {
+      const formattedTableName = matanoResourceToCdkName(resolvedTableName);
 
-        const tableName = table.charAt(0).toUpperCase() + table.slice(1);
+      const ingestionDLQ = new sqs.Queue(this, `${formattedTableName}IngestDLQ`);
+      const ingestionQueue = new sqs.Queue(this, `${formattedTableName}IngestQueue`, {
+        deadLetterQueue: { queue: ingestionDLQ, maxReceiveCount: 3 },
+      });
 
-        const ingestionDLQ = new sqs.Queue(this, `${lsName}${tableName}IngestDLQ`);
-        const ingestionQueue = new sqs.Queue(this, `${lsName}${tableName}IngestQueue`, {
-          deadLetterQueue: { queue: ingestionDLQ, maxReceiveCount: 3 },
-        });
-
-        this.ingestionQueues.push(ingestionQueue);
-        sqsMetadata.set(ingestionQueue.queueName, [ls.name, table]);
-      }
+      this.ingestionQueues.push(ingestionQueue);
+      sqsMetadata.set(ingestionQueue.queueName, resolvedTableName);
     }
 
     const obj = Object.fromEntries(sqsMetadata);
     this.sqsMetadata = JSON.stringify(obj);
-    
   }
 }

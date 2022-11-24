@@ -27,7 +27,7 @@ build-rust:
 build-jvm:
 	cd lib/java/matano && ./gradlew release
 
-build-assets: build-python build-nodejs build-rust build-jvm
+build-assets: build-python build-rust build-jvm
 
 build-all: build-cli build-infra build-assets
 

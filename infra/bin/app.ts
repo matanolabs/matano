@@ -26,6 +26,8 @@ const dpMainStack = new DPMainStack(app, "DPMainStack", {
   lakeStorageBucket: dpCommonStack.matanoLakeStorageBucket,
   realtimeBucket: dpCommonStack.realtimeBucket,
   realtimeBucketTopic: dpCommonStack.realtimeBucketTopic,
+  integrationsStore: dpCommonStack.integrationsStore,
+  alertTrackerTable: dpCommonStack.alertTrackerTable,
 });
 
 const userAwsTags = dpMainStack.userAwsTags ?? {};

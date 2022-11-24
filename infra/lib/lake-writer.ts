@@ -1,6 +1,6 @@
 import * as cdk from "aws-cdk-lib";
 import { Construct } from "constructs";
-import * as sqs from "aws-cdk-lib/aws-sqs";
+import * as sns from "aws-cdk-lib/aws-sns";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import { RustFunctionCode, RustFunctionLayer } from "./rust-function-layer";
@@ -8,6 +8,7 @@ import { RustFunctionCode, RustFunctionLayer } from "./rust-function-layer";
 interface LakeWriterProps {
   outputBucketName: string;
   outputObjectPrefix: string;
+  alertingSnsTopic: sns.Topic;
 }
 
 export class LakeWriter extends Construct {
@@ -46,8 +47,9 @@ export class LakeWriter extends Construct {
         RUST_LOG: "warn,lake_writer=info",
         OUT_BUCKET_NAME: props.outputBucketName,
         OUT_KEY_PREFIX: props.outputObjectPrefix,
+        ALERTING_SNS_TOPIC_ARN: props.alertingSnsTopic.topicArn,
       },
-      timeout: cdk.Duration.seconds(60),
+      timeout: cdk.Duration.seconds(120),
       initialPolicy: [
         new iam.PolicyStatement({
           actions: ["secretsmanager:*", "dynamodb:*", "s3:*"],
@@ -57,5 +59,6 @@ export class LakeWriter extends Construct {
       // prevent concurrency
       reservedConcurrentExecutions: 1,
     });
+    props.alertingSnsTopic.grantPublish(this.alertsLakeWriterLambda);
   }
 }

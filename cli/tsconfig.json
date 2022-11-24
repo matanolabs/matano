@@ -7,13 +7,9 @@
     "rootDir": "src",
     "strict": true,
     "target": "es2015",
-    "lib": [
-      "es2015"
-    ],
-    "typeRoots": ["./node_modules/@types",],
+    "lib": ["es2015"],
+    "typeRoots": ["./node_modules/@types"],
     "esModuleInterop": true
   },
-  "include": [
-    "src/**/*"
-  ]
+  "include": ["src/**/*"]
 }

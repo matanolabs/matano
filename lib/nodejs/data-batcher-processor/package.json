@@ -1,24 +1,24 @@
 {
-    "name": "@matano/data-batcher-processor",
-    "version": "1.0.0",
-    "scripts": {
-        "clean": "rm -rf dist build",
-        "release": "mkdir -p build && esbuild index.ts --platform=node --external:aws-sdk --outfile=build/index.js --bundle --loader:.ts=ts",
-        "postrelease": "OUTDIR=../../../local-assets/DataBatcherProcessorFunction && mkdir -p $OUTDIR && cp -a build/* $OUTDIR",
-        "build": "tsc",
-        "watch": "tsc -w",
-        "test": "jest"
-    },
-    "devDependencies": {
-        "aws-sdk": "2.1208.0",
-        "@types/aws-lambda": "^8.10.77",
-        "@types/node": "^18.7.2",
-        "concurrently": "^7.2.2",
-        "esbuild": "^0.14.48",
-        "ts-node": "^9.0.0",
-        "typescript": "^4.7"
-    },
-    "prettier": {
-        "printWidth": 120
-    }
+  "name": "@matano/data-batcher-processor",
+  "version": "1.0.0",
+  "scripts": {
+    "clean": "rm -rf dist build",
+    "release": "mkdir -p build && esbuild index.ts --platform=node --external:aws-sdk --outfile=build/index.js --bundle --loader:.ts=ts",
+    "postrelease": "OUTDIR=../../../local-assets/DataBatcherProcessorFunction && mkdir -p $OUTDIR && cp -a build/* $OUTDIR",
+    "build": "tsc",
+    "watch": "tsc -w",
+    "test": "jest"
+  },
+  "devDependencies": {
+    "aws-sdk": "2.1208.0",
+    "@types/aws-lambda": "^8.10.77",
+    "@types/node": "^18.7.2",
+    "concurrently": "^7.2.2",
+    "esbuild": "^0.14.48",
+    "ts-node": "^9.0.0",
+    "typescript": "^4.7"
+  },
+  "prettier": {
+    "printWidth": 120
+  }
 }

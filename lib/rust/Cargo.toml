@@ -1,3 +1,10 @@
 [workspace]
-members = ["transformer", "lake_writer", "data_batcher", "shared", "log_puller"]
+members = [
+  "transformer",
+  "lake_writer",
+  "data_batcher",
+  "shared",
+  "log_puller",
+  "alert_forwarder",
+]
 default-members = ["transformer"]

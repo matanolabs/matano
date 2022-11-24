@@ -7,7 +7,7 @@ plugins {
 }
 configurations.all {
     exclude("org.slf4j", "commons-collections")
-    exclude("org.slf4j","slf4j-reload4j")
+    exclude("org.slf4j", "slf4j-reload4j")
 }
 dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
@@ -23,7 +23,7 @@ dependencies {
     implementation("org.apache.logging.log4j:log4j-api:2.17.2")
     runtimeOnly("org.apache.logging.log4j:log4j-slf4j-impl:2.17.2")
     implementation("org.slf4j:slf4j-api:1.7.32")
-    //implementation("org.slf4j:slf4j-simple:1.7.32")
+    // implementation("org.slf4j:slf4j-simple:1.7.32")
 
     implementation("org.apache.iceberg:iceberg-api:0.14.1")
     implementation("org.apache.iceberg:iceberg-core:0.14.1")

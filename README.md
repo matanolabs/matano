@@ -310,7 +310,7 @@ You can implement a `title` function to format the title if an alert is created 
 
 ```python
 def title(record) -> str:
-  user_name = record.get("user", {}).get("name")
+  user_name = record.deepget("user.name")
   return f"{user_name} - Elevated login failures"
 ```
 
@@ -320,7 +320,7 @@ You can implement a `dedupe` function to return a _dedupe string_ that will be u
 
 ```python
 def dedupe(record) -> str:
-  return record.get("user", {}).get("name")
+  return record.deepget("user.name")
 ```
 
 #### Example Python detection
@@ -330,11 +330,9 @@ Here is a sample Python detection. It runs on AWS CloudTrail logs and detects a 
 ```python
 def detect(record):
   return (
-    record.get("event", {}).get("action")
-    == "CreateInstanceExportTask"
-    and record.get("event", {}).get("provider")
-    == "ec2.amazonaws.com"
-    and event.outcome == "failure
+    record.deepget("event.action") == "CreateInstanceExportTask"
+    and record.deepget("event.provider") == "ec2.amazonaws.com"
+    and record.deepget("event.outcome") == "failure
   )
 ```
 
@@ -357,10 +355,12 @@ from detection import remotecache
 users_ips = remotecache("user_ip", ttl=86400 * 7)
 
 def detect(record):
-    if record.get('event', {}).get('action') == 'ConsoleLogin' and
-        record.get('event', {}).get('outcome', {}) == 'success':
+    if (
+      record.deepget("event.action") == "ConsoleLogin" and
+      record.deepget("event.outcome") == "success"
+    ):
         # A unique key on the user name
-        key = record.get("user", {}).get("name")
+        key = record.deepget("user.name")
 
         # Alert on new IP
         user_ips = users_ips.add_to_string_set(key)
@@ -420,17 +420,30 @@ All alerts are automatically stored in a Matano table named `matano_alerts`. The
 
 **Example Queries**
 
-_View alerts that breached threshold_
+Summarize alerts in the last week that have breached threshold
 
 ```sql
-select matano.alert.id as alert_id,
-    count(matano.alert.rule.match.id) as rule_match_count,
-    array_agg(matano.alert.rule.match.id) as rule_matches,
-from matano_alerts
-    where
-        ts < current_timestamp - interval '1' hour
-        and matano.alert.breached = true
-    group by matano.alert.id, matano.alert.dedupe
+select
+  matano.alert.id as alert_id,
+  matano.alert.rule.name as rule_name,
+  max(matano.alert.title) as title,
+  count(*) as match_count,
+  min(matano.alert.first_matched_at) as first_matched_at,
+  max(ts) as last_matched_at,
+  flatten(array_distinct(array_agg(related.ip))) as related_ip,
+  flatten(array_distinct(array_agg(related.user))) as related_user,
+  flatten(array_distinct(array_agg(related.hosts))) as related_hosts,
+  flatten(array_distinct(array_agg(related.hash))) as related_hash
+from
+  matano_alerts
+where
+  matano.alert.first_matched_at > (current_timestamp - interval '7' day)
+  and matano.alert.breached = true
+group by
+  matano.alert.rule.name,
+  matano.alert.id
+order by
+  last_matched_at desc
 ```
 
 #### Delivering alerts

@@ -66,10 +66,18 @@ THREAD_EXECUTOR = concurrent.futures.ThreadPoolExecutor(max_workers=12)
 
 DETECTION_CONFIGS = None
 TABLE_DETECTION_CONFIG = None
-ALERTING_SNS_TOPIC_ARN = None
 SOURCES_S3_BUCKET = None
 MATANO_ALERTS_TABLE_NAME = "matano_alerts"
 LOADED_PYSTON = False
+SEVERITY_TO_DESTINATION_DEFAULTS = {
+    "info": [],
+    "notice": ["slack"],
+    "low": ["slack"],
+    "medium": ["slack"],  # TODO...
+    "high": ["slack"],
+    "critical": ["slack"],
+}
+
 timers = Timers()
 
 
@@ -124,9 +132,6 @@ def handler(event, context):
     if not LOADED_PYSTON:
         pyston_lite.enable()
         LOADED_PYSTON = True
-
-    global ALERTING_SNS_TOPIC_ARN
-    ALERTING_SNS_TOPIC_ARN = os.environ["ALERTING_SNS_TOPIC_ARN"]
 
     global SOURCES_S3_BUCKET
     SOURCES_S3_BUCKET = os.environ["SOURCES_S3_BUCKET"]
@@ -213,22 +218,33 @@ def run_detection(record_data: RecordData, detection_config):
         detection_config["detection"],
         detection_config["module"],
     )
-    detection_name = detection["name"]
-
     alert_response = detection_module.detect(record_data.record)
 
     if not alert_response:
         return False
     else:
-        default_alert_title = detection_name
-        alert_title = (
-            safe_call(detection_module, "title", record_data.record)
-            or default_alert_title
-        )
+        alert_title = safe_call(detection_module, "title", record_data.record)
         alert_dedupe = safe_call(detection_module, "dedupe", record_data.record)
+        alert_severity = safe_call(detection_module, "severity", record_data.record)
+        alert_description = safe_call(
+            detection_module, "description", record_data.record
+        )
+        alert_runbook = safe_call(detection_module, "runbook", record_data.record)
+        alert_reference = safe_call(detection_module, "reference", record_data.record)
+        alert_context = safe_call(detection_module, "contextualize", record_data.record)
+        alert_destinations = safe_call(
+            detection_module, "destinations", record_data.record
+        )
+
         return {
             "title": alert_title,
             "dedupe": alert_dedupe,
+            "severity": alert_severity,
+            "description": alert_description,
+            "runbook": alert_runbook,
+            "reference": alert_reference,
+            "context": alert_context,
+            "destinations": alert_destinations,
             "detection": detection,
             "record_data": record_data,
         }
@@ -237,9 +253,51 @@ def run_detection(record_data: RecordData, detection_config):
 def create_alert(alert_response):
     record_data: RecordData = alert_response["record_data"]
     record: dict = record_data.record
-    detection = alert_response["detection"]
-    detection_name = detection["name"]
-    dedupe = alert_response["dedupe"]
+    detection_config = alert_response["detection"]
+
+    rule_name = detection_config["name"]
+    rule_display_name = detection_config.get("display_name")
+    rule_threshold = detection_config.get("alert", {}).get("threshold", 1)
+    rule_deduplication_window = (
+        detection_config.get("alert", {}).get("deduplication_window_minutes", 60) * 60
+    )
+    rule_severity = detection_config.get("alert", {}).get("severity")
+    rule_description = detection_config.get("description")
+    rule_runbook = detection_config.get("runbook")
+    rule_reference = detection_config.get("reference")
+    rule_destinations = detection_config.get("alert", {}).get("destinations")
+    rule_false_positives = detection_config.get("false_positives")
+    alert_title = alert_response["title"] or rule_display_name or rule_name
+    alert_dedupe = alert_response["dedupe"] or alert_title
+    alert_severity = (
+        alert_response["severity"]
+        or rule_severity
+        or ("notice" if rule_destinations else "info")
+    )
+    alert_description = alert_response["description"] or rule_description
+    alert_runbook = alert_response["runbook"] or rule_runbook
+    alert_reference = alert_response["reference"] or rule_reference
+    alert_destinations = (
+        next(
+            (
+                r
+                for r in (
+                    alert_response["destinations"],
+                    rule_destinations,
+                    # SEVERITY_TO_DESTINATION_DEFAULTS.get(alert_severity), TODO(shaeq)
+                    [],
+                )
+                if r is not None
+            ),
+            None,
+        )
+        if alert_severity != "info"
+        else []
+    )
+    alert_context = json.dumps({})
+    # TODO think about what the API for accepting additional user-defined context fields should be like
+    # alert_context = alert_response["context"]
+
     ret = {
         **{k: v for k, v in record.items() if k in ALERT_ECS_FIELDS},
         "ts": time.time(),
@@ -250,20 +308,27 @@ def create_alert(alert_response):
         "matano": {
             "table": record_data.table_name,
             "alert": {
-                "title": alert_response["title"],
-                "dedupe": dedupe,
+                "title": alert_title,
+                "severity": alert_severity,
+                "dedupe": alert_dedupe,
+                "description": alert_description,
+                "runbook": alert_runbook,
+                "reference": alert_reference,
+                "destinations": alert_destinations,
+                "context": alert_context,
                 "original_timestamp": record["ts"],
                 "original_event": json_dumps_dt(record_data.record),
                 "original_event_id": record_data.record_reference(),  # TODO: replace w/ real ID when added
                 "rule": {
-                    "name": detection_name,
-                    "threshold": detection.get("alert", {}).get("threshold"),
-                    "deduplication_window": detection.get("alert", {}).get(
-                        "deduplication_window_minutes"
-                    ) * 60,
+                    "name": rule_name,
+                    "threshold": rule_threshold,
+                    "false_positives": rule_false_positives,
+                    "deduplication_window": rule_deduplication_window,
                     "match": {
                         "id": str(uuid4()),
                     },
+                    "severity": rule_severity,
+                    "destinations": rule_destinations,
                 },
             },
         },
@@ -281,18 +346,7 @@ async def process_responses(alert_responses):
         alert_objs.append(alert_obj)
 
     futures = []
-    alert_objs_chunks = chunks(alert_objs, 10)
     await ensure_clients()
-
-    for alert_objs_chunk in alert_objs_chunks:
-        sns_fut = publish_sns_batch(
-            topic_arn=ALERTING_SNS_TOPIC_ARN,
-            entries=[
-                {"Id": str(uuid4()), "Message": json_dumps_dt(obj)}
-                for obj in alert_objs_chunk
-            ],
-        )
-        futures.append(sns_fut)
 
     s3_future = write_alerts(alert_objs)
     futures.append(s3_future)
@@ -310,19 +364,6 @@ async def write_alerts(alerts: list):
         Bucket=SOURCES_S3_BUCKET,
         Key=f"{MATANO_ALERTS_TABLE_NAME}/{str(uuid4())}.json",
     )
-
-
-async def publish_sns_batch(topic_arn, entries):
-    # TODO: handle errors (partial)
-    return await sns.publish_batch(
-        TopicArn=topic_arn,
-        PublishBatchRequestEntries=entries,
-    )
-
-
-def chunks(lst, n):
-    for i in range(0, len(lst), n):
-        yield lst[i : i + n]
 
 
 def safe_call(module: Any, func_name: str, *args):

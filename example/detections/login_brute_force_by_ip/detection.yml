@@ -1,0 +1,33 @@
+id: 7ad1600d-e9dc-4251-b0ee-a65268f29add
+created: 2022/10/23
+name: login_brute_force_by_ip
+display_name: Brute Force Login Attempts by IP
+Description: Failed login attempts for a user exceeded the configured theshold.
+
+enabled: true
+
+runbook: Idenitfy whether or not a user from this IP was able to eventually login sucessfully. Investigate this IP and search for activity from it around the duration of this event.
+
+references:
+  - https://docs.aws.amazon.com/IAM/latest/UserGuide/id_root-user.html
+false_positives:
+  - Non-malicious user with a forgotten password.
+
+reports:
+  attack:
+    - ta0006:t1110
+
+alert:
+  severity: medium
+  threshold: 5
+  deduplication_window_minutes: 15
+  destinations:
+    - slack_my_team
+    - jira_main
+
+tables:
+  - aws_cloudtrail
+
+modified: 2022/10/23
+tags:
+  - brute_force

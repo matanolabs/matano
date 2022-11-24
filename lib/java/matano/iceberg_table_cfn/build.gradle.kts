@@ -1,6 +1,5 @@
-import org.gradle.kotlin.dsl.support.zipTo
-import java.nio.file.Paths
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import java.nio.file.Paths
 
 plugins {
     application
@@ -10,7 +9,7 @@ plugins {
 
 configurations.all {
     exclude("org.slf4j", "commons-collections")
-    exclude("org.slf4j","slf4j-reload4j")
+    exclude("org.slf4j", "slf4j-reload4j")
 }
 
 dependencies {
@@ -25,7 +24,7 @@ dependencies {
     implementation("org.apache.logging.log4j:log4j-api:2.17.2")
     runtimeOnly("org.apache.logging.log4j:log4j-slf4j-impl:2.17.2")
     implementation("org.slf4j:slf4j-api:1.7.32")
-    //implementation("org.slf4j:slf4j-simple:1.7.32")
+    // implementation("org.slf4j:slf4j-simple:1.7.32")
 
     implementation("org.apache.iceberg:iceberg-api:0.14.1")
     implementation("org.apache.iceberg:iceberg-core:0.14.1")

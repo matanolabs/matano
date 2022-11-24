@@ -1,12 +1,12 @@
-id: 8ad1600d-e9dc-4251-b0ee-a65268f29add
+id: b011cb5b-10f3-404b-9b1e-e1750056a172
 created: 2022/10/23
-name: aws_root_credentials
-display_name: AWS Root Credentials Change
-description: Detects AWS root account usage
+name: zeek_events
+display_name: Zeek events being used
+description: Detects on all zeek events
 
 enabled: true
 
-runbook: Check the AWS root account activity
+runbook: Check the zeek event
 references:
   - https://docs.aws.amazon.com/IAM/latest/UserGuide/id_root-user.html
 false_positives:
@@ -20,7 +20,7 @@ reports:
     - ta0002:t1059
 
 alert:
-  severity: medium
+  severity: notice
   threshold: 1
   deduplication_window_minutes: 60
   destinations:
@@ -28,7 +28,7 @@ alert:
     - jira_main
 
 tables:
-  - aws_cloudtrail
+  - zeek_dns
 
 modified: 2022/10/23
 tags:

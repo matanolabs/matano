@@ -21,7 +21,15 @@ impl TryIntoAvro<apache_avro::types::Value> for Value {
                 Ok(v_32) => apache_avro::types::Value::from(v_32),
                 Err(_) => apache_avro::types::Value::from(v),
             })),
-            Self::Float(v) => Ok(apache_avro::types::Value::from(v.into_inner())),
+            Self::Float(v) => {
+                let v_inner = v.into_inner();
+                let v_32 = v_inner as f32;
+                Ok(if v_32.is_finite() {
+                    apache_avro::types::Value::from(v_32) // TODO(shaeq) lossy... fix this
+                } else {
+                    apache_avro::types::Value::from(v_inner)
+                })
+            }
             Self::Bytes(v) => Ok(apache_avro::types::Value::from(
                 String::from_utf8(v.to_vec()).map_err(Self::Error::ConvertToUtf8)?,
             )),

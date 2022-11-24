@@ -2,9 +2,7 @@
   "compilerOptions": {
     "target": "ES2019",
     "module": "commonjs",
-    "lib": [
-      "es2019"
-    ],
+    "lib": ["es2019"],
     "skipLibCheck": true,
     "outDir": "dist",
     "declaration": true,
@@ -21,14 +19,7 @@
     "inlineSources": true,
     "experimentalDecorators": true,
     "strictPropertyInitialization": false,
-    "typeRoots": [
-      "./node_modules/@types"
-    ]
+    "typeRoots": ["./node_modules/@types"]
   },
-  "exclude": [
-    "dist",
-    "node_modules",
-    "cdk.out",
-    "dist"
-  ]
+  "exclude": ["dist", "node_modules", "cdk.out", "dist"]
 }

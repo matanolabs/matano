@@ -1,4 +1,3 @@
-import java.nio.file.Paths
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 plugins {
@@ -9,7 +8,7 @@ plugins {
 
 configurations.all {
     exclude("org.slf4j", "commons-collections")
-    exclude("org.slf4j","slf4j-reload4j")
+    exclude("org.slf4j", "slf4j-reload4j")
 }
 
 dependencies {

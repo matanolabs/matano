@@ -185,7 +185,7 @@ export class IcebergMetadata extends Construct {
     const eventSource = new SqsEventSource(props.lakeStorageBucket.queue, {});
     this.metadataWriterFunction.addEventSource(eventSource);
 
-    this.alertsHelperFunction = new lambda.Function(this, "IcebergHelper", {
+    this.alertsHelperFunction = new lambda.Function(this, "AlertsHelper", {
       description: "JVM Iceberg helper for alerting.",
       runtime: lambda.Runtime.JAVA_11,
       memorySize: 1500,

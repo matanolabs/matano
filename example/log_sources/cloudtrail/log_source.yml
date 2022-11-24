@@ -2,7 +2,6 @@ name: aws_cloudtrail
 
 managed:
   type: AWS_CLOUDTRAIL
-
 # --- ONLY uncomment below if using Cloudtrail->Cloudwatch Log Subscription delivered to S3 through Kinesis Firehose ---
 # ingest:
 #   expand_records_from_payload:

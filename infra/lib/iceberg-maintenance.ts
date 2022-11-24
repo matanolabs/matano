@@ -34,7 +34,7 @@ class IcebergCompaction extends Construct {
   constructor(scope: Construct, id: string, props: IcebergCompactionProps) {
     super(scope, id);
 
-    const compactionHelperFunction = new lambda.Function(this, "IcebergCompactionHelper", {
+    const compactionHelperFunction = new lambda.Function(this, "Helper", {
       runtime: lambda.Runtime.PYTHON_3_9,
       handler: "index.handler",
       code: lambda.Code.fromInline(helperFunctionCode),
@@ -84,7 +84,7 @@ class IcebergCompaction extends Construct {
       })
     );
 
-    const smScheduleRule = new events.Rule(this, "MatanoIcebergCompactionRule", {
+    const smScheduleRule = new events.Rule(this, "Rule", {
       schedule: events.Schedule.rate(cdk.Duration.hours(1)),
     });
 

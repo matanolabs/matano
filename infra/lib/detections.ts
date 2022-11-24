@@ -18,7 +18,6 @@ import { SqsSubscription } from "aws-cdk-lib/aws-sns-subscriptions";
 
 export interface MatanoDetectionsProps {
   realtimeTopic: sns.Topic;
-  alertingSnsTopic: sns.Topic;
   matanoSourcesBucketName: string;
 }
 
@@ -81,8 +80,8 @@ export class MatanoDetections extends Construct {
       }),
       layers: [detectionsLayer],
       memorySize: 1800,
+      timeout: cdk.Duration.seconds(60),
       environment: {
-        ALERTING_SNS_TOPIC_ARN: props.alertingSnsTopic.topicArn,
         SOURCES_S3_BUCKET: props.matanoSourcesBucketName,
         REMOTE_CACHE_TABLE_NAME: remoteCacheTable.tableName,
       },
@@ -90,11 +89,11 @@ export class MatanoDetections extends Construct {
     });
 
     remoteCacheTable.grantReadWriteData(this.detectionFunction);
-    props.alertingSnsTopic.grantPublish(this.detectionFunction);
 
     const detectionDLQ = new sqs.Queue(this, "DLQ");
     this.detectionsQueue = new sqs.Queue(this, "Queue", {
       deadLetterQueue: { queue: detectionDLQ, maxReceiveCount: 3 },
+      visibilityTimeout: cdk.Duration.seconds(Math.max(this.detectionFunction.timeout!.toSeconds(), 30)),
     });
 
     const sqsEventSource = new SqsEventSource(this.detectionsQueue, {
@@ -107,6 +106,7 @@ export class MatanoDetections extends Construct {
     for (const detectionName of detectionNames) {
       const detectionDirectory = path.resolve(matanoUserDirectory, "detections", detectionName);
       const config = readDetectionConfig(detectionDirectory);
+      validateDetectionConfig(config, detectionDirectory);
       this.detectionConfigs[detectionName] = config;
       tablesWithDetections = [...tablesWithDetections, ...config["tables"]];
     }
@@ -119,6 +119,16 @@ export class MatanoDetections extends Construct {
           resolved_table_name: sns.SubscriptionFilter.stringFilter({ allowlist: tablesWithDetections }),
         },
       })
+    );
+  }
+}
+function validateDetectionConfig(config: Record<string, any>, detectionDirPath: string) {
+  if (
+    Array.isArray(config?.alert?.destinations) &&
+    (config?.alert?.severity == null || config?.alert?.severity == "info")
+  ) {
+    throw new Error(
+      `An info-level detection cannot be configured to deliver alerts to external destinations. ${detectionDirPath}: Please change the alert.severity to \"notice\" or remove the alert.destinations configuration.`
     );
   }
 }

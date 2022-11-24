@@ -5,12 +5,6 @@ use std::collections::HashMap;
 use config::Config;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone)]
-pub struct LogSourceConfiguration {
-    pub base: Config,
-    pub tables: HashMap<String, Config>,
-}
-
 #[derive(Debug, Serialize)]
 pub(crate) struct FailureResponse {
     pub body: String,

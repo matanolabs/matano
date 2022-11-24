@@ -7,6 +7,10 @@ edition = "2021"
 
 [dependencies]
 shared = { path = "../shared" }
+rayon = "1.5.3"
+zstd = "0.11.2"
+base64 = "0.13.1"
+bytes = "1.2.1"
 tokio = { version = "1.17.0", features = ["full"] }
 tokio-util = { version = "0.7.3", features = ["full"] }
 serde = "^1"
@@ -15,12 +19,13 @@ log = "^0.4"
 tracing-subscriber = { version = "0.3.8", features = ["env-filter"] }
 tracing = { version = "0.1.30", features = ["log"] }
 # NOTE: the following crate is not part of the SDK, but it is maintained by AWS.
-lambda_runtime = "0.6.0"
-aws-config = "0.48.0"
+lambda_runtime = "0.7.0"
+aws-config = "0.51.0"
 
-aws_lambda_events = "0.6.3"
-aws-sdk-s3 = "0.18.0"
-aws-sdk-lambda = "0.18.0"
+aws_lambda_events = "0.7.2"
+aws-sdk-s3 = "0.21.0"
+aws-sdk-lambda = "0.21.0"
+aws-sdk-sns = "0.21.0"
 futures = "0.3"
 futures-util = "0.3.23"
 anyhow = "1.0.53"
@@ -34,7 +39,6 @@ reqwest = { version = "0.11.9", default-features = false, features = [
 
 json-deserializer = "0.4.0"
 uuid = { version = "1.1.2", features = ["v4"] }
-bytes = "1.1.0"
 lazy_static = "1.4.0"
 async_once = "0.2.6"
 tokio-stream = { version = "0.1.9", features = ["io-util"] }
@@ -59,5 +63,5 @@ tikv-jemallocator = { version = "0.5.0" }
 # avro-schema = {version = "0.3.0", features = ["full"]}
 # avro-rs = "0.13.0"
 async-stream = { version = "0.3.3" }               # NEED THIS or parquet2 fails compile
-parquet = "25.0.0"
-arrow = { version = "25.0.0", features = ["ffi"] }
+parquet = "27.0.0"
+arrow = { version = "27.0.0", features = ["ffi"] }

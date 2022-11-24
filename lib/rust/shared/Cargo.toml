@@ -10,6 +10,29 @@ serde = "^1"
 serde_json = "^1"
 tracing-subscriber = { version = "0.3.8", features = ["env-filter"] }
 tracing = { version = "0.1.30", features = ["log"] }
+time = "0.3.7"
+lazy_static = "1.4.0"
+async_once = "0.2.6"
+log = "^0.4"
+anyhow = "1.0.53"
+lru = "0.8.0"
+cached = "0.40.0"
 
-tokio = { version = "1.17.0", features = ["macros"] }
+aws-config = "0.51.0"
+aws-sdk-secretsmanager = "0.21.0"
+
+tokio = { version = "1.17.0", features = ["macros", "sync"] }
 rayon = "1.5.3"
+walkdir = "2.3.2"
+config = { version = "0.13.1", features = ["yaml"] }
+
+# VRL v0.24.1
+value = { git = "https://github.com/vectordotdev/vector", rev = "8935681" }
+vrl = { git = "https://github.com/vectordotdev/vector", rev = "8935681" }
+vrl-stdlib = { git = "https://github.com/vectordotdev/vector", rev = "8935681" }
+
+# wierd issue with 'alloc' missing from pest's Parser macro used in vrl requires reimporting with std to work...
+pest = { version = "2.2.1", default-features = false, features = ["std"] }
+pest_derive = { version = "2.2.1", default-features = false, features = [
+  "std",
+] }

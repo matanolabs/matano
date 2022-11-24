@@ -28,14 +28,14 @@ subprojects {
 //        outputs.files(subproject.buildDir)
         dependsOn("shadowJar")
         val assetName = if (subproject.name == "scripts") "matano-java-scripts" else subproject.name
-        val assetDir = Paths.get(project.rootDir.absolutePath, "../../../local-assets/${assetName}").toFile()
+        val assetDir = Paths.get(project.rootDir.absolutePath, "../../../local-assets/$assetName").toFile()
         val assetDirp = assetDir.canonicalPath
         Paths.get(assetDirp, "lib").toFile().mkdirsOrThrow()
 
         doLast {
-            File("${assetDirp}/placeholder-for-cdk.txt").createNewFile()
+            File("$assetDirp/placeholder-for-cdk.txt").createNewFile()
             exec {
-                commandLine("bash", "-c", "cp -a ${subproject.buildDir}/libs/* ${assetDirp}/lib")
+                commandLine("bash", "-c", "cp -a ${subproject.buildDir}/libs/* $assetDirp/lib")
             }
         }
     }

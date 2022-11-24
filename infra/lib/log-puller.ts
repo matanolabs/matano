@@ -48,7 +48,7 @@ export class ExternalLogPuller extends Construct {
       logSourceSecretMap[logSourceName] = secret.secretArn;
     }
 
-    func.addEnvironment("SECRET_ARNS", JSON.stringify(logSourceSecretMap));
+    func.addEnvironment("LOG_SOURCE_TO_SECRET_ARN_MAP", JSON.stringify(logSourceSecretMap));
 
     props.ingestionBucket.grantWrite(func);
 

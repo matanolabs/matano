@@ -17,6 +17,7 @@ import {
   getDirectories,
   getLocalAssetPath,
   makeTempDir,
+  matanoResourceToCdkName,
   MATANO_USED_RUNTIMES,
   md5Hash,
   readConfig,
@@ -28,6 +29,7 @@ import { SqsEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
 import { execSync } from "child_process";
 import { SecurityGroup, SubnetType } from "aws-cdk-lib/aws-ec2";
 import { Bucket } from "aws-cdk-lib/aws-s3";
+import { Table } from "aws-cdk-lib/aws-dynamodb";
 import { DataBatcher } from "../lib/data-batcher";
 import { RustFunctionLayer } from "../lib/rust-function-layer";
 import { LayerVersion } from "aws-cdk-lib/aws-lambda";
@@ -40,12 +42,15 @@ import { MatanoS3Sources } from "../lib/s3-sources";
 import { IcebergMaintenance } from "../lib/iceberg-maintenance";
 import { MatanoSQSSources } from "../lib/sqs-sources";
 import { Enrichment } from "../lib/enrichment";
+import { IntegrationsStore } from "../lib/integrations-store";
 
 interface DPMainStackProps extends MatanoStackProps {
   matanoSourcesBucket: S3BucketWithNotifications;
   lakeStorageBucket: S3BucketWithNotifications;
   realtimeBucket: Bucket;
   realtimeBucketTopic: sns.Topic;
+  integrationsStore: IntegrationsStore;
+  alertTrackerTable: Table;
 }
 
 const MATANO_LOG_PARTITION_SPEC = [
@@ -62,16 +67,19 @@ export class DPMainStack extends MatanoStack {
     const logSourcesDirectory = path.join(this.matanoUserDirectory, "log_sources");
     const logSourceConfigPaths = getDirectories(logSourcesDirectory).map((d) => path.join(logSourcesDirectory, d));
 
-    const matanoAlerting = new MatanoAlerting(this, "Alerting", {});
+    const matanoAlerting = new MatanoAlerting(this, "Alerting", {
+      integrationsStore: props.integrationsStore,
+      alertTrackerTable: props.alertTrackerTable,
+    });
 
     const detections = new MatanoDetections(this, "Detections", {
-      alertingSnsTopic: matanoAlerting.alertingTopic,
       realtimeTopic: props.realtimeBucketTopic,
       matanoSourcesBucketName: props.matanoSourcesBucket.bucket.bucketName,
     });
     this.addConfigFile("detections_config.json", JSON.stringify(detections.detectionConfigs));
 
     const lakeWriter = new LakeWriter(this, "LakeWriter", {
+      alertingSnsTopic: matanoAlerting.alertingTopic,
       outputBucketName: props.lakeStorageBucket.bucket.bucketName,
       outputObjectPrefix: "lake",
     });
@@ -88,9 +96,8 @@ export class DPMainStack extends MatanoStack {
           lakeWriterLambda: lakeWriter.lakeWriterLambda,
         }
       );
-      (logSource.node.id as any) = `MatanoLogs${logSource.logSourceLevelConfig
-        .name!.split("_")
-        .map((substr) => substr.charAt(0).toUpperCase() + substr.slice(1))}`; // TODO(shaeq): fix this
+      const formattedName = matanoResourceToCdkName(logSource.logSourceLevelConfig.name!);
+      (logSource.node.id as any) = `MatanoLogs${formattedName}`; // TODO(shaeq): fix this
       logSources.push(logSource);
     }
 
@@ -178,7 +185,7 @@ export class DPMainStack extends MatanoStack {
       logSources: logSources.filter(
         (ls) => ls.isDataLogSource && ls.logSourceConfig?.ingest?.sqs_source?.enabled === true
       ),
-      resolvedLogSourceConfigs: resolvedLogSourceConfigs
+      resolvedLogSourceConfigs: resolvedLogSourceConfigs,
     });
 
     const transformer = new Transformer(this, "Transformer", {
@@ -186,7 +193,7 @@ export class DPMainStack extends MatanoStack {
       realtimeTopic: props.realtimeBucketTopic,
       matanoSourcesBucketName: props.matanoSourcesBucket.bucket.bucketName,
       logSourcesConfigurationPath: path.join(this.configTempDir, "config"), // TODO: weird fix later (@shaeq)
-      sqsMetadata: sqsSources.sqsMetadata
+      sqsMetadata: sqsSources.sqsMetadata,
     });
     transformer.node.addDependency(sqsSources);
 

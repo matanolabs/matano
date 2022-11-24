@@ -53,11 +53,27 @@ schema:
                   type: string
                 - name: created
                   type: timestamp
+                - name: first_matched_at
+                  type: timestamp
                 - name: dedupe
                   type: string
                 - name: breached
                   type: boolean
                 - name: title
+                  type: string
+                - name: severity
+                  type: string
+                - name: description
+                  type: string
+                - name: runbook
+                  type: string
+                - name: reference
+                  type: string
+                - name: destinations
+                  type:
+                    type: list
+                    element: string
+                - name: context
                   type: string
                 - name: original_timestamp
                   type: timestamp
@@ -71,6 +87,8 @@ schema:
                     fields:
                       - name: "name"
                         type: string
+                      - name: severity
+                        type: string
                       - name: threshold
                         type: int
                       - name: deduplication_window
@@ -81,6 +99,10 @@ schema:
                           fields:
                             - name: id
                               type: string
+                      - name: destinations
+                        type:
+                          type: list
+                          element: string
 
 transform: |
   . = del(.json)

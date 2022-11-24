@@ -12,7 +12,7 @@ use log::{debug, error, info};
 use regex::Regex;
 
 use super::{PullLogs, PullLogsContext};
-use shared::JsonValueExt;
+use shared::{convert_json_array_str_to_ndjson, JsonValueExt};
 
 #[derive(Clone)]
 pub struct O365Puller;
@@ -29,7 +29,7 @@ impl PullLogs for O365Puller {
         let tenant_id = config.get("tenant_id").context("Missing tenant_id")?;
         let client_id = config.get("client_id").context("Missing client_id")?;
         let client_secret = ctx
-            .get_secret("client_secret")
+            .get_secret_field("client_secret")
             .await?
             .context("Missing client secret")?;
 
@@ -80,7 +80,7 @@ impl PullLogs for O365Puller {
             .into_iter()
             .map(|v| {
                 let s = String::from_utf8(v)?;
-                convert_json_array_str_ndjson(&s)
+                convert_json_array_str_to_ndjson(&s)
             })
             .collect::<Result<Vec<_>>>()?;
 
@@ -221,12 +221,4 @@ async fn pull_entry(
         .error_for_status()?;
     let resp = res.bytes().await?.to_vec();
     Ok(resp)
-}
-
-fn convert_json_array_str_ndjson(s: &str) -> Result<String> {
-    let first_bracket_pos = s.find('[').context("must have bracket!")?;
-    let last_bracket_pos = s.rfind(']').context("must have bracket!")?;
-    let new_s = &s[first_bracket_pos + 1..last_bracket_pos];
-    let ret = new_s.replace("},{", "}\n{");
-    Ok(ret)
 }

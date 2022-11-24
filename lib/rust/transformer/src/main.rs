@@ -3,39 +3,24 @@
 mod arrow;
 mod avro;
 mod models;
-use ::value::value::timestamp_to_string;
 use aws_sdk_sns::model::MessageAttributeValue;
 use chrono::Utc;
-use http::{HeaderMap, HeaderValue};
-use std::borrow::Borrow;
 use std::cell::RefCell;
-use std::collections::{BTreeMap, HashMap, HashSet};
-use std::env::{set_var, var};
-use std::mem::size_of_val;
+use std::collections::HashMap;
+use std::env::var;
 use std::path::Path;
 use std::pin::Pin;
-use std::rc::Rc;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
-use std::thread;
 use std::time::Instant;
 use tokio::fs;
 use tokio::io::AsyncBufReadExt;
 use tokio::io::AsyncReadExt;
 use tokio::task::spawn_blocking;
-use walkdir::WalkDir;
 
 #[global_allocator]
 static ALLOC: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
 use apache_avro::{Codec, Schema, Writer};
-use arrow2::datatypes::*;
-use arrow2::io::avro::avro_schema::schema::{
-    BytesLogical, Field as AvroField, Fixed, FixedLogical, IntLogical, LongLogical, Record,
-    Schema as AvroSchema,
-};
-use arrow2::io::json::read;
-
 use aws_sdk_s3::types::ByteStream;
 
 use async_compression::tokio::bufread::{GzipDecoder, ZstdDecoder};
@@ -45,17 +30,14 @@ use futures::{stream, Stream, StreamExt, TryStreamExt};
 use serde_json::json;
 use tokio_stream::StreamMap;
 use tokio_util::codec::{FramedRead, LinesCodec};
-use tokio_util::io::{ReaderStream, StreamReader};
 
 use itertools::Itertools;
-use lru::LruCache;
-use std::iter::FromIterator;
 use uuid::Uuid;
-use vrl::TimeZone;
 
-use models::*;
 use rayon::prelude::*;
+use shared::vrl_util::vrl;
 use shared::*;
+use vrl::{state, value};
 
 use anyhow::{anyhow, Result};
 use async_once::AsyncOnce;
@@ -67,12 +49,7 @@ use aws_lambda_events::event::sqs::{SqsEvent, SqsMessage};
 use lambda_runtime::{run, service_fn, Context, Error as LambdaError, LambdaEvent};
 use log::{debug, error, info, warn};
 
-use vrl::{diagnostic::Formatter, state, value, Program, Runtime, TargetValueRef};
-
-use crate::arrow::{coerce_data_type, type_to_schema};
 use crate::avro::TryIntoAvro;
-
-use config::{Config, ConfigError, Environment, File};
 
 lazy_static! {
     static ref AWS_CONFIG: AsyncOnce<SdkConfig> =
@@ -81,103 +58,6 @@ lazy_static! {
         AsyncOnce::new(async { aws_sdk_s3::Client::new(AWS_CONFIG.get().await) });
     static ref SNS_CLIENT: AsyncOnce<aws_sdk_sns::Client> =
         AsyncOnce::new(async { aws_sdk_sns::Client::new(AWS_CONFIG.get().await) });
-}
-
-thread_local! {
-    pub static RUNTIME: RefCell<Runtime> = RefCell::new(Runtime::new(state::Runtime::default()));
-    pub static LOG_SOURCES_CONFIG: RefCell<BTreeMap<String, LogSourceConfiguration>> = {
-        let log_sources_configuration_path = Path::new(&var("LAMBDA_TASK_ROOT").unwrap().to_string()).join("log_sources");
-        let mut log_sources_configuration_map: BTreeMap<String, LogSourceConfiguration> = BTreeMap::new();
-
-        for entry in WalkDir::new(log_sources_configuration_path).min_depth(1).max_depth(1) {
-            let log_source_dir_path = match entry {
-                Ok(v) => v,
-                Err(e) => {
-                    error!("Invalid entry while walking children for log_sources/ directory: {}", e);
-                    continue;
-                }
-            };
-            let log_source_dir_path = log_source_dir_path.path();
-            if !log_source_dir_path.is_dir() {
-                continue;
-            }
-
-            let log_source_folder_name = match log_source_dir_path.file_name() {
-                Some(v) => v,
-                None => {
-                    error!("Invalid entry name under log_sources/.");
-                    continue;
-                }
-            };
-
-            let log_source_folder_name = match log_source_folder_name.to_str() {
-                Some(v) => v,
-                None => {
-                    error!("Invalid entry name under log_sources/");
-                    continue;
-                }
-            };
-
-            let log_source_configuration_path = log_source_dir_path.join("log_source.yml");
-            let log_source_configuration_path = log_source_configuration_path.as_path().to_str().unwrap();
-            let base_configuration_builder = Config::builder()
-                .add_source(
-                    File::with_name(log_source_configuration_path).required(true)
-                );
-            let base_configuration = base_configuration_builder.build().expect(format!("Failed to load base configuration for log_source: {}/", log_source_folder_name).as_str());
-
-            let mut log_source_configuration = LogSourceConfiguration {
-                base: base_configuration,
-                tables: HashMap::new()
-            };
-            let log_source_name = log_source_configuration.base.get_string("name").unwrap();
-
-            let tables_path = log_source_dir_path.join("tables");
-            if tables_path.is_dir() {
-                for entry in WalkDir::new(&tables_path).min_depth(1).max_depth(1) {
-                    let tables_path = &tables_path.as_path().to_str().unwrap();
-
-                    let table_configuration_path = entry.expect(format!("Invalid entry while walking children for {} directory.", &tables_path).as_str());
-                    let table_configuration_path = table_configuration_path.path();
-
-                    let err_str = format!("Invalid table entry: {}.", table_configuration_path.display());
-                    let table_file_name = table_configuration_path.file_name().expect(&err_str).to_str().expect(&err_str);
-
-                    let extension = table_configuration_path
-                        .extension()
-                        .and_then(std::ffi::OsStr::to_str);
-
-                    if !table_configuration_path.is_file() || !(extension == Some("yml") || extension == Some("yaml")) {
-                        continue;
-                    }
-
-                    let table_configuration_path = table_configuration_path.to_str().unwrap();
-
-                    let table_configuration = Config::builder()
-                    .add_source(
-                        File::with_name(table_configuration_path).required(true)
-                    )
-                    .build();
-
-                    let table_configuration = match table_configuration {
-                        Ok(v) => v,
-                        Err(e) => {
-                            error!("Failed to load table configuration for log_source={}, table_path={}: {}", log_source_name, table_file_name, e);
-                            continue;
-                        }
-                    };
-
-                    let table_name = table_configuration.get_string("name").unwrap();
-
-                    // .add_source(Environment::with_prefix("app"));
-                    log_source_configuration.tables.insert(table_name, table_configuration);
-                }
-            }
-            log_sources_configuration_map.insert(log_source_name, log_source_configuration);
-        }
-
-        RefCell::new(log_sources_configuration_map)
-    };
 }
 
 /// Compression schemes supported by Matano for log sources
@@ -206,6 +86,44 @@ impl Compression {
     }
 }
 
+fn get_log_source_from_bucket_and_key(
+    bucket: &str,
+    key: &str,
+    managed_bucket: &str,
+) -> Option<String> {
+    LOG_SOURCES_CONFIG.with(|c| {
+        let log_sources_config = c.borrow();
+
+        // TODO: @shaeq: optimize?
+        // Try get from BYOB or else assume managed and get from path
+        let ret = (*log_sources_config)
+            .iter()
+            .find(|(_, v)| {
+                v.base
+                    .get_string("ingest.s3_source.key_prefix")
+                    .map(|prefix| {
+                        key.starts_with(prefix.as_str())
+                            && v.base
+                                .get_string("ingest.s3_source.bucket")
+                                .ok()
+                                .map_or(managed_bucket == bucket, |b| b.as_str() == bucket)
+                    })
+                    .unwrap_or(false)
+            })
+            .map(|r| r.0.to_owned())
+            .or_else(|| {
+                let ls = key
+                    .split(std::path::MAIN_SEPARATOR)
+                    .next()
+                    .unwrap()
+                    .to_string();
+                log_sources_config.contains_key(&ls).then_some(ls)
+            });
+        debug!("Got log source: {:?} from key: {}", ret, key);
+        ret
+    })
+}
+
 #[tokio::main]
 async fn main() -> Result<(), LambdaError> {
     setup_logging();
@@ -224,9 +142,7 @@ async fn infer_compression(
     content_type: Option<&str>,
     key: &str,
 ) -> Option<Compression> {
-    let extension = std::path::Path::new(key)
-        .extension()
-        .and_then(std::ffi::OsStr::to_str);
+    let extension = Path::new(key).extension().and_then(std::ffi::OsStr::to_str);
 
     let inferred_from_file_meta = content_encoding
         .and_then(|encoding| match encoding {
@@ -266,117 +182,6 @@ async fn infer_compression(
             inferred_compression
         }
     }
-}
-
-pub fn vrl<'a>(
-    program: &'a str,
-    value: &'a mut ::value::Value,
-) -> Result<(::value::Value, &'a mut ::value::Value)> {
-    thread_local!(
-        static CACHE: RefCell<LruCache<String, Result<Program, String>>> =
-            RefCell::new(LruCache::new(std::num::NonZeroUsize::new(400).unwrap()));
-    );
-
-    CACHE.with(|c| {
-        let mut cache_ref = c.borrow_mut();
-        let stored_result = (*cache_ref).get(program);
-
-        let start = Instant::now();
-        let compiled = match stored_result {
-            Some(compiled) => match compiled {
-                Ok(compiled) => Ok(compiled),
-                Err(e) => {
-                    return Err(anyhow!(e.clone()));
-                }
-            },
-            None => match vrl::compile(&program, &vrl_stdlib::all()) {
-                Ok(result) => {
-                    debug!(
-                        "Compiled a vrl program ({}), took {:?}",
-                        program
-                            .lines()
-                            .into_iter()
-                            .skip(1)
-                            .next()
-                            .unwrap_or("expansion"),
-                        start.elapsed()
-                    );
-                    (*cache_ref).put(program.to_string(), Ok(result.program));
-                    if result.warnings.len() > 0 {
-                        warn!("{:?}", result.warnings);
-                    }
-                    match (*cache_ref).get(program) {
-                        Some(compiled) => match compiled {
-                            Ok(compiled) => Ok(compiled),
-                            Err(e) => {
-                                return Err(anyhow!(e.clone()));
-                            }
-                        },
-                        None => unreachable!(),
-                    }
-                }
-                Err(diagnostics) => {
-                    let msg = Formatter::new(&program, diagnostics).to_string();
-                    (*cache_ref).put(program.to_string(), Err(msg.clone()));
-                    Err(anyhow!(msg))
-                }
-            },
-        }?;
-
-        let mut metadata = ::value::Value::Object(BTreeMap::new());
-        let mut secrets = ::value::Secrets::new();
-        let mut target = TargetValueRef {
-            value: value,
-            metadata: &mut metadata,
-            secrets: &mut secrets,
-        };
-
-        let time_zone_str = Some("tt".to_string()).unwrap_or_default();
-
-        let time_zone = match TimeZone::parse(&time_zone_str) {
-            Some(tz) => tz,
-            None => TimeZone::Local,
-        };
-
-        let result = RUNTIME.with(|r| {
-            let mut runtime = r.borrow_mut();
-
-            match (*runtime).resolve(&mut target, &compiled, &time_zone) {
-                Ok(result) => Ok(result),
-                Err(err) => Err(anyhow!(err.to_string())),
-            }
-        });
-
-        result.and_then(|output| Ok((output, value)))
-    })
-}
-
-fn get_log_source_from_key(key: &str) -> Option<String> {
-    LOG_SOURCES_CONFIG.with(|c| {
-        let log_sources_config = c.borrow();
-
-        // TODO: @shaeq: optimize?
-        // Try get from BYOB or else assume managed and get from path
-        let ret = (*log_sources_config)
-            .iter()
-            .find(|(_, v)| {
-                v.base
-                    .get_string("ingest.s3_source.key_prefix")
-                    .map(|prefix| key.starts_with(prefix.as_str()))
-                    .unwrap_or(false)
-            })
-            .map(|r| r.0.to_owned())
-            .or_else(|| {
-                let ls = key
-                    .split(std::path::MAIN_SEPARATOR)
-                    .next()
-                    .unwrap()
-                    .to_string();
-                log_sources_config.contains_key(&ls).then_some(ls)
-            });
-        debug!("Got log source: {:?} from key: {}", ret, key);
-        ret
-    })
 }
 
 const TRANSFORM_JSON_PARSE: &str = r#"
@@ -674,7 +479,9 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
         })
         .filter(|d| d.size > 0)
         .filter_map(|d| {
-            let log_source = get_log_source_from_key(&d.key);
+            let managed_bucket = var("MATANO_SOURCES_BUCKET").unwrap();
+            let log_source =
+                get_log_source_from_bucket_and_key(&d.bucket, &d.key, managed_bucket.as_str());
             if log_source.is_none() {
                 info!("Skipping irrelevant S3 object: {:?}", d);
             }
@@ -821,12 +628,8 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
                 let mut rows = RefCell::new(0);
 
                 reader
-                    .chunks(8000) // chunks(8000) (avro block size)
-                    .for_each(|chunk| {
-                        // .for_each_concurrent(100, |chunk| { // figure out how to make this work (lock writer so that we can write better blocks...)
-                        let mut writer = writer.borrow_mut();
-                        let mut rows = rows.borrow_mut();
-
+                    .chunks(400) // ? chunks(8000) (avro block size)
+                    .filter_map(|chunk| {
                         let schema = Arc::clone(&inferred_avro_schema);
 
                         async move {
@@ -860,9 +663,17 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
                             .await
                             .unwrap();
 
-                            *rows += avro_values.len();
+                            Some(stream::iter(avro_values))
+                        }
+                    })
+                    .flatten()
+                    .for_each(|v| {
+                        let mut writer = writer.borrow_mut();
+                        let mut rows = rows.borrow_mut();
 
-                            writer.extend_from_slice(&avro_values).unwrap(); // IO (well theoretically) TODO: since this actually does non-trivial comptuuation work too (schema validation), we need to figure out a way to prevent this from blocking our main async thread
+                        async move {
+                            *rows += 1;
+                            writer.append_value_ref(&v).unwrap(); // IO (well theoretically) TODO: since this actually does non-trivial comptuuation work too (schema validation), we need to figure out a way to prevent this from blocking our main async thread
                         }
                     })
                     .await;

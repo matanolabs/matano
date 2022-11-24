@@ -20,7 +20,7 @@ async-compression = { version = "0.3.14", default-features = false, features = [
   "zstd",
   "stream",
 ] }
-infer = "0.9.0"
+infer = "0.11.0"
 arrow2 = { git = "https://github.com/jorgecarleitao/arrow2", features = [
   "io_avro",
   "io_avro_async",
@@ -29,8 +29,8 @@ arrow2 = { git = "https://github.com/jorgecarleitao/arrow2", features = [
   "io_json",
 ] }
 indexmap = "1.9.1"
-
-apache-avro = { git = "https://github.com/apache/avro.git", rev = "c78f12f", features = [
+# git = "https://github.com/shaeqahmed/avro.git", rev = "63fe20e",
+apache-avro = { path = "/Users/shaeqahmed/avro/lang/rust/avro/", features = [
   "zstandard",
   "snappy",
 ] }
@@ -50,12 +50,12 @@ itertools = "0.10.3"
 tracing-subscriber = { version = "0.3.8", features = ["env-filter"] }
 tracing = { version = "0.1.30", features = ["log"] }
 # NOTE: the following crate is not part of the SDK, but it is maintained by AWS.
-lambda_runtime = "0.6.0"
-aws-config = "0.49.0"
+lambda_runtime = "0.7.0"
+aws-config = "0.51.0"
 # We are using the Amazon Simple Storage Service (Amazon S3) crate in this example,
 # but you can use any SDK crate in your Lambda code.
-aws-sdk-s3 = "0.19.0"
-aws-sdk-sns = "0.19.0"
+aws-sdk-s3 = "0.21.0"
+aws-sdk-sns = "0.21.0"
 aws_lambda_events = "0.7.0"
 walkdir = "2.3.2"
 anyhow = "1.0.53"

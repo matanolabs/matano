@@ -9,17 +9,9 @@ import { MatanoIcebergTable } from "../lib/iceberg";
 import { resolveSchema, serializeToFields, mergeSchema, fieldsToSchema } from "./schema";
 import { SqsSubscription } from "aws-cdk-lib/aws-sns-subscriptions";
 import { SqsEventSource, SqsEventSourceProps } from "aws-cdk-lib/aws-lambda-event-sources";
-import { dataDirPath, fail, mergeDeep, readConfig } from "./utils";
+import { dataDirPath, fail, matanoResourceToCdkName, mergeDeep, readConfig, walkdirSync } from "./utils";
 
 export const MATANO_DATABASE_NAME = "matano";
-
-function walkdirSync(dir: string): string[] {
-  return fs.readdirSync(dir).reduce(function (result: string[], file) {
-    const filePath = path.join(dir, file);
-    const isDir = fs.statSync(filePath).isDirectory();
-    return result.concat(isDir ? walkdirSync(filePath) : [filePath]);
-  }, []);
-}
 
 type ConfigurationInfo = { type: "shared" | "managed" | "user"; relativePath: string };
 
@@ -378,7 +370,7 @@ export class MatanoLogSource extends Construct {
       const tableConfig = this.tablesConfig[tableName];
       const resolvedTableName = tableConfig.resolved_name;
 
-      const formattedName = merged.name.charAt(0).toUpperCase() + merged.name.slice(1);
+      const formattedName = matanoResourceToCdkName(merged.name);
 
       this.matanoTable = new MatanoTable(this, `${formattedName}Table`, {
         tableName: resolvedTableName,

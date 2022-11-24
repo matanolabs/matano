@@ -26,15 +26,13 @@ lazy_static! {
         AsyncOnce::new(async { aws_config::load_from_env().await });
     static ref S3_CLIENT: AsyncOnce<aws_sdk_s3::Client> =
         AsyncOnce::new(async { aws_sdk_s3::Client::new(AWS_CONFIG.get().await) });
-    static ref SECRETS_CLIENT: AsyncOnce<aws_sdk_secretsmanager::Client> =
-        AsyncOnce::new(async { aws_sdk_secretsmanager::Client::new(AWS_CONFIG.get().await) });
 }
 
 fn build_contexts() -> HashMap<String, PullLogsContext> {
     let puller_log_source_types: Vec<String> =
         serde_json::from_str(&std::env::var("PULLER_LOG_SOURCE_TYPES").unwrap()).unwrap();
-    let secret_arns: HashMap<String, String> =
-        serde_json::from_str(&std::env::var("SECRET_ARNS").unwrap()).unwrap();
+    let log_source_to_secret_arn_map: HashMap<String, String> =
+        serde_json::from_str(&std::env::var("LOG_SOURCE_TO_SECRET_ARN_MAP").unwrap()).unwrap();
 
     let ret = WalkDir::new("/opt/config/log_sources")
         .min_depth(1)
@@ -60,7 +58,7 @@ fn build_contexts() -> HashMap<String, PullLogsContext> {
                 .get("managed")
                 .and_then(|v| v.get("type"))
                 .and_then(|v| v.as_str())
-                .map(|s| s.to_string());
+                .map(|s| s.to_string().to_lowercase());
 
             let managed_properties = config
                 .get("managed")
@@ -80,7 +78,7 @@ fn build_contexts() -> HashMap<String, PullLogsContext> {
                 .collect::<HashMap<_, _>>();
             props.insert("log_source_type".to_string(), managed_type);
 
-            let secret_arn = secret_arns
+            let secret_arn = log_source_to_secret_arn_map
                 .get(&ls_name)
                 .context("Need secret arn.")
                 .unwrap();

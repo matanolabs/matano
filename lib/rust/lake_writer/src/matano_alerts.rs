@@ -12,19 +12,85 @@ use arrow2::io::avro::avro_schema::write::compress;
 use arrow2::io::avro::write;
 use async_once::AsyncOnce;
 use aws_sdk_lambda::types::Blob;
+use aws_sdk_sns::model::MessageAttributeValue;
 use bytes::Bytes;
-use futures::future::join_all;
+use futures::future::{join_all, try_join_all};
 use lazy_static::lazy_static;
-use log::{error, info};
+use log::{debug, error, info};
 use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::{
+    cell::RefCell,
     collections::{HashMap, HashSet},
+    env::var,
+    io::Write,
     path::Path,
+    sync::Arc,
     time::Instant,
     vec,
 };
+use tokio::fs;
+use tokio::task::spawn_blocking;
+
+use base64::encode;
+use std::mem;
+struct ByteArrayChunker<I: Iterator> {
+    iter: I,
+    chunk: Vec<I::Item>,
+    max_total_size: usize,
+    total_size: usize,
+}
+
+impl<I> Iterator for ByteArrayChunker<I>
+where
+    I: Iterator,
+    I::Item: AsRef<Vec<u8>>,
+{
+    type Item = Vec<I::Item>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            match self.iter.next() {
+                Some(item) => {
+                    let item_size = item.as_ref().len();
+                    let mut ret: Option<Self::Item> = None;
+                    if self.total_size + item_size > self.max_total_size {
+                        self.total_size = 0;
+                        ret = Some(mem::take(&mut self.chunk));
+                    }
+                    self.chunk.push(item);
+                    self.total_size += item_size;
+
+                    if let Some(_) = ret {
+                        return ret;
+                    }
+                }
+                None => {
+                    return if self.chunk.is_empty() {
+                        None
+                    } else {
+                        Some(mem::take(&mut self.chunk))
+                    }
+                }
+            }
+        }
+    }
+}
+
+trait ChunkExt: Iterator + Sized {
+    fn chunks_total_size(self, max_total_size: usize) -> ByteArrayChunker<Self> {
+        ByteArrayChunker {
+            iter: self,
+            chunk: Vec::new(),
+            max_total_size: max_total_size,
+            total_size: 0,
+        }
+    }
+}
+
+impl<I: Iterator + Sized> ChunkExt for I {}
 
 lazy_static! {
     static ref ALERTS_AVRO_SCHEMA: apache_avro::Schema = get_alerts_avro_schema().unwrap();
@@ -32,6 +98,8 @@ lazy_static! {
         load_table_arrow_schema("matano_alerts").unwrap();
     static ref LAMBDA_CLIENT: AsyncOnce<aws_sdk_lambda::Client> =
         AsyncOnce::new(async { aws_sdk_lambda::Client::new(AWS_CONFIG.get().await) });
+    static ref SNS_CLIENT: AsyncOnce<aws_sdk_sns::Client> =
+        AsyncOnce::new(async { aws_sdk_sns::Client::new(AWS_CONFIG.get().await) });
 }
 
 /// Here's what we do:
@@ -96,8 +164,9 @@ pub async fn process_alerts(s3: aws_sdk_s3::Client, data: Vec<Vec<u8>>) -> Resul
 
         let deduplication_window =
             get_av_path(&new_value, "matano.alert.rule.deduplication_window");
-        let deduplication_window_micros: i64 =
-            (cast_av_int(deduplication_window).unwrap_or(1) * 1000000).into();
+        let deduplication_window_seconds: i64 =
+            cast_av_int(deduplication_window).unwrap_or(3600).into();
+        let deduplication_window_micros = deduplication_window_seconds * 1000000;
 
         let alert_threshold = get_av_path(&new_value, "matano.alert.rule.threshold");
         let alert_threshold = cast_av_int(alert_threshold).unwrap_or(1);
@@ -109,6 +178,7 @@ pub async fn process_alerts(s3: aws_sdk_s3::Client, data: Vec<Vec<u8>>) -> Resul
             alert_id: None,
             breached: None,
             created_micros: None,
+            first_matched_at_micros: None,
             deduplication_window_micros,
             threshold: alert_threshold,
         };
@@ -128,13 +198,17 @@ pub async fn process_alerts(s3: aws_sdk_s3::Client, data: Vec<Vec<u8>>) -> Resul
             let matano_alert_rule_name = get_av_path(&value, "matano.alert.rule.name");
             let matano_alert_dedupe = get_av_path(&value, "matano.alert.dedupe");
             let matano_alert_id = get_av_path(&value, "matano.alert.id");
+            let matano_alert_first_matched_at =
+                get_av_path(&value, "matano.alert.first_matched_at");
             let matano_alert_created = get_av_path(&value, "matano.alert.created");
+
             let matano_alert_breached = get_av_path(&value, "matano.alert.breached");
 
             let matano_alert_rule_name = cast_av_str(matano_alert_rule_name);
             let matano_alert_dedupe = cast_av_str(matano_alert_dedupe);
 
             let matano_alert_id_s = cast_av_str(matano_alert_id);
+            let matano_alert_first_matched_at_ts = cast_av_ts(matano_alert_first_matched_at);
             let matano_alert_created_ts = cast_av_ts(matano_alert_created);
 
             let matano_alert_breached_bool = cast_av_bool(matano_alert_breached).unwrap_or(false);
@@ -146,16 +220,18 @@ pub async fn process_alerts(s3: aws_sdk_s3::Client, data: Vec<Vec<u8>>) -> Resul
                 let deduplication_window_micros =
                     new_alert_entry.unwrap().deduplication_window_micros;
 
-                if matano_alert_created_ts.map_or(false, |ts| {
+                if matano_alert_first_matched_at_ts.map_or(false, |ts| {
                     ts + deduplication_window_micros > current_micros
                 }) {
                     let alert_id = matano_alert_id_s.unwrap();
-                    let window_start = matano_alert_created_ts.unwrap();
+                    let first_matched_at = matano_alert_first_matched_at_ts.unwrap();
+
                     let rule_match_id = cast_av_str(matano_rule_match_id).unwrap();
                     let data = ExistingAlertsData {
                         alert_id,
                         rule_match_ids: vec![],
-                        window_start,
+                        first_matched_at,
+                        created: matano_alert_created_ts,
                         breached: matano_alert_breached_bool,
                         breached_changed: false,
                     };
@@ -175,28 +251,39 @@ pub async fn process_alerts(s3: aws_sdk_s3::Client, data: Vec<Vec<u8>>) -> Resul
         let existing_entry = existing_aggregation_map.get_mut(&key);
 
         let threshold: usize = new_alert_data.threshold.try_into().unwrap();
+        let new_match_count = new_alert_data.rule_match_ids.len();
+
         if let Some(entry) = existing_entry {
             let alert_id = entry.alert_id.clone();
             let existing_count = entry.rule_match_ids.len();
-            let existing_created = entry.window_start;
-            let new_match_count = new_alert_data.rule_match_ids.len();
+            let first_matched_at = entry.first_matched_at;
             let did_breach = (existing_count + new_match_count) >= threshold;
-
             let breached_changed = !entry.breached && did_breach;
-            entry.breached_changed = breached_changed;
 
+            let created_ts = match (entry.created, breached_changed) {
+                (Some(ts), _) => Some(ts),
+                (None, true) => Some(current_micros),
+                (None, false) => None,
+            };
+
+            entry.breached_changed = breached_changed;
             new_alert_data.alert_id = Some(alert_id);
             new_alert_data.breached = Some(did_breach);
-            new_alert_data.created_micros = Some(existing_created);
+            new_alert_data.created_micros = created_ts;
+            new_alert_data.first_matched_at_micros = Some(first_matched_at);
         } else {
             let new_alert_id = uuid::Uuid::new_v4().to_string();
-            let new_match_count = new_alert_data.rule_match_ids.len();
             let did_breach = new_match_count >= threshold;
             new_alert_data.alert_id = Some(new_alert_id);
             new_alert_data.breached = Some(did_breach);
-            new_alert_data.created_micros = Some(current_micros);
+            if did_breach {
+                new_alert_data.created_micros = Some(current_micros);
+            }
+            new_alert_data.first_matched_at_micros = Some(current_micros);
         }
     }
+
+    let mut alerts_to_deliver = json!({});
 
     // update the new values based on the alert it was added to
     info!("Updating new values...");
@@ -210,6 +297,9 @@ pub async fn process_alerts(s3: aws_sdk_s3::Client, data: Vec<Vec<u8>>) -> Resul
         let key = (matano_alert_rule_name_s, matano_alert_dedupe_s);
         let new_alert_data = new_value_agg.get(&key).unwrap();
 
+        let is_breached = existing_aggregation_map
+            .get(&key)
+            .map_or(new_alert_data.breached.unwrap_or(false), |e| e.breached);
         let new_value_mut = unsafe { make_mut(new_value) };
 
         insert_av_path(
@@ -228,11 +318,44 @@ pub async fn process_alerts(s3: aws_sdk_s3::Client, data: Vec<Vec<u8>>) -> Resul
         );
         insert_av_path(
             new_value_mut,
-            "matano.alert.created".to_string(),
+            "matano.alert.first_matched_at".to_string(),
             avro_null_union(apache_avro::types::Value::TimestampMicros(
-                new_alert_data.created_micros.unwrap(),
+                new_alert_data.first_matched_at_micros.unwrap(),
             )),
         );
+        let created_av = match new_alert_data.created_micros {
+            Some(created_micros) => {
+                avro_null_union(apache_avro::types::Value::TimestampMicros(created_micros))
+            }
+            None => apache_avro::types::Value::Null,
+        };
+        insert_av_path(
+            new_value_mut,
+            "matano.alert.created".to_string(),
+            created_av,
+        );
+
+        if is_breached {
+            let rule_match = new_value_mut.clone();
+            let rule_match_json =
+                apache_avro::from_value::<serde_json::Value>(&rule_match).unwrap();
+            let alert_id = new_alert_data.alert_id.as_ref().unwrap().clone();
+            alerts_to_deliver
+                .as_object_mut()
+                .unwrap()
+                .entry(alert_id.clone())
+                .or_insert(json!({
+                    "alert_id": alert_id,
+                    "rule_matches": {},
+                }))["rule_matches"]
+                .as_object_mut()
+                .unwrap()
+                .entry("new")
+                .or_insert(json!([]))
+                .as_array_mut()
+                .unwrap()
+                .push(rule_match_json);
+        }
     }
 
     // Update the existing values if an alert was breached just now
@@ -260,6 +383,31 @@ pub async fn process_alerts(s3: aws_sdk_s3::Client, data: Vec<Vec<u8>>) -> Resul
                         avro_null_union(apache_avro::types::Value::Boolean(true)),
                     );
                     modified_partitions.insert(partition.clone());
+
+                    // add the existing value to the alerts to deliver
+                    // let rule_match = value_mut.clone();
+                    // let rule_match_json =
+                    //     apache_avro::from_value::<serde_json::Value>(&rule_match).unwrap();
+                    let alert_id = existing_data.alert_id.clone();
+                    let rule_matches_obj = alerts_to_deliver
+                        .as_object_mut()
+                        .unwrap()
+                        .entry(alert_id.clone())
+                        .or_insert(json!({
+                            "alert_id": alert_id,
+                            "rule_matches": {},
+                        }))["rule_matches"]
+                        .as_object_mut()
+                        .unwrap();
+
+                    rule_matches_obj
+                        .entry("existing")
+                        .or_insert(json!({}))
+                        .as_object_mut()
+                        .unwrap()
+                        .entry("count")
+                        .and_modify(|v| *v = json!(v.as_i64().unwrap() + 1))
+                        .or_insert(json!(1));
                 }
             }
         }
@@ -347,6 +495,62 @@ pub async fn process_alerts(s3: aws_sdk_s3::Client, data: Vec<Vec<u8>>) -> Resul
     let st11 = std::time::Instant::now();
     do_iceberg_commit(commit_req_items).await?;
     println!("**************** TIME: DO_COMMIT {:?}", st11.elapsed());
+
+    // TODO: reduce intermediate byte vec allocations
+    let alerts_to_deliver = alerts_to_deliver
+        .as_object()
+        .unwrap()
+        .values()
+        .par_bridge()
+        .into_par_iter()
+        .map(|v| {
+            let mut bytes_v = v.to_string().into_bytes();
+            bytes_v.push(b'\n');
+            bytes_v
+        })
+        .collect::<Vec<_>>();
+    println!(
+        "Delivering {} alerts that contained new rule matches...",
+        alerts_to_deliver.len()
+    );
+    debug!("Delivering alerts: {:?}", alerts_to_deliver);
+    // TODO(shaeq): handle case if >256kb compressed new rule matches for a single alert..
+    let alerts_to_deliver_chunks = alerts_to_deliver
+        .into_iter()
+        .chunks_total_size(256 * 1024)
+        .collect::<Vec<_>>();
+    let alerts_to_deliver_compressed_chunks = alerts_to_deliver_chunks
+        .into_par_iter()
+        .map(|c| {
+            let mut encoder = zstd::Encoder::new(Vec::new(), 1).unwrap();
+            for l in c {
+                encoder.write_all(&l).unwrap();
+            }
+            encoder.finish().unwrap()
+        })
+        .collect::<Vec<_>>()
+        .into_iter()
+        .chunks_total_size(192 * 1024)
+        .map(|c| encode(c.into_iter().flatten().collect::<Vec<_>>()))
+        .collect::<Vec<_>>();
+
+    let sns = SNS_CLIENT.get().await;
+
+    let alert_futures = alerts_to_deliver_compressed_chunks.into_iter().map(|s| {
+        sns.publish()
+            .topic_arn(var("ALERTING_SNS_TOPIC_ARN").unwrap().to_string())
+            .message(s)
+            .message_attributes(
+                "destination",
+                MessageAttributeValue::builder()
+                    .data_type("String".to_string())
+                    .string_value("slack")
+                    .build(),
+            )
+            .send()
+    });
+
+    let res = try_join_all(alert_futures).await?;
 
     Ok(())
 }
@@ -688,7 +892,11 @@ fn get_single_record(
 ) -> &apache_avro::types::Value {
     match value {
         apache_avro::types::Value::Record(ref vals) => {
-            &vals.iter().find(|(k, _)| k == &path).unwrap().1
+            let v = vals.iter().find(|(k, _)| k == &path);
+            match v {
+                Some((_, v)) => v,
+                None => panic!("No value for path {}", path),
+            }
         }
         apache_avro::types::Value::Union(pos, v) => {
             if *pos == 0 {
@@ -821,7 +1029,8 @@ unsafe fn make_mut<T>(reference: &T) -> &mut T {
 struct ExistingAlertsData {
     alert_id: String,
     rule_match_ids: Vec<String>,
-    window_start: i64,
+    first_matched_at: i64,
+    created: Option<i64>,
     breached: bool,
     breached_changed: bool,
 }
@@ -831,6 +1040,7 @@ struct NewAlertData {
     rule_match_ids: Vec<String>,
     alert_id: Option<String>,
     breached: Option<bool>,
+    first_matched_at_micros: Option<i64>,
     created_micros: Option<i64>,
     deduplication_window_micros: i64,
     threshold: i32,

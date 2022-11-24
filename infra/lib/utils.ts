@@ -12,6 +12,14 @@ export const getDirectories = (source: string) =>
     .filter((dirent) => dirent.isDirectory())
     .map((dirent) => dirent.name);
 
+export function walkdirSync(dir: string): string[] {
+  return fs.readdirSync(dir).reduce(function (result: string[], file) {
+    const filePath = path.join(dir, file);
+    const isDir = fs.statSync(filePath).isDirectory();
+    return result.concat(isDir ? walkdirSync(filePath) : [filePath]);
+  }, []);
+}
+
 // cdk formatArn is confusing af
 export function makeRoleArn(account: string, roleName: string) {
   return `arn:aws:iam::${account}:role/${roleName}`;
@@ -19,6 +27,10 @@ export function makeRoleArn(account: string, roleName: string) {
 
 export function readConfig(directory: string, filename: string): Record<string, any> {
   return YAML.parse(fs.readFileSync(path.join(directory, filename), "utf8"));
+}
+
+export function readConfigPath(filepath: string): Record<string, any> {
+  return YAML.parse(fs.readFileSync(path.join(filepath), "utf8"));
 }
 
 export function readDetectionConfig(detectionDirectory: string): Record<string, any> {
@@ -139,3 +151,20 @@ export const stackNameWithLabel = (name: string) => {
   if (projectLabel != null) validateProjectLabel(projectLabel);
   return `${name}${projectLabel ? `-${projectLabel}` : ""}`;
 };
+
+export function validateMatanoResourceName(name: string) {
+  const SNAKE_CASE_REGEX = /^([a-z](?![\d])|[\d](?![a-z]))+(_?([a-z](?![\d])|[\d](?![a-z])))*$|^$/;
+
+  if (!(name.match(SNAKE_CASE_REGEX) && name.length >= 5 && name.length <= 64 && isLower(name))) {
+    throw new Error(
+      `Invalid resource name: ${name}, must be snake_cased and only contain lowercase letters and numbers, and be 5-64 characters long.`
+    );
+  }
+}
+
+export function matanoResourceToCdkName(name: string) {
+  return name
+    .split("_")
+    .map((substr) => substr.charAt(0).toUpperCase() + substr.slice(1))
+    .join("");
+}

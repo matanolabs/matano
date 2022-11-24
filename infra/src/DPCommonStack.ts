@@ -1,12 +1,14 @@
 import { Construct } from "constructs";
 import * as cdk from "aws-cdk-lib";
 import * as s3 from "aws-cdk-lib/aws-s3";
+import * as ddb from "aws-cdk-lib/aws-dynamodb";
 import * as glue from "aws-cdk-lib/aws-glue";
 import * as athena from "aws-cdk-lib/aws-athena";
 import { MatanoStack, MatanoStackProps } from "../lib/MatanoStack";
 import { S3BucketWithNotifications } from "../lib/s3-bucket-notifs";
 import { Bucket, BlockPublicAccess } from "aws-cdk-lib/aws-s3";
 import { Topic } from "aws-cdk-lib/aws-sns";
+import { IntegrationsStore } from "../lib/integrations-store";
 
 export const MATANO_DATABASE_NAME = "matano";
 interface DPCommonStackProps extends MatanoStackProps {}
@@ -15,6 +17,8 @@ export class DPCommonStack extends MatanoStack {
   matanoLakeStorageBucket: S3BucketWithNotifications;
   realtimeBucket: Bucket;
   realtimeBucketTopic: Topic;
+  integrationsStore: IntegrationsStore;
+  alertTrackerTable: ddb.Table;
 
   constructor(scope: Construct, id: string, props: DPCommonStackProps) {
     super(scope, id, props);
@@ -23,6 +27,11 @@ export class DPCommonStack extends MatanoStack {
       bucketProps: {
         blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
       },
+    });
+
+    this.alertTrackerTable = new ddb.Table(this, "MatanoAlertTrackingTable", {
+      partitionKey: { name: "id", type: ddb.AttributeType.STRING },
+      billingMode: ddb.BillingMode.PAY_PER_REQUEST,
     });
 
     this.matanoLakeStorageBucket = new S3BucketWithNotifications(this, "MatanoLakeStorageBucket", {
@@ -66,6 +75,7 @@ export class DPCommonStack extends MatanoStack {
         },
       },
     });
+    this.integrationsStore = new IntegrationsStore(this, "MatanoIntegrationsStore", {});
 
     this.humanCfnOutput("MatanoIngestionS3BucketName", {
       value: this.matanoIngestionBucket.bucket.bucketName,

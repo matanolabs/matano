@@ -1,0 +1,60 @@
+[package]
+name = "alert_forwarder"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+shared = { path = "../shared" }
+anyhow = "1.0.53"
+tokio = { version = "1.17.0", features = ["full"] }
+tokio-util = { version = "0.7.3", features = ["full"] }
+tokio-stream = { version = "^0.1", features = ["io-util", "net", "sync"] }
+async-stream = "0.3.3"
+bytes = "1.2.1"
+base64 = "0.13.1"
+reqwest = { version = "0.11.2", default-features = false, features = [
+  "rustls-tls-native-roots",
+  "json",
+] }
+
+chrono = { version = "0.4", features = ["serde"] }
+# chrono-tz = "0.8.0"
+futures = "0.3"
+futures-util = "0.3.23"
+serde = "^1"
+serde_json = "^1"
+serde_yaml = "0.9"
+log = "^0.4"
+tracing-subscriber = { version = "0.3.8", features = ["env-filter"] }
+tracing = { version = "0.1.30", features = ["log"] }
+lambda_runtime = "0.7.0"
+aws-config = "0.51.0"
+aws_lambda_events = "0.7.2"
+aws-sdk-sqs = "0.21.0"
+aws-sdk-dynamodb = "0.21.0"
+serde_dynamo = { version = "4", features = ["aws-sdk-dynamodb+0_21"] }
+
+aws-sdk-secretsmanager = "0.21.0"
+lazy_static = "1.4.0"
+async_once = "0.2.6"
+uuid = { version = "1.1.2", features = ["v4"] }
+walkdir = "2.3.2"
+tikv-jemallocator = { version = "0.5.0" }
+
+async-compression = { version = "0.3.14", default-features = false, features = [
+  "tokio",
+  "gzip",
+  "zstd",
+  "stream",
+] }
+
+# VRL v0.24.1
+value = { git = "https://github.com/vectordotdev/vector", rev = "8935681" }
+vrl = { git = "https://github.com/vectordotdev/vector", rev = "8935681" }
+vrl-stdlib = { git = "https://github.com/vectordotdev/vector", rev = "8935681" }
+
+# wierd issue with 'alloc' missing from pest's Parser macro used in vrl requires reimporting with std to work...
+pest = { version = "2.2.1", default-features = false, features = ["std"] }
+pest_derive = { version = "2.2.1", default-features = false, features = [
+  "std",
+] }

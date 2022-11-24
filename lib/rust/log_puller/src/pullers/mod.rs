@@ -8,7 +8,7 @@ use log::{debug, error, info};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-use crate::SECRETS_CLIENT;
+use shared::secrets::load_secret;
 
 mod o365;
 
@@ -59,32 +59,19 @@ impl PullLogsContext {
         }
     }
 
-    async fn load_secrets(&self) -> HashMap<String, String> {
-        let client = SECRETS_CLIENT.get().await;
-        let output = client
-            .get_secret_value()
-            .secret_id(self.secret_arn.to_owned())
-            .send()
-            .await
-            .unwrap();
-        let secrets_val_str = output.secret_string().unwrap_or("");
-        let secrets_val: HashMap<String, String> = serde_json::from_str(secrets_val_str).unwrap();
-        secrets_val
-    }
-
-    pub async fn get_secret(&self, s: &str) -> Result<Option<String>> {
+    pub async fn get_secret_field(&self, key: &str) -> Result<Option<String>> {
         let secret_cache_ref = self.secret_cache.clone();
         let mut secret_cache_opt = secret_cache_ref.lock().await;
         let secrets_val = match secret_cache_opt.as_ref() {
             Some(v) => v,
             None => {
-                let secrets = self.load_secrets().await;
+                let secrets = load_secret(self.secret_arn.clone()).await?;
                 *secret_cache_opt = Some(secrets);
                 secret_cache_opt.as_ref().unwrap()
             }
         };
 
-        Ok(secrets_val.get(s).map(|s| s.to_owned()))
+        Ok(secrets_val.get(key).map(|s| s.to_owned()))
     }
 
     pub fn config(&self) -> &HashMap<String, String> {
