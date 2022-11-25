@@ -176,8 +176,7 @@ class IcebergMetadataWriter {
         private val ddb = AmazonDynamoDBClientBuilder.defaultClient()
 
         fun createIcebergCatalog(): Catalog {
-            val glueCatalog = GlueCatalog().apply { initialize("glue_catalog", icebergProperties) }
-            return CachingCatalog.wrap(glueCatalog)
+            return GlueCatalog().apply { initialize("glue_catalog", icebergProperties) }
         }
     }
 }
