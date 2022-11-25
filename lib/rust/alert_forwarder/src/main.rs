@@ -72,6 +72,48 @@ thread_local! {
     };
 }
 
+const FLATTENED_CONTEXT_EXPANDER: &str = r#"
+key_to_label = {
+    "related.ip": ":mag: IP",
+    "related.user": ":bust_in_silhouette: User",
+    "related.hosts": ":globe_with_meridians: Host",
+    "related.hash": ":hash: Hash",
+}
+
+context = .
+. = {}
+
+for_each(context) -> |k, v| {
+    label = get(key_to_label, [k]) ?? null
+    values = array!(v)
+    value_str_prefix = if label != null { label } else { k }
+
+    value_str_prefix, err = "*" + to_string(value_str_prefix) + ":* "
+    vals, err = map_values(values) -> |v| {
+        "`" + to_string(v) + "`"
+    }
+    more_count_short = length(vals) - 5
+    values_short = slice!(vals, 0, 5)
+    value_short_str = value_str_prefix + join!(values_short, "  ")
+    if more_count_short > 0 {
+        value_short_str = value_short_str + " +" + to_string(more_count_short) + " more..."
+    }
+
+    more_count_long = length(vals) - 25
+    values_long = slice!(vals, 0, 25)
+    value_long_str = value_str_prefix + join!(values_long, "  ")
+    if more_count_long > 0 {
+        value_long_str = value_long_str + " +" + to_string(more_count_long) + " more..."
+    }
+
+    k_parts = split(k, ".")
+
+    .long_fmt = set!(object!(.long_fmt || {}), k_parts, value_long_str)
+    .short_fmt = set!(object!(.short_fmt || {}), k_parts, value_short_str)
+    .values = set!(object!(.values || {}), k_parts, values)
+}
+"#;
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Alert {
     // pub alert_info: Value,
@@ -188,66 +230,13 @@ async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
 
             combined_context = compact(combined_context, recursive: true)
 
-            # combined_context = map_values(combined_context) -> |v| {
-            #     len = length(array!(v))
-            #     # if len == 1 {
-            #     #     v[0]
-            #     # } else
-            # }
-
-            # combined_context = map_keys(combined_context) -> |k| {
-            #     k_parts = split(k, ".")
-            #     k_parts, err = map_values(k_parts) -> |v| { upcase(slice!(string(v), 0, 1)) + slice(v, 1)  }
-            #     if err == null {
-            #         join!(k_parts, " ")
-            #     } else {
-            #         k
-            #     }
-            # }
-
-            key_to_label = {
-                "related.ip": ":mag: IP",
-                "related.user": ":bust_in_silhouette: User",
-                "related.hosts": ":globe_with_meridians: Host",
-                "related.hash": ":hash: Hash",
-            }
-
-            . = {}
-
-            for_each(combined_context) -> |k, v| {
-                label = get(key_to_label, [k]) ?? null
-                values = array!(v)
-                value_str_prefix = if label != null { label } else { k }
-
-                value_str_prefix, err = "*" + to_string(value_str_prefix) + ":* "
-                vals, err = map_values(values) -> |v| {
-                    "`" + to_string(v) + "`"
-                }
-                more_count_short = length(vals) - 5
-                values_short = slice!(vals, 0, 5)
-                value_short_str = value_str_prefix + join!(values_short, "  ")
-                if more_count_short > 0 {
-                    value_short_str = value_short_str + " +" + to_string(more_count_short) + " more..."
-                }
-
-                more_count_long = length(vals) - 25
-                values_long = slice!(vals, 0, 25)
-                value_long_str = value_str_prefix + join!(values_long, "  ")
-                if more_count_long > 0 {
-                    value_long_str = value_long_str + " +" + to_string(more_count_long) + " more..."
-                }
-
-                k_parts = split(k, ".")
-
-                .long_fmt = set!(object!(.long_fmt || {}), k_parts, value_long_str)
-                .short_fmt = set!(object!(.short_fmt || {}), k_parts, value_short_str)
-                .values = set!(object!(.values || {}), k_parts, values)
-            }
+            . = combined_context
 
             matano_alert_info.match_count = length(rule_matches)
             matano_alert_info
             "#;
         let mut matano_alert_info= vrl(&wrapped_prog, &mut ecs_alert_info_agg)?.0;
+        vrl(FLATTENED_CONTEXT_EXPANDER, &mut ecs_alert_info_agg)?;
 
         let alert_id = vrl(".id", &mut matano_alert_info)?.0.as_str().context("missing id")?.to_string();
 
@@ -396,7 +385,53 @@ async fn publish_alert_to_slack(
                 .unwrap();
             let thread_ts = existing_dest_info["ts"].as_str().unwrap();
 
-            let blocks = json!([
+            let compute_new_context = r#"
+            new_context = {}
+
+            .a = flatten(object!(.a))
+            .b = flatten(object!(.b))
+
+            for_each(.b) -> |k, v| {
+                a_v = array!(get(.a, [k]) ?? [])
+                a_v_set = {}
+                for_each(a_v) -> |_i, f| {
+                  a_v_set = set!(a_v_set, [f], true)
+                }
+                v_new = []
+                for_each(array!(v)) -> |_i, f| {
+                  exists = get(a_v_set, [f]) ?? false
+                  exists = if exists == true {
+                    true
+                  } else {
+                    false
+                  }
+                  if !exists {
+                    v_new = push(v_new, f)
+                  }
+                }
+                new_context = set!(new_context, [k], v_new)
+            }
+            compact(new_context)"#;
+            let existing_context = existing_alert.context_values.to_owned();
+            let incoming_context = alert.context_values.to_owned();
+            let mut new_context = vrl(
+                compute_new_context,
+                &mut value!({
+                    "a": existing_context,
+                    "b": incoming_context,
+                }),
+            )?
+            .0;
+            vrl(FLATTENED_CONTEXT_EXPANDER, &mut new_context)?;
+            let new_context_strs = vrl("flatten(.long_fmt) ?? {}", &mut new_context)?.0;
+            let new_context_strs = match new_context_strs {
+                Value::Object(context_strs) => context_strs.into_values().map(|v| v.as_str().unwrap().to_string()).collect::<Vec<String>>(),
+                _ => vec![],
+            };
+            // let new_context_values = vrl(".values || {}", &mut new_context)?.0;
+            // let new_context_values_json: serde_json::Value = new_context_values.try_into().unwrap();
+            // let new_context_values_json_str = serde_json::to_string_pretty(&new_context_values_json).unwrap();
+            let mut blocks = json!([
                 {
                     "type": "header",
                     "text": {
@@ -406,25 +441,47 @@ async fn publish_alert_to_slack(
                     }
                 },
                 {
-                    "type": "section",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": "*Context details*"
-                    },
-                },
-                {
-                    "type": "context",
-                    "elements": [
-                        {
-                            "type": "mrkdwn",
-                            "text": alert.context_strs.join("\n\n")
-                        }
-                    ]
-                },
-                {
                     "type": "divider"
                 }
             ]);
+
+            if new_context_strs.len() > 0 {
+                blocks.as_array_mut().unwrap().insert(
+                    2,
+                    json!({
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": "*New context*"
+                        },
+                    }),
+                );
+                blocks.as_array_mut().unwrap().insert(
+                    3,
+                    json!({
+                        "type": "context",
+                        "elements": [
+                            {
+                                "type": "mrkdwn",
+                                "text": new_context_strs.join("\n\n")
+                            }
+                        ]
+                    }),
+                );
+            } else {
+                blocks.as_array_mut().unwrap().insert(
+                    2,
+                    json!({
+                        "type": "context",
+                        "elements": [
+                            {
+                                "type": "mrkdwn",
+                                "text": "No new context"
+                            }  
+                        ]
+                    }),
+                );
+            }
 
             let blocks_str = serde_json::to_string(&blocks).unwrap();
 
@@ -526,9 +583,6 @@ async fn publish_alert_to_slack(
                                 "text": alert.related_strs.join("\n\n")
                             }
                         ]
-                    },
-                    {
-                        "type": "divider"
                     }
             ]);
 
@@ -560,6 +614,9 @@ async fn publish_alert_to_slack(
                 ));
             }
 
+            let context_values_json: serde_json::Value = alert.context_values.to_owned().try_into().unwrap();
+            let context_values_json_str = serde_json::to_string_pretty(&context_values_json).unwrap();
+
             let blocks = json!([
                     {
                         "type": "header",
@@ -580,9 +637,6 @@ async fn publish_alert_to_slack(
                                 "text": alert.context_strs.join("\n\n")
                             }
                         ]
-                    },
-                    {
-                        "type": "divider"
                     }
             ]);
 

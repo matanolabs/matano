@@ -181,7 +181,7 @@ export class DPMainStack extends MatanoStack {
       }
     }
 
-    const sqsSources = new MatanoSQSSources(this, "SQSIngestionLogSources", {
+    const sqsSources = new MatanoSQSSources(this, "SQSIngest", {
       logSources: logSources.filter(
         (ls) => ls.isDataLogSource && ls.logSourceConfig?.ingest?.sqs_source?.enabled === true
       ),

@@ -29,8 +29,8 @@ export class MatanoSQSSources extends Construct {
     for (const resolvedTableName of resolvedTableNames) {
       const formattedTableName = matanoResourceToCdkName(resolvedTableName);
 
-      const ingestionDLQ = new sqs.Queue(this, `${formattedTableName}IngestDLQ`);
-      const ingestionQueue = new sqs.Queue(this, `${formattedTableName}IngestQueue`, {
+      const ingestionDLQ = new sqs.Queue(this, `${formattedTableName}DLQ`);
+      const ingestionQueue = new sqs.Queue(this, `${formattedTableName}Queue`, {
         deadLetterQueue: { queue: ingestionDLQ, maxReceiveCount: 3 },
       });
 
