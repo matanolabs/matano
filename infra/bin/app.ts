@@ -26,6 +26,7 @@ const dpMainStack = new DPMainStack(app, "DPMainStack", {
   lakeStorageBucket: dpCommonStack.matanoLakeStorageBucket,
   realtimeBucket: dpCommonStack.realtimeBucket,
   realtimeBucketTopic: dpCommonStack.realtimeBucketTopic,
+  matanoAthenaResultsBucket: dpCommonStack.matanoAthenaResultsBucket,
   integrationsStore: dpCommonStack.integrationsStore,
   alertTrackerTable: dpCommonStack.alertTrackerTable,
 });

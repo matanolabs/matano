@@ -21,6 +21,7 @@ export class DPCommonStack extends MatanoStack {
   realtimeBucketTopic: Topic;
   integrationsStore: IntegrationsStore;
   alertTrackerTable: ddb.Table;
+  matanoAthenaResultsBucket: s3.Bucket;
 
   constructor(scope: Construct, id: string, props: DPCommonStackProps) {
     super(scope, id, props);
@@ -62,7 +63,7 @@ export class DPCommonStack extends MatanoStack {
       catalogId: cdk.Aws.ACCOUNT_ID,
     });
 
-    const matanoAthenaResultsBucket = new s3.Bucket(this, "MatanoAthenaResults", {
+    this.matanoAthenaResultsBucket = new s3.Bucket(this, "MatanoAthenaResults", {
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
     });
     const matanoAthenaWorkgroup = new athena.CfnWorkGroup(this, "MatanoAthenaWorkGroup", {
@@ -73,7 +74,7 @@ export class DPCommonStack extends MatanoStack {
           selectedEngineVersion: "Athena engine version 2",
         },
         resultConfiguration: {
-          outputLocation: `s3://${matanoAthenaResultsBucket.bucketName}/results`,
+          outputLocation: `s3://${this.matanoAthenaResultsBucket.bucketName}/results`,
         },
       },
     });
@@ -98,5 +99,6 @@ export class DPCommonStack extends MatanoStack {
     // important: to prevent output deletion
     this.exportValue(this.matanoIngestionBucket.topic.topicArn);
     this.exportValue(this.matanoIngestionBucket.bucket.bucketArn);
+    this.exportValue(this.matanoAthenaResultsBucket.bucketArn);
   }
 }

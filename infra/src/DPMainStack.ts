@@ -49,6 +49,7 @@ interface DPMainStackProps extends MatanoStackProps {
   lakeStorageBucket: S3BucketWithNotifications;
   realtimeBucket: Bucket;
   realtimeBucketTopic: sns.Topic;
+  matanoAthenaResultsBucket: s3.Bucket;
   integrationsStore: IntegrationsStore;
   alertTrackerTable: Table;
 }
@@ -144,6 +145,7 @@ export class DPMainStack extends MatanoStack {
         enrichmentIngestionBucket: props.matanoSourcesBucket.bucket,
         realtimeTopic: props.realtimeBucketTopic,
         lakeWriterLambda: lakeWriter.lakeWriterLambda,
+        matanoAthenaResultsBucket: props.matanoAthenaResultsBucket,
       });
 
       this.addConfigDir(userEnrichmentDir, "enrichment", {

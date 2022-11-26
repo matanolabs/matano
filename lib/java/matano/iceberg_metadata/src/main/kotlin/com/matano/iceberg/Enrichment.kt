@@ -112,7 +112,7 @@ data class EnrichmentConfig(
 )
 
 fun loadEnrichmentConfiguration(): Map<String, EnrichmentConfig> {
-    val path = "/media/samrose/hdd1/workplace/matano/example/enrichment"
+    val path = "/opt/config/enrichment"
     val mapper = YAMLMapper().registerModule(kotlinModule())
     val configs = File(path).walk().maxDepth(2).filter { it.isFile && it.endsWith("enrichment_table.yml") }.map { f ->
         val conf = mapper.readValue<EnrichmentConfig>(f.inputStream())
@@ -169,10 +169,16 @@ class EnrichmentIcebergSyncer {
         val enrichTableName = "enrich_$tableName"
         val icebergTable = icebergCatalog.loadTable(TableIdentifier.of(Namespace.of(IcebergMetadataWriter.MATANO_NAMESPACE), enrichTableName))
 
+        val currentSnapshot = icebergTable.currentSnapshot()
+        if (currentSnapshot == null) {
+            logger.info("Empty table, returning.")
+            return
+        }
+
         val timeDt = OffsetDateTime.parse(time)
         val fifteenMinAgoMillis = timeDt.minusMinutes(1).toEpochSecond() * 1000
         // can get stuck...
-        if (icebergTable.currentSnapshot().timestampMillis() < fifteenMinAgoMillis) {
+        if (currentSnapshot.timestampMillis() < fifteenMinAgoMillis) {
             logger.info("Skipping table: $tableName as no updates found.")
             return
         }
@@ -218,10 +224,9 @@ class EnrichmentIcebergSyncer {
             .build()
 
         val currentFiles = icebergTable.newScan().planWith(planExecutorService).planFiles().map { it.file() }
-        val currentSnapshotId = icebergTable.currentSnapshot().snapshotId()
         icebergTable.newRewrite()
             .scanManifestsWith(planExecutorService)
-            .validateFromSnapshot(currentSnapshotId)
+            .validateFromSnapshot(currentSnapshot.snapshotId())
             .rewriteFiles(currentFiles.toSet(), setOf(dataFile))
             .commit()
         logger.info("Completed syncing table: $enrichTableName")

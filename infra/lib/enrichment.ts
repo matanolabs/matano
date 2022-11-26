@@ -24,6 +24,7 @@ interface EnrichmentProps {
   enrichmentIngestionBucket: s3.IBucket;
   realtimeTopic: sns.Topic;
   lakeWriterLambda: lambda.Function;
+  matanoAthenaResultsBucket: s3.IBucket;
 }
 
 interface EnrichmentCRProps {
@@ -112,12 +113,25 @@ export class Enrichment extends Construct {
           actions: ["glue:*"],
           resources: ["*"],
         }),
+        new iam.PolicyStatement({
+          actions: [
+            "athena:StartQueryExecution",
+            "athena:GetQueryExecution",
+            "athena:GetQueryResults",
+            "s3:PutObject",
+            "s3:GetObject",
+          ],
+          resources: [
+            `arn:aws:athena:*:${cdk.Stack.of(this).account}:workgroup/matano`
+          ],
+        }),
       ],
       code: getLocalAsset("iceberg_metadata"),
     });
 
     props.lakeStorageBucket.grantReadWrite(this.enrichmentSyncerFunc);
-    enrichmentTablesBucket.grantWrite(this.enrichmentSyncerFunc);
+    enrichmentTablesBucket.grantReadWrite(this.enrichmentSyncerFunc);
+    props.matanoAthenaResultsBucket.grantReadWrite(this.enrichmentSyncerFunc);
 
     const enrichmentSyncerDLQ = new sqs.Queue(this, "SyncerDLQ");
     const enrichmentSyncerQueue = new sqs.Queue(this, "SyncerQueue", {
