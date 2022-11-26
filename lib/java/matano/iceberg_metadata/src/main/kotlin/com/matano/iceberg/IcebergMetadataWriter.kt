@@ -2,6 +2,7 @@ package com.matano.iceberg
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder
 import com.amazonaws.services.dynamodbv2.model.AttributeValue
 import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException
+import com.amazonaws.services.dynamodbv2.model.DeleteItemRequest
 import com.amazonaws.services.dynamodbv2.model.PutItemRequest
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestHandler
@@ -120,27 +121,33 @@ class IcebergMetadataWriter {
             return
         }
 
-        val tableObj = tableObjs[tableName] ?: throw RuntimeException("table must exist.")
-        val icebergTable = tableObj.table
+        try {
+            val tableObj = tableObjs[tableName] ?: throw RuntimeException("table must exist.")
+            val icebergTable = tableObj.table
 
-        val isEnrichmentTable = icebergTable.name().split(".").last().startsWith("enrich_")
+            val isEnrichmentTable = icebergTable.name().split(".").last().startsWith("enrich_")
 
-        val metrics = readParquetMetrics(s3Path, icebergTable)
-        val partition = icebergTable.spec()
-        val dataFile = DataFiles.builder(partition)
-            .apply {
-                if (partition.isPartitioned) { this.withPartitionPath(partitionPath) }
+            val metrics = readParquetMetrics(s3Path, icebergTable)
+            val partition = icebergTable.spec()
+            val dataFile = DataFiles.builder(partition)
+                .apply {
+                    if (partition.isPartitioned) { this.withPartitionPath(partitionPath) }
+                }
+                .withPath(s3Path)
+                .withFileSizeInBytes(s3ObjectSize)
+                .withFormat("PARQUET")
+                .withMetrics(metrics)
+                .build()
+
+            if (isEnrichmentTable) {
+                enrichmentMetadataWriter.doMetadataWrite(icebergTable, dataFile, tableObj.appendFiles, { tableObj.overwriteFiles.get() })
+            } else {
+                tableObj.appendFiles.appendFile(dataFile)
             }
-            .withPath(s3Path)
-            .withFileSizeInBytes(s3ObjectSize)
-            .withFormat("PARQUET")
-            .withMetrics(metrics)
-            .build()
-
-        if (isEnrichmentTable) {
-            enrichmentMetadataWriter.doMetadataWrite(icebergTable, dataFile, tableObj.appendFiles, { tableObj.overwriteFiles.get() })
-        } else {
-            tableObj.appendFiles.appendFile(dataFile)
+        } catch (e: Exception) {
+            // Need to delete on failure to avoid false duplicate skip.
+            deleteDuplicateMarker(s3Object.sequencer)
+            throw e
         }
     }
 
@@ -157,6 +164,11 @@ class IcebergMetadataWriter {
             return true
         }
         return false
+    }
+
+    private fun deleteDuplicateMarker(sequencer: String) {
+        val req = DeleteItemRequest(DUPLICATES_DDB_TABLE_NAME, mapOf("sequencer" to AttributeValue(sequencer)))
+        ddb.deleteItem(req)
     }
 
     companion object {
