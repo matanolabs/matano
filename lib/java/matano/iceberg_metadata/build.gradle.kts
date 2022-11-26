@@ -11,6 +11,7 @@ configurations.all {
 }
 dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.6.4")
 
     implementation("com.github.airbytehq.json-avro-converter:converter:1.0.1")
     implementation("com.fasterxml.jackson.core:jackson-annotations:2.13.3")
@@ -50,6 +51,7 @@ dependencies {
         exclude("software.amazon.awssdk", "apache-client")
         exclude("software.amazon.awssdk", "netty-nio-client")
     }
+    implementation("software.amazon.awssdk:athena:2.17.131")
     implementation("software.amazon.awssdk:s3:2.17.131") {
         exclude("software.amazon.awssdk", "apache-client")
 //        exclude("software.amazon.awssdk", "netty-nio-client")

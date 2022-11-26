@@ -9,24 +9,29 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.kotlinModule
 import com.fasterxml.jackson.module.kotlin.readValue
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.future.await
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.apache.iceberg.*
 import org.apache.iceberg.catalog.Namespace
 import org.apache.iceberg.catalog.TableIdentifier
-import org.apache.iceberg.data.IcebergGenerics
 import org.apache.iceberg.io.InputFile
-import org.apache.parquet.io.DelegatingPositionOutputStream
-import org.apache.parquet.io.OutputFile
-import org.apache.parquet.io.PositionOutputStream
+import org.apache.iceberg.parquet.ParquetSchemaUtil
+import org.apache.iceberg.parquet.ParquetUtil
+import org.apache.parquet.hadoop.ParquetFileWriter
+import org.apache.parquet.hadoop.metadata.ParquetMetadata
+import org.apache.parquet.io.*
 import org.slf4j.LoggerFactory
 import software.amazon.awssdk.core.async.AsyncRequestBody
 import software.amazon.awssdk.services.s3.S3AsyncClient
-import java.io.*
+import java.io.ByteArrayOutputStream
+import java.io.File
+import java.io.OutputStream
 import java.time.OffsetDateTime
-import java.util.*
+import java.util.UUID
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
+import java.util.stream.Stream
 
 class InMemoryOutputFile : OutputFile {
     private val baos = ByteArrayOutputStream()
@@ -79,6 +84,26 @@ class InMemoryIcebergOutputFile : org.apache.iceberg.io.OutputFile {
     }
 }
 
+// ParquetIO is private...
+class ParquetInputStreamAdapter constructor(private val delegate: org.apache.iceberg.io.SeekableInputStream) : DelegatingSeekableInputStream(delegate) {
+    override fun getPos() = delegate.pos
+    override fun seek(newPos: Long) = delegate.seek(newPos)
+}
+class ParquetIcebergInputFile(private val inputFile: org.apache.iceberg.io.InputFile) : org.apache.parquet.io.InputFile {
+    override fun getLength(): Long = inputFile.length
+    override fun newStream(): SeekableInputStream = ParquetInputStreamAdapter(inputFile.newStream())
+}
+class ParquetOutputStreamAdapter(private val delegate: org.apache.iceberg.io.PositionOutputStream) : DelegatingPositionOutputStream(delegate) {
+    override fun getPos() = delegate.pos
+}
+class ParquetIcebergOutputFile(private val file: org.apache.iceberg.io.OutputFile) : OutputFile {
+    override fun create(ignored: Long): PositionOutputStream = ParquetOutputStreamAdapter(file.create())
+    override fun createOrOverwrite(ignored: Long): PositionOutputStream = ParquetOutputStreamAdapter(file.createOrOverwrite())
+
+    override fun supportsBlockSize() = false
+    override fun defaultBlockSize(): Long = 0
+}
+
 data class EnrichmentConfig(
     val name: String,
     val enrichment_type: String,
@@ -86,11 +111,8 @@ data class EnrichmentConfig(
     val schema: JsonNode
 )
 
-fun main() {
-}
-
 fun loadEnrichmentConfiguration(): Map<String, EnrichmentConfig> {
-    val path = "/opt/config/enrichment"
+    val path = "/media/samrose/hdd1/workplace/matano/example/enrichment"
     val mapper = YAMLMapper().registerModule(kotlinModule())
     val configs = File(path).walk().maxDepth(2).filter { it.isFile && it.endsWith("enrichment_table.yml") }.map { f ->
         val conf = mapper.readValue<EnrichmentConfig>(f.inputStream())
@@ -115,18 +137,22 @@ class EnrichmentSyncerHandler : RequestHandler<SQSEvent, Void?> {
 
 /** Periodically sync enrichment Iceberg tables for direct use */
 class EnrichmentIcebergSyncer {
+    private val logger = LoggerFactory.getLogger(this::class.java)
+
     val s3AsyncClient = S3AsyncClient.create()
     val icebergCatalog = IcebergMetadataWriter.createIcebergCatalog()
-    val enrichmentTablesBucket = System.getenv("ENRICHMENT_TABLES_BUCKET")
+    val enrichmentTablesBucket = System.getenv("ENRICHMENT_TABLES_BUCKET") ?: throw RuntimeException("Need enrichment bucket.")
     val mapper = jacksonObjectMapper()
     val planExecutorService = Executors.newFixedThreadPool(20)
+    val athenaQueryRunner = AthenaQueryRunner()
 
     fun handle(event: SQSEvent, configs: Map<String, EnrichmentConfig>) {
         val records = event.records.map { mapper.readValue<EnrichmentSyncRequest>(it.body) }
         runBlocking {
             for (record in records) {
                 launch(Dispatchers.IO) {
-                    syncTable(record.table_name, record.time, configs[record.table_name]!!)
+                    val conf = configs[record.table_name] ?: throw RuntimeException("Invalid table: ${record.table_name}, No config found.")
+                    syncTable(record.table_name, record.time, conf)
                 }
             }
         }
@@ -139,50 +165,58 @@ class EnrichmentIcebergSyncer {
             .apply { isAccessible = true }
     }
 
-    fun syncTable(tableName: String, time: String, conf: EnrichmentConfig) {
+    suspend fun syncTable(tableName: String, time: String, conf: EnrichmentConfig?) {
         val enrichTableName = "enrich_$tableName"
         val icebergTable = icebergCatalog.loadTable(TableIdentifier.of(Namespace.of(IcebergMetadataWriter.MATANO_NAMESPACE), enrichTableName))
 
         val timeDt = OffsetDateTime.parse(time)
-        val fiveMinAgoMillis = timeDt.minusMinutes(5).toEpochSecond() * 1000
+        val fifteenMinAgoMillis = timeDt.minusMinutes(1).toEpochSecond() * 1000
         // can get stuck...
-        if (icebergTable.currentSnapshot().timestampMillis() < fiveMinAgoMillis) {
-            println("Skipping table: $tableName as no updates found.")
+        if (icebergTable.currentSnapshot().timestampMillis() < fifteenMinAgoMillis) {
+            logger.info("Skipping table: $tableName as no updates found.")
             return
         }
 
-        val outFile = InMemoryIcebergOutputFile()
-        val appenderFactory = org.apache.iceberg.data.GenericAppenderFactory(icebergTable.schema())
-        val writer = appenderFactory.newAppender(outFile, FileFormat.PARQUET)
-        writer.use { w ->
-            IcebergGenerics.read(icebergTable).build().iterator().use { recs ->
-                if (!recs.hasNext()) {
-                    hackParquetWriterEnsureMethod.invoke(writer)
-                } else {
-                    recs.forEach { w.add(it) }
-                }
-            }
+        // Run an Athena query to select data (resolve deletes). Iceberg Generics has bug? returns nulls.
+        val tempSyncBucket = enrichmentTablesBucket
+        val uniquePath = UUID.randomUUID().toString()
+        val keyPrefix = "temp-enrich-sync/$uniquePath/"
+        val qs = """
+            UNLOAD (SELECT * FROM $enrichTableName) 
+            TO 's3://$tempSyncBucket/$keyPrefix'
+            WITH (format = 'PARQUET', compression='snappy')
+        """.trimIndent()
+        athenaQueryRunner.runAthenaQuery(qs)
+        val filePaths = s3AsyncClient.listObjects { r -> r.bucket(tempSyncBucket).prefix(keyPrefix) }.await().contents().map {
+            "s3://$tempSyncBucket/${it.key()}"
         }
+        val inputFiles = filePaths.map { icebergTable.io().newInputFile(it) }
+        // Athena can write multiple files, concat into one file
+        val outFile = InMemoryIcebergOutputFile()
+        val footer = concatIcebergParquetFiles(inputFiles, outFile, icebergTable.schema()) // parallelize?
 
-        val icebergS3Path = icebergTable.locationProvider().newDataLocation("${UUID.randomUUID()}.zstd.parquet")
+        val icebergS3Path = icebergTable.locationProvider().newDataLocation("${UUID.randomUUID()}.parquet")
         val (s3Bucket, s3Key) = icebergS3Path.removePrefix("s3://").split('/', limit = 2)
-        val enrichmentTablesS3Key = "tables/$enrichTableName.zstd.parquet"
+        val enrichmentTablesS3Key = "tables/$tableName.parquet"
 
-        val dataBody = AsyncRequestBody.fromBytes(outFile.toArray())
+        val dataBytes = outFile.toArray()
+        val dataLength = dataBytes.size
+        val dataBody = AsyncRequestBody.fromBytes(dataBytes)
+
+        // Write to Iceberg and enrichment table.
         val fut1 = s3AsyncClient.putObject({ it.bucket(s3Bucket).key(s3Key) }, dataBody)
         val fut2 = s3AsyncClient.putObject({ it.bucket(enrichmentTablesBucket).key(enrichmentTablesS3Key) }, dataBody)
 
-        val futs = arrayOf(fut1, fut2)
-        CompletableFuture.allOf(*futs).get()
+        CompletableFuture.allOf(fut1, fut2).await()
 
+        val metrics = ParquetUtil.footerMetrics(footer, Stream.empty(), MetricsConfig.forTable(icebergTable))
         val dataFile = DataFiles.builder(PartitionSpec.unpartitioned())
             .withPath(icebergS3Path)
-            .withFileSizeInBytes(writer.length())
+            .withFileSizeInBytes(dataLength.toLong())
             .withFormat("PARQUET")
-            .withMetrics(writer.metrics())
+            .withMetrics(metrics)
             .build()
 
-        // Unfortunately have to double scan (IceberGenerics.read does one internally but doesn't expose).
         val currentFiles = icebergTable.newScan().planWith(planExecutorService).planFiles().map { it.file() }
         val currentSnapshotId = icebergTable.currentSnapshot().snapshotId()
         icebergTable.newRewrite()
@@ -190,6 +224,24 @@ class EnrichmentIcebergSyncer {
             .validateFromSnapshot(currentSnapshotId)
             .rewriteFiles(currentFiles.toSet(), setOf(dataFile))
             .commit()
+        logger.info("Completed syncing table: $enrichTableName")
+    }
+
+    private fun concatIcebergParquetFiles(inputFiles: Iterable<InputFile>, outputFile: org.apache.iceberg.io.OutputFile, schema: Schema): ParquetMetadata {
+        val rowGroupSize: Long = 128 * 1024 * 1024
+        val writer = ParquetFileWriter(
+            ParquetIcebergOutputFile(outputFile),
+            ParquetSchemaUtil.convert(schema, "table"),
+            ParquetFileWriter.Mode.CREATE,
+            rowGroupSize,
+            0
+        )
+        writer.start()
+        for (inputFile in inputFiles) {
+            writer.appendFile(ParquetIcebergInputFile(inputFile))
+        }
+        writer.end(mapOf())
+        return writer.footer
     }
 }
 

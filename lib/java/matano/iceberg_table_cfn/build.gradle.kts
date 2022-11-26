@@ -50,7 +50,7 @@ dependencies {
     }
     implementation("software.amazon.awssdk:s3:2.17.131") {
         exclude("software.amazon.awssdk", "apache-client")
-//        exclude("software.amazon.awssdk", "netty-nio-client")
+        exclude("software.amazon.awssdk", "netty-nio-client")
     }
     implementation("software.amazon.awssdk:url-connection-client:2.17.131")
     implementation("com.amazonaws:aws-lambda-java-events:3.11.0")

@@ -113,7 +113,7 @@ export class Enrichment extends Construct {
           resources: ["*"],
         }),
       ],
-      code: getLocalAsset("iceberg_table_cfn"),
+      code: getLocalAsset("iceberg_metadata"),
     });
 
     props.lakeStorageBucket.grantReadWrite(this.enrichmentSyncerFunc);
