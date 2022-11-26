@@ -15,10 +15,9 @@ plugins:
       uri: https://github.com/trunk-io/plugins
 actions:
   enabled:
-    - git-lfs
     - trunk-announce
-    - trunk-check-pre-push
-    - trunk-fmt-pre-commit
+    # - trunk-check-pre-push
+    # - trunk-fmt-pre-commit
     - trunk-cache-prune
     - trunk-upgrade-available
 cli:

@@ -12,7 +12,7 @@ import { SqsEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
 import { SqsSubscription } from "aws-cdk-lib/aws-sns-subscriptions";
 
 interface MatanoAlertingProps {
-  integrationsStore: IntegrationsStore;
+  integrationsStore?: IntegrationsStore;
   alertTrackerTable: ddb.Table;
 }
 
@@ -25,11 +25,13 @@ export class MatanoAlerting extends Construct {
       displayName: "MatanoAlertingTopic",
     });
 
-    const alertForwarder = new AlertForwarder(this, "Forwarder", {
-      integrationsStore: props.integrationsStore,
-      alertTrackerTable: props.alertTrackerTable,
-      alertsSnsTopic: this.alertingTopic,
-    });
+    if (props.integrationsStore) {
+      const alertForwarder = new AlertForwarder(this, "Forwarder", {
+        integrationsStore: props.integrationsStore,
+        alertTrackerTable: props.alertTrackerTable,
+        alertsSnsTopic: this.alertingTopic,
+      });
+    }
   }
 }
 
@@ -48,7 +50,7 @@ export class AlertForwarder extends Construct {
     super(scope, id);
 
     const destinationToSecretArnMap = Object.fromEntries(
-      Object.entries(props.integrationsStore.integrationsSecretMap).map(([d, s]) => [d, s.secretArn])
+      Object.entries(props.integrationsStore?.integrationsSecretMap ?? {}).map(([d, s]) => [d, s.secretArn])
     );
 
     this.function = new lambda.Function(this, "Default", {
@@ -62,7 +64,7 @@ export class AlertForwarder extends Construct {
       environment: {
         RUST_LOG: "warn,alert_forwarder=info",
         ALERT_TRACKER_TABLE_NAME: props.alertTrackerTable.tableName,
-        DESTINATION_TO_CONFIGURATION_MAP: JSON.stringify(props.integrationsStore.integrationsInfoMap),
+        DESTINATION_TO_CONFIGURATION_MAP: JSON.stringify(props.integrationsStore?.integrationsInfoMap ?? {}),
         DESTINATION_TO_SECRET_ARN_MAP: JSON.stringify(destinationToSecretArnMap),
       },
       timeout: cdk.Duration.seconds(30),

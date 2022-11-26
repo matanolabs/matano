@@ -1,3 +1,5 @@
+import * as fs from "fs-extra";
+import * as path from "path";
 import { Construct } from "constructs";
 import * as cdk from "aws-cdk-lib";
 import * as s3 from "aws-cdk-lib/aws-s3";
@@ -75,7 +77,11 @@ export class DPCommonStack extends MatanoStack {
         },
       },
     });
-    this.integrationsStore = new IntegrationsStore(this, "MatanoIntegrationsStore", {});
+    const integrationsDir = path.join(this.matanoUserDirectory, "integrations");
+    const usesIntegrations = fs.existsSync(integrationsDir);
+    if (usesIntegrations) {
+      this.integrationsStore = new IntegrationsStore(this, "MatanoIntegrationsStore", {});
+    }
 
     this.humanCfnOutput("MatanoIngestionS3BucketName", {
       value: this.matanoIngestionBucket.bucket.bucketName,

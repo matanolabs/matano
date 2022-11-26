@@ -19,23 +19,23 @@ export class MatanoSQSSources extends Construct {
     const resolvedLogSourceConfigs = props.resolvedLogSourceConfigs;
     let sqsMetadata: Map<string, string> = new Map<string, string>();
 
-    // The resolved table name is:
-    // 1) <log_source_name>_<table_name>
-    // 2) OR if table_name == default: <log_source_name>
-    const resolvedTableNames: string[] = Object.values(resolvedLogSourceConfigs).flatMap((c) =>
-      Object.values(c.tables).map((t: any) => t.resolved_name)
-    );
+    for (const ls of logSources) {
+      const tables = resolvedLogSourceConfigs[ls.name].tables;
+      // The resolved table name is:
+      // 1) <log_source_name>_<table_name>
+      // 2) OR if table_name == default: <log_source_name>
+      const resolvedTableNames: string[] = Object.values(tables).map((t: any) => t.resolved_name);
+      for (const resolvedTableName of resolvedTableNames) {
+        const formattedTableName = matanoResourceToCdkName(resolvedTableName);
 
-    for (const resolvedTableName of resolvedTableNames) {
-      const formattedTableName = matanoResourceToCdkName(resolvedTableName);
+        const ingestionDLQ = new sqs.Queue(this, `${formattedTableName}DLQ`);
+        const ingestionQueue = new sqs.Queue(this, `${formattedTableName}Queue`, {
+          deadLetterQueue: { queue: ingestionDLQ, maxReceiveCount: 3 },
+        });
 
-      const ingestionDLQ = new sqs.Queue(this, `${formattedTableName}DLQ`);
-      const ingestionQueue = new sqs.Queue(this, `${formattedTableName}Queue`, {
-        deadLetterQueue: { queue: ingestionDLQ, maxReceiveCount: 3 },
-      });
-
-      this.ingestionQueues.push(ingestionQueue);
-      sqsMetadata.set(ingestionQueue.queueName, resolvedTableName);
+        this.ingestionQueues.push(ingestionQueue);
+        sqsMetadata.set(ingestionQueue.queueName, resolvedTableName);
+      }
     }
 
     const obj = Object.fromEntries(sqsMetadata);
