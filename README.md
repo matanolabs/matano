@@ -279,7 +279,7 @@ SELECT * FROM matano.table_name [WHERE predicate]
 
 ### Optimization and Iceberg Table maintenance
 
-Apache Iceberg tables require regular table maintenance to ensure optimal performance and cost efficiency. Matano automatically performs Iceberg table maintenance, including rewriting data files (compaction), expiring snapshots, and rewriting manifests. The maintenance is run asynchronously every hour on each partition. For more information, see [this blog post](/blog/2022/11/04/automated-iceberg-table-maintenance).
+Apache Iceberg tables require regular table maintenance to ensure optimal performance and cost efficiency. Matano automatically performs Iceberg table maintenance, including rewriting data files (compaction), expiring snapshots, and rewriting manifests. The maintenance is run asynchronously every hour on each partition. For more information, see [this blog post](https://www.matano.dev/blog/2022/11/04/automated-iceberg-table-maintenance).
 
 ## Detections
 
