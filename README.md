@@ -177,14 +177,16 @@ def detect(record):
     ):
         # A unique key on the user name
         user = record.deepget("user.name")
-        record_ip = record.deepget("source.ip")
 
         existing_ips = users_ips[user] or []
-        updated_ips = users_ips.add_to_string_set(user, record_ip)
+        updated_ips = users_ips.add_to_string_set(
+          user, 
+          record.deepget("source.ip")
+        )
+
         # Alert on new IPs
         new_ips = set(updated_ips) - set(existing_ips)
         if existing_ips and new_ips:
-            del users_ips[user]
             return True
 ```
 
