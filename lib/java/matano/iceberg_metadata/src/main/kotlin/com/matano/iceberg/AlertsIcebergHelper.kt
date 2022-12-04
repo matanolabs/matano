@@ -30,7 +30,7 @@ data class IcebergCommitRequestItem(
 )
 
 class AlertsIcebergHelper : RequestStreamHandler {
-    private val icebergCatalog = createIcebergCatalog()
+    private val icebergCatalog: Catalog by lazy { createIcebergCatalog() }
     private val mapper = jacksonObjectMapper()
 
     private fun createIcebergCatalog(): Catalog {

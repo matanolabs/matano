@@ -27,7 +27,7 @@ class RewriteManifestsHandler : RequestStreamHandler {
 class RewriteManifests {
     private val logger = LoggerFactory.getLogger(this::class.java)
 
-    val icebergCatalog = createIcebergCatalog()
+    val icebergCatalog: Catalog by lazy { createIcebergCatalog() }
     private fun createIcebergCatalog(): Catalog {
         val glueCatalog = GlueCatalog().apply { initialize("glue_catalog", IcebergMetadataWriter.icebergProperties) }
         return CachingCatalog.wrap(glueCatalog)
@@ -38,6 +38,10 @@ class RewriteManifests {
     fun handle(event: RewriteManifestsRequest) {
         logger.info("Expiring snapshots for: ${event.table_name}")
         val table = icebergCatalog.loadTable(TableIdentifier.of(namespace, event.table_name))
+        if (table.currentSnapshot() == null) {
+            logger.info("Empty table, returning.")
+            return
+        }
         val start = System.currentTimeMillis()
 
         table

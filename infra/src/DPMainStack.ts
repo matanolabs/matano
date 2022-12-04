@@ -63,6 +63,8 @@ export class DPMainStack extends MatanoStack {
   configTempDir: string;
   constructor(scope: Construct, id: string, props: DPMainStackProps) {
     super(scope, id, props);
+    lambda.Function.classifyVersionProperty("SnapStart", true);
+
     this.configTempDir = this.createConfigTempDir();
 
     const logSourcesDirectory = path.join(this.matanoUserDirectory, "log_sources");

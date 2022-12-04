@@ -6,6 +6,7 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import net.lingala.zip4j.ZipFile
 import org.apache.iceberg.SchemaParser
 import org.apache.iceberg.avro.AvroSchemaUtil
+import org.apache.iceberg.catalog.Catalog
 import org.apache.iceberg.catalog.Namespace
 import org.apache.iceberg.catalog.TableIdentifier
 import org.apache.iceberg.parquet.ParquetSchemaUtil
@@ -20,7 +21,7 @@ data class SchemasLayerCRProps(val tables: List<String>)
 class MatanoSchemasLayerCustomResource {
     private val logger = LoggerFactory.getLogger(this::class.java)
 
-    val icebergCatalog = MatanoIcebergTableCustomResource.createIcebergCatalog()
+    val icebergCatalog: Catalog by lazy { MatanoIcebergTableCustomResource.createIcebergCatalog() }
     val mapper = jacksonObjectMapper()
 
     val s3: S3Client = S3Client.create()

@@ -13,6 +13,7 @@ import kotlinx.coroutines.future.await
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.apache.iceberg.*
+import org.apache.iceberg.catalog.Catalog
 import org.apache.iceberg.catalog.Namespace
 import org.apache.iceberg.catalog.TableIdentifier
 import org.apache.iceberg.io.InputFile
@@ -140,7 +141,9 @@ class EnrichmentIcebergSyncer {
     private val logger = LoggerFactory.getLogger(this::class.java)
 
     val s3AsyncClient = S3AsyncClient.create()
-    val icebergCatalog = IcebergMetadataWriter.createIcebergCatalog()
+    val icebergCatalog: Catalog by lazy {
+        IcebergMetadataWriter.createIcebergCatalog()
+    }
     val enrichmentTablesBucket = System.getenv("ENRICHMENT_TABLES_BUCKET") ?: throw RuntimeException("Need enrichment bucket.")
     val mapper = jacksonObjectMapper()
     val planExecutorService = Executors.newFixedThreadPool(20)

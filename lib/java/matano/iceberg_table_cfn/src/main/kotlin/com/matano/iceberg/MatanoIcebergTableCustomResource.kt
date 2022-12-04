@@ -18,6 +18,7 @@ import org.apache.iceberg.PartitionSpec
 import org.apache.iceberg.Schema
 import org.apache.iceberg.SchemaParser
 import org.apache.iceberg.aws.glue.GlueCatalog
+import org.apache.iceberg.catalog.Catalog
 import org.apache.iceberg.catalog.Namespace
 import org.apache.iceberg.catalog.TableIdentifier
 import org.apache.iceberg.expressions.Expressions
@@ -116,7 +117,7 @@ interface CFNCustomResource {
 class MatanoIcebergTableCustomResource : CFNCustomResource {
     private val logger = LoggerFactory.getLogger(this::class.java)
 
-    val icebergCatalog = createIcebergCatalog()
+    val icebergCatalog: Catalog by lazy { createIcebergCatalog() }
     val mapper = CFNCustomResource.mapper
 
     private val ICEBERG_HAS_WIDTH = Pattern.compile("(\\w+)\\[(\\d+)\\]")

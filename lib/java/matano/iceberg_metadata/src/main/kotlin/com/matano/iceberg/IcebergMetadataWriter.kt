@@ -53,7 +53,7 @@ fun dtToHours(s: String): Int {
 class IcebergMetadataWriter {
     private val logger = LoggerFactory.getLogger(this::class.java)
 
-    val icebergCatalog = createIcebergCatalog()
+    val icebergCatalog: Catalog by lazy { createIcebergCatalog() }
     val enrichmentMetadataWriter = EnrichmentMetadataWriter(loadEnrichmentConfiguration())
 
     inner class TableObj(tableName: String) {

@@ -28,7 +28,7 @@ class ExpireSnapshotsHandler : RequestStreamHandler {
 class ExpireSnapshots {
     private val logger = LoggerFactory.getLogger(this::class.java)
 
-    val icebergCatalog = createIcebergCatalog()
+    val icebergCatalog: Catalog by lazy { createIcebergCatalog() }
     private fun createIcebergCatalog(): Catalog {
         System.setProperty("http-client.type", "apache")
         val glueCatalog = GlueCatalog().apply { initialize("glue_catalog", IcebergMetadataWriter.icebergProperties) }
@@ -42,6 +42,10 @@ class ExpireSnapshots {
         logger.info("Expiring snapshots for: $event")
         val dt = OffsetDateTime.parse(event.time)
         val table = icebergCatalog.loadTable(TableIdentifier.of(namespace, event.table_name))
+        if (table.currentSnapshot() == null) {
+            logger.info("Empty table, returning.")
+            return
+        }
 
         val dtMark = dt.minusDays(1).toInstant().toEpochMilli()
         val start = System.currentTimeMillis()

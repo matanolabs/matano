@@ -11,7 +11,7 @@ import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as sqs from "aws-cdk-lib/aws-sqs";
 import * as s3deploy from "aws-cdk-lib/aws-s3-deployment";
-import { fail, getLocalAsset } from "./utils";
+import { fail, getLocalAsset, makeLambdaSnapstart } from "./utils";
 import { S3BucketWithNotifications } from "./s3-bucket-notifs";
 import { SqsEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
 import { MatanoStack } from "./MatanoStack";
@@ -128,6 +128,7 @@ export class Enrichment extends Construct {
       ],
       code: getLocalAsset("iceberg_metadata"),
     });
+    makeLambdaSnapstart(this.enrichmentSyncerFunc);
 
     props.lakeStorageBucket.grantReadWrite(this.enrichmentSyncerFunc);
     enrichmentTablesBucket.grantReadWrite(this.enrichmentSyncerFunc);
@@ -143,7 +144,7 @@ export class Enrichment extends Construct {
       batchSize: 10000,
       maxBatchingWindow: cdk.Duration.seconds(5),
     });
-    this.enrichmentSyncerFunc.addEventSource(syncerEventSource);
+    this.enrichmentSyncerFunc.currentVersion.addEventSource(syncerEventSource);
 
     const scheduleRule = new events.Rule(this, "EventsRule", {
       description: "[Matano] Schedules the enrichment table log syncer.",

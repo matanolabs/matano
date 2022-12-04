@@ -12,7 +12,7 @@ import { execSync } from "child_process";
 import { S3BucketWithNotifications } from "./s3-bucket-notifs";
 import { AwsCliLayer } from "aws-cdk-lib/lambda-layer-awscli";
 import { SqsEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
-import { getLocalAsset } from "./utils";
+import { getLocalAsset, makeLambdaSnapstart } from "./utils";
 import { MatanoStack } from "./MatanoStack";
 
 interface MatanoSchemasProps {
@@ -67,9 +67,10 @@ export class SchemasProvider extends Construct {
         }),
       ],
     });
+    makeLambdaSnapstart(providerFunc);
 
     this.provider = new cr.Provider(this, "Default", {
-      onEventHandler: providerFunc,
+      onEventHandler: providerFunc.currentVersion,
     });
   }
 }
@@ -139,9 +140,10 @@ export class IcebergTableProvider extends Construct {
         }),
       ],
     });
+    makeLambdaSnapstart(providerFunc);
 
     this.provider = new cr.Provider(this, "Default", {
-      onEventHandler: providerFunc,
+      onEventHandler: providerFunc.currentVersion,
     });
   }
 }
@@ -183,7 +185,7 @@ export class IcebergMetadata extends Construct {
     duplicatesTable.grantReadWriteData(this.metadataWriterFunction);
 
     const eventSource = new SqsEventSource(props.lakeStorageBucket.queue, {});
-    this.metadataWriterFunction.addEventSource(eventSource);
+    this.metadataWriterFunction.currentVersion.addEventSource(eventSource);
 
     this.alertsHelperFunction = new lambda.Function(this, "AlertsHelper", {
       description: "JVM Iceberg helper for alerting.",
@@ -204,6 +206,9 @@ export class IcebergMetadata extends Construct {
       ],
     });
 
+    this.alertsHelperFunction.addAlias("current");
+
     duplicatesTable.grantReadWriteData(this.alertsHelperFunction);
+    [this.metadataWriterFunction, this.alertsHelperFunction].map(makeLambdaSnapstart);
   }
 }

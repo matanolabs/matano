@@ -6,7 +6,7 @@ import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as sfn from "aws-cdk-lib/aws-stepfunctions";
 import * as tasks from "aws-cdk-lib/aws-stepfunctions-tasks";
-import { getLocalAsset } from "./utils";
+import { getLocalAsset, makeLambdaSnapstart } from "./utils";
 
 const helperFunctionCode = `
 from datetime import datetime, timedelta
@@ -124,6 +124,7 @@ class IcebergExpireSnapshots extends Construct {
       handler: "com.matano.iceberg.ExpireSnapshotsHandler::handleRequest",
       code: getLocalAsset("iceberg_metadata"),
     });
+    makeLambdaSnapstart(expireSnapshotsFunc);
 
     // TODO: scope down
     expireSnapshotsFunc.addToRolePolicy(
@@ -134,7 +135,7 @@ class IcebergExpireSnapshots extends Construct {
     );
 
     const expireSnapshotsInvoke = new tasks.LambdaInvoke(this, "Expire Table Snapshots", {
-      lambdaFunction: expireSnapshotsFunc,
+      lambdaFunction: expireSnapshotsFunc.currentVersion,
     });
 
     queryMap.iterator(expireSnapshotsInvoke);
@@ -185,6 +186,7 @@ class IcebergRewriteManifests extends Construct {
       handler: "com.matano.iceberg.RewriteManifestsHandler::handleRequest",
       code: getLocalAsset("iceberg_metadata"),
     });
+    makeLambdaSnapstart(rewriteManifestsFunc);
 
     // TODO: scope down
     rewriteManifestsFunc.addToRolePolicy(
@@ -195,7 +197,7 @@ class IcebergRewriteManifests extends Construct {
     );
 
     const rewriteManifestsInvoke = new tasks.LambdaInvoke(this, "Rewrite Manifests", {
-      lambdaFunction: rewriteManifestsFunc,
+      lambdaFunction: rewriteManifestsFunc.currentVersion,
     });
 
     queryMap.iterator(rewriteManifestsInvoke);

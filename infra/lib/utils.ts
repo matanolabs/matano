@@ -168,3 +168,9 @@ export function matanoResourceToCdkName(name: string) {
     .map((substr) => substr.charAt(0).toUpperCase() + substr.slice(1))
     .join("");
 }
+
+export function makeLambdaSnapstart(func: lambda.Function) {
+  (func.node.defaultChild as lambda.CfnFunction).addPropertyOverride("SnapStart", {
+    ApplyOn: "PublishedVersions",
+  });
+}
