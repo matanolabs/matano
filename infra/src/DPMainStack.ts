@@ -134,7 +134,7 @@ export class DPMainStack extends MatanoStack {
 
     lakeWriter.alertsLakeWriterLambda.addEnvironment(
       "ALERT_HELPER_FUNCTION_NAME",
-      icebergMetadata.alertsHelperFunction.functionName
+      `${icebergMetadata.alertsHelperFunction.functionName}:current`
     );
     icebergMetadata.alertsHelperFunction.grantInvoke(lakeWriter.alertsLakeWriterLambda);
 
@@ -157,6 +157,10 @@ export class DPMainStack extends MatanoStack {
       });
       const enrichmentLogSources = Object.values(enrichment.enrichmentLogSources);
       logSources.push(...enrichmentLogSources);
+      detections.detectionFunction.addEnvironment(
+        "ENRICHMENT_TABLES_BUCKET",
+        enrichment.enrichmentTablesBucket.bucketName
+      );
     }
 
     const resolvedLogSourceConfigs: Record<string, any> = Object.fromEntries(

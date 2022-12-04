@@ -821,7 +821,7 @@ async fn call_helper_lambda(payload: String) -> Result<Option<Vec<u8>>> {
 
     let func_res = lambda
         .invoke()
-        .function_name(helper_function_name)
+        .function_name(&helper_function_name)
         .payload(Blob::new(payload))
         .send()
         .await?;
@@ -830,7 +830,11 @@ async fn call_helper_lambda(payload: String) -> Result<Option<Vec<u8>>> {
     if func_res.function_error().is_some() {
         let err_obj_bytes = resp_payload.unwrap_or_default();
         let err_obj = String::from_utf8_lossy(&err_obj_bytes);
-        Err(anyhow!("read_files Lambda failed: {}", err_obj))
+        Err(anyhow!(
+            "{} Lambda failed: {}",
+            &helper_function_name,
+            err_obj
+        ))
     } else {
         Ok(resp_payload)
     }
