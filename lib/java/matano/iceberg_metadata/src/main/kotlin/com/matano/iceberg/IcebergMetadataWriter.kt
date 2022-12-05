@@ -60,10 +60,6 @@ class IcebergMetadataWriter {
         val table: Table = icebergCatalog.loadTable(TableIdentifier.of(Namespace.of(MATANO_NAMESPACE), tableName))
         val appendFiles: AppendFiles = table.newAppend()
         var overwriteFiles = Optional.empty<OverwriteFiles>()
-            get() {
-                field = Optional.of(table.newOverwrite())
-                return field
-            }
     }
 
     fun parseObjectKey(key: String): Pair<String, String> {
@@ -140,7 +136,13 @@ class IcebergMetadataWriter {
                 .build()
 
             if (isEnrichmentTable) {
-                enrichmentMetadataWriter.doMetadataWrite(icebergTable, dataFile, tableObj.appendFiles, { tableObj.overwriteFiles.get() })
+                enrichmentMetadataWriter.doMetadataWrite(icebergTable, dataFile, tableObj.appendFiles, {
+                    val overwriteOpt = tableObj.overwriteFiles
+                    if (overwriteOpt.isEmpty) {
+                        tableObj.overwriteFiles = Optional.of(icebergTable.newOverwrite())
+                    }
+                    tableObj.overwriteFiles.get()
+                })
             } else {
                 tableObj.appendFiles.appendFile(dataFile)
             }

@@ -11,9 +11,9 @@
         </Root>
         <Logger name="com.matano.iceberg" level = "INFO" />
         <Logger name="org.apache.parquet" level = "WARN" />
-        <Logger name="com.amazonaws.request" level="DEBUG" />
+        <Logger name="com.amazonaws.request" level="INFO" />
         <Logger name="software.amazon.awssdk" level="INFO" />
         <Logger name="org.apache.iceberg" level="DEBUG" />
-        <Logger name="software.amazon.awssdk.request" level="DEBUG" />
+        <Logger name="software.amazon.awssdk.request" level="INFO" />
     </Loggers>
 </Configuration>
