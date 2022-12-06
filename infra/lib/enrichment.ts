@@ -37,7 +37,7 @@ interface EnrichmentTableProps {
   enrichConfig: any;
   enrichmentIngestionBucket: s3.IBucket;
   enrichmentSyncerQueue: sqs.IQueue;
-  dynamicScheduleRule: events.Rule;
+  syncerScheduleRule: events.Rule;
   realtimeTopic: sns.Topic;
   lakeWriterLambda: lambda.Function;
   dataFilePath?: any;
@@ -71,16 +71,18 @@ export class EnrichmentTable extends Construct {
         include: ["data.json"],
       });
       deploy.node.addDependency(this.logSource.matanoTable.icebergTable);
-    } else {
-      props.dynamicScheduleRule.addTarget(
-        new SqsQueueTarget(props.enrichmentSyncerQueue, {
-          message: events.RuleTargetInput.fromObject({
-            time: events.EventField.time,
-            table_name: tableName,
-          }),
-        })
-      );
     }
+
+    // run for both dynamic and static to do syncing (simplify)
+    props.syncerScheduleRule.addTarget(
+      new SqsQueueTarget(props.enrichmentSyncerQueue, {
+        message: events.RuleTargetInput.fromObject({
+          time: events.EventField.time,
+          table_name: tableName,
+        }),
+        retryAttempts: 184,
+      })
+    );
   }
 }
 
@@ -89,13 +91,14 @@ export class Enrichment extends Construct {
   enrichmentSyncerFunc: lambda.Function;
   enrichmentConfigs: Record<string, EnrichConfig>;
   enrichmentLogSources: Record<string, MatanoLogSource> = {};
+  enrichmentTablesBucket: s3.Bucket;
 
   constructor(scope: Construct, id: string, props: EnrichmentProps) {
     super(scope, id);
 
     this.enrichmentConfigs = this.loadEnrichmentTables();
 
-    const enrichmentTablesBucket = new s3.Bucket(this, "EnrichmentTables", {
+    this.enrichmentTablesBucket = new s3.Bucket(this, "EnrichmentTables", {
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
     });
 
@@ -106,7 +109,7 @@ export class Enrichment extends Construct {
       memorySize: 1024,
       timeout: cdk.Duration.minutes(5),
       environment: {
-        ENRICHMENT_TABLES_BUCKET: enrichmentTablesBucket.bucketName,
+        ENRICHMENT_TABLES_BUCKET: this.enrichmentTablesBucket.bucketName,
       },
       initialPolicy: [
         new iam.PolicyStatement({
@@ -131,7 +134,7 @@ export class Enrichment extends Construct {
     makeLambdaSnapstart(this.enrichmentSyncerFunc);
 
     props.lakeStorageBucket.grantReadWrite(this.enrichmentSyncerFunc);
-    enrichmentTablesBucket.grantReadWrite(this.enrichmentSyncerFunc);
+    this.enrichmentTablesBucket.grantReadWrite(this.enrichmentSyncerFunc);
     props.matanoAthenaResultsBucket.grantReadWrite(this.enrichmentSyncerFunc);
 
     const enrichmentSyncerDLQ = new sqs.Queue(this, "SyncerDLQ");
@@ -157,7 +160,7 @@ export class Enrichment extends Construct {
         dataFilePath,
         enrichmentIngestionBucket: props.enrichmentIngestionBucket,
         enrichmentSyncerQueue,
-        dynamicScheduleRule: scheduleRule,
+        syncerScheduleRule: scheduleRule,
         realtimeTopic: props.realtimeTopic,
         lakeWriterLambda: props.lakeWriterLambda,
       });
