@@ -19,8 +19,10 @@ import botocore
 import botocore.session
 import fastavro
 import jsonlines
+import nest_asyncio
 import pyston_lite
 from detection.cache import RemoteCache
+from detection.enrichment import Enrichment, _load_enrichment_configs
 from detection.util import ALERT_ECS_FIELDS, DeepDict, Timers, json_dumps_dt, timing
 
 logger = logging.getLogger()
@@ -52,6 +54,7 @@ sns = aiobotocore_session.create_client("sns", **botocore_client_kwargs)
 
 event_loop = asyncio.new_event_loop()
 asyncio.set_event_loop(event_loop)
+nest_asyncio.apply(event_loop)
 
 
 async def ensure_clients():
@@ -63,6 +66,13 @@ async def ensure_clients():
 
 
 THREAD_EXECUTOR = concurrent.futures.ThreadPoolExecutor(max_workers=12)
+
+enrichment = Enrichment(s3_async, _load_enrichment_configs(), event_loop)
+
+
+def get_enrich_record(table_name: str, key: str):
+    return enrichment.get_record_by_key(table_name, key)
+
 
 DETECTION_CONFIGS = None
 TABLE_DETECTION_CONFIG = None
@@ -201,11 +211,10 @@ def get_records(event):
         table_name = sqs_record_body["resolved_table_name"]
         s3_bucket, s3_key = sqs_record_body["bucket"], sqs_record_body["key"]
 
-        logger.info(f"START: Downloading from s3://{s3_bucket}/{s3_key}")
         with timers.get_timer("process").pause():
             with timers.get_timer("data_download"):
                 obj_body = s3.get_object(Bucket=s3_bucket, Key=s3_key)["Body"]
-        logger.info(f"END: Downloading from s3://{s3_bucket}/{s3_key}")
+        logger.info(f"Downloaded from s3://{s3_bucket}/{s3_key}")
 
         reader = fastavro.reader(obj_body)
 

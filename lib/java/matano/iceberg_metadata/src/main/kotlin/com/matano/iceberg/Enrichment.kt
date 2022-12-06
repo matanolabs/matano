@@ -161,13 +161,6 @@ class EnrichmentIcebergSyncer {
         }
     }
 
-    // The ParquetWriter doesn't write a valid Parquet file when we don't write any rows (empty). This hackily fixes.
-    val hackParquetWriterEnsureMethod: java.lang.reflect.Method by lazy {
-        Class.forName("org.apache.iceberg.parquet.ParquetWriter")
-            .getDeclaredMethod("ensureWriterInitialized")
-            .apply { isAccessible = true }
-    }
-
     suspend fun syncTable(tableName: String, time: String, conf: EnrichmentConfig?) {
         val enrichTableName = "enrich_$tableName"
         val icebergTable = icebergCatalog.loadTable(TableIdentifier.of(Namespace.of(IcebergMetadataWriter.MATANO_NAMESPACE), enrichTableName))
