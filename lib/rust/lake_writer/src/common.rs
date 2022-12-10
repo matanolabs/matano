@@ -85,12 +85,11 @@ pub async fn write_arrow_to_s3_parquet(
     let bucket = std::env::var("OUT_BUCKET_NAME")?;
     let key_prefix = std::env::var("OUT_KEY_PREFIX")?;
 
-    // lake/TABLE_NAME/data/ts_hour=2022-07-05-00/partition_hour=2022-07-05-00/<file>.parquet
+    // lake/TABLE_NAME/data/ts_hour=2022-07-05-00/<file>.parquet
     let key = format!(
-        "{}/{}/data/ts_hour={}/partition_hour={}/{}_mtn_append.zstd.parquet",
+        "{}/{}/data/ts_hour={}/{}_mtn_append.zstd.parquet",
         key_prefix,
         table_name,
-        partition_hour,
         partition_hour,
         Uuid::new_v4()
     );

@@ -63,7 +63,7 @@ class IcebergMetadataWriter {
     }
 
     fun parseObjectKey(key: String): Pair<String, String> {
-        // lake/TABLE_NAME/data/ts_hour=2022-07-05/partition_hour=2022-07-05/<file>.parquet
+        // lake/TABLE_NAME/data/ts_hour=2022-07-05/<file>.parquet
         val parts = key.split("/")
         val tableName = parts[1]
         val partitionValue = parts[3].substring(8)

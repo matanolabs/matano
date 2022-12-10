@@ -189,7 +189,7 @@ class EnrichmentIcebergSyncer {
             WITH (format = 'PARQUET', compression='snappy')
         """.trimIndent()
         athenaQueryRunner.runAthenaQuery(qs)
-        val filePaths = s3AsyncClient.listObjects { r -> r.bucket(tempSyncBucket).prefix(keyPrefix) }.await().contents().map {
+        val filePaths = s3AsyncClient.listObjectsV2 { r -> r.bucket(tempSyncBucket).prefix(keyPrefix) }.await().contents().map {
             "s3://$tempSyncBucket/${it.key()}"
         }
         val inputFiles = filePaths.map { icebergTable.io().newInputFile(it) }
