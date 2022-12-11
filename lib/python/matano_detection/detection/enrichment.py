@@ -12,6 +12,14 @@ from concurrent.futures import ThreadPoolExecutor
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
+class EnrichmentTable:
+    def __init__(self, name, enrichment) -> None:
+        self.name = name
+        self._enrichment: Enrichment = enrichment
+
+    def get_record(self, key):
+        return self._enrichment.get_record_by_key(self.name, key)
+
 def _load_enrichment_configs():
     ret = {}
     path = Path("/opt/config/enrichment")
@@ -75,3 +83,7 @@ class Enrichment:
         pk_col = self._get_table_primary_key(table_name)
         rows = table.lazy().filter(pl.col(pk_col) == key).limit(1).collect().to_dicts()
         return next(iter(rows), None)
+
+    def _patch_module(self, module):
+        for table_name in self._table_configs:
+            setattr(module, table_name, EnrichmentTable(table_name, self))
