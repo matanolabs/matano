@@ -39,7 +39,7 @@ export class DataBatcher extends Construct {
 
     const sqsEventSource = new SqsEventSource(props.s3Bucket.queue, {
       batchSize: 10000,
-      maxBatchingWindow: cdk.Duration.seconds(1),
+      maxBatchingWindow: cdk.Duration.seconds(5),
       reportBatchItemFailures: true,
     });
     this.batcherFunction.addEventSource(sqsEventSource);
