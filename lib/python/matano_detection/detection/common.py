@@ -68,7 +68,8 @@ async def ensure_clients():
 
 THREAD_EXECUTOR = concurrent.futures.ThreadPoolExecutor(max_workers=12)
 
-enrichment = Enrichment(s3_async, _load_enrichment_configs(), event_loop)
+# TODO recreate client for now
+enrichment = Enrichment(aiobotocore_session.create_client("s3", **botocore_client_kwargs), _load_enrichment_configs(), event_loop)
 enrichment._patch_module(detection.enrichment)
 
 

@@ -624,54 +624,6 @@ fn hack_fix_arrow2_avro_record(record: avro_schema::schema::Record) -> avro_sche
     }
 }
 
-// We have a bug somewhere where our Timestamps have timezone information when read from Parquet (adjust to UTC = true)
-// This is hack to remove the timezone since we don't actually have tz-aware timestamps
-// TODO: fix the root cause
-fn hack_fix_arrow2_schema_ts(schema: Schema) -> Schema {
-    Schema {
-        fields: schema
-            .fields
-            .iter()
-            .map(|field| {
-                Field::new(
-                    field.name.clone(),
-                    hack_fix_arrow2_dtyp_ts(field.data_type.clone()),
-                    field.is_nullable,
-                )
-            })
-            .collect(),
-        metadata: Default::default(),
-    }
-}
-fn hack_fix_arrow2_dtyp_ts(dtype: DataType) -> DataType {
-    match dtype {
-        DataType::Timestamp(tu, _) => DataType::Timestamp(tu, None),
-        DataType::List(field) => DataType::List(Box::new(Field::new(
-            field.name,
-            hack_fix_arrow2_dtyp_ts(field.data_type),
-            field.is_nullable,
-        ))),
-        DataType::LargeList(field) => DataType::LargeList(Box::new(Field::new(
-            field.name,
-            hack_fix_arrow2_dtyp_ts(field.data_type),
-            field.is_nullable,
-        ))),
-        DataType::Struct(fields) => DataType::Struct(
-            fields
-                .iter()
-                .map(|field| {
-                    Field::new(
-                        field.name.clone(),
-                        hack_fix_arrow2_dtyp_ts(field.data_type.clone()),
-                        field.is_nullable,
-                    )
-                })
-                .collect(),
-        ),
-        x => x,
-    }
-}
-
 // need this rn b/c arrow2 cannot read Athena optimized parquet files (delta length byte array)
 // so we need to deserialize using arrow crate and serialize back for arrow2
 // TODO: Make FFI work (weird bugs)
@@ -764,7 +716,6 @@ async fn get_existing_values(
             let mut reader = std::io::Cursor::new(reader);
             let metadata = read::read_metadata(&mut reader).unwrap();
             let schema = read::infer_schema(&metadata).unwrap();
-            let schema = hack_fix_arrow2_schema_ts(schema);
             let row_groups = metadata.row_groups;
 
             let start = std::time::Instant::now();
