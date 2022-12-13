@@ -43,6 +43,7 @@ import { IcebergMaintenance } from "../lib/iceberg-maintenance";
 import { MatanoSQSSources } from "../lib/sqs-sources";
 import { Enrichment } from "../lib/enrichment";
 import { IntegrationsStore } from "../lib/integrations-store";
+import { ExternalLogPuller, PULLER_LOG_SOURCE_TYPES } from "../lib/log-puller";
 
 interface DPMainStackProps extends MatanoStackProps {
   matanoSourcesBucket: S3BucketWithNotifications;
@@ -269,6 +270,19 @@ export class DPMainStack extends MatanoStack {
     new IcebergMaintenance(this, "MatanoIcebergMaintenance", {
       tableNames: allIcebergTableNames,
     });
+
+    const externalLogPuller = new ExternalLogPuller(this, "ExternalLogPuller", {
+      logSources: logSources
+        .filter(
+          (ls) =>
+            ls.isDataLogSource &&
+            ls.managedLogSourceType != null &&
+            PULLER_LOG_SOURCE_TYPES.includes(ls.managedLogSourceType)
+        )
+        .map((ls) => ls.name),
+      ingestionBucket: props.matanoSourcesBucket.bucket,
+    });
+    externalLogPuller.function.addLayers(configLayer);
 
     this.humanCfnOutput("AlertingSnsTopicArn", {
       value: matanoAlerting.alertingTopic.topicArn,

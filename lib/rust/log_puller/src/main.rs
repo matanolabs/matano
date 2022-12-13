@@ -15,6 +15,7 @@ use log::{debug, error, info};
 use serde::{Deserialize, Serialize};
 use shared::setup_logging;
 use walkdir::WalkDir;
+use chrono::{DateTime, DurationRound, Duration};
 
 mod pullers;
 use pullers::{LogSource, PullLogs, PullLogsContext};
@@ -105,6 +106,7 @@ async fn main() -> Result<(), LambdaError> {
 struct PullerRequest {
     log_source_name: String,
     time: String,
+    rate_minutes: u32,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -141,6 +143,13 @@ async fn handler(event: LambdaEvent<SqsEvent>) -> Result<Option<SQSBatchResponse
     let futs = records
         .into_iter()
         .map(|record| {
+            let event_dt = DateTime::parse_from_rfc3339(&record.time).expect("failed to parse");
+
+            let end_dt = event_dt.duration_trunc(Duration::minutes(1)).unwrap();
+            let start_dt = end_dt - Duration::minutes(record.rate_minutes as i64);
+
+            info!("Processing log_source: {}, from {} to {}", &record.log_source_name, &start_dt, &end_dt);
+
             let ctx = contexts
                 .get(&record.log_source_name)
                 .context("Invalid log source.")?;
@@ -148,7 +157,7 @@ async fn handler(event: LambdaEvent<SqsEvent>) -> Result<Option<SQSBatchResponse
             let puller = ctx.log_source_type.clone();
             let log_source_name = record.log_source_name.clone();
             let fut = puller
-                .pull_logs(client.clone(), ctx)
+                .pull_logs(client.clone(), ctx, start_dt, end_dt)
                 .and_then(|data| async move { upload_data(data, &record.log_source_name).await })
                 .map(move |r| {
                     r.with_context(|| format!("Error for log_source: {}", log_source_name))
@@ -179,7 +188,7 @@ async fn handler(event: LambdaEvent<SqsEvent>) -> Result<Option<SQSBatchResponse
         match result {
             Ok(_) => (),
             Err(e) => {
-                error!("Failed: {}", e);
+                error!("Failed: {:#}", e);
                 failures.push(SQSBatchResponseItemFailure {
                     itemIdentifier: msg_id.to_owned(),
                 });

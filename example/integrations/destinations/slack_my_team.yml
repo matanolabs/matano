@@ -1,0 +1,6 @@
+name: slack_my_team
+
+type: SLACK
+properties:
+  channel: C04AG3QSXSS
+  client_id: MY_CLIENT_ID

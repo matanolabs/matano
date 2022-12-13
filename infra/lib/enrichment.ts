@@ -70,7 +70,9 @@ export class EnrichmentTable extends Construct {
         exclude: ["*"],
         include: ["data.json"],
       });
-      deploy.node.addDependency(this.logSource.matanoTable.icebergTable);
+      for (const matanoTable of this.logSource.matanoTables) {
+        deploy.node.addDependency(matanoTable.icebergTable);
+      }
     }
 
     // run for both dynamic and static to do syncing (simplify)

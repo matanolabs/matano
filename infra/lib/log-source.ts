@@ -92,6 +92,7 @@ interface MatanoLogSourceProps {
 const MANAGED_LOG_SOURCE_PREFIX_MAP: Record<string, string> = {
   aws_cloudtrail: "aws",
   zeek: "zeek",
+  o365: "o365",
   matano_alerts: "matano_alerts", // doesn't really make sense but OK
 };
 
@@ -159,7 +160,8 @@ export class MatanoLogSource extends Construct {
   logSourceLevelConfig: Partial<LogSourceConfig>;
   tablesSchemas: Record<string, any> = {};
   tablesConfig: Record<string, Record<string, any>> = {};
-  matanoTable: MatanoTable;
+  matanoTables: MatanoTable[] = [];
+  managedLogSourceType?: string;
 
   constructor(scope: Construct, id: string, props: MatanoLogSourceProps) {
     super(scope, id);
@@ -185,6 +187,7 @@ export class MatanoLogSource extends Construct {
     if (logSourceConfig?.managed && logSourceConfig.name !== "matano_alerts") {
       const configPath = props.configPath!;
       const managedLogSourceType = logSourceConfig?.managed?.type?.toLowerCase();
+      this.managedLogSourceType = managedLogSourceType;
       if (!managedLogSourceType) {
         fail("Invalid Managed Log source type: cannot be empty");
       }
@@ -251,6 +254,15 @@ export class MatanoLogSource extends Construct {
             const header = `#### Matano managed transform for ${managedLogSourceType} ${
               isTableConfig ? `- ${managedConfig.name} table` : ""
             } - DO NOT EDIT ####`;
+
+            if (managedLogSourceType == "o365") {
+              const tenantName = logSourceConfig?.managed?.properties?.tenant_name;
+              const injectTenantsConfig = `tenants = ${JSON.stringify(
+                tenantName ? { [logSourceConfig?.managed?.properties?.tenant_id]: tenantName  } : {}
+              )}`;
+              managedConfig.transform = `${injectTenantsConfig}\n${managedConfig.transform}\n`;
+            }
+
             managedConfig.transform = `${header}\n${managedConfig.transform}\n`;
           }
 
@@ -372,13 +384,15 @@ export class MatanoLogSource extends Construct {
 
       const formattedName = matanoResourceToCdkName(merged.name);
 
-      this.matanoTable = new MatanoTable(this, `${formattedName}Table`, {
-        tableName: resolvedTableName,
-        schema: tableSchema,
-        realtimeTopic: props.realtimeTopic,
-        lakeWriterLambda: props.lakeWriterLambda,
-        partitions: props.partitions,
-      });
+      this.matanoTables.push(
+          new MatanoTable(this, `${formattedName}Table`, {
+            tableName: resolvedTableName,
+            schema: tableSchema,
+            realtimeTopic: props.realtimeTopic,
+            lakeWriterLambda: props.lakeWriterLambda,
+            partitions: props.partitions,
+        })
+      );
     }
   }
 

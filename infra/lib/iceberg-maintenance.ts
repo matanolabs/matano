@@ -116,7 +116,7 @@ class IcebergExpireSnapshots extends Construct {
       maxConcurrency: 25,
     });
 
-    const expireSnapshotsFunc = new lambda.Function(this, "IcebergExpireSnapshots", {
+    const expireSnapshotsFunc = new lambda.Function(this, "Function", {
       description: "[Matano] Expires snapshots for an iceberg table.",
       runtime: lambda.Runtime.JAVA_11,
       memorySize: 650,
@@ -146,7 +146,7 @@ class IcebergExpireSnapshots extends Construct {
       definition: chain,
     });
 
-    const smScheduleRule = new events.Rule(this, "MatanoIcebergExpireSnapshotsRule", {
+    const smScheduleRule = new events.Rule(this, "Rule", {
       description: "[Matano] Schedules the Iceberg expire snapshots workflow.",
       schedule: events.Schedule.rate(cdk.Duration.days(1)),
     });
@@ -178,7 +178,7 @@ class IcebergRewriteManifests extends Construct {
       maxConcurrency: 25,
     });
 
-    const rewriteManifestsFunc = new lambda.Function(this, "RewriteManifests", {
+    const rewriteManifestsFunc = new lambda.Function(this, "Function", {
       description: "[Matano] Rewrites manifests for an iceberg table.",
       runtime: lambda.Runtime.JAVA_11,
       memorySize: 1024,
@@ -208,7 +208,7 @@ class IcebergRewriteManifests extends Construct {
       definition: chain,
     });
 
-    const smScheduleRule = new events.Rule(this, "MatanoRewriteManifestsRule", {
+    const smScheduleRule = new events.Rule(this, "Rule", {
       description: "[Matano] Schedules the Iceberg rewrite manifests workflow.",
       schedule: events.Schedule.rate(cdk.Duration.hours(1)),
     });

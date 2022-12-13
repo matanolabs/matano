@@ -38,7 +38,6 @@ export class IntegrationsStore extends Construct {
       if (destinationConfig.type == "slack") {
         placeholder = {
           bot_user_oauth_token: placeholder_val,
-          client_id: placeholder_val,
           client_secret: placeholder_val,
           signing_secret: placeholder_val,
         };
@@ -52,7 +51,7 @@ export class IntegrationsStore extends Construct {
       const formattedName = matanoResourceToCdkName(destName);
 
       this.integrationsSecretMap[destName] = new secrets.Secret(this, `${formattedName}Secret`, {
-        description: `${destName} secret (${destinationConfig.type})`,
+        description: `[Matano] ${destName} - (${destinationConfig.type}) alert delivery secret`,
         secretObjectValue: placeholder,
         encryptionKey: props.customerManagedKmsKey,
       });

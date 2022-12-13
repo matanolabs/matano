@@ -338,7 +338,8 @@ async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
             if dest_type == "slack" {
                 println!("sending slack alert");
                 let channel = dest_config["properties"]["channel"].as_str().unwrap();
-                let res = publish_alert_to_slack(dest_name, &existing_alert, &new_alert, channel).await.unwrap();
+                let client_id = dest_config["properties"]["client_id"].as_str().unwrap();
+                let res = publish_alert_to_slack(dest_name, &existing_alert, &new_alert, channel, client_id).await.unwrap();
                 println!("published to slack: {:?}", res);
                 new_alert.destination_to_alert_info.entry(destination.to_string()).or_insert(res);
             }
@@ -370,6 +371,7 @@ async fn publish_alert_to_slack(
     existing_alert: &Option<Alert>,
     alert: &Alert,
     channel: &str,
+    client_id: &str,
 ) -> Result<serde_json::Value> {
     let api_token = &get_secret_for_destination(dest_name).await?["bot_user_oauth_token"];
 
@@ -425,7 +427,10 @@ async fn publish_alert_to_slack(
             vrl(FLATTENED_CONTEXT_EXPANDER, &mut new_context)?;
             let new_context_strs = vrl("flatten(.long_fmt) ?? {}", &mut new_context)?.0;
             let new_context_strs = match new_context_strs {
-                Value::Object(context_strs) => context_strs.into_values().map(|v| v.as_str().unwrap().to_string()).collect::<Vec<String>>(),
+                Value::Object(context_strs) => context_strs
+                    .into_values()
+                    .map(|v| v.as_str().unwrap().to_string())
+                    .collect::<Vec<String>>(),
                 _ => vec![],
             };
             // let new_context_values = vrl(".values || {}", &mut new_context)?.0;
@@ -477,7 +482,7 @@ async fn publish_alert_to_slack(
                             {
                                 "type": "mrkdwn",
                                 "text": "No new context"
-                            }  
+                            }
                         ]
                     }),
                 );
@@ -614,8 +619,10 @@ async fn publish_alert_to_slack(
                 ));
             }
 
-            let context_values_json: serde_json::Value = alert.context_values.to_owned().try_into().unwrap();
-            let context_values_json_str = serde_json::to_string_pretty(&context_values_json).unwrap();
+            let context_values_json: serde_json::Value =
+                alert.context_values.to_owned().try_into().unwrap();
+            let context_values_json_str =
+                serde_json::to_string_pretty(&context_values_json).unwrap();
 
             let blocks = json!([
                     {

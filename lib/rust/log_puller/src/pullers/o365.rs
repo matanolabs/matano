@@ -10,6 +10,7 @@ use futures_util::stream::StreamExt;
 use lazy_static::lazy_static;
 use log::{debug, error, info};
 use regex::Regex;
+use chrono::{DateTime, FixedOffset};
 
 use super::{PullLogs, PullLogsContext};
 use shared::{convert_json_array_str_to_ndjson, JsonValueExt};
@@ -19,7 +20,7 @@ pub struct O365Puller;
 
 #[async_trait]
 impl PullLogs for O365Puller {
-    async fn pull_logs(self, client: reqwest::Client, ctx: &PullLogsContext) -> Result<Vec<u8>> {
+    async fn pull_logs(self, client: reqwest::Client, ctx: &PullLogsContext, start_dt: DateTime<FixedOffset>, end_dt: DateTime<FixedOffset>) -> Result<Vec<u8>> {
         info!("Pulling o365 logs....");
 
         let config = ctx.config();
@@ -42,10 +43,8 @@ impl PullLogs for O365Puller {
             }
         };
 
-        let now = chrono::Utc::now();
-        let one_min_ago = now - chrono::Duration::minutes(1);
-        let start_time = one_min_ago.format("%Y-%m-%dT%H:%M:%S").to_string();
-        let end_time = now.format("%Y-%m-%dT%H:%M:%S").to_string();
+        let start_time = start_dt.format("%Y-%m-%dT%H:%M:%S").to_string();
+        let end_time = end_dt.format("%Y-%m-%dT%H:%M:%S").to_string();
 
         let mut maybe_next_token: Option<String> = None;
 

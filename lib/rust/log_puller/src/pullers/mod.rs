@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use anyhow::Result;
 use async_trait::async_trait;
+use chrono::{DateTime, FixedOffset};
 use enum_dispatch::enum_dispatch;
 use log::{debug, error, info};
 
@@ -86,7 +87,7 @@ impl PullLogsContext {
 #[async_trait]
 #[enum_dispatch]
 pub trait PullLogs {
-    async fn pull_logs(self, client: reqwest::Client, ctx: &PullLogsContext) -> Result<Vec<u8>>;
+    async fn pull_logs(self, client: reqwest::Client, ctx: &PullLogsContext, start_dt: DateTime<FixedOffset>, end_dt: DateTime<FixedOffset>) -> Result<Vec<u8>>;
 }
 
 #[derive(Clone)]
@@ -98,7 +99,7 @@ pub enum LogSource {
 impl LogSource {
     pub fn from_str(s: &str) -> Option<LogSource> {
         match s.to_lowercase().as_str() {
-            "office365" => Some(LogSource::O365Puller(o365::O365Puller {})),
+            "o365" => Some(LogSource::O365Puller(o365::O365Puller {})),
             _ => None,
         }
     }
