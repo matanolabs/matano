@@ -20,7 +20,7 @@ const cdkPkgConfigPath = path.resolve(workDir, "cdkpkg.json");
 process.chdir(workDir);
 
 function prepareCdkPkg() {
-  execSync("npm install aws-cdk", { cwd: workDir });
+  execSync("npm install aws-cdk@2.54.0", { cwd: workDir });
 
   // some js template files mess up pkg, just delete
   fs.rmSync(path.resolve(workDir, "node_modules/aws-cdk/lib/init-templates/app/javascript"), {
@@ -35,7 +35,7 @@ function prepareCdkPkg() {
   const cdkPkgConfig = {
     scripts: ["node_modules/aws-cdk/**/*.js"],
     assets: ["node_modules/aws-cdk/**"],
-    targets: ["node16-linux-x64", "node16-macos-x64"],
+    targets: ["node18.5.0-linux-x64", "node18.5.0-macos-x64"],
     outputPath: workOutputDir,
   };
 

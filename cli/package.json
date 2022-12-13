@@ -60,8 +60,8 @@
       "node_modules/vm2/**/*"
     ],
     "targets": [
-      "node16-linux-x64",
-      "node16-macos-x64"
+      "node18.5.0-linux-x64",
+      "node18.5.0-macos-x64"
     ],
     "outputPath": "build"
   },
