@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "pkg": "5.8.0",
+    "pkg-fetch": "3.2.4"
+  },
+  "overrides": {
+    "pkg-fetch": "3.2.4"
+  }
+}

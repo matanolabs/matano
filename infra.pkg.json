@@ -2,14 +2,14 @@
   "name": "matano-cdk",
   "pkg": {
     "scripts": ["./infra/dist/**/*.js"],
-    "targets": ["node18.5.0-linux-x64", "node18.5.0-macos-x64"],
+    "targets": ["node14.18.1-linux-x64", "node14.18.1-macos-x64"],
     "assets": [
       "./data/**/*",
       "./infra/node_modules/aws-cdk-lib/custom-resources/lib/provider-framework/runtime/*.js",
       "./infra/node_modules/aws-cdk-lib/lambda-layer-awscli/**/*",
-      "./infra/node_modules/aws-cdk-lib/aws-s3-assets/**/*/",
-      "./infra/node_modules/aws-cdk-lib/aws-s3-deployment/**/*/",
-      "./infra/node_modules/aws-cdk-lib/aws-s3/**/*/"
+      "./infra/node_modules/aws-cdk-lib/aws-s3-assets/**/*",
+      "./infra/node_modules/aws-cdk-lib/aws-s3-deployment/**/*",
+      "./infra/node_modules/aws-cdk-lib/aws-s3/**/*"
     ],
     "outputPath": "build"
   }

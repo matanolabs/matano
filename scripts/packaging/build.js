@@ -35,7 +35,7 @@ function prepareCdkPkg() {
   const cdkPkgConfig = {
     scripts: ["node_modules/aws-cdk/**/*.js"],
     assets: ["node_modules/aws-cdk/**"],
-    targets: ["node18.5.0-linux-x64", "node18.5.0-macos-x64"],
+    targets: ["node14.18.1-linux-x64", "node14.18.1-macos-x64"],
     outputPath: workOutputDir,
   };
 

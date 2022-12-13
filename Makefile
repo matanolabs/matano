@@ -32,7 +32,7 @@ build-assets: build-python build-rust build-jvm
 build-all: build-cli build-infra build-assets
 
 package: build-all
-	cd scripts/packaging && npm install pkg@5.8.0 && cd ${CURDIR} && node scripts/packaging/build.js
+	cd scripts/packaging && npm install && cd ${CURDIR} && node scripts/packaging/build.js
 
 local-install: build-cli
 	cd cli && npm run full-install

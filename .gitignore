@@ -24,5 +24,5 @@ __pycache__
 !pr-build.yml
 local-assets/**
 !scripts/**/*.js
-scripts/packaging/package*.json
+scripts/packaging/package-lock.json
 matano*.sh*
