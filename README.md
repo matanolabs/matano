@@ -117,7 +117,7 @@ Once initialized, your [Matano directory](https://www.matano.dev/docs/matano-dir
 
 When onboarding a new log source or authoring a detection, run `matano deploy` from anywhere in your project to deploy the changes to your account.
 
-## 🔧 Integrations
+## ✨ Integrations
 
 #### Managed log sources
 
@@ -125,7 +125,8 @@ When onboarding a new log source or authoring a detection, run `matano deploy` f
 - [**Office 365**](https://www.matano.dev/docs/log-sources/managed-log-sources/office365)
 - [**Suricata**](https://www.matano.dev/docs/log-sources/managed-log-sources/suricata)
 - [**Zeek**](https://www.matano.dev/docs/log-sources/managed-log-sources/zeek)
-- [**Custom ✨**](#%EF%B8%8F⃣-custom-log-transformation--data-normalization)
+- [**Custom 🔧**](#-log-transformation--data-normalization)
+
 #### Alert destinations
 
 - [**Amazon SNS**](https://www.matano.dev/docs/detections/alerting)
@@ -135,7 +136,7 @@ When onboarding a new log source or authoring a detection, run `matano deploy` f
 
 - **MaxMind GeoIP** (_coming soon_)
 - **GreyNoise Intelligence** (_coming soon_)
-- **Custom ✨** (_coming soon_)
+- **Custom 🔧** (_coming soon_)
 
 #### Query engines
 
@@ -146,7 +147,7 @@ When onboarding a new log source or authoring a detection, run `matano deploy` f
 - [**BigQuery Omni (BigLake)**](https://cloud.google.com/biglake)
 - [**Dremio**](https://docs.dremio.com/software/data-formats/apache-iceberg/)
 
-## #️⃣ Custom Log Transformation / Data Normalization
+## 🔧 Log Transformation & Data Normalization
 [**Read the complete docs on configuring custom log sources**](https://www.matano.dev/docs/log-sources/configuration)
 
 Matano uses [Vector Remap Language (VRL)](https://vector.dev/docs/reference/vrl/), to allow users to easily onboard custom log sources and encourages you to normalize fields according to the [Elastic Common Schema (ECS)]() to enable enhanced pivoting and bulk search for IOCs across your security data lake.
