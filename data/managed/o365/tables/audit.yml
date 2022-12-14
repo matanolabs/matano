@@ -1,0 +1,1010 @@
+transform: |-
+  # tenants config injected here^
+
+  .event.kind = "event"
+  .event.type = ["info"]
+  .event.category = ["web"]
+
+  .o365.audit = object!(del(.json))
+
+  if .o365.audit.CreationTime != null {
+    creation_time, err = split(string!(.o365.audit.CreationTime), "Z")[0] + "Z"                                          
+    .ts = to_timestamp!(creation_time) 
+  }
+
+  .event.id = del(.o365.audit.Id)
+      
+  .user.id = to_string(.o365.audit.UserId) ?? null
+
+  .event.provider = del(.o365.audit.Workload)
+
+  .event.action = del(.o365.audit.Operation)
+
+  .organization.id = del(.o365.audit.OrganizationId)
+
+  .user_agent.original = .o365.audit.UserAgent
+
+  id_to_schema = {
+    "1": "ExchangeAdmin",
+    "2": "ExchangeItem",
+    "3": "ExchangeItemGroup",
+    "4": "SharePoint",
+    "6": "SharePointFileOperation",
+    "7": "OneDrive",
+    "8": "AzureActiveDirectory",
+    "9": "AzureActiveDirectoryAccountLogon",
+    "10": "DataCenterSecurityCmdlet",
+    "11": "ComplianceDLPSharePoint",
+    "12": "Sway",
+    "13": "ComplianceDLPExchange",
+    "14": "SharePointSharingOperation",
+    "15": "AzureActiveDirectoryStsLogon",
+    "16": "SkypeForBusinessPSTNUsage",
+    "17": "SkypeForBusinessUsersBlocked",
+    "18": "SecurityComplianceCenterEOPCmdlet",
+    "19": "ExchangeAggregatedOperation",
+    "20": "PowerBIAudit",
+    "21": "CRM",
+    "22": "Yammer",
+    "23": "SkypeForBusinessCmdlets",
+    "24": "Discovery",
+    "25": "MicrosoftTeams",
+    "28": "ThreatIntelligence",
+    "29": "MailSubmission",
+    "30": "MicrosoftFlow",
+    "31": "AeD",
+    "32": "MicrosoftStream",
+    "33": "ComplianceDLPSharePointClassification",
+    "34": "ThreatFinder",
+    "35": "Project",
+    "36": "SharePointListOperation",
+    "37": "SharePointCommentOperation",
+    "38": "DataGovernance",
+    "39": "Kaizala",
+    "40": "SecurityComplianceAlerts",
+    "41": "ThreatIntelligenceUrl",
+    "42": "SecurityComplianceInsights",
+    "43": "MIPLabel",
+    "44": "WorkplaceAnalytics",
+    "45": "PowerAppsApp",
+    "46": "PowerAppsPlan",
+    "47": "ThreatIntelligenceAtpContent",
+    "48": "LabelContentExplorer",
+    "49": "TeamsHealthcare",
+    "50": "ExchangeItemAggregated",
+    "51": "HygieneEvent",
+    "52": "DataInsightsRestApiAudit",
+    "53": "InformationBarrierPolicyApplication",
+    "54": "SharePointListItemOperation",
+    "55": "SharePointContentTypeOperation",
+    "56": "SharePointFieldOperation",
+    "57": "MicrosoftTeamsAdmin",
+    "58": "HRSignal",
+    "59": "MicrosoftTeamsDevice",
+    "60": "MicrosoftTeamsAnalytics",
+    "61": "InformationWorkerProtection",
+    "62": "Campaign",
+    "63": "DLPEndpoint",
+    "64": "AirInvestigation",
+    "65": "Quarantine",
+    "66": "MicrosoftForms",
+    "67": "ApplicationAudit",
+    "68": "ComplianceSupervisionExchange",
+    "69": "CustomerKeyServiceEncryption",
+    "70": "OfficeNative",
+    "71": "MipAutoLabelSharePointItem",
+    "72": "MipAutoLabelSharePointPolicyLocation",
+    "73": "MicrosoftTeamsShifts",
+    "75": "MipAutoLabelExchangeItem",
+    "76": "CortanaBriefing",
+    "78": "WDATPAlerts",
+    "82": "SensitivityLabelPolicyMatch",
+    "83": "SensitivityLabelAction",
+    "84": "SensitivityLabeledFileAction",
+    "85": "AttackSim",
+    "86": "AirManualInvestigation",
+    "87": "SecurityComplianceRBAC",
+    "88": "UserTraining",
+    "89": "AirAdminActionInvestigation",
+    "90": "MSTIC",
+    "91": "PhysicalBadgingSignal",
+    "93": "AipDiscover",
+    "94": "AipSensitivityLabelAction",
+    "95": "AipProtectionAction",
+    "96": "AipFileDeleted",
+    "97": "AipHeartBeat",
+    "98": "MCASAlerts",
+    "99": "OnPremisesFileShareScannerDlp",
+    "100": "OnPremisesSharePointScannerDlp",
+    "101": "ExchangeSearch",
+    "102": "SharePointSearch",
+    "103": "PrivacyInsights",
+    "105": "MyAnalyticsSettings",
+    "106": "SecurityComplianceUserChange",
+    "107": "ComplianceDLPExchangeClassification",
+    "109": "MipExactDataMatch",
+    "113": "MS365DCustomDetection",
+    "147": "CoreReportingSettings",
+    "148": "ComplianceConnector",
+    "174": "DataShareOperation",
+    "181": "EduDataLakeDownloadOperation",
+  }
+  if .o365.audit.RecordType != null {           
+    schema_id = to_string!(.o365.audit.RecordType)
+    .event.code = get(id_to_schema, [schema_id]) ?? null       
+  }
+
+  if .o365.audit.ResultStatus != null {
+    result_status = downcase!(.o365.audit.ResultStatus)
+    if (
+      "succeeded" == result_status || "success" == result_status || "partiallysucceeded" == result_status || "true" == result_status
+    ) {
+      .event.outcome = "success"
+    }
+    if (
+      "failed" == result_status || "false" == result_status
+    ) {
+      .event.outcome = "failure"
+    }
+  }
+
+  if .event.outcome == null { 
+      .event.outcome = "success"
+  }
+
+  if .o365.audit.Parameters != null {
+    if is_array(.o365.audit.Parameters) {           
+      params_arr = array!(del(.o365.audit.Parameters))
+      .o365.audit.Parameters = {}
+      for_each(params_arr) -> |_i, r| {
+        if r.Value != null {
+          .o365.audit.Parameters = set!(.o365.audit.Parameters, [r.Name], r.Value)
+        }
+      }                     
+    } else if is_string(.o365.audit.Parameters) {
+      .o365.audit.RawParameters = del(.o365.audit.Parameters)
+    }
+  }
+
+  if .o365.audit.ExtendedProperties != null {
+    if is_array(.o365.audit.ExtendedProperties) {           
+      params_arr = array!(del(.o365.audit.ExtendedProperties))
+      .o365.audit.ExtendedProperties = {}
+      for_each(params_arr) -> |_i, r| {
+        if r.Value != null {
+          name = r.Name
+          .o365.audit.ExtendedProperties = set!(.o365.audit.ExtendedProperties, [name], r.Value)
+        }
+      }                     
+    } else if is_string(.o365.audit.ExtendedProperties) {
+      .o365.audit.RawExtendedProperties = del(.o365.audit.ExtendedProperties)
+    }
+  }
+
+  if .o365.audit.ModifiedProperties != null {
+    if is_array(.o365.audit.ModifiedProperties) {           
+      params_arr = array!(del(.o365.audit.ModifiedProperties))
+      .o365.audit.ModifiedProperties = {}
+      for_each(params_arr) -> |_i, r| {
+        if is_object(r) && r.OldValue != null && r.NewValue != null {
+          name = replace!(r.Name, r'(\.| )', "_")
+          .o365.audit.ModifiedProperties = set!(.o365.audit.ModifiedProperties, [name, "OldValue"], r.OldValue)
+          .o365.audit.ModifiedProperties = set!(.o365.audit.ModifiedProperties, [name, "NewValue"], r.NewValue)
+        } else if is_string(r) {
+          name = replace!(r, r'(\.| )', "_")
+          .o365.audit.ModifiedProperties = set!(.o365.audit.ModifiedProperties, [name], {})
+        }
+      }
+      if is_empty(.o365.audit.ModifiedProperties) {
+        .o365.audit.ModifiedProperties = null
+      }
+    } else if is_string(.o365.audit.ModifiedProperties) {
+      .o365.audit.RawModifiedProperties = del(.o365.audit.ModifiedProperties)
+    }
+  }
+   
+  if is_array(.o365.audit.AlertLinks) {
+    .o365.audit.AlertLinks = map_values(array!(.o365.audit.AlertLinks)) -> |v| {
+      if is_object(v) {
+        string(v.AlertLinkHref) ?? null
+      } else {
+        null
+      }
+    }
+    .o365.audit.AlertLinks = filter(.o365.audit.AlertLinks) -> |_, v| { v != null }                    
+  }
+
+  if .o365.audit.Severity == "informational" { 
+    .event.severity = "1"
+  } else if .o365.audit.Severity == "low" { 
+    .event.severity = "2"
+  } else if .o365.audit.Severity == "medium" { 
+    .event.severity = "3"
+  } else if .o365.audit.Severity == "high" { 
+    .event.severity = "4"
+  }
+
+  if .event.code == "ExchangeAdmin" { 
+    .organization.name = del(.o365.audit.OrganizationName)
+  }
+
+  client_temp = del(.o365.audit.ClientIPAddress) || del(.o365.audit.ClientIP) || del(.o365.audit.ActorIpAddress)
+
+  if .event.code == "ExchangeItem" { 
+    .user.email = del(.o365.audit.MailboxOwnerUPN)
+    if .user.id == null && .o365.audit.LogonUserSid != null { 
+      .user.id = to_string(.o365.audit.LogonUserSid) ?? null
+    }
+    .user.full_name = .o365.audit.LogonUserDisplayName
+    .organization.name = del(.o365.audit.OrganizationName) || .organization.name
+    .process.name = .o365.audit.ClientProcessName
+  } else if .event.code == "AzureActiveDirectory" { 
+    .user.target.id = .o365.audit.ObjectId
+    if .event.action == "Add user." { 
+      .event.action = "added-user-account"
+      .event.category = push(.event.category, "iam")
+      .event.type = push(.event.type, "user")
+      .event.type = push(.event.type, "creation")
+    } else if .event.action == "Update user." { 
+      .event.action = "modified-user-account"
+      .event.category = push(.event.category, "iam")
+      .event.type = push(.event.type, "user")
+      .event.type = push(.event.type, "change")
+    } else if .event.action == "Delete user." { 
+      .event.action = "deleted-user-account"
+      .event.category = push(.event.category, "iam")
+      .event.type = push(.event.type, "user")
+      .event.type = push(.event.type, "deletion")
+    }
+  } else if .event.code == "AzureActiveDirectoryStsLogon" { 
+    .event.category = push(.event.category, "authentication")
+    .event.type = push(.event.type, "start") 
+    .event.type = push(.event.type, "access") 
+  } else if .event.code == "SharePointFileOperation" { 
+    .url.original = del(.o365.audit.ObjectId)
+    .file.directory = del(.o365.audit.SourceRelativeUrl)
+    .file.name = del(.o365.audit.SourceFileName)
+    .file.extension = del(.o365.audit.SourceFileExtension)
+  }
+
+  if .event.action != null && ("FileAccessed" == .event.action || "FileDeleted" == .event.action || "FileDownloaded" == .event.action || "FileModified" == .event.action || "FileMoved" == .event.action || "FileRenamed" == .event.action || "FileRestored" == .event.action || "FileUploaded" == .event.action || "FolderCopied" == .event.action || "FolderCreated" == .event.action || "FolderDeleted" == .event.action || "FolderModified" == .event.action || "FolderMoved" == .event.action || "FolderRenamed" == .event.action || "FolderRestored" == .event.action) { 
+    .event.category = push(.event.category, "file") 
+  }
+
+  if .event.action == "ComplianceSettingChanged" { 
+    .event.category = push(.event.category, "configuration") 
+  }
+
+  if "FileAccessed" == .event.action || "FileDownloaded" == .event.action { 
+    .event.type = push(.event.type, "access") 
+  }
+
+  if (
+    "ComplianceSettingChanged" == .event.action || "FileModified" == .event.action || "FileMoved" == .event.action || "FileRenamed" == .event.action || "FileRestored" == .event.action || "FolderModified" == .event.action || "FolderMoved" == .event.action || "FolderRenamed" == .event.action || "FolderRestored" == .event.action
+  ) { 
+    .event.type = push(.event.type, "change") 
+  }
+
+  if "FileDeleted" == .event.action || "FolderDeleted" == .event.action { 
+    .event.type = push(.event.type, "deletion") 
+  }
+
+  if (
+    "FileUploaded" == .event.action || "FolderCopied" == .event.action || "FolderCreated" == .event.action
+  ) { 
+    .event.type = push(.event.type, "creation") 
+  }
+
+  if .event.code == "SecurityComplianceAlerts" { 
+    .message = del(.o365.audit.Comments)
+    .rule.name = del(.o365.audit.Name)
+    .rule.id = del(.o365.audit.PolicyId)
+    .rule.category = .o365.audit.Category
+    .rule.ruleset = del(.o365.audit.EntityType)
+    .rule.description = .o365.audit.AlertEntityId
+    .rule.reference = join!(.o365.audit.AlertLinks, ", ")
+    .event.kind = "alert"
+    if .o365.audit.Category == "AccessGovernance" { 
+      .event.category = push(.event.category, "authentication")
+    } else if (
+      .o365.audit.Category == "DataGovernance" || .o365.audit.Category == "DataLossPrevention"
+    ) { 
+      .event.category = push(.event.category, "file")
+    } else if .o365.audit.Category == "ThreatManagement" { 
+      .event.category = push(.event.category, "malware")
+    } else {
+      .event.category = push(.event.category, "authentication")
+    }
+
+    if .user.id == null && .rule.ruleset == "User" { 
+      .user.id = to_string(.o365.audit.AlertEntityId) ?? null
+    }      
+    if "Recipients" == .rule.ruleset || "Sender" == .rule.ruleset { 
+      .user.email = .o365.audit.AlertEntityId || .user.email
+    } else if .rule.ruleset == "MalwareFamily" { 
+      .threat.technique.id = [.o365.audit.AlertEntityId]
+    }
+    del(.o365.audit.AlertEntityId)
+    del(.o365.audit.AlertLinks)
+    del(.o365.audit.Category)
+  }
+
+  if (
+    "ComplianceDLPSharePoint" == .event.code || "ComplianceDLPExchange"  == .event.code
+  ) { 
+    .event.kind = "alert"
+    .event.category = push(.event.category, "file")
+    .event.type = push(.event.type, "access")
+          
+    if .user.id == null { 
+        .user.id = del(.o365.audit.SharePointMetaData.From)
+    }
+    .file.name = del(.o365.audit.SharePointMetaData.FileName) || .file.name
+    .url.original = del(.o365.audit.SharePointMetaData.FilePathUrl) || .url.original
+    .file.inode = del(.o365.audit.SharePointMetaData.UniqueId) || del(.o365.audit.SharePointMetaData.UniqueID) || .file.inode
+    .file.owner = del(.o365.audit.SharePointMetaData.FileOwner)
+    .source.user.email = del(.o365.audit.ExchangeMetaData.From)
+    .message = del(.o365.audit.ExchangeMetaData.Subject) || .message
+    .rule.id = del(.o365.audit.PolicyId) || .rule.id
+    .rule.name = del(.o365.audit.PolicyName) || .rule.name
+    if .o365.audit.SharePointMetaData.LastModifiedTime != null {
+      last_modified_time, err = split(string!(.o365.audit.SharePointMetaData.LastModifiedTime), "Z")[0] + "Z"                                    
+      .file.mtime = to_timestamp!(last_modified_time) 
+    }
+
+    if .o365.audit.ExchangeMetaData != null {
+      to_emails = .o365.audit.ExchangeMetaData.To
+      to_emails = if to_emails == null { [] } else if is_array(to_emails) { to_emails } else { [ to_emails ] }
+      cc_emails = .o365.audit.ExchangeMetaData.CC
+      cc_emails = if cc_emails == null { [] } else if is_array(cc_emails) { cc_emails } else { [ cc_emails ] }
+      bcc_emails = .o365.audit.ExchangeMetaData.BCC
+      bcc_emails = if bcc_emails == null { [] } else if is_array(bcc_emails) { bcc_emails } else { [ bcc_emails ] }
+
+      .destination.user.email = flatten([array!(to_emails), array!(cc_emails), array!(bcc_emails)])
+      # TODO(shaeq): ECS should define destination.user.email as array, but it doesnt.
+      # we should de something about this rather than use , string join's as this will make indicator lookups difficult.
+      .destination.user.email = join!(.destination.user.email, ", ")                       
+    }
+
+    if is_string(.o365.audit.ExceptionInfo) { 
+        .o365.audit.ExceptionInfo.Reason = del(.o365.audit.ExceptionInfo)
+    }
+
+    if .o365.audit.PolicyDetails != null {
+      severity_to_code = {
+        "informational": 1,
+        "low": 2,
+        "medium": 3,
+        "high": 4,
+      }
+
+      rule_ids = []
+      rule_names = []
+
+      allowed = true
+      max_sev_code = 0
+      if is_array(.o365.audit.PolicyDetails) {
+        for_each(array!(.o365.audit.PolicyDetails)) -> |_i, d| {
+          rules = array!(d.Rules || [])
+          for_each(rules) -> |_i, r| {
+            sev = downcase!(r.Severity)
+            sev_code = int!(get(severity_to_code, [sev]) ?? 0)
+            if r.RuleId != null && r.RuleName != null {
+              rule_ids = push(rule_ids, r.RuleId)
+              rule_names = push(rule_names, r.RuleName)
+            }
+            if sev_code > max_sev_code {
+              max_sev_code = sev_code
+            }
+            if allowed && r.Actions != null {
+              for_each(array!(r.Actions)) -> |_i, v| {
+                if v == "BlockAccess" {
+                  allowed = false
+                }
+              }
+            }
+          } 
+        }
+        .rule.id = if is_empty(rule_ids) { null } else { join!(rule_ids, ", ") } # TODO(shaeq): fix this respect ECS
+        .rule.name = if is_empty(rule_names) { null } else { join!(rule_names, ", ") } # TODO(shaeq): fix this respect ECS
+        if (max_sev_code > -1) {
+          .event.severity = max_sev_code
+        } 
+        if allowed {
+          .event.outcome = "success"
+        } else if .event.action == "DlpRuleUndo" {
+          .event.outcome = "success"
+        } else if .event.action == "DlpInfo" {
+          .event.outcome = "failure"
+        } else if .o365.audit.ExceptionInfo != null && !is_empty!(.o365.audit.ExceptionInfo) {
+          .event.outcome = "success"
+        } else {
+          .event.outcome = "failure"
+        }
+      }                        
+    }
+  }
+
+  if .event.code == "Yammer" { 
+      .user.email = del(.o365.audit.ActorUserId) || .user.email
+      .user.id = .user.id || to_string(.o365.audit.ActorYammerUserId) ?? null
+      .file.inode = del(.o365.audit.FileId) || .file.inode
+      .file.name = del(.o365.audit.FileName) || .file.name
+      .group.name = del(.o365.audit.GroupName)
+      .destination.user.email = del(.o365.audit.TargetUserId)
+      .destination.user.id = del(.o365.audit.TargetYammerUserId)
+      if (
+        "NetworkConfigurationUpdated" == .event.action || "NetworkSecurityConfigurationUpdated" == .event.action || "SoftDeleteSettingsUpdated" == .event.action || "ProcessProfileFields" == .event.action || "SupervisorAdminToggled" == .event.action
+      ) {
+        .event.category = push(.event.category, "configuration")
+        .event.type = push(.event.type, "change")
+        if "NetworkSecurityConfigurationUpdated" == .event.action {
+          .event.type = push(.event.type, "admin")
+        }
+      } else if (
+        "NetworkSecurityConfigurationUpdated" == .event.action || "GroupCreation" == .event.action || "GroupDeletion" == .event.action || "NetworkUserSuspended" == .event.action || "UserSuspension" == .event.action
+      ) {
+        .event.category = push(.event.category, "iam") 
+      } else if (
+        "FileCreated" == .event.action || "FileDownloaded" == .event.action || "FileShared" == .event.action || "FileUpdateDescription" == .event.action || "FileUpdateName" == .event.action || "FileVisited" == .event.action
+      ) {
+        .event.category = push(.event.category, "file") 
+      }
+
+      if (
+        "FileCreated" == .event.action || "GroupCreation" == .event.action || "FileUpdateName" == .event.action
+      ) { 
+        .event.type = push(.event.type, "creation") 
+      } else if .event.action == "GroupDeletion" {
+        .event.type = push(.event.type, "deletion")
+      } else if (
+        "FileDownloaded" == .event.action || "FileShared" == .event.action || "FileUpdateDescription" == .event.action || "FileVisited" == .event.action
+      ) {
+        .event.type = push(.event.type, "access") 
+      }
+
+      if (
+        "GroupCreation" == .event.action || "GroupDeletion" == .event.action
+      ) { 
+        .event.type = push(.event.type, "group") 
+      }
+  }
+
+  if .event.code == "MicrosoftTeams" {
+    if .event.action == "TeamCreated" { 
+      .event.action = "added-group-account-to"
+      .event.category = push(.event.category, "iam")
+      .event.type = push(.event.type, "group") 
+      .event.type = push(.event.type, "creation")  
+    } else if .event.action == "MemberAdded" {
+      .event.action = "added-users-to-group"
+      .event.category = push(.event.category, "iam") 
+      .event.type = push(.event.type, "group") 
+      .event.type = push(.event.type, "change")
+    } else if .event.action == "Delete user." { # TODO(shaeq): Check this
+      .event.action = "deleted-user-account"
+      .event.category = push(.event.category, "iam")
+      .event.type = push(.event.type, "user")
+      .event.type = push(.event.type, "deletion")
+      .user.target.id = .o365.audit.ObjectId
+    }
+    .group.name = del(.o365.audit.TeamName) || .group.name
+    if is_array(.o365.audit.Members) {
+      for_each(array!(.o365.audit.Members)) -> |_i, m| {
+        if is_object(m) && m.UPN != null && !is_empty(string!(m.UPN)) {
+          .related.user = push(.related.user, m.UPN)
+        } 
+      }
+    }
+  }
+
+  client_temp = replace(client_temp, r'::ffff:([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)', "$1") ?? null                   
+  client_port = null
+
+  if client_temp != null && !is_empty(string!(client_temp)) {                                                                   
+  	_grokked = parse_groks!(
+      client_temp,
+      [
+        "%{IPANDPORTBRACKETS}",
+        "^%{IP:client.address}$",
+        "^\\[%{IP:client.address}\\]$",
+        "%{IPANDPORT}",
+        "^%{NOTSPACE:client.domain}$",
+        "%{HOSTNAMEANDPORTBRACKETS}",
+        "%{HOSTNAMEANDPORT}",
+        "^\\[%{HOSTNAMEANDIP}\\]$",
+        "^%{HOSTNAMEANDIP}$",
+        "%{GREEDYDATA:client.address}",
+      ],
+      {
+        "IPANDPORTBRACKETS": "^\\[%{IP:client.address}\\]:%{POSINT:client_port}",
+        "IPANDPORT": "^%{IP:client.address}:%{POSINT:client_port}",
+        "HOSTNAMEANDPORTBRACKETS": "^\\[%{NOTSPACE:client.domain}\\]:%{POSINT:client_port}",
+        "HOSTNAMEANDPORT": "^%{NOTSPACE:client.domain}:%{POSINT:client_port}",
+        "NOTCLOSINGPARENS": "[^)]*",
+        "HOSTNAMEANDIP": "%{NOTSPACE:client.domain} \\(%{NOTCLOSINGPARENS:client.address}\\)",
+      }
+    )
+    client_port = del(_grokked.client_port)
+    . = merge(., _grokked, deep: true)
+  }
+
+  if .event.code == "ExchangeAdmin" || .event.code == "ExchangeItem"  { 
+      server_temp = del(.o365.audit.OriginatingServer)
+      server_temp = replace(server_temp, r'\n|\r', "") ?? null
+      if server_temp != null && !is_empty(string!(server_temp)) {
+        . |= parse_groks!(server_temp,
+          [
+            "^\\[%{HOSTNAMEANDIP}\\]$",
+            "%{HOSTNAMEANDIP}",
+            "%{GREEDYDATA:server.address}",
+          ],
+          {
+            "NOTCLOSINGPARENS": "[^)]*",
+            "HOSTNAMEANDIP": "%{NOTSPACE:server.domain} \\(%{NOTCLOSINGPARENS:server.address}\\)"
+          },
+        ) 
+      }
+  }
+
+  if .client.address != null {
+    .network.type = if is_ipv6!(.client.address) { "ipv6" } else if is_ipv4!(.client.address) { "ipv4" } else { null }
+    if .network.type != null {
+      .client.ip = .client.address
+    }
+  }
+
+  if client_port != null {
+    .client.port = to_int!(client_port)
+  }
+
+  if .server.address != null {
+    .server.ip = if is_ipv6!(.server.address) || is_ipv4!(.server.address) { .server.address } else { null }
+  }
+
+  .source.ip = .client.ip
+
+  .source.port = .client.port
+
+  .destination.ip = .server.ip
+
+  if .user.id != null && contains(string!(.user.id), "@") { 
+    parts = split!(.user.id, "@")
+    if length(parts) == 2 {
+      .user.email = .user.id
+      .user.name = parts[0]
+      .user.domain = parts[1]
+    }                        
+  }
+
+  if .user.target.id != null && contains(string!(.user.target.id), "@") { 
+    parts = split!(.user.target.id, "@")
+    if length(parts) == 2 {
+      .user.target.email = .user.target.id
+      .user.target.name = parts[0]
+      .user.target.domain = parts[1]
+    }                        
+  }
+
+  if .source.user.id != null && contains(string!(.source.user.id), "@") { 
+    parts = split!(.source.user.id, "@")
+    if length(parts) == 2 {
+      .source.user.email = .source.user.id
+      .source.user.name = parts[0]
+      .source.user.domain = parts[1]
+    }                    
+  }
+
+  if .destination.user.id != null && contains(string!(.destination.user.id), "@") { 
+    parts = split!(.destination.user.id, "@")
+    if length(parts) == 2 {
+      .destination.user.email = .destination.user.id
+      .destination.user.name = parts[0]
+      .destination.user.domain = parts[1]
+    }                    
+  }
+
+  .related.ip = array!(.related.ip)
+  if .client.ip != null { 
+      .related.ip = push(.related.ip, .client.ip)
+  }
+
+  if .server.ip != null { 
+      .related.ip = push(.related.ip, .server.ip) 
+  }
+
+  .related.user = array!(.related.user)
+  if .user.name != null { 
+      .related.user = push(.related.user, .user.name) 
+  }
+
+  if .user.target.name != null { 
+      .related.user = push(.related.user, .user.target.name) 
+  }
+      
+  if .file.owner != null { 
+      .related.user = push(.related.user, .file.owner) 
+  }
+
+  .user_agent.original = .o365.audit.ExtendedProperties.UserAgent || .user_agent.original
+
+  .organization.id = downcase(.organization.id) ?? null                     
+
+  .host.id = .organization.id
+
+  # TODO(shaeq): enrich organization.id -> host.name / org.name based on a tenant config
+  .host.name = get(tenants, [.organization.id]) ?? null
+  .organization.name = .host.name || .organization.name 
+
+  .host.name = .host.name || .organization.name || .user.domain
+
+  .o365.audit.AzureActiveDirectoryEventType = to_string(.o365.audit.AzureActiveDirectoryEventType) ?? null
+
+  .o365.audit.RecordType = to_string(.o365.audit.RecordType) ?? null
+
+  .o365.audit.UserType = to_string(.o365.audit.UserType) ?? null
+
+  .o365.audit.Version = to_string(.o365.audit.Version) ?? null
+
+  .o365.audit.InternalLogonType = to_string(.o365.audit.InternalLogonType) ?? null
+
+  .o365.audit.LogonType = to_string(.o365.audit.LogonType) ?? null
+
+  .o365.audit.ActorYammerUserId = to_string(.o365.audit.ActorYammerUserId) ?? null
+
+  .o365.audit.YammerNetworkId = to_string(.o365.audit.YammerNetworkId) ?? null
+
+  # .user_agent = parse_user_agent(.user_agent.original)
+
+  .source.as.number = del(.source.as.asn)
+
+  .source.as.organization.name = del(.source.as.organization_name)
+
+  # TODO(auto-stringify object JSONs)
+  .o365.audit.Parameters = if .o365.audit.Parameters != null { encode_json(.o365.audit.Parameters) } else { null }
+  .o365.audit.Item = if .o365.audit.Item != null { encode_json(.o365.audit.Item) } else { null }
+  .o365.audit.ExtendedProperties = if .o365.audit.ExtendedProperties != null { encode_json(.o365.audit.ExtendedProperties) } else { null }
+  .o365.audit.ModifiedProperties = if .o365.audit.ModifiedProperties != null { encode_json(.o365.audit.ModifiedProperties) } else { null }
+  .o365.audit.ExchangeMetaData = if .o365.audit.ExchangeMetaData != null { encode_json(.o365.audit.ExchangeMetaData) } else { null }
+  .o365.audit.ExceptionInfo = if .o365.audit.ExceptionInfo != null { encode_json(.o365.audit.ExceptionInfo) } else { null }
+  if .o365.audit.PolicyDetails != null {
+     .o365.audit.PolicyDetails = map_values(array!(.o365.audit.PolicyDetails)) -> |v| { encode_json(v) }
+  }
+  .o365.audit.SharePointMetaData = if .o365.audit.SharePointMetaData != null { encode_json(.o365.audit.SharePointMetaData) } else { null }
+name: audit
+schema:
+  ecs_field_names:
+    - client.address
+    - client.domain
+    - client.ip
+    - client.port
+    - cloud.account.id
+    - cloud.availability_zone
+    - cloud.instance.id
+    - cloud.instance.name
+    - cloud.machine.type
+    - cloud.project.id
+    - cloud.provider
+    - cloud.region
+    - container.id
+    - container.image.name
+    - container.labels
+    - container.name
+    - destination.ip
+    - destination.user.email
+    - destination.user.id
+    - ecs.version
+    - event.action
+    - event.category
+    - event.code
+    - event.dataset
+    - event.id
+    - event.ingested
+    - event.kind
+    - event.module
+    - event.outcome
+    - event.provider
+    - event.severity
+    - event.type
+    - file.directory
+    - file.extension
+    - file.inode
+    - file.mtime
+    - file.name
+    - file.owner
+    - group.name
+    - host.architecture
+    - host.domain
+    - host.hostname
+    - host.id
+    - host.ip
+    - host.mac
+    - host.name
+    - host.os.family
+    - host.os.kernel
+    - host.os.name
+    - host.os.platform
+    - host.os.version
+    - host.type
+    - log.file.path
+    - message
+    - network.type
+    - organization.id
+    - organization.name
+    - process.name
+    - related.ip
+    - related.user
+    - rule.category
+    - rule.description
+    - rule.id
+    - rule.name
+    - rule.reference
+    - rule.ruleset
+    - server.address
+    - server.domain
+    - server.ip
+    - source.as.number
+    - source.as.organization.name
+    - source.geo.city_name
+    - source.geo.continent_name
+    - source.geo.country_iso_code
+    - source.geo.country_name
+    - source.geo.location
+    - source.geo.name
+    - source.geo.region_iso_code
+    - source.geo.region_name
+    - source.ip
+    - source.port
+    - source.user.email
+    - tags
+    - threat.technique.id
+    - url.original
+    - user.domain
+    - user.email
+    - user.full_name
+    - user.id
+    - user.name
+    - user.target.domain
+    - user.target.email
+    - user.target.full_name
+    - user.target.group.domain
+    - user.target.group.id
+    - user.target.group.name
+    - user.target.id
+    - user.target.name
+    - user_agent.device.name
+    - user_agent.name
+    - user_agent.original
+    - user_agent.os.full
+    - user_agent.os.name
+    - user_agent.os.version
+    - user_agent.version
+  fields:
+    - name: o365
+      type:
+        type: struct
+        fields:
+          - name: audit
+            type:
+              type: struct
+              fields:
+                - name: Actor
+                  type:
+                    type: list
+                    element:
+                      type: struct
+                      fields:
+                        - name: ID
+                          type: string
+                        - name: Type
+                          type: int
+                - name: ActorContextId
+                  type: string
+                - name: ActorIpAddress
+                  type: string
+                - name: ActorUserId
+                  type: string
+                - name: ActorYammerUserId
+                  type: string
+                - name: AlertEntityId
+                  type: string
+                - name: AlertId
+                  type: string
+                - name: .
+                  type:
+                    type: list
+                    element: string
+                - name: AlertType
+                  type: string
+                - name: AppId
+                  type: string
+                - name: ApplicationDisplayName
+                  type: string
+                - name: ApplicationId
+                  type: string
+                - name: AzureActiveDirectoryEventType
+                  type: string
+                - name: Category
+                  type: string
+                - name: ClientAppId
+                  type: string
+                - name: ClientIP
+                  type: string
+                - name: ClientIPAddress
+                  type: string
+                - name: ClientInfoString
+                  type: string
+                - name: ClientRequestId
+                  type: string
+                - name: Comments
+                  type: string
+                - name: CorrelationId
+                  type: string
+                - name: CreationTime
+                  type: string
+                - name: CustomUniqueId
+                  type: boolean
+                - name: Data
+                  type: string
+                - name: DataType
+                  type: string
+                - name: EntityType
+                  type: string
+                - name: ErrorNumber
+                  type: string
+                - name: EventData
+                  type: string
+                - name: EventSource
+                  type: string
+                - name: ExceptionInfo
+                  type: string
+                - name: ExchangeMetaData
+                  type: string
+                - name: ExtendedProperties
+                  type: string
+                - name: RawExtendedProperties
+                  type: string
+                - name: ExternalAccess
+                  type: boolean
+                - name: GroupName
+                  type: string
+                - name: Id
+                  type: string
+                - name: ImplicitShare
+                  type: string
+                - name: IncidentId
+                  type: string
+                - name: InterSystemsId
+                  type: string
+                - name: InternalLogonType
+                  type: string
+                - name: IntraSystemId
+                  type: string
+                - name: Item
+                  type: string
+                - name: ItemName
+                  type: string
+                - name: ItemType
+                  type: string
+                - name: ListId
+                  type: string
+                - name: ListItemUniqueId
+                  type: string
+                - name: LogonError
+                  type: string
+                - name: LogonType
+                  type: string
+                - name: LogonUserSid
+                  type: string
+                - name: MailboxGuid
+                  type: string
+                - name: MailboxOwnerMasterAccountSid
+                  type: string
+                - name: MailboxOwnerSid
+                  type: string
+                - name: MailboxOwnerUPN
+                  type: string
+                - name: Members
+                  type:
+                    type: list
+                    element:
+                      type: struct
+                      fields:
+                        - name: DisplayName
+                          type: string
+                        - name: Role
+                          type: int
+                        - name: UPN
+                          type: string
+                - name: ModifiedProperties
+                  type: string
+                - name: RawModifiedProperties
+                  type: string
+                - name: Name
+                  type: string
+                - name: ObjectId
+                  type: string
+                - name: Operation
+                  type: string
+                - name: OrganizationId
+                  type: string
+                - name: OrganizationName
+                  type: string
+                - name: OriginatingServer
+                  type: string
+                - name: Parameters
+                  type: string
+                - name: RawParameters
+                  type: string
+                - name: PolicyDetails
+                  type:
+                    type: list
+                    element: string
+                - name: PolicyId
+                  type: string
+                - name: RecordType
+                  type: string
+                - name: ResultStatus
+                  type: string
+                - name: SensitiveInfoDetectionIsIncluded
+                  type: boolean
+                - name: SessionId
+                  type: string
+                - name: Severity
+                  type: string
+                - name: SharePointMetaData
+                  type: string
+                - name: Site
+                  type: string
+                - name: SiteUrl
+                  type: string
+                - name: Source
+                  type: string
+                - name: SourceFileExtension
+                  type: string
+                - name: SourceFileName
+                  type: string
+                - name: SourceRelativeUrl
+                  type: string
+                - name: Status
+                  type: string
+                - name: SupportTicketId
+                  type: string
+                - name: Target
+                  type:
+                    type: list
+                    element:
+                      type: struct
+                      fields:
+                        - name: ID
+                          type: string
+                        - name: Type
+                          type: int
+                - name: TargetContextId
+                  type: string
+                - name: TargetUserOrGroupName
+                  type: string
+                - name: TargetUserOrGroupType
+                  type: string
+                - name: TeamGuid
+                  type: string
+                - name: TeamName
+                  type: string
+                - name: UniqueSharingId
+                  type: string
+                - name: UserAgent
+                  type: string
+                - name: UserId
+                  type: string
+                - name: UserKey
+                  type: string
+                - name: UserType
+                  type: string
+                - name: Version
+                  type: string
+                - name: WebId
+                  type: string
+                - name: Workload
+                  type: string
+                - name: YammerNetworkId
+                  type: string

@@ -5,9 +5,11 @@ mod avro;
 mod models;
 use aws_sdk_sns::model::MessageAttributeValue;
 use chrono::Utc;
+use std::borrow::Cow;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::env::var;
+use std::fs::read_to_string;
 use std::path::Path;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -30,6 +32,7 @@ use futures::{stream, Stream, StreamExt, TryStreamExt};
 use serde_json::json;
 use tokio_stream::StreamMap;
 use tokio_util::codec::{FramedRead, LinesCodec};
+use walkdir::WalkDir;
 
 use itertools::Itertools;
 use uuid::Uuid;
@@ -58,6 +61,18 @@ lazy_static! {
         AsyncOnce::new(async { aws_sdk_s3::Client::new(AWS_CONFIG.get().await) });
     static ref SNS_CLIENT: AsyncOnce<aws_sdk_sns::Client> =
         AsyncOnce::new(async { aws_sdk_sns::Client::new(AWS_CONFIG.get().await) });
+    static ref AVRO_SCHEMAS: HashMap<String, Schema> = {
+        let mut m = HashMap::new();
+        let schemas_path = Path::new("/opt/schemas");
+        for entry in WalkDir::new(schemas_path).min_depth(1).max_depth(1) {
+            let entry = entry.unwrap();
+            let schema = read_to_string(entry.path().join("avro_schema.avsc")).unwrap();
+            let schema = Schema::parse_str(&schema).unwrap();
+            let resolved_table_name = entry.file_name().to_str().unwrap().to_string();
+            m.insert(resolved_table_name, schema);
+        }
+        m
+    };
 }
 
 /// Compression schemes supported by Matano for log sources
@@ -184,7 +199,7 @@ async fn infer_compression(
     }
 }
 
-const TRANSFORM_JSON_PARSE: &str = r#"
+const PRE_TRANSFORM_JSON_PARSE: &str = r#"
 if .message != null {{
     .json, err = parse_json(string!(.message))
     if !is_object(.json) {{
@@ -214,15 +229,16 @@ del(.json)
 "#;
 
 const TRANSFORM_DATA_FOOTER: &str = r#"
-
 .partition_hour = format_timestamp!(.ts, "%Y-%m-%d-%H")
 .ecs.version = "8.5.0"
-
 "#;
 
-fn format_transform_expr(transform_expr: &str, is_passthrough: bool) -> String {
-    let mut ret = String::with_capacity(65 + transform_expr.len());
-    ret.push_str(TRANSFORM_JSON_PARSE);
+fn format_transform_expr(
+    transform_expr: &str,
+    select_table_from_payload_expr: &Option<String>,
+    is_passthrough: bool,
+) -> String {
+    let mut ret = String::with_capacity(1000 + transform_expr.len());
     if !is_passthrough {
         ret.push_str(TRANSFORM_RELATED);
     }
@@ -233,6 +249,15 @@ fn format_transform_expr(transform_expr: &str, is_passthrough: bool) -> String {
     ret.push_str(TRANSFORM_BASE_FOOTER);
     if !is_passthrough {
         ret.push_str(TRANSFORM_DATA_FOOTER);
+    }
+    if let Some(select_table_from_payload_expr) = select_table_from_payload_expr {
+        ret.push_str(&format!(
+            r#"
+        .__mtn_table = {{
+            {}
+        }}"#,
+            select_table_from_payload_expr
+        ));
     }
     return ret;
 }
@@ -501,25 +526,39 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
     println!("current_num_threads() = {}", rayon::current_num_threads());
 
     let transformed_lines_streams = s3_download_items
-        .iter()
+        .into_iter()
         .map(|(item, log_source)| {
             let s3 = &s3;
 
             async move {
-                let (table_config, raw_lines): (
+                let (ingest_table_config, raw_lines): (
                     _,
                     Pin<Box<dyn Stream<Item = Result<Value, anyhow::Error>> + Send>>,
-                ) = read_events_s3(s3, &item, log_source).await.unwrap();
+                ) = read_events_s3(s3, &item, &log_source).await.unwrap();
 
                 let reader = raw_lines;
 
-                let transform_expr = table_config.get_string("transform").unwrap_or_default();
-                let wrapped_transform_expr = format_transform_expr(&transform_expr, log_source.starts_with("enrich_"));
+                let select_table_from_payload_expr = LOG_SOURCES_CONFIG.with(|c| {
+                    let log_sources_config = c.borrow();
+
+                    (*log_sources_config)
+                        .get(&log_source)
+                        .unwrap()
+                        .base
+                        .get_string("ingest.select_table_from_payload")
+                        .ok()
+                });
+
+                let transform_expr = ingest_table_config.get_string("transform").unwrap_or_default();
+                let wrapped_transform_expr = format_transform_expr(&transform_expr, &select_table_from_payload_expr, log_source.starts_with("enrich_"));
 
                 let transformed_lines_as_json = reader
                     .chunks(400)
                     .filter_map(move |chunk| {
+                        let log_source = log_source.clone();
                         let wrapped_transform_expr = wrapped_transform_expr.clone(); // hmm
+                        let select_table_from_payload_expr = select_table_from_payload_expr.clone();
+                        let default_table_name = ingest_table_config.get_string("name").unwrap();
 
                         async move {
                             let start = Instant::now();
@@ -532,6 +571,29 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
 
                                             // println!("v: {:?}", v);
 
+                                            match vrl(PRE_TRANSFORM_JSON_PARSE, &mut v).map_err(|e| {
+                                                anyhow!("Failed to run pre-transform: {}", e)
+                                            }) {
+                                                Ok(_) => {},
+                                                Err(e) => {
+                                                    error!("Failed to process event, mutated event state: {}\n {}", v.to_string_lossy(), e);
+                                                    return Err(e);
+                                                }
+                                            }
+
+                                            let table_name = match select_table_from_payload_expr {
+                                                Some(ref select_table_from_payload_expr) => match vrl(select_table_from_payload_expr, &mut v).map_err(|e| {
+                                                    anyhow!("Failed to select table: {}", e)
+                                                }) {
+                                                    Ok((table_name, _)) => table_name.as_str().unwrap_or_else(|| Cow::from(default_table_name.to_owned())).to_string(),
+                                                    Err(e) => {
+                                                        error!("Failed to process event, mutated event state: {}\n {}", v.to_string_lossy(), e);
+                                                        return Err(e);
+                                                    }
+                                                },
+                                                None => default_table_name.to_owned(),
+                                            };
+
                                             match vrl(&wrapped_transform_expr, &mut v).map_err(|e| {
                                                 anyhow!("Failed to transform: {}", e)
                                             }) {
@@ -542,7 +604,20 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
                                                 }
                                             }
 
-                                            Ok(v)
+                                            let resolved_table_name = if table_name == "default" {
+                                                log_source.to_owned()
+                                            } else {
+                                                format!("{}_{}", log_source.to_owned(), table_name)
+                                            };
+
+                                            let avro_schema = AVRO_SCHEMAS
+                                                .get(&resolved_table_name)
+                                                .expect("Failed to find avro schema");
+
+                                            let v_avro = TryIntoAvro::try_into(v).unwrap();
+                                            let v_avro = v_avro.resolve(avro_schema)?;
+
+                                            Ok((resolved_table_name, v_avro))
                                         }
                                         Err(e) => Err(anyhow!("Malformed line: {}", e)),
                                     })
@@ -568,120 +643,59 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
                     }
                 });
 
-                (table_config, stream)
+                stream
             }
         })
         .collect::<Vec<_>>();
 
     let result = join_all(transformed_lines_streams).await;
-    let result = result
-        .into_iter()
-        .group_by(|(table_config, _)| table_config.get_string("resolved_name").unwrap());
 
-    let mut merged: HashMap<
+    let mut writers_by_table: RefCell<HashMap<String, (Writer<Vec<u8>>, usize)>> =
+        RefCell::new(HashMap::new());
+
+    let mut merged: StreamMap<
         String,
-        (
-            config::Config,
-            StreamMap<String, Pin<Box<dyn Stream<Item = Value> + Send>>>,
-        ),
-    > = HashMap::new();
-    for (resolved_table_name, streams) in result.into_iter() {
-        for (i, (table_config, stream)) in streams.enumerate() {
-            merged
-                .entry(resolved_table_name.clone())
-                .or_insert((table_config, StreamMap::new()))
-                .1
-                .insert(
-                    format!("{}", i), // object_key.clone(),
-                    Box::pin(stream), // as Pin<Box<dyn Stream<Item = usize> + Send>>,
-                );
-        }
+        Pin<Box<dyn Stream<Item = (std::string::String, apache_avro::types::Value)> + Send>>,
+    > = StreamMap::new();
+    for (i, stream) in result.into_iter().enumerate() {
+        merged.insert(
+            format!("{}", i), // object_key.clone(),
+            Box::pin(stream), // as Pin<Box<dyn Stream<Item = usize> + Send>>,
+        );
     }
 
-    let futures = merged
-        .into_iter()
-        .map(|(resolved_table_name, (table_config, stream))| {
-            let s3 = &s3;
-            let sns = &sns;
+    merged
+        .for_each(|(_, (resolved_table_name, v))| {
+            let mut writers_by_table = writers_by_table.borrow_mut();
 
             async move {
-                let mut reader = stream.map(|(_, value)| value);
+                let (writer, rows) = writers_by_table
+                    .entry(resolved_table_name.clone())
+                    .or_insert_with(|| {
+                        let avro_schema = AVRO_SCHEMAS
+                            .get(&resolved_table_name)
+                            .expect("Failed to find avro schema");
 
-                let schemas_path = Path::new("/opt/schemas");
-                let schema_path = schemas_path
-                    .join(&resolved_table_name)
-                    .join("avro_schema.avsc");
-                let avro_schema_json_string = fs::read_to_string(schema_path).await.unwrap();
+                        let writer: Writer<Vec<u8>> = Writer::builder()
+                            .schema(avro_schema)
+                            .writer(Vec::new())
+                            .codec(Codec::Snappy)
+                            .block_size(1 * 1024 * 1024 as usize)
+                            .build();
+                        (writer, 0)
+                    });
 
-                let mut inferred_avro_schema = Schema::parse_str(&avro_schema_json_string).unwrap();
+                *rows += 1;
+                writer.append_value_ref(&v).unwrap(); // IO (well theoretically) TODO: since this actually does non-trivial comptuuation work too (schema validation), we need to figure out a way to prevent this from blocking our main async thread
+            }
+        })
+        .await;
 
-                let inferred_avro_schema = Arc::new(inferred_avro_schema);
+    let writers_by_table = writers_by_table.into_inner();
+    let futures = writers_by_table.into_iter().map(|(resolved_table_name, (writer, rows))| {
 
-                let writer_schema = inferred_avro_schema.clone();
-                let writer: Writer<Vec<u8>> = Writer::builder()
-                    .schema(&writer_schema)
-                    .writer(Vec::new())
-                    .codec(Codec::Snappy)
-                    .block_size(1 * 1024 * 1024 as usize)
-                    .build();
-                let writer = RefCell::new(writer);
-                let mut rows = RefCell::new(0);
-
-                reader
-                    .chunks(400) // ? chunks(8000) (avro block size)
-                    .filter_map(|chunk| {
-                        let schema = Arc::clone(&inferred_avro_schema);
-
-                        async move {
-                            let avro_values = spawn_blocking(move || {
-                                // CPU bound (VRL transform)
-                                let avro_values = chunk
-                                    .into_par_iter()
-                                    .map(|v| {
-                                        let v_avro = TryIntoAvro::try_into(v).unwrap();
-                                        let ret = v_avro.resolve(schema.as_ref());
-
-                                        let ret = ret.map(|v| Some(v)).or_else(|e| {
-                                            match e {
-                                                apache_avro::Error::FindUnionVariant => {
-                                                    // TODO: report errors
-                                                    println!("USER_ERROR: Failed at FindUnionVariant, likely schema issue.");
-                                                    // println!("{}", serde_json::to_string(&v).unwrap());
-                                                    Ok(None)
-                                                }
-                                                e => Err(e)
-                                            }
-                                        }).unwrap();
-
-                                        ret
-                                    })
-                                    .flatten()
-                                    .collect::<Vec<_>>();
-
-                                avro_values
-                            })
-                            .await
-                            .unwrap();
-
-                            Some(stream::iter(avro_values))
-                        }
-                    })
-                    .flatten()
-                    .for_each(|v| {
-                        let mut writer = writer.borrow_mut();
-                        let mut rows = rows.borrow_mut();
-
-                        async move {
-                            *rows += 1;
-                            writer.append_value_ref(&v).unwrap(); // IO (well theoretically) TODO: since this actually does non-trivial comptuuation work too (schema validation), we need to figure out a way to prevent this from blocking our main async thread
-                        }
-                    })
-                    .await;
-
-                let writer = writer.into_inner();
+        async move {
                 let bytes = writer.into_inner().unwrap();
-
-                let rows = rows.into_inner();
                 if bytes.len() == 0 || rows == 0 {
                     return;
                 }
@@ -731,22 +745,9 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
                         e
                     })
                     .unwrap();
-            }
-        })
-        .collect::<Vec<_>>();
+        }
+    });
 
-    let mut start = Instant::now();
-    println!("Starting processing");
-
-    {
-        let _ = join_all(futures).await;
-        println!(
-            "process + upload time (exclude download/decompress/expand): {:?}",
-            start.elapsed()
-        );
-        start = Instant::now();
-    }
-    println!("time to drop {:?}", start.elapsed());
-
+    join_all(futures).await;
     Ok(())
 }

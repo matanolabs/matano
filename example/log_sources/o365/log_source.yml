@@ -1,0 +1,9 @@
+name: o365
+
+managed:
+  type: O365
+  properties:
+    client_id: a6a77fa7-5859-4049-830c-56064b625572
+
+    tenant_id: 91515f41-f094-4894-afca-feef044fb189
+    tenant_name: mytenant.onmicrosoft.com # optional
