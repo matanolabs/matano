@@ -27,14 +27,6 @@ Matano is an open source **cloud-native alternative to SIEM**, built for securit
 
 We are on a mission to build the first open platform for threat hunting, detection & response, and cybersecurity analytics at petabyte scale.
 
-- **Security Data Lake:** Matano normalizes unstructured security logs into a structured realtime data lake in your AWS account.
-- **Collect All Your Logs:** Matano integrates out of the box with [50+ sources](https://www.matano.dev/docs/log-sources/managed-log-sources) for security logs and can easily be extended with custom sources.
-- **Detections-as-Code:** Use Python to build realtime detections as code. Support for automatic import of [Sigma](https://www.matano.dev/docs/detections/importing-from-sigma-rules) detections to Matano.
-- **Log Transformation Pipeline:** Matano supports custom VRL ([Vector Remap Language](https://vector.dev/docs/reference/vrl/)) scripting to parse, enrich, normalize and transform your logs as they are ingested without managing any servers.
-- **No Vendor Lock-In:** Matano uses an open table format ([Apache Iceberg](https://iceberg.apache.org/)) and open schema standards ([ECS](https://github.com/elastic/ecs)), to give you full ownership of your security data in a vendor-neutral format.
-- **Bring Your Own Analytics:** Query your security lake directly from any Iceberg-compatible engine (AWS Athena, Snowflake, Spark, Trino etc.) without having to copy data around.
-- **Serverless:** Matano is _fully serverless_ and designed specifically for AWS and focuses on enabling high scale, low cost, and zero-ops.
-
 <div>
 <h3 align="center">
         <a href="https://www.matano.dev/docs">Docs</a>
@@ -45,12 +37,29 @@ We are on a mission to build the first open platform for threat hunting, detecti
 </h3>
 </div>
 
+## Features
+
+- **Security Data Lake:** Matano normalizes unstructured security logs into a structured realtime data lake in your AWS account.
+- **Collect All Your Logs:** Matano integrates out of the box with [50+ sources](https://www.matano.dev/docs/log-sources/managed-log-sources) for security logs and can easily be extended with custom sources.
+- **Detections-as-Code:** Use Python to build realtime detections as code. Support for automatic import of [Sigma](https://www.matano.dev/docs/detections/importing-from-sigma-rules) detections to Matano.
+- **Log Transformation Pipeline:** Matano supports custom VRL ([Vector Remap Language](https://vector.dev/docs/reference/vrl/)) scripting to parse, enrich, normalize and transform your logs as they are ingested without managing any servers.
+- **No Vendor Lock-In:** Matano uses an open table format ([Apache Iceberg](https://iceberg.apache.org/)) and open schema standards ([ECS](https://github.com/elastic/ecs)), to give you full ownership of your security data in a vendor-neutral format.
+- **Bring Your Own Analytics:** Query your security lake directly from any Iceberg-compatible engine (AWS Athena, Snowflake, Spark, Trino etc.) without having to copy data around.
+- **Serverless:** Matano is _fully serverless_ and designed specifically for AWS and focuses on enabling high scale, low cost, and zero-ops.
+
 ## Architecture
 
 <div align="center">
   <br>
   <img src="assets/diagram.png" width="600">
 </div>
+
+## 👀 Use cases
+
+- Reduce SIEM costs drastically (1/10th the cost).
+- Augment your SIEM with a security data lake for additional context during investigations.
+- Easier to use cloud-native open source SIEM alternative for detection & response.
+- ECS-compatible severless alternative to ELK / Elastic Security stack.
 
 ## Quick start
 
@@ -335,16 +344,9 @@ Matano allows you to deliver alerts to external systems. You can use the Matano 
 ## ❔ Why Matano?
 
 - Traditional tools used to analyze security data (SIEMs) don’t scale, and are too expensive and difficult to manage for cloud-based security teams.
-- Cybersecurity vendors lock your data in proprietary formats which make it very difficult to use outside of their product. With Matano, all your data is in open Apache Iceberg tables that can can be directly queried from different tools (AWS Athena, Snowflake, etc.) without having to copy any data.
-- Security is a Big Data problem: collecting data from your network, SaaS, and cloud environments can exceed 100TBs of data. Security teams are forced to either not collect some data, leave data unprocessed, or build an in-house data lake to cost-effectively analyze large datasets. Matano helps you easily build a security data lake with all features needed for detection and response.
+- Cybersecurity vendors lock your data in proprietary formats which make it difficult to use outside of their product. With Matano, all your data is in open Apache Iceberg tables that can can be directly queried from different tools (AWS Athena, Snowflake, etc.) without having to copy any data.
+- **Security is a Big Data problem**: collecting data from your network, SaaS, and cloud environments can exceed 100TBs of data. Security teams are forced to either not collect some data, leave data unprocessed, or build an in-house data lake to cost-effectively analyze large datasets. Matano helps you easily build a security data lake with all features needed for detection and response.
 - At scale, without a strategy to normalize data into a structured format, it is difficult to correlate across data sources & build effective alerts that don’t create many false positives. Traditional SIEM query-based rules fail to accurately identify threats. Matano's detection-as-code approach offers greater flexibility and help's you harden your detections over time.
-
-## 👀 Use cases
-
-- Reduce SIEM costs drastically (1/10th the cost).
-- Augment your SIEM with a security data lake for additional context during investigations
-- Easier to use cloud-native open source SIEM alternative for detection & response
-- ECS-compatible severless alternative to ELK / Elastic Security stack
 
 ## ❤️ Community support
 
