@@ -6,6 +6,7 @@ use async_once::AsyncOnce;
 use aws_config::SdkConfig;
 use aws_lambda_events::event::sqs::SqsEvent;
 use aws_sdk_s3::types::ByteStream;
+use chrono::{DateTime, Duration, DurationRound};
 use futures::stream::FuturesOrdered;
 use futures::{FutureExt, TryFutureExt};
 use futures_util::stream::StreamExt;
@@ -15,10 +16,12 @@ use log::{debug, error, info};
 use serde::{Deserialize, Serialize};
 use shared::setup_logging;
 use walkdir::WalkDir;
-use chrono::{DateTime, DurationRound, Duration};
 
 mod pullers;
 use pullers::{LogSource, PullLogs, PullLogsContext};
+
+#[global_allocator]
+static ALLOC: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
 lazy_static! {
     static ref REQ_CLIENT: reqwest::Client = reqwest::Client::new();
@@ -148,7 +151,10 @@ async fn handler(event: LambdaEvent<SqsEvent>) -> Result<Option<SQSBatchResponse
             let end_dt = event_dt.duration_trunc(Duration::minutes(1)).unwrap();
             let start_dt = end_dt - Duration::minutes(record.rate_minutes as i64);
 
-            info!("Processing log_source: {}, from {} to {}", &record.log_source_name, &start_dt, &end_dt);
+            info!(
+                "Processing log_source: {}, from {} to {}",
+                &record.log_source_name, &start_dt, &end_dt
+            );
 
             let ctx = contexts
                 .get(&record.log_source_name)

@@ -17,6 +17,12 @@ interface ExternalLogPullerProps {
 
 // Managed log source types that support pulling.
 export const PULLER_LOG_SOURCE_TYPES: string[] = ["o365"];
+const LOG_SOURCE_RATES: Record<string, cdk.Duration> = {
+  "o365": cdk.Duration.minutes(1),
+  "abusech_urlhaus": cdk.Duration.minutes(5),
+  "abusech_malware_bazaar": cdk.Duration.hours(1),
+  "abusech_threatfox": cdk.Duration.hours(1),
+}
 
 export class ExternalLogPuller extends Construct {
   function: lambda.Function;
@@ -74,18 +80,26 @@ export class ExternalLogPuller extends Construct {
       },
     });
 
-    const scheduleRule = new events.Rule(this, "EventsRule", {
-      description: "[Matano] Schedules the external Log puller lambda function.",
-      schedule: events.Schedule.rate(cdk.Duration.minutes(1)),
-    });
-
+    const scheduleRules: Record<string, events.Rule> = {}
     for (const logSourceName of props.logSources) {
+      const rate = LOG_SOURCE_RATES[logSourceName];
+      let scheduleRule;
+      if (Object.keys(scheduleRules).includes(rate.toSeconds().toString())) {
+        scheduleRule = scheduleRules[rate.toSeconds()];
+      } else {
+        scheduleRule = new events.Rule(this, `EventsRule-${rate.toSeconds()}`, {
+          description: "[Matano] Schedules the external Log puller lambda function.",
+          schedule: events.Schedule.rate(rate),
+        });
+        scheduleRules[rate.toSeconds()] = scheduleRule;
+      }
+
       scheduleRule.addTarget(
         new SqsQueueTarget(queue, {
           message: events.RuleTargetInput.fromObject({
             time: events.EventField.time,
             log_source_name: logSourceName,
-            rate_minutes: 1,
+            rate_minutes: rate.toMinutes(),
           }),
         })
       );

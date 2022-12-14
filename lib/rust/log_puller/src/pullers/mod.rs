@@ -11,6 +11,7 @@ use tokio::sync::Mutex;
 
 use shared::secrets::load_secret;
 
+mod abusech;
 mod o365;
 
 #[derive(Clone)]
@@ -87,19 +88,37 @@ impl PullLogsContext {
 #[async_trait]
 #[enum_dispatch]
 pub trait PullLogs {
-    async fn pull_logs(self, client: reqwest::Client, ctx: &PullLogsContext, start_dt: DateTime<FixedOffset>, end_dt: DateTime<FixedOffset>) -> Result<Vec<u8>>;
+    async fn pull_logs(
+        self,
+        client: reqwest::Client,
+        ctx: &PullLogsContext,
+        start_dt: DateTime<FixedOffset>,
+        end_dt: DateTime<FixedOffset>,
+    ) -> Result<Vec<u8>>;
 }
 
 #[derive(Clone)]
 #[enum_dispatch(PullLogs)]
 pub enum LogSource {
     O365Puller(o365::O365Puller),
+    AbuseChUrlhausPuller(abusech::AbuseChUrlhausPuller),
+    AbuseChMalwareBazaarPuller(abusech::AbuseChMalwareBazaarPuller),
+    AbuseChThreatfoxPuller(abusech::AbuseChThreatfoxPuller),
 }
 
 impl LogSource {
     pub fn from_str(s: &str) -> Option<LogSource> {
         match s.to_lowercase().as_str() {
             "o365" => Some(LogSource::O365Puller(o365::O365Puller {})),
+            "abusech_urlhaus" => Some(LogSource::AbuseChUrlhausPuller(
+                abusech::AbuseChUrlhausPuller {},
+            )),
+            "abusech_malware_bazaar" => Some(LogSource::AbuseChMalwareBazaarPuller(
+                abusech::AbuseChMalwareBazaarPuller {},
+            )),
+            "abusech_threatfox" => Some(LogSource::AbuseChThreatfoxPuller(
+                abusech::AbuseChThreatfoxPuller {},
+            )),
             _ => None,
         }
     }
