@@ -2,9 +2,76 @@ enrichment_type: dynamic
 write_mode: overwrite
 
 # TODO: add
-transform: ""
+transform: |
+  .event.kind = "enrichment"
+  .event.category = ["threat"]
+  .event.type = ["indicator"]
+
+  .threat.indicator.type = "url"
+  .threat.indicator.reference = .json.urlhaus_link
+  .threat.indicator.provider = .json.reporter
+  .threat.indicator.first_seen = to_timestamp(.json.dateadded) ?? null
+
+  # 2022-12-16 04:XX:XX
+  if .json.last_online != null && .json.last_online != "None" {
+      .threat.indicator.last_seen = to_timestamp!(replace!(.json.last_online, "X", "0"))
+  }
+
+  if .json.url != null {
+      url = parse_url!(.json.url)
+      url.domain = del(url.host)
+
+      if url.query != null {
+          query = []
+          for_each(url.query) -> |k, v| {
+              query = push(query, k + "=" + v)
+          }
+          query = join(query, "&") ?? null
+          url.query = query
+      }
+      url = compact(url)
+
+      .threat.indicator.url = url
+      .threat.indicator.url.original = .json.url
+      .threat.indicator.url.full = .json.url
+  }
+
+  .abusech.url.id = .json.id
+  .abusech.url.threat = .json.threat
+  if .json.tags != "None" {
+    .abusech.url.tags = split(.json.tags, ",") ?? null
+  }
+  .abusech.url.url_status = .json.url_status
+
 schema:
   ecs_field_names:
-    - event
-    - threat
-  fields: []
+    - ecs.version
+    - event.kind
+    - event.category
+    - event.type
+    - threat.indicator.type
+    - threat.indicator.reference
+    - threat.indicator.provider
+    - threat.indicator.first_seen
+    - threat.indicator.last_seen
+    - threat.indicator.url
+  fields:
+    - name: abusech
+      type:
+        type: struct
+        fields:
+          - name: url
+            type:
+              type: struct
+              fields:
+                - name: id
+                  type: string
+                - name: threat
+                  type: string
+                - name: tags
+                  type:
+                    type: list
+                    element: string
+                - name: url_status
+                  type: string
+

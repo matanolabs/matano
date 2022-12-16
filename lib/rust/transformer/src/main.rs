@@ -42,7 +42,7 @@ use shared::vrl_util::vrl;
 use shared::*;
 use vrl::{state, value};
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context as AnyhowContext, Result};
 use async_once::AsyncOnce;
 use lazy_static::lazy_static;
 
@@ -50,7 +50,7 @@ use ::value::{Secrets, Value};
 use aws_config::SdkConfig;
 use aws_lambda_events::event::sqs::{SqsEvent, SqsMessage};
 use lambda_runtime::{run, service_fn, Context, Error as LambdaError, LambdaEvent};
-use log::{debug, error, info, warn};
+use log::{debug, error, info, log_enabled, warn};
 
 use crate::avro::TryIntoAvro;
 
@@ -226,11 +226,11 @@ const TRANSFORM_BASE_FOOTER: &str = r#"
 
 del(.json)
 . = compact(.)
+.ecs.version = "8.5.0"
 "#;
 
 const TRANSFORM_DATA_FOOTER: &str = r#"
 .partition_hour = format_timestamp!(.ts, "%Y-%m-%d-%H")
-.ecs.version = "8.5.0"
 "#;
 
 fn format_transform_expr(
@@ -242,7 +242,7 @@ fn format_transform_expr(
     if !is_passthrough {
         ret.push_str(TRANSFORM_RELATED);
     }
-    if is_passthrough {
+    if is_passthrough && transform_expr == "" {
         ret.push_str(TRANSFORM_PASSTHROUGH_JSON)
     }
     ret.push_str(transform_expr);
@@ -614,8 +614,22 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
                                                 .get(&resolved_table_name)
                                                 .expect("Failed to find avro schema");
 
-                                            let v_avro = TryIntoAvro::try_into(v).unwrap();
-                                            let v_avro = v_avro.resolve(avro_schema)?;
+                                            let v_clone = log_enabled!(log::Level::Debug).then(|| v.clone());
+
+                                            let v_avro = TryIntoAvro::try_into(v)?;
+                                            let v_avro = v_avro.resolve(avro_schema)
+                                            .map_err(|e| {
+                                                match e {
+                                                    apache_avro::Error::FindUnionVariant => {
+                                                        // TODO: report errors
+                                                        if log_enabled!(log::Level::Debug) {
+                                                            debug!("{}", serde_json::to_string(&v_clone.unwrap()).unwrap_or_default());
+                                                        }
+                                                        anyhow!("USER_ERROR: Failed at FindUnionVariant, likely schema issue.")
+                                                    }
+                                                    e => anyhow!(e)
+                                                }
+                                            })?;
 
                                             Ok((resolved_table_name, v_avro))
                                         }
@@ -637,7 +651,6 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
                         Ok(line) => Some(line),
                         Err(e) => {
                             error!("{}", e);
-                            // Err(std::io::Error::new(std::io::ErrorKind::Other, e))
                             None
                         }
                     }
@@ -692,9 +705,10 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
         .await;
 
     let writers_by_table = writers_by_table.into_inner();
-    let futures = writers_by_table.into_iter().map(|(resolved_table_name, (writer, rows))| {
-
-        async move {
+    let futures = writers_by_table
+        .into_iter()
+        .map(|(resolved_table_name, (writer, rows))| {
+            async move {
                 let bytes = writer.into_inner().unwrap();
                 if bytes.len() == 0 || rows == 0 {
                     return;
@@ -745,8 +759,8 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
                         e
                     })
                     .unwrap();
-        }
-    });
+            }
+        });
 
     join_all(futures).await;
     Ok(())

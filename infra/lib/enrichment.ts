@@ -63,7 +63,7 @@ export class EnrichmentTable extends Construct {
       config: lsConfig,
       realtimeTopic: props.realtimeTopic,
       lakeWriterLambda: props.lakeWriterLambda,
-      noDefaultEcsFields: true,
+      noDefaultEcsFields: props.enrichConfig?.schema?.ecs_field_names != null,
     });
 
     if (props.enrichConfig.enrichment_type === "static") {
@@ -246,6 +246,7 @@ export function convertEnrichToLogSourceConfig(enrichConfig: any) {
     name: `enrich_${enrichConfig.name}`,
     transform: enrichConfig.transform,
     schema: {
+      ecs_field_names: enrichConfig.schema.ecs_field_names,
       fields: enrichConfig.schema.fields,
     },
   };
