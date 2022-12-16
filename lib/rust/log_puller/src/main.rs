@@ -64,17 +64,38 @@ fn build_contexts() -> HashMap<String, PullLogsContext> {
                 .and_then(|v| v.as_str())
                 .map(|s| s.to_string().to_lowercase());
 
+            // Either regular managed log source or managed enrichment table.
+            let managed_type = managed_type.or_else(|| {
+                ls_name
+                    .as_ref()
+                    .and_then(|lsn| {
+                        puller_log_source_types
+                            .iter()
+                            .find(|s| lsn.starts_with(s.as_str()))
+                    })
+                    .map(|s| s.trim_start_matches("enrich_").to_string())
+            });
+
             let managed_properties = config
                 .get("managed")
                 .and_then(|v| v.get("properties"))
                 .and_then(|v| v.as_mapping())
-                .map(|v| v.to_owned());
+                .map(|v| v.to_owned())
+                .unwrap_or(serde_yaml::Mapping::new());
 
-            let log_source = ls_name.as_ref().and_then(|lsn| LogSource::from_str(lsn));
+            let log_source = managed_type
+                .as_ref()
+                .and_then(|lsn| LogSource::from_str(lsn));
 
-            Some((ls_name?, log_source?, managed_type?, managed_properties?))
+            debug!(
+                "Processed: log source name: {:?}, type: {:?}, is_log_source: {:?}",
+                ls_name,
+                managed_type,
+                log_source.is_some()
+            );
+
+            Some((ls_name?, log_source?, managed_type?, managed_properties))
         })
-        .filter(|(_, _, managed_type, _)| puller_log_source_types.iter().any(|s| s == managed_type))
         .map(|(ls_name, log_source, managed_type, managed_properties)| {
             let mut props = managed_properties
                 .into_iter()
@@ -142,6 +163,8 @@ async fn handler(event: LambdaEvent<SqsEvent>) -> Result<Option<SQSBatchResponse
     let (msg_ids, records): (Vec<_>, Vec<_>) = records.into_iter().unzip();
 
     info!("Processing {} messages.", records.len());
+
+    debug!("Using contexts: {:?}", contexts.keys().collect::<Vec<_>>());
 
     let futs = records
         .into_iter()

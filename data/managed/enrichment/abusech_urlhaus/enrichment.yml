@@ -1,0 +1,10 @@
+enrichment_type: dynamic
+write_mode: overwrite
+
+# TODO: add
+transform: ""
+schema:
+  ecs_field_names:
+    - event
+    - threat
+  fields: []

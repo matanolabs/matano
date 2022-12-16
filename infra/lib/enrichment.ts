@@ -11,7 +11,7 @@ import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as sqs from "aws-cdk-lib/aws-sqs";
 import * as s3deploy from "aws-cdk-lib/aws-s3-deployment";
-import { fail, getLocalAsset, makeLambdaSnapstart } from "./utils";
+import { dataDirPath, fail, getLocalAsset, makeLambdaSnapstart } from "./utils";
 import { S3BucketWithNotifications } from "./s3-bucket-notifs";
 import { SqsEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
 import { MatanoStack } from "./MatanoStack";
@@ -41,6 +41,13 @@ interface EnrichmentTableProps {
   realtimeTopic: sns.Topic;
   lakeWriterLambda: lambda.Function;
   dataFilePath?: any;
+}
+
+const MANAGED_ENRICHMENT_DIR = path.join(dataDirPath, "managed/enrichment");
+const MANAGED_ENRICHMENT_PREFIX_MAP: Record<string, string> = {
+  "abusech_urlhaus": "abusech_urlhaus",
+  "abusech_malware_bazaar": "abusech_malware_bazaar",
+  "abusech_threatfox": "abusech_threatfox",
 }
 
 export class EnrichmentTable extends Construct {
@@ -82,9 +89,35 @@ export class EnrichmentTable extends Construct {
           time: events.EventField.time,
           table_name: tableName,
         }),
-        retryAttempts: 184,
       })
     );
+  }
+}
+
+function loadManagedEnrichmentConfig(enrichConfig: any) {
+  const managedType = enrichConfig.managed.type;
+  if (!managedType) {
+    fail("Managed enrichment type cannot be empty");
+  }
+  const managedConfigPath = path.join(MANAGED_ENRICHMENT_DIR, managedType);
+  if (!fs.existsSync(managedConfigPath)) {
+    fail(
+      `The managed enrichment type: ${managedType} does not exist. Available managed enrichment types: ${JSON.stringify(
+        Object.keys(MANAGED_ENRICHMENT_PREFIX_MAP)
+      )}`
+    );
+  }
+
+  const prefix = MANAGED_ENRICHMENT_PREFIX_MAP[managedType];
+  if (!enrichConfig.name.startsWith(prefix)) {
+    fail(
+      `Since you are using the managed enrichment type: ${enrichConfig}, your name must be prefixed with ${prefix}.`
+    );
+  }
+  const managedConfig = YAML.parse(fs.readFileSync(path.join(MANAGED_ENRICHMENT_DIR, `${managedType}/enrichment.yml`), "utf-8"));
+  return {
+    name: enrichConfig.name,
+    ...managedConfig,
   }
 }
 
@@ -175,7 +208,11 @@ export class Enrichment extends Construct {
     const enrichmentDir = path.resolve(stack.matanoUserDirectory, "enrichment");
     const entries = fs.readdirSync(enrichmentDir).map((tableSubDir) => {
       const tableDir = path.resolve(enrichmentDir, tableSubDir);
-      const enrichConfig = YAML.parse(fs.readFileSync(path.resolve(tableDir, "enrichment_table.yml"), "utf-8"));
+      let enrichConfig = YAML.parse(fs.readFileSync(path.resolve(tableDir, "enrichment.yml"), "utf-8"));
+
+      if (enrichConfig?.managed?.type) {
+        enrichConfig = loadManagedEnrichmentConfig(enrichConfig);
+      }
 
       if (enrichConfig.enrichment_type === "static" && enrichConfig.write_mode != undefined) {
         fail(`Static enrichment tables always have write mode 'overwrite', in ${enrichConfig.name}`);

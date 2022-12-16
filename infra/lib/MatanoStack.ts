@@ -50,7 +50,7 @@ export interface MatanoStackProps extends cdk.StackProps {}
 
 export class MatanoStack extends cdk.Stack {
   matanoConfig: MatanoConfig;
-  matanoVpc: ec2.IVpc;
+  matanoVpc: ec2.IVpc | undefined;
   cdkAssetsBucketName: string;
   cdkAssetsBucket: s3.IBucket;
   constructor(scope: Construct, id: string, props: MatanoStackProps) {
@@ -58,7 +58,9 @@ export class MatanoStack extends cdk.Stack {
     this.matanoConfig = YAML.parse(
       fs.readFileSync(path.resolve(this.matanoUserDirectory, "matano.config.yml"), "utf8")
     );
-    this.matanoVpc = ec2.Vpc.fromVpcAttributes(this, "MATANO_VPC", this.matanoContext["vpc"]);
+    if (this.matanoContext["vpc"]) {
+      this.matanoVpc = ec2.Vpc.fromVpcAttributes(this, "MATANO_VPC", this.matanoContext["vpc"]);
+    }
     this.cdkAssetsBucketName = cdk.Fn.sub(cdk.DefaultStackSynthesizer.DEFAULT_FILE_ASSETS_BUCKET_NAME, {
       Qualifier:
         (this.node.tryGetContext(cdk.BOOTSTRAP_QUALIFIER_CONTEXT) as any) ??

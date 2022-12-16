@@ -100,7 +100,7 @@ function getPrefixForManagedLogSourceType(logSourceType: string) {
   return MANAGED_LOG_SOURCE_PREFIX_MAP[logSourceType];
 }
 
-const MANAGED_LOG_SOURCES_DIR = path.join(dataDirPath, "managed");
+const MANAGED_LOG_SOURCES_DIR = path.join(dataDirPath, "managed/log_sources");
 
 export interface MatanoTableProps {
   tableName: string;
@@ -258,7 +258,7 @@ export class MatanoLogSource extends Construct {
             if (managedLogSourceType == "o365") {
               const tenantName = logSourceConfig?.managed?.properties?.tenant_name;
               const injectTenantsConfig = `tenants = ${JSON.stringify(
-                tenantName ? { [logSourceConfig?.managed?.properties?.tenant_id]: tenantName  } : {}
+                tenantName ? { [logSourceConfig?.managed?.properties?.tenant_id]: tenantName } : {}
               )}`;
               managedConfig.transform = `${injectTenantsConfig}\n${managedConfig.transform}\n`;
             }
@@ -385,12 +385,12 @@ export class MatanoLogSource extends Construct {
       const formattedName = matanoResourceToCdkName(merged.name);
 
       this.matanoTables.push(
-          new MatanoTable(this, `${formattedName}Table`, {
-            tableName: resolvedTableName,
-            schema: tableSchema,
-            realtimeTopic: props.realtimeTopic,
-            lakeWriterLambda: props.lakeWriterLambda,
-            partitions: props.partitions,
+        new MatanoTable(this, `${formattedName}Table`, {
+          tableName: resolvedTableName,
+          schema: tableSchema,
+          realtimeTopic: props.realtimeTopic,
+          lakeWriterLambda: props.lakeWriterLambda,
+          partitions: props.partitions,
         })
       );
     }

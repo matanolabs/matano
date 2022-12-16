@@ -3,6 +3,7 @@ package com.matano.iceberg
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.events.SQSEvent
+import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
@@ -114,8 +115,8 @@ data class EnrichmentConfig(
 
 fun loadEnrichmentConfiguration(): Map<String, EnrichmentConfig> {
     val path = "/opt/config/enrichment"
-    val mapper = YAMLMapper().registerModule(kotlinModule())
-    val configs = File(path).walk().maxDepth(2).filter { it.isFile && it.endsWith("enrichment_table.yml") }.map { f ->
+    val mapper = YAMLMapper().registerModule(kotlinModule()).configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+    val configs = File(path).walk().maxDepth(2).filter { it.isFile && it.endsWith("enrichment.yml") }.map { f ->
         val conf = mapper.readValue<EnrichmentConfig>(f.inputStream())
         Pair(conf.name, conf)
     }.toMap()
@@ -184,7 +185,7 @@ class EnrichmentIcebergSyncer {
         val uniquePath = UUID.randomUUID().toString()
         val keyPrefix = "temp-enrich-sync/$uniquePath/"
         val qs = """
-            UNLOAD (SELECT * FROM $enrichTableName) 
+            UNLOAD (SELECT * FROM $enrichTableName)
             TO 's3://$tempSyncBucket/$keyPrefix'
             WITH (format = 'PARQUET', compression='snappy')
         """.trimIndent()

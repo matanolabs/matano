@@ -9,6 +9,7 @@ import * as s3 from "aws-cdk-lib/aws-s3";
 import * as sqs from "aws-cdk-lib/aws-sqs";
 import { RustFunctionCode } from "./rust-function-layer";
 import { SqsEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
+import { fail } from "./utils";
 
 interface ExternalLogPullerProps {
   logSources: string[];
@@ -16,13 +17,18 @@ interface ExternalLogPullerProps {
 }
 
 // Managed log source types that support pulling.
-export const PULLER_LOG_SOURCE_TYPES: string[] = ["o365"];
+export const PULLER_LOG_SOURCE_TYPES: string[] = [
+  "o365",
+  "enrich_abusech_urlhaus",
+  "enrich_abusech_malware_bazaar",
+  "enrich_abusech_threatfox",
+];
 const LOG_SOURCE_RATES: Record<string, cdk.Duration> = {
-  "o365": cdk.Duration.minutes(1),
-  "abusech_urlhaus": cdk.Duration.minutes(5),
-  "abusech_malware_bazaar": cdk.Duration.hours(1),
-  "abusech_threatfox": cdk.Duration.hours(1),
-}
+  o365: cdk.Duration.minutes(1),
+  enrich_abusech_urlhaus: cdk.Duration.minutes(5),
+  enrich_abusech_malware_bazaar: cdk.Duration.hours(1),
+  enrich_abusech_threatfox: cdk.Duration.hours(1),
+};
 
 export class ExternalLogPuller extends Construct {
   function: lambda.Function;
@@ -80,9 +86,10 @@ export class ExternalLogPuller extends Construct {
       },
     });
 
-    const scheduleRules: Record<string, events.Rule> = {}
+    const scheduleRules: Record<string, events.Rule> = {};
     for (const logSourceName of props.logSources) {
-      const rate = LOG_SOURCE_RATES[logSourceName];
+      const [_, rate] =
+        Object.entries(LOG_SOURCE_RATES).find(([k, _]) => logSourceName.startsWith(k)) ?? fail("Invalid log source.");
       let scheduleRule;
       if (Object.keys(scheduleRules).includes(rate.toSeconds().toString())) {
         scheduleRule = scheduleRules[rate.toSeconds()];

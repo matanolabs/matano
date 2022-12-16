@@ -151,11 +151,10 @@ export class DPMainStack extends MatanoStack {
         matanoAthenaResultsBucket: props.matanoAthenaResultsBucket,
       });
 
-      this.addConfigDir(userEnrichmentDir, "enrichment", {
-        filter: (s, _) => {
-          return fs.lstatSync(s).isDirectory() || s.endsWith(".yml");
-        },
-      });
+      for (const [enrichTableName, { enrichConfig }] of Object.entries(enrichment.enrichmentConfigs)) {
+        this.addConfigFile(`enrichment/${enrichTableName}/enrichment.yml`, YAML.stringify(enrichConfig));
+      }
+
       const enrichmentLogSources = Object.values(enrichment.enrichmentLogSources);
       logSources.push(...enrichmentLogSources);
       detections.detectionFunction.addEnvironment(
@@ -174,18 +173,12 @@ export class DPMainStack extends MatanoStack {
     for (const logSource in resolvedLogSourceConfigs) {
       this.addConfigFile(
         `log_sources/${logSource}/log_source.yml`,
-        YAML.stringify(resolvedLogSourceConfigs[logSource].base, {
-          aliasDuplicateObjects: false,
-          blockQuote: "literal",
-        })
+        yamlStringify(resolvedLogSourceConfigs[logSource].base)
       );
       for (const table in resolvedLogSourceConfigs[logSource].tables) {
         this.addConfigFile(
           `log_sources/${logSource}/tables/${table}.yml`,
-          YAML.stringify(resolvedLogSourceConfigs[logSource].tables[table], {
-            aliasDuplicateObjects: false,
-            blockQuote: "literal",
-          })
+          yamlStringify(resolvedLogSourceConfigs[logSource].tables[table])
         );
       }
     }
@@ -275,9 +268,8 @@ export class DPMainStack extends MatanoStack {
       logSources: logSources
         .filter(
           (ls) =>
-            ls.isDataLogSource &&
-            ls.managedLogSourceType != null &&
-            PULLER_LOG_SOURCE_TYPES.includes(ls.managedLogSourceType)
+            (ls.managedLogSourceType != null && PULLER_LOG_SOURCE_TYPES.includes(ls.managedLogSourceType)) ||
+            !!PULLER_LOG_SOURCE_TYPES.find((s) => ls.name.startsWith(s))
         )
         .map((ls) => ls.name),
       ingestionBucket: props.matanoSourcesBucket.bucket,
@@ -312,4 +304,11 @@ export class DPMainStack extends MatanoStack {
     fs.mkdirSync(destDir, { recursive: true });
     fs.copySync(srcDir, destDir, opts);
   }
+}
+
+function yamlStringify(o: any) {
+  return YAML.stringify(o, {
+    aliasDuplicateObjects: false,
+    blockQuote: "literal",
+  });
 }

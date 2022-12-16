@@ -23,7 +23,7 @@ class EnrichmentTable:
 def _load_enrichment_configs():
     ret = {}
     path = Path("/opt/config/enrichment")
-    enrichment_configs = path.rglob("enrichment_table.yml")
+    enrichment_configs = path.rglob("enrichment.yml")
     for enrichment_conf in enrichment_configs:
         with enrichment_conf.open() as f:
             conf = yaml.safe_load(f)
