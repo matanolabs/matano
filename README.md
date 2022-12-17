@@ -58,6 +58,8 @@ We are on a mission to build the first open platform for threat hunting, detecti
 
 - Reduce SIEM costs drastically (1/10th the cost).
 - Augment your SIEM with a security data lake for additional context during investigations.
+- Instantly search for matches to IOCs across your data lake using standardized fields.
+- Write detections-as-code using Python to detect suspicious behavior & create cotextualized alerts.
 - Easier to use cloud-native open source SIEM alternative for detection & response.
 - ECS-compatible severless alternative to ELK / Elastic Security stack.
 
