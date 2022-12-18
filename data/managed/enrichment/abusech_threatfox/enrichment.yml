@@ -1,7 +1,7 @@
 enrichment_type: dynamic
 write_mode: overwrite
 
-# TODO: add
+# TODO: add related?
 transform: |
   .event.kind = "enrichment"
   .event.category = ["threat"]
@@ -18,7 +18,7 @@ transform: |
   .threat.software.name = .json.malware_printable
   .threat.software.alias = split(.json.malware_alias, ",") ?? null
 
-  th_confidence, err = int(.json.confidence_level)
+  th_confidence, err = to_int(.json.confidence_level)
   .threat.indicator.confidence = if th_confidence > 0 && th_confidence < 30 {
     "Low"
   } else if th_confidence >= 30 && th_confidence < 70 {
@@ -66,6 +66,7 @@ schema:
     - event.category
     - event.type
     - event.id
+    - related
     - threat.indicator.type
     - threat.indicator.reference
     - threat.indicator.provider
@@ -97,6 +98,4 @@ schema:
                     type: list
                     element: string
                 - name: threat_type
-                  type: string
-                - name: threat_type_desc
                   type: string

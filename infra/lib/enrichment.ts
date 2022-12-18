@@ -46,7 +46,7 @@ interface EnrichmentTableProps {
 const MANAGED_ENRICHMENT_DIR = path.join(dataDirPath, "managed/enrichment");
 const MANAGED_ENRICHMENT_PREFIX_MAP: Record<string, string> = {
   "abusech_urlhaus": "abusech_urlhaus",
-  "abusech_malware_bazaar": "abusech_malware_bazaar",
+  "abusech_malwarebazaar": "abusech_malwarebazaar",
   "abusech_threatfox": "abusech_threatfox",
 }
 
@@ -111,7 +111,7 @@ function loadManagedEnrichmentConfig(enrichConfig: any) {
   const prefix = MANAGED_ENRICHMENT_PREFIX_MAP[managedType];
   if (!enrichConfig.name.startsWith(prefix)) {
     fail(
-      `Since you are using the managed enrichment type: ${enrichConfig}, your name must be prefixed with ${prefix}.`
+      `Since you are using the managed enrichment type: ${managedType}, your name must be prefixed with ${prefix}.`
     );
   }
   const managedConfig = YAML.parse(fs.readFileSync(path.join(MANAGED_ENRICHMENT_DIR, `${managedType}/enrichment.yml`), "utf-8"));

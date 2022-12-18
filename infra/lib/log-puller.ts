@@ -20,13 +20,13 @@ interface ExternalLogPullerProps {
 export const PULLER_LOG_SOURCE_TYPES: string[] = [
   "o365",
   "enrich_abusech_urlhaus",
-  "enrich_abusech_malware_bazaar",
+  "enrich_abusech_malwarebazaar",
   "enrich_abusech_threatfox",
 ];
 const LOG_SOURCE_RATES: Record<string, cdk.Duration> = {
   o365: cdk.Duration.minutes(1),
   enrich_abusech_urlhaus: cdk.Duration.minutes(5),
-  enrich_abusech_malware_bazaar: cdk.Duration.hours(1),
+  enrich_abusech_malwarebazaar: cdk.Duration.hours(1),
   enrich_abusech_threatfox: cdk.Duration.hours(1),
 };
 

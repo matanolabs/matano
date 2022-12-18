@@ -180,6 +180,7 @@ export class IcebergMetadata extends Construct {
           resources: ["*"],
         }),
       ],
+      reservedConcurrentExecutions: 1,
     });
 
     duplicatesTable.grantReadWriteData(this.metadataWriterFunction);

@@ -54,7 +54,7 @@ class IcebergMetadataWriter {
     private val logger = LoggerFactory.getLogger(this::class.java)
 
     val icebergCatalog: Catalog by lazy { createIcebergCatalog() }
-    val enrichmentMetadataWriter: EnrichmentMetadataWriter by lazy { EnrichmentMetadataWriter(loadEnrichmentConfiguration()) }
+    lateinit var enrichmentMetadataWriter: EnrichmentMetadataWriter
 
     inner class TableObj(tableName: String) {
         val table: Table = icebergCatalog.loadTable(TableIdentifier.of(Namespace.of(MATANO_NAMESPACE), tableName))
@@ -75,6 +75,7 @@ class IcebergMetadataWriter {
 
     fun handle(sqsEvent: SQSEvent) {
         val tableObjs = LazyConcurrentMap<String, TableObj>({ name -> TableObj(name) })
+        enrichmentMetadataWriter = EnrichmentMetadataWriter(loadEnrichmentConfiguration())
         runBlocking {
             for (record in sqsEvent.records) {
                 launch(Dispatchers.IO) { processRecord(record, tableObjs) }

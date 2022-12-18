@@ -1,7 +1,6 @@
 enrichment_type: dynamic
 write_mode: overwrite
 
-# TODO: add
 transform: |
   .event.kind = "enrichment"
   .event.category = ["threat"]
@@ -50,6 +49,7 @@ schema:
     - event.category
     - event.type
     - event.id
+    - related
     - threat.indicator.type
     - threat.indicator.reference
     - threat.indicator.provider

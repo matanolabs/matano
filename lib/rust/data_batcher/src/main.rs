@@ -182,6 +182,7 @@ async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
 
     let sqs_messages = record_chunks
         .into_iter()
+        .filter(|chunk| !chunk.is_empty())
         .map(|chunk| {
             let json_body = serde_json::to_string(&chunk).unwrap();
             SendMessageBatchRequestEntry::builder()

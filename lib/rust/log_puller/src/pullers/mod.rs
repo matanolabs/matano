@@ -113,7 +113,7 @@ impl LogSource {
             "abusech_urlhaus" => Some(LogSource::AbuseChUrlhausPuller(
                 abusech::AbuseChUrlhausPuller {},
             )),
-            "abusech_malware_bazaar" => Some(LogSource::AbuseChMalwareBazaarPuller(
+            "abusech_malwarebazaar" => Some(LogSource::AbuseChMalwareBazaarPuller(
                 abusech::AbuseChMalwareBazaarPuller {},
             )),
             "abusech_threatfox" => Some(LogSource::AbuseChThreatfoxPuller(

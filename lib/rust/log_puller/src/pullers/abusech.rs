@@ -29,7 +29,7 @@ const URLHAUS_HEADERS: [&str; 9] = [
     "urlhaus_link",
     "reporter",
 ];
-const MALWARE_BAZAAR_URL: &str = "https://mb-api.abuse.ch/api/v1/";
+const MALWAREBAZAAR_URL: &str = "https://mb-api.abuse.ch/api/v1/";
 const THREATFOX_FULL_URL: &str = "https://threatfox.abuse.ch/export/json/full/";
 
 #[async_trait]
@@ -76,7 +76,7 @@ impl PullLogs for AbuseChMalwareBazaarPuller {
     ) -> Result<Vec<u8>> {
         info!("Pulling malware bazaar");
         let resp = client
-            .post(MALWARE_BAZAAR_URL)
+            .post(MALWAREBAZAAR_URL)
             .form(&[("query", "get_recent"), ("selector", "time")])
             .send()
             .await?
