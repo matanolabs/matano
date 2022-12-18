@@ -6,6 +6,7 @@ transform: |
   .event.kind = "enrichment"
   .event.category = ["threat"]
   .event.type = ["indicator"]
+  .event.id = .json.id
 
   .threat.indicator.type = "url"
   .threat.indicator.reference = .json.urlhaus_link
@@ -36,7 +37,6 @@ transform: |
       .threat.indicator.url.full = .json.url
   }
 
-  .abusech.url.id = .json.id
   .abusech.url.threat = .json.threat
   if .json.tags != "None" {
     .abusech.url.tags = split(.json.tags, ",") ?? null
@@ -49,6 +49,7 @@ schema:
     - event.kind
     - event.category
     - event.type
+    - event.id
     - threat.indicator.type
     - threat.indicator.reference
     - threat.indicator.provider
@@ -64,8 +65,6 @@ schema:
             type:
               type: struct
               fields:
-                - name: id
-                  type: string
                 - name: threat
                   type: string
                 - name: tags

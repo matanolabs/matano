@@ -109,7 +109,6 @@ fn get_log_source_from_bucket_and_key(
     LOG_SOURCES_CONFIG.with(|c| {
         let log_sources_config = c.borrow();
 
-        // TODO: @shaeq: optimize?
         // Try get from BYOB or else assume managed and get from path
         let ret = (*log_sources_config)
             .iter()
@@ -174,8 +173,8 @@ async fn infer_compression(
         })
         .or_else(|| {
             extension.and_then(|extension| match extension {
-                "gz" => Some(Compression::Gzip),
-                "zst" => Some(Compression::Zstd),
+                "gz" | "gzip" => Some(Compression::Gzip),
+                "zst" | "zstd" => Some(Compression::Zstd),
                 _ => None,
             })
         });
@@ -227,9 +226,11 @@ const TRANSFORM_BASE_FOOTER: &str = r#"
 del(.json)
 . = compact(.)
 .ecs.version = "8.5.0"
+
 "#;
 
 const TRANSFORM_DATA_FOOTER: &str = r#"
+
 .partition_hour = format_timestamp!(.ts, "%Y-%m-%d-%H")
 "#;
 

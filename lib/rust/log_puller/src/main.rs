@@ -137,6 +137,11 @@ struct PullerRequest {
 struct SQSBatchResponseItemFailure {
     itemIdentifier: String,
 }
+impl SQSBatchResponseItemFailure {
+    fn new(id: String) -> SQSBatchResponseItemFailure {
+        SQSBatchResponseItemFailure { itemIdentifier: id }
+    }
+}
 
 #[derive(Serialize, Deserialize, Debug)]
 struct SQSBatchResponse {
@@ -154,9 +159,16 @@ async fn handler(event: LambdaEvent<SqsEvent>) -> Result<Option<SQSBatchResponse
         .payload
         .records
         .into_iter()
-        .flat_map(|msg| msg.body.and_then(|b| Some((msg.message_id.unwrap(), b))))
-        .flat_map(|(id, body)| {
-            serde_json::from_str::<PullerRequest>(&body).and_then(|b| Ok((id, b)))
+        .flat_map(|msg| Some((msg.message_id?, msg.body?)))
+        .filter_map(|(id, body)| {
+            let maybe_req = serde_json::from_str::<PullerRequest>(&body)
+                .map_err(|e| {
+                    error!("Failed to deserialize for msg id: {}, err: {:#}", &id, e);
+                    failures.push(SQSBatchResponseItemFailure::new(id.clone()));
+                    e
+                })
+                .ok();
+            Some((id, maybe_req?))
         })
         .collect::<Vec<_>>();
 
@@ -197,9 +209,7 @@ async fn handler(event: LambdaEvent<SqsEvent>) -> Result<Option<SQSBatchResponse
         .filter_map(|(r, msg_id)| {
             r.map_err(|e| {
                 error!("{:?}", e);
-                failures.push(SQSBatchResponseItemFailure {
-                    itemIdentifier: msg_id.to_string(),
-                });
+                failures.push(SQSBatchResponseItemFailure::new(msg_id.to_string()));
                 e
             })
             .ok()
@@ -218,9 +228,7 @@ async fn handler(event: LambdaEvent<SqsEvent>) -> Result<Option<SQSBatchResponse
             Ok(_) => (),
             Err(e) => {
                 error!("Failed: {:#}", e);
-                failures.push(SQSBatchResponseItemFailure {
-                    itemIdentifier: msg_id.to_owned(),
-                });
+                failures.push(SQSBatchResponseItemFailure::new(msg_id.to_owned()));
             }
         };
     }

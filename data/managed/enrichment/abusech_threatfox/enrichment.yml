@@ -2,9 +2,101 @@ enrichment_type: dynamic
 write_mode: overwrite
 
 # TODO: add
-transform: ""
+transform: |
+  .event.kind = "enrichment"
+  .event.category = ["threat"]
+  .event.type = ["indicator"]
+  .event.id = .json.id
+
+  if !is_nullish(.json.reference) {
+    .threat.indicator.reference = .json.reference
+  }
+  .threat.indicator.provider = .json.reporter
+  .threat.indicator.first_seen = to_timestamp(replace(.json.first_seen_utc, " UTC", "") ?? null) ?? null
+  .threat.indicator.last_seen = to_timestamp(replace(.json.last_seen_utc, " UTC", "") ?? null) ?? null
+
+  .threat.software.name = .json.malware_printable
+  .threat.software.alias = split(.json.malware_alias, ",") ?? null
+
+  th_confidence, err = int(.json.confidence_level)
+  .threat.indicator.confidence = if th_confidence > 0 && th_confidence < 30 {
+    "Low"
+  } else if th_confidence >= 30 && th_confidence < 70 {
+    "Medium"
+  } else if th_confidence >= 70 && th_confidence <= 100 {
+    "High"
+  } else {
+    "None"
+  }
+
+  og_ioc_type = .json.ioc_type
+  .threat.indicator.type = if og_ioc_type == "url" {
+      .threat.indicator.url = .json.ioc_value
+      "url"
+  } else if og_ioc_type == "domain" {
+      .threat.indicator.url.domain = .json.ioc_value
+      "domain-name"
+  } else if og_ioc_type == "ip:port" {
+      if .json.ioc_value != null {
+        ipinfo = parse_grok!(.json.ioc_value, "%{IP:ip}:%{NUMBER:port}")
+        ipinfo.port = int!(ipinfo.port)
+        .threat.indicator.ip = ipinfo.ip
+        .threat.indicator.port = ipinfo.port
+      }
+      if contains(string(.threat.indicator.ip) ?? "", ":") { "ipv6-addr" } else {"ipv4-addr"}
+  } else if includes(["md5_hash", "sha1_hash", "sha256_hash"], og_ioc_type) {
+      ioc_type = "file"
+      hash_type = replace!(og_ioc_type, "_hash", "")
+      .threat.indicator.file.hash = set!({}, [hash_type], .json.ioc_value)
+  }
+
+  .abusech.threatfox.confidence_level = .json.confidence_level
+  .abusech.threatfox.malware = .json.malware
+  .abusech.threatfox.tags = if is_string(.json.tags) {
+    split(.json.tags, ",") ?? null
+  } else { .json.tags }
+  .abusech.threatfox.threat_type = .json.threat_type
+  .abusech.threatfox.threat_type_desc = .json.threat_type_desc
+
+
 schema:
   ecs_field_names:
-    - event
-    - threat
-  fields: []
+    - ecs.version
+    - event.kind
+    - event.category
+    - event.type
+    - event.id
+    - threat.indicator.type
+    - threat.indicator.reference
+    - threat.indicator.provider
+    - threat.indicator.first_seen
+    - threat.indicator.last_seen
+    - threat.indicator.confidence
+    - threat.indicator.url
+    - threat.indicator.file.hash
+    - threat.indicator.ip
+    - threat.indicator.port
+    - threat.software.reference
+    - threat.software.name
+    - threat.software.alias
+  fields:
+    - name: abusech
+      type:
+        type: struct
+        fields:
+          - name: threatfox
+            type:
+              type: struct
+              fields:
+                - name: confidence_level
+                  type: int
+                - name: malware
+                  type: string
+                - name: tags
+                  type:
+                    type: list
+                    element: string
+                - name: threat_type
+                  type: string
+                - name: threat_type_desc
+                  type: string

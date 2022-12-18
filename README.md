@@ -145,6 +145,7 @@ When onboarding a new log source or authoring a detection, run `matano deploy` f
 
 #### Enrichment / Threat Intel
 
+- **AbuseCH** ([URLhaus](https://urlhaus.abuse.ch), [MalwareBazaar](https://bazaar.abuse.ch), [ThreatFox](https://threatfox.abuse.ch))
 - **MaxMind GeoIP** (_coming soon_)
 - **GreyNoise Intelligence** (_coming soon_)
 - **Custom 🔧** (_coming soon_)

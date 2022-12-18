@@ -43,7 +43,7 @@ export class ExternalLogPuller extends Construct {
       code: RustFunctionCode.assetCode({ package: "log_puller" }),
       handler: "main",
       timeout: cdk.Duration.minutes(2),
-      memorySize: 512,
+      memorySize: 3000,
       environment: {
         RUST_LOG: "warn,log_puller=info",
         PULLER_LOG_SOURCE_TYPES: JSON.stringify(PULLER_LOG_SOURCE_TYPES),
