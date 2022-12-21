@@ -402,12 +402,39 @@ async fn read_events_s3<'a>(
                 }
             })
         }
-        None => FramedRead::new(reader, LinesCodec::new())
-            .map(|v| match v {
-                Ok(v) => Ok(Value::from(v)),
-                Err(e) => Err(anyhow!(e)),
-            })
-            .boxed(),
+        None => {
+            if r.key.clone().ends_with("csv") {
+                let mut csv_reader = AsyncReader::from_reader(reader);
+                let mut headers: StringRecord = StringRecord::new();
+                { headers = csv_reader.headers().await?.to_owned(); } // do better here
+                let records = csv_reader.into_records();
+
+                records
+                    .map(move |r| match r {  // move is used for headers scope.. do better here too
+                        Ok(r) => {
+                            let mut record = Map::new();
+                            let _ = r.iter().enumerate().map(|(i, field)| {
+                                record.insert(headers.get(i).unwrap().parse().unwrap(), field.parse().unwrap());
+                            });
+                            let json_string = serde_json::Value::from(record).to_string();
+                            Ok(Value::from(json_string))
+                        },
+                        Err(e) => Err(anyhow!(e)),
+                    })
+                    .boxed()
+            } else {
+                FramedRead::new(reader, LinesCodec::new())
+                    .map(|v| match v {
+                        Ok(v) => {
+                            println!("{:?}", v.clone());
+                            Ok(Value::from(v))
+                        },
+                        Err(e) => Err(anyhow!(e)),
+                    })
+                    .boxed();
+            }
+
+        },
     };
 
     let is_from_cloudwatch_log_subscription = LOG_SOURCES_CONFIG
