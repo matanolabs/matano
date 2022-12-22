@@ -86,6 +86,7 @@ interface MatanoLogSourceProps {
   lakeWriterLambda: lambda.Function;
   partitions?: any[];
   noDefaultEcsFields?: boolean;
+  noDefaultTs?: boolean;
   eventSourceProps?: SqsEventSourceProps;
 }
 
@@ -321,7 +322,8 @@ export class MatanoLogSource extends Construct {
     this.schema = resolveSchema(
       this.logSourceConfig.schema?.ecs_field_names,
       this.logSourceConfig.schema?.fields,
-      props.noDefaultEcsFields
+      props.noDefaultEcsFields,
+      props.noDefaultTs
     );
 
     const logSourceConfigToMerge = diff(this.logSourceConfig, logSourceLevelConfig);
@@ -371,7 +373,12 @@ export class MatanoLogSource extends Construct {
         merged.schema.fields = serializeToFields(tableSchema);
       }
 
-      let tableSchema = resolveSchema(merged.schema?.ecs_field_names, merged.schema?.fields, props.noDefaultEcsFields);
+      let tableSchema = resolveSchema(
+        merged.schema?.ecs_field_names,
+        merged.schema?.fields,
+        props.noDefaultEcsFields,
+        props.noDefaultTs
+      );
       // partial sort to move ts to top
       tableSchema.fields = sortBy(tableSchema.fields, (e) => e.name, ["ts", "partition_hour"]);
 

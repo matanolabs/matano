@@ -67,6 +67,8 @@ export default class Deploy extends BaseCommand {
       matanoAwsAccountId: awsAccountId,
       matanoAwsRegion: awsRegion,
       matanoContext: JSON.stringify(matanoContext),
+      // https://github.com/aws/aws-cdk/issues/19098 TODO: maybe update CDK to remove?
+      "@aws-cdk/aws-lambda:recognizeLayerVersion": true,
     };
 
     for (const [key, value] of Object.entries(cdkContext)) {

@@ -63,7 +63,8 @@ export class EnrichmentTable extends Construct {
       config: lsConfig,
       realtimeTopic: props.realtimeTopic,
       lakeWriterLambda: props.lakeWriterLambda,
-      noDefaultEcsFields: props.enrichConfig?.schema?.ecs_field_names != null,
+      noDefaultEcsFields: props.enrichConfig?.schema?.ecs_field_names == null,
+      noDefaultTs: true,
     });
 
     if (props.enrichConfig.enrichment_type === "static") {
@@ -138,7 +139,7 @@ export class Enrichment extends Construct {
     });
 
     this.enrichmentSyncerFunc = new lambda.Function(this, "Syncer", {
-      description: "[Matano] Syncs enrichment table data",
+      description: "[Matano] Syncs enrichment table data.",
       runtime: lambda.Runtime.JAVA_11,
       handler: "com.matano.iceberg.EnrichmentSyncerHandler::handleRequest",
       memorySize: 1024,
