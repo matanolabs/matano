@@ -117,7 +117,7 @@ class IcebergExpireSnapshots extends Construct {
     });
 
     const expireSnapshotsFunc = new lambda.Function(this, "Function", {
-      description: "[Matano] Expires snapshots for an iceberg table.",
+      description: "[Matano] Expires Iceberg snapshots for an iceberg table.",
       runtime: lambda.Runtime.JAVA_11,
       memorySize: 650,
       timeout: cdk.Duration.minutes(14),
@@ -179,7 +179,7 @@ class IcebergRewriteManifests extends Construct {
     });
 
     const rewriteManifestsFunc = new lambda.Function(this, "Function", {
-      description: "[Matano] Rewrites manifests for an iceberg table.",
+      description: "[Matano] Rewrites Iceberg manifests for an iceberg table.",
       runtime: lambda.Runtime.JAVA_11,
       memorySize: 1024,
       timeout: cdk.Duration.minutes(14),

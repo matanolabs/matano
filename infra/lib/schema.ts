@@ -91,7 +91,8 @@ const deepFind = (obj: any, keys: string | (string | number)[], delimiter = ".")
   );
 };
 
-const DEFAULT_ECS_FIELD_NAMES: string[] = ["ts", "partition_hour", "labels", "tags"];
+const DEFAULT_TS_FIELD_NAMES: string[] = ["ts", "partition_hour"];
+const DEFAULT_ECS_FIELD_NAMES: string[] = ["labels", "tags"];
 
 export function fieldsToSchema(fields: any[]) {
   const reducer = (acc: any, item: any) => {
@@ -140,13 +141,24 @@ export function serializeToFields(schema: Record<string, any>): any[] {
   }));
 }
 
-export function resolveSchema(ecsFieldNames?: string[], customFields?: any[], noDefaultEcsFields = false) {
+export function resolveSchema(
+  ecsFieldNames?: string[],
+  customFields?: any[],
+  noDefaultEcsFields = false,
+  noDefaultTs = false
+) {
   const baseEcsSchema = fieldsToSchema(
     JSON.parse(fs.readFileSync(path.join(dataDirPath, "ecs_iceberg_schema.json")).toString())["fields"]
   );
 
-  const defaultEcsFieldNames = noDefaultEcsFields ? [] : DEFAULT_ECS_FIELD_NAMES;
-  const allEcsFieldNames = [...defaultEcsFieldNames, ...(ecsFieldNames ?? [])];
+  const allEcsFieldNames = [];
+  if (!noDefaultEcsFields) {
+    allEcsFieldNames.push(...DEFAULT_ECS_FIELD_NAMES);
+  }
+  if (!noDefaultTs) {
+    allEcsFieldNames.push(...DEFAULT_TS_FIELD_NAMES);
+  }
+  allEcsFieldNames.push(...(ecsFieldNames ?? []));
 
   const relevantEcsSchema = allEcsFieldNames.reduce((acc, fieldName) => {
     let { path, value: field } = deepFind(baseEcsSchema, fieldName);

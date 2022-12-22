@@ -53,6 +53,7 @@ export class SchemasProvider extends Construct {
 
     const providerFunc = new lambda.Function(this, "Function", {
       runtime: lambda.Runtime.JAVA_11,
+      description: "[Matano] Custom resource for creating schemas.",
       handler: "com.matano.iceberg.MatanoSchemasLayerCustomResource::handleRequest",
       memorySize: 1024,
       timeout: cdk.Duration.minutes(5),
@@ -126,7 +127,7 @@ export class IcebergTableProvider extends Construct {
     const providerFunc = new lambda.Function(this, "Function", {
       runtime: lambda.Runtime.JAVA_11,
       handler: "com.matano.iceberg.MatanoIcebergTableCustomResource::handleRequest",
-      description: "This function provides the Cloudformation custom resource for a Matano log source Iceberg table.",
+      description: "[Matano] This function provides the Cloudformation custom resource for a Matano Iceberg table.",
       memorySize: 1024,
       timeout: cdk.Duration.minutes(5),
       environment: {
@@ -164,7 +165,7 @@ export class IcebergMetadata extends Construct {
     });
 
     this.metadataWriterFunction = new lambda.Function(this, "WriterFunction", {
-      description: "This function ingests written input files into an Iceberg table.",
+      description: "[Matano] This function ingests written input files into an Iceberg table.",
       runtime: lambda.Runtime.JAVA_11,
       memorySize: 1024,
       handler: "com.matano.iceberg.IcebergMetadataHandler::handleRequest",
@@ -189,7 +190,7 @@ export class IcebergMetadata extends Construct {
     this.metadataWriterFunction.currentVersion.addEventSource(eventSource);
 
     this.alertsHelperFunction = new lambda.Function(this, "AlertsHelper", {
-      description: "JVM Iceberg helper for alerting.",
+      description: "[Matano] JVM Iceberg helper for alerting.",
       runtime: lambda.Runtime.JAVA_11,
       memorySize: 1500,
       handler: "com.matano.iceberg.AlertsIcebergHelper::handleRequest",
