@@ -122,10 +122,6 @@ export class DPMainStack extends MatanoStack {
       sourcesIngestionTopic: props.matanoSourcesBucket.topic,
     });
 
-    const rawDataBatcher = new DataBatcher(this, "DataBatcher", {
-      s3Bucket: props.matanoSourcesBucket,
-    });
-
     const icebergMetadata = new IcebergMetadata(this, "IcebergMetadata", {
       lakeStorageBucket: props.lakeStorageBucket,
     });
@@ -196,11 +192,10 @@ export class DPMainStack extends MatanoStack {
     });
     transformer.node.addDependency(sqsSources);
 
-    transformer.transformerLambda.addEventSource(
-      new SqsEventSource(rawDataBatcher.outputQueue, {
-        batchSize: 1,
-      })
-    );
+    const rawDataBatcher = new DataBatcher(this, "DataBatcher", {
+      transformerFunction: transformer.transformerLambda,
+      s3Bucket: props.matanoSourcesBucket,
+    });
 
     for (const sqsSource of sqsSources.ingestionQueues) {
       transformer.transformerLambda.addEventSource(

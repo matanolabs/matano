@@ -12,6 +12,7 @@ import { RustFunctionCode } from "./rust-function-layer";
 
 interface DataBatcherProps {
   s3Bucket: S3BucketWithNotifications;
+  transformerFunction: lambda.Function;
 }
 
 export class DataBatcher extends Construct {
@@ -23,6 +24,7 @@ export class DataBatcher extends Construct {
 
     this.outputDLQ = new sqs.Queue(this, "OutputDLQ");
     this.outputQueue = new sqs.Queue(this, "OutputQueue", {
+      visibilityTimeout: cdk.Duration.seconds(Math.max(props.transformerFunction.timeout!.toSeconds(), 30)), // same as transformer
       deadLetterQueue: { queue: this.outputDLQ, maxReceiveCount: 3 },
     });
 
@@ -44,5 +46,11 @@ export class DataBatcher extends Construct {
     });
     this.batcherFunction.addEventSource(sqsEventSource);
     this.outputQueue.grantSendMessages(this.batcherFunction);
+
+    props.transformerFunction.addEventSource(
+      new SqsEventSource(this.outputQueue, {
+        batchSize: 1,
+      })
+    );
   }
 }
