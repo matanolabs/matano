@@ -17,12 +17,15 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.apache.iceberg.PartitionSpec
 import org.apache.iceberg.Schema
 import org.apache.iceberg.SchemaParser
+import org.apache.iceberg.TableProperties.DEFAULT_NAME_MAPPING
 import org.apache.iceberg.aws.glue.GlueCatalog
 import org.apache.iceberg.catalog.Catalog
 import org.apache.iceberg.catalog.Namespace
 import org.apache.iceberg.catalog.TableIdentifier
 import org.apache.iceberg.expressions.Expressions
 import org.apache.iceberg.expressions.UnboundTerm
+import org.apache.iceberg.mapping.MappingUtil
+import org.apache.iceberg.mapping.NameMappingParser
 import org.apache.iceberg.types.TypeUtil
 import org.slf4j.LoggerFactory
 import java.util.concurrent.atomic.AtomicInteger
@@ -82,7 +85,7 @@ data class MatanoTableRequest(
     @JsonDeserialize(using = RelaxedIcebergSchemaDeserializer::class)
     val schema: Schema,
     val partitions: List<MatanoPartitionSpec> = listOf(),
-    val tableProperties: Map<String, String> = mapOf()
+    val tableProperties: MutableMap<String, String> = mutableMapOf()
 )
 
 sealed interface MatanoIcebergTransform {
@@ -166,6 +169,8 @@ class MatanoIcebergTableCustomResource : CFNCustomResource {
 
         val requestProps = mapper.convertValue<MatanoTableRequest>(event.resourceProperties)
         val tableProperties = requestProps.tableProperties
+        val mappingJson = NameMappingParser.toJson(MappingUtil.create(requestProps.schema))
+        tableProperties[DEFAULT_NAME_MAPPING] = mappingJson
 
         val tableId = TableIdentifier.of(Namespace.of(MATANO_NAMESPACE), requestProps.tableName)
         val partition = if (requestProps.partitions.isEmpty()) PartitionSpec.unpartitioned() else createIcebergPartitionSpec(requestProps.partitions, requestProps.schema)
@@ -195,10 +200,12 @@ class MatanoIcebergTableCustomResource : CFNCustomResource {
         val oldInputPartitions = oldProps.partitions
         val newInputPartitions = newProps.partitions
         val shouldUpdatePartitions = oldInputPartitions != newInputPartitions
+        val tx = table.newTransaction()
 
-        if (shouldUpdateSchema && shouldUpdatePartitions) {
-            throw RuntimeException("Cannot update schema and partitions in the same operation.")
-        }
+        // TODO: is this actually an issue? Rexamine if/when we add user partitions.
+//        if (shouldUpdateSchema && shouldUpdatePartitions) {
+//            throw RuntimeException("Cannot update schema and partitions in the same operation.")
+//        }
 
         if (shouldUpdateSchema) {
             logger.info("Updating schema of ${table.name()}")
@@ -210,18 +217,19 @@ class MatanoIcebergTableCustomResource : CFNCustomResource {
             logger.info("Using resolved schema:")
             logger.info(SchemaParser.toJson(resolvedNewSchema))
 
-            val updateSchemaReq = table.updateSchema()
+            val updateSchemaReq = tx.updateSchema()
                 .unionByNameWith(resolvedNewSchema)
                 .setIdentifierFields(resolvedNewSchema.identifierFieldNames())
             val updateSchema = updateSchemaReq.apply()
-            if (!updateSchema.sameSchema(existingSchema)) {
-                updateSchemaReq.commit()
-            }
+            updateSchemaReq.commit()
+
+            val mappingJson = NameMappingParser.toJson(MappingUtil.create(updateSchema))
+            newProps.tableProperties[DEFAULT_NAME_MAPPING] = mappingJson
         }
 
         if (shouldUpdatePartitions) {
             logger.info("Updating partitions of ${table.name()}")
-            val update = table.updateSpec()
+            val update = tx.updateSpec()
 
             val oldFields = oldInputPartitions.toSet()
             val newFields = newInputPartitions.toSet()
@@ -239,12 +247,12 @@ class MatanoIcebergTableCustomResource : CFNCustomResource {
             update.commit()
         }
 
-        val oldProperties = table.properties().toMap()
+        val oldProperties = table.properties().toMap().filterKeys { it != DEFAULT_NAME_MAPPING }
         val newProperties = newProps.tableProperties.filterKeys { it != "format-version" }
 
         if (newProperties != oldProperties) {
             logger.info("Updating table Properties")
-            val update = table.updateProperties()
+            val update = tx.updateProperties()
             val modifications = newProperties.filter { (k, v) -> !oldProperties.containsKey(k) || oldProperties[k] != v }
             val removals = oldProperties.filterKeys { k -> !newProperties.containsKey(k) }
 
@@ -255,6 +263,8 @@ class MatanoIcebergTableCustomResource : CFNCustomResource {
             removals.keys.forEach { update.remove(it) }
             update.commit()
         }
+
+        tx.commitTransaction()
 
         return null
     }

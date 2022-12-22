@@ -229,11 +229,6 @@ del(.json)
 
 "#;
 
-const TRANSFORM_DATA_FOOTER: &str = r#"
-
-.partition_hour = format_timestamp!(.ts, "%Y-%m-%d-%H")
-"#;
-
 fn format_transform_expr(
     transform_expr: &str,
     select_table_from_payload_expr: &Option<String>,
@@ -248,9 +243,6 @@ fn format_transform_expr(
     }
     ret.push_str(transform_expr);
     ret.push_str(TRANSFORM_BASE_FOOTER);
-    if !is_passthrough {
-        ret.push_str(TRANSFORM_DATA_FOOTER);
-    }
     if let Some(select_table_from_payload_expr) = select_table_from_payload_expr {
         ret.push_str(&format!(
             r#"

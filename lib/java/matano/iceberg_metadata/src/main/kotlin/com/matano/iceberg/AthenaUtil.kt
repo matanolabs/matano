@@ -16,7 +16,7 @@ class AthenaQueryRunner {
 
         val startQueryExecutionRequest = StartQueryExecutionRequest.builder()
             .queryString(qs)
-            .workGroup("matano")
+            .workGroup("matano_system")
             .queryExecutionContext(queryExecutionContext)
             .build()
         val startQueryExecutionResponse = athenaClient.startQueryExecution(startQueryExecutionRequest).await()

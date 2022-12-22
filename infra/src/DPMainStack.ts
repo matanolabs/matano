@@ -55,10 +55,7 @@ interface DPMainStackProps extends MatanoStackProps {
   alertTrackerTable: Table;
 }
 
-const MATANO_LOG_PARTITION_SPEC = [
-  { column: "ts", transform: "hour" },
-  { column: "partition_hour", transform: "identity" },
-];
+const MATANO_LOG_PARTITION_SPEC = [{ column: "ts", transform: "hour" }];
 
 export class DPMainStack extends MatanoStack {
   configTempDir: string;

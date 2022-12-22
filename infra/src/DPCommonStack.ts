@@ -66,18 +66,33 @@ export class DPCommonStack extends MatanoStack {
     this.matanoAthenaResultsBucket = new s3.Bucket(this, "MatanoAthenaResults", {
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
     });
-    const matanoAthenaWorkgroup = new athena.CfnWorkGroup(this, "MatanoAthenaWorkGroup", {
-      name: "matano",
-      description: "[Matano] Matano Athena Work Group.",
+    const matanoDefaultAthenaWorkgroup = new athena.CfnWorkGroup(this, "MatanoDefault", {
+      name: "matano_default",
+      description:
+        "[Matano] Matano Default Athena Work Group. This is a preconfigured Athena workgroup. You can use it for querying.",
+      workGroupConfiguration: {
+        engineVersion: {
+          selectedEngineVersion: "Athena engine version 3",
+        },
+        resultConfiguration: {
+          outputLocation: `s3://${this.matanoAthenaResultsBucket.bucketName}/results/matano-default`,
+        },
+      },
+    });
+
+    const matanoSystemAthenaWorkgroup = new athena.CfnWorkGroup(this, "MatanoSystem", {
+      name: "matano_system",
+      description: "[Matano] Matano System Athena Work Group. Used for system queries such as table maintenance.",
       workGroupConfiguration: {
         engineVersion: {
           selectedEngineVersion: "Athena engine version 2",
         },
         resultConfiguration: {
-          outputLocation: `s3://${this.matanoAthenaResultsBucket.bucketName}/results`,
+          outputLocation: `s3://${this.matanoAthenaResultsBucket.bucketName}/results/matano-system`,
         },
       },
     });
+
     const integrationsDir = path.join(this.matanoUserDirectory, "integrations");
     const usesIntegrations = fs.existsSync(integrationsDir);
     if (usesIntegrations) {

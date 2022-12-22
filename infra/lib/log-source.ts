@@ -380,7 +380,7 @@ export class MatanoLogSource extends Construct {
         props.noDefaultTs
       );
       // partial sort to move ts to top
-      tableSchema.fields = sortBy(tableSchema.fields, (e) => e.name, ["ts", "partition_hour"]);
+      tableSchema.fields = sortBy(tableSchema.fields, (e) => e.name, ["ts"]);
 
       this.tablesSchemas[tableName] = tableSchema;
       merged.schema.fields = tableSchema.fields; // store the resolved fields & schema in the config

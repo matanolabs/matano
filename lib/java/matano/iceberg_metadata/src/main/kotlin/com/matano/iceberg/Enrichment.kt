@@ -120,6 +120,7 @@ fun loadEnrichmentConfiguration(): Map<String, EnrichmentConfig> {
         val conf = mapper.readValue<EnrichmentConfig>(f.inputStream())
         Pair(conf.name, conf)
     }.toMap()
+    println("Loaded enrichment configurations for enrichment tables: ${configs.keys.toList()}")
     return configs
 }
 

@@ -210,7 +210,6 @@ async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
                 del(v.event.created)
                 del(v.event.kind)
                 del(v.event.duration)
-                del(v.partition_hour)
                 # del(v.event.created)
 
                 flatten(v)

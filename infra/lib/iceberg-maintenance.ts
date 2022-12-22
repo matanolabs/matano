@@ -18,9 +18,7 @@ def handler(event, context):
     else:
         dt = datetime.now()
     dt_hour_ago = dt - timedelta(hours=1)
-    partition_hour = dt_hour_ago.strftime("%Y-%m-%d-%H")
     return {
-      "partition_hour": partition_hour,
       "current_hour_ts": dt.strftime("%Y-%m-%d %H:00:00"),
       "prev_hour_ts": dt_hour_ago.strftime("%Y-%m-%d %H:00:00"),
     }
@@ -60,13 +58,13 @@ class IcebergCompaction extends Construct {
     });
 
     const optimizeQueryString =
-      "OPTIMIZE matano.{} REWRITE DATA USING BIN_PACK WHERE timestamp \\'{}\\' > ts and ts >= timestamp \\'{}\\' and partition_hour=\\'{}\\';";
-    const optimizeQueryFormatStr = `States.Format('${optimizeQueryString}', $.table_name, $.partition.current_hour_ts, $.partition.prev_hour_ts , $.partition.partition_hour)`;
+      "OPTIMIZE matano.{} REWRITE DATA USING BIN_PACK WHERE timestamp \\'{}\\' > ts and ts >= timestamp \\'{}\\';";
+    const optimizeQueryFormatStr = `States.Format('${optimizeQueryString}', $.table_name, $.partition.current_hour_ts, $.partition.prev_hour_ts)`;
 
     const compactionQuery = new tasks.AthenaStartQueryExecution(this, "Compaction Query", {
       integrationPattern: sfn.IntegrationPattern.RUN_JOB,
       queryString: sfn.JsonPath.stringAt(optimizeQueryFormatStr),
-      workGroup: "matano",
+      workGroup: "matano_system",
     });
 
     queryMap.iterator(compactionQuery);

@@ -68,7 +68,7 @@ class IcebergMetadataWriter {
         val tableName = parts[1]
         val partitionValue = parts[3].substring(8)
         val intPartitionvalue = dtToHours(partitionValue)
-        val partitionPath = "ts_hour=$intPartitionvalue/partition_hour=$partitionValue"
+        val partitionPath = "ts_hour=$intPartitionvalue"
         logger.info("Using table: $tableName")
         return Pair(tableName, partitionPath)
     }

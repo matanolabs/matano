@@ -91,7 +91,7 @@ const deepFind = (obj: any, keys: string | (string | number)[], delimiter = ".")
   );
 };
 
-const DEFAULT_TS_FIELD_NAMES: string[] = ["ts", "partition_hour"];
+const DEFAULT_TS_FIELD_NAMES: string[] = ["ts"];
 const DEFAULT_ECS_FIELD_NAMES: string[] = ["labels", "tags"];
 
 export function fieldsToSchema(fields: any[]) {
