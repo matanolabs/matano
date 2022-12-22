@@ -169,7 +169,19 @@ export function matanoResourceToCdkName(name: string) {
     .join("");
 }
 
+const SNAPSTART_REGIONS = [
+  "us-east-1",
+  "us-east-2",
+  "us-west-2",
+  "ap-southeast-1",
+  "ap-southeast-2",
+  "ap-northeast-1",
+  "eu-central-1",
+  "eu-west-1",
+  "eu-north-1",
+];
 export function makeLambdaSnapstart(func: lambda.Function) {
+  if (!SNAPSTART_REGIONS.includes(cdk.Stack.of(func).region)) return;
   (func.node.defaultChild as lambda.CfnFunction).addPropertyOverride("SnapStart", {
     ApplyOn: "PublishedVersions",
   });
