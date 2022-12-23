@@ -23,7 +23,9 @@ Open an issue on our [issues list on GitHub][2] which describes the feature you 
 
 We welcome code changes and pull requests from the community. Good pull requests - patches, improvements, new features - are a fantastic help.
 
-Please ask (feel free to open an issue or send a message in the #dev channel) before embarking on any significant pull request (e.g. implementing features, refactoring code), otherwise you risk spending a lot of time working on something that the project's developers might not want to merge into the project.
+To get started developing, check out the [DEVELOPMENT.md](DEVELOPMENT.md).
+
+Please ask (feel free to open an issue or send a message in Discord) before embarking on any significant pull request (e.g. implementing features, refactoring code), otherwise you risk spending a lot of time working on something that the project's developers might not want to merge into the project.
 
 ## Community
 
