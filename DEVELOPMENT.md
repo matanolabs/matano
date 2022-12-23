@@ -12,7 +12,7 @@ Since Matano is regularly distributed as a prebuilt binary, you may need to ensu
 
 - Rust 1.63.0
 - Cargo Lambda (Run `pip install cargo-lambda`)
-- Java >8
+- Java 11
 - Python 3.9
 - Node JS >14
 - Docker
