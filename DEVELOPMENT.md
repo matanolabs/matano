@@ -86,7 +86,7 @@ Of course, you can use any IDE you wish. Here are tips that have worked well in 
 
 - Use Visual Studio Code for Typescript development (CLI, Infrastructure). You can open the root or subdirectories in VS Code.
 - Use IntelliJ IDEA for JVM development. Make sure you open the `lib/java/matano` directory in IDEA for the project to be recognized.
-- Use Visual Studio Code for Rust development. Make sure you open the `lib/rust` workspace directory in a separate directory as Rust language analysis will not work from the root project directory.
+- Use Visual Studio Code for Rust development. Make sure you open the `lib/rust` workspace directory in a separate window as Rust language analysis will not work from the root project directory.
 
 ## Developing managed log sources
 
