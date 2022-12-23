@@ -11,6 +11,7 @@ Matano is a monorepo codebase with code in several languages (Rust, Kotlin, Type
 Since Matano is regularly distributed as a prebuilt binary, you may need to ensure several dependencies are installed if you are developing on the source code:
 
 - Rust 1.63.0
+- Cargo Lambda (Run `pip install cargo-lambda`)
 - Java >8
 - Python 3.9
 - Node JS >14
