@@ -75,12 +75,6 @@ make build-python
 make build-jvm
 ```
 
-#### JVM/Kotlin
-
-```bash
-make build-jvm
-```
-
 ### IDEs
 
 Of course, you can use any IDE you wish. Here are tips that have worked well in our experience:
