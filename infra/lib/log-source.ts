@@ -94,6 +94,7 @@ const MANAGED_LOG_SOURCE_PREFIX_MAP: Record<string, string> = {
   aws_cloudtrail: "aws",
   zeek: "zeek",
   o365: "o365",
+  suricata: "suricata",
   matano_alerts: "matano_alerts", // doesn't really make sense but OK
 };
 

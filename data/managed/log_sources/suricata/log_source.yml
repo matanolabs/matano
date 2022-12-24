@@ -1,0 +1,768 @@
+name: suricata
+
+ingest:
+  select_table_from_payload_metadata: |
+    if match(.__metadata.s3.key, r'.*') {
+      "eve"
+    }
+
+schema:
+  ecs_field_names:
+  - cloud.account.id
+  - cloud.availability_zone
+  - cloud.instance.id
+  - cloud.instance.name
+  - cloud.machine.type
+  - cloud.project.id
+  - cloud.provider
+  - cloud.region
+  - container.id
+  - container.image.name
+  - container.labels
+  - container.name
+  - destination.address
+  - destination.as.number
+  - destination.as.organization.name
+  - destination.bytes
+  - destination.domain
+  - destination.geo.city_name
+  - destination.geo.continent_name
+  - destination.geo.country_iso_code
+  - destination.geo.country_name
+  - destination.geo.location
+  - destination.geo.region_iso_code
+  - destination.geo.region_name
+  - destination.ip
+  - destination.mac
+  - destination.packets
+  - destination.port
+  - dns.answers.class
+  - dns.answers.data
+  - dns.answers.name
+  - dns.answers.ttl
+  - dns.answers.type
+  - dns.header_flags
+  - dns.id
+  - dns.op_code
+  - dns.question.class
+  - dns.question.name
+  - dns.question.registered_domain
+  - dns.question.subdomain
+  - dns.question.top_level_domain
+  - dns.question.type
+  - dns.resolved_ip
+  - dns.response_code
+  - dns.type
+  - ecs.version
+  - event.category
+  - event.created
+  - event.dataset
+  - event.duration
+  - event.end
+  - event.ingested
+  - event.kind
+  - event.module
+  - event.original
+  - event.outcome
+  - event.severity
+  - event.start
+  - event.type
+  - file.name
+  - file.path
+  - file.size
+  - host.architecture
+  - host.domain
+  - host.hostname
+  - host.id
+  - host.mac
+  - host.name
+  - host.os.family
+  - host.os.kernel
+  - host.os.name
+  - host.os.platform
+  - host.os.version
+  - host.type
+  - http.request.method
+  - http.request.referrer
+  - http.response.body.bytes
+  - http.response.status_code
+  - log.file.path
+  - message
+  - network.bytes
+  - network.community_id
+  - network.packets
+  - network.protocol
+  - network.transport
+  - related.hash
+  - related.hosts
+  - related.ip
+  - rule.category
+  - rule.id
+  - rule.name
+  - source.address
+  - source.as.number
+  - source.as.organization.name
+  - source.bytes
+  - source.geo.city_name
+  - source.geo.continent_name
+  - source.geo.country_iso_code
+  - source.geo.country_name
+  - source.geo.location
+  - source.geo.region_iso_code
+  - source.geo.region_name
+  - source.ip
+  - source.mac
+  - source.packets
+  - source.port
+  - tags
+  - threat.framework
+  - threat.tactic.id
+  - threat.tactic.name
+  - threat.technique.id
+  - threat.technique.name
+  - tls.client.ja3
+  - tls.client.server_name
+  - tls.resumed
+  - tls.server.hash.sha1
+  - tls.server.issuer
+  - tls.server.ja3s
+  - tls.server.not_after
+  - tls.server.not_before
+  - tls.server.subject
+  - tls.server.x509.issuer.common_name
+  - tls.server.x509.issuer.country
+  - tls.server.x509.issuer.locality
+  - tls.server.x509.issuer.organization
+  - tls.server.x509.issuer.organizational_unit
+  - tls.server.x509.issuer.state_or_province
+  - tls.server.x509.not_after
+  - tls.server.x509.not_before
+  - tls.server.x509.serial_number
+  - tls.server.x509.subject.common_name
+  - tls.server.x509.subject.country
+  - tls.server.x509.subject.locality
+  - tls.server.x509.subject.organization
+  - tls.server.x509.subject.organizational_unit
+  - tls.server.x509.subject.state_or_province
+  - tls.version
+  - tls.version_protocol
+  - url.domain
+  - url.original
+  - url.path
+  - url.query
+  - user_agent.device.name
+  - user_agent.name
+  - user_agent.original
+  - user_agent.os.full
+  - user_agent.os.name
+  - user_agent.os.version
+  - user_agent.version
+  fields:
+  - name: suricata
+    type:
+      type: struct
+      fields:
+      - name: eve
+        type:
+          type: struct
+          fields:
+          - name: alert
+            type:
+              type: struct
+              fields:
+              - name: affected_product
+                type:
+                  element: string
+                  type: list
+              - name: attack_target
+                type:
+                  element: string
+                  type: list
+              - name: capec_id
+                type:
+                  element: string
+                  type: list
+              - name: category
+                type: string
+              - name: classtype
+                type:
+                  element: string
+                  type: list
+              - name: created_at
+                type: timestamp
+              - name: cve
+                type:
+                  element: string
+                  type: list
+              - name: cvss_v2_base
+                type:
+                  element: string
+                  type: list
+              - name: cvss_v2_temporal
+                type:
+                  element: string
+                  type: list
+              - name: cvss_v3_base
+                type:
+                  element: string
+                  type: list
+              - name: cvss_v3_temporal
+                type:
+                  element: string
+                  type: list
+              - name: cwe_id
+                type:
+                  element: string
+                  type: list
+              - name: deployment
+                type:
+                  element: string
+                  type: list
+              - name: former_category
+                type:
+                  element: string
+                  type: list
+              - name: gid
+                type: long
+              - name: hostile
+                type:
+                  element: string
+                  type: list
+              - name: infected
+                type:
+                  element: string
+                  type: list
+              - name: malware
+                type:
+                  element: string
+                  type: list
+              - name: metadata
+                type: string
+              - name: mitre_tool_id
+                type:
+                  element: string
+                  type: list
+              - name: performance_impact
+                type:
+                  element: string
+                  type: list
+              - name: priority
+                type:
+                  element: string
+                  type: list
+              - name: protocols
+                type:
+                  element: string
+                  type: list
+              - name: rev
+                type: long
+              - name: rule_source
+                type:
+                  element: string
+                  type: list
+              - name: sid
+                type:
+                  element: string
+                  type: list
+              - name: signature
+                type: string
+              - name: signature_id
+                type: long
+              - name: signature_severity
+                type: string
+              - name: tag
+                type:
+                  element: string
+                  type: list
+              - name: updated_at
+                type: timestamp
+          - name: app_proto_expected
+            type: string
+          - name: app_proto_orig
+            type: string
+          - name: app_proto_tc
+            type: string
+          - name: app_proto_ts
+            type: string
+          - name: dns
+            type:
+              type: struct
+              fields:
+              - name: id
+                type: long
+              - name: rcode
+                type: string
+              - name: rdata
+                type: string
+              - name: rrname
+                type: string
+              - name: rrtype
+                type: string
+              - name: ttl
+                type: long
+              - name: tx_id
+                type: long
+              - name: type
+                type: string
+          - name: email
+            type:
+              type: struct
+              fields:
+              - name: status
+                type: string
+          - name: event_type
+            type: string
+          - name: fileinfo
+            type:
+              type: struct
+              fields:
+              - name: gaps
+                type: boolean
+              - name: md5
+                type: string
+              - name: sha1
+                type: string
+              - name: sha256
+                type: string
+              - name: state
+                type: string
+              - name: stored
+                type: boolean
+              - name: tx_id
+                type: long
+          - name: flow
+            type:
+              type: struct
+              fields:
+              - name: age
+                type: long
+              - name: alerted
+                type: boolean
+              - name: end
+                type: timestamp
+              - name: reason
+                type: string
+              - name: state
+                type: string
+          - name: flow_id
+            type: string
+          - name: http
+            type:
+              type: struct
+              fields:
+              - name: http_content_type
+                type: string
+              - name: http_port
+                type: long
+              - name: protocol
+                type: string
+              - name: redirect
+                type: string
+          - name: icmp_code
+            type: long
+          - name: icmp_type
+            type: long
+          - name: in_iface
+            type: string
+          - name: pcap_cnt
+            type: long
+          - name: smtp
+            type:
+              type: struct
+              fields:
+              - name: helo
+                type: string
+              - name: mail_from
+                type: string
+              - name: rcpt_to
+                type: string
+          - name: ssh
+            type:
+              type: struct
+              fields:
+              - name: client
+                type:
+                  type: struct
+                  fields:
+                  - name: proto_version
+                    type: string
+                  - name: software_version
+                    type: string
+              - name: server
+                type:
+                  type: struct
+                  fields:
+                  - name: proto_version
+                    type: string
+                  - name: software_version
+                    type: string
+          - name: stats
+            type:
+              type: struct
+              fields:
+              - name: app_layer
+                type:
+                  type: struct
+                  fields:
+                  - name: flow
+                    type:
+                      type: struct
+                      fields:
+                      - name: dcerpc_tcp
+                        type: long
+                      - name: dcerpc_udp
+                        type: long
+                      - name: dns_tcp
+                        type: long
+                      - name: dns_udp
+                        type: long
+                      - name: failed_tcp
+                        type: long
+                      - name: failed_udp
+                        type: long
+                      - name: ftp
+                        type: long
+                      - name: http
+                        type: long
+                      - name: imap
+                        type: long
+                      - name: msn
+                        type: long
+                      - name: smb
+                        type: long
+                      - name: smtp
+                        type: long
+                      - name: ssh
+                        type: long
+                      - name: tls
+                        type: long
+                  - name: tx
+                    type:
+                      type: struct
+                      fields:
+                      - name: dcerpc_tcp
+                        type: long
+                      - name: dcerpc_udp
+                        type: long
+                      - name: dns_tcp
+                        type: long
+                      - name: dns_udp
+                        type: long
+                      - name: ftp
+                        type: long
+                      - name: http
+                        type: long
+                      - name: smb
+                        type: long
+                      - name: smtp
+                        type: long
+                      - name: ssh
+                        type: long
+                      - name: tls
+                        type: long
+              - name: capture
+                type:
+                  type: struct
+                  fields:
+                  - name: kernel_drops
+                    type: long
+                  - name: kernel_ifdrops
+                    type: long
+                  - name: kernel_packets
+                    type: long
+              - name: decoder
+                type:
+                  type: struct
+                  fields:
+                  - name: avg_pkt_size
+                    type: long
+                  - name: bytes
+                    type: long
+                  - name: dce
+                    type:
+                      type: struct
+                      fields:
+                      - name: pkt_too_small
+                        type: long
+                  - name: erspan
+                    type: long
+                  - name: ethernet
+                    type: long
+                  - name: gre
+                    type: long
+                  - name: icmpv4
+                    type: long
+                  - name: icmpv6
+                    type: long
+                  - name: ieee8021ah
+                    type: long
+                  - name: invalid
+                    type: long
+                  - name: ipraw
+                    type:
+                      type: struct
+                      fields:
+                      - name: invalid_ip_version
+                        type: long
+                  - name: ipv4
+                    type: long
+                  - name: ipv4_in_ipv6
+                    type: long
+                  - name: ipv6
+                    type: long
+                  - name: ipv6_in_ipv6
+                    type: long
+                  - name: ltnull
+                    type:
+                      type: struct
+                      fields:
+                      - name: pkt_too_small
+                        type: long
+                      - name: unsupported_type
+                        type: long
+                  - name: max_pkt_size
+                    type: long
+                  - name: mpls
+                    type: long
+                  - name: 'null'
+                    type: long
+                  - name: pkts
+                    type: long
+                  - name: ppp
+                    type: long
+                  - name: pppoe
+                    type: long
+                  - name: raw
+                    type: long
+                  - name: sctp
+                    type: long
+                  - name: sll
+                    type: long
+                  - name: tcp
+                    type: long
+                  - name: teredo
+                    type: long
+                  - name: udp
+                    type: long
+                  - name: vlan
+                    type: long
+                  - name: vlan_qinq
+                    type: long
+              - name: defrag
+                type:
+                  type: struct
+                  fields:
+                  - name: ipv4
+                    type:
+                      type: struct
+                      fields:
+                      - name: fragments
+                        type: long
+                      - name: reassembled
+                        type: long
+                      - name: timeouts
+                        type: long
+                  - name: ipv6
+                    type:
+                      type: struct
+                      fields:
+                      - name: fragments
+                        type: long
+                      - name: reassembled
+                        type: long
+                      - name: timeouts
+                        type: long
+                  - name: max_frag_hits
+                    type: long
+              - name: detect
+                type:
+                  type: struct
+                  fields:
+                  - name: alert
+                    type: long
+              - name: dns
+                type:
+                  type: struct
+                  fields:
+                  - name: memcap_global
+                    type: long
+                  - name: memcap_state
+                    type: long
+                  - name: memuse
+                    type: long
+              - name: file_store
+                type:
+                  type: struct
+                  fields:
+                  - name: open_files
+                    type: long
+              - name: flow
+                type:
+                  type: struct
+                  fields:
+                  - name: emerg_mode_entered
+                    type: long
+                  - name: emerg_mode_over
+                    type: long
+                  - name: icmpv4
+                    type: long
+                  - name: icmpv6
+                    type: long
+                  - name: memcap
+                    type: long
+                  - name: memuse
+                    type: long
+                  - name: spare
+                    type: long
+                  - name: tcp
+                    type: long
+                  - name: tcp_reuse
+                    type: long
+                  - name: udp
+                    type: long
+              - name: flow_mgr
+                type:
+                  type: struct
+                  fields:
+                  - name: bypassed_pruned
+                    type: long
+                  - name: closed_pruned
+                    type: long
+                  - name: est_pruned
+                    type: long
+                  - name: flows_checked
+                    type: long
+                  - name: flows_notimeout
+                    type: long
+                  - name: flows_removed
+                    type: long
+                  - name: flows_timeout
+                    type: long
+                  - name: flows_timeout_inuse
+                    type: long
+                  - name: new_pruned
+                    type: long
+                  - name: rows_busy
+                    type: long
+                  - name: rows_checked
+                    type: long
+                  - name: rows_empty
+                    type: long
+                  - name: rows_maxlen
+                    type: long
+                  - name: rows_skipped
+                    type: long
+              - name: http
+                type:
+                  type: struct
+                  fields:
+                  - name: memcap
+                    type: long
+                  - name: memuse
+                    type: long
+              - name: tcp
+                type:
+                  type: struct
+                  fields:
+                  - name: insert_data_normal_fail
+                    type: long
+                  - name: insert_data_overlap_fail
+                    type: long
+                  - name: insert_list_fail
+                    type: long
+                  - name: invalid_checksum
+                    type: long
+                  - name: memuse
+                    type: long
+                  - name: no_flow
+                    type: long
+                  - name: overlap
+                    type: long
+                  - name: overlap_diff_data
+                    type: long
+                  - name: pseudo
+                    type: long
+                  - name: pseudo_failed
+                    type: long
+                  - name: reassembly_gap
+                    type: long
+                  - name: reassembly_memuse
+                    type: long
+                  - name: rst
+                    type: long
+                  - name: segment_memcap_drop
+                    type: long
+                  - name: sessions
+                    type: long
+                  - name: ssn_memcap_drop
+                    type: long
+                  - name: stream_depth_reached
+                    type: long
+                  - name: syn
+                    type: long
+                  - name: synack
+                    type: long
+              - name: uptime
+                type: long
+          - name: tcp
+            type:
+              type: struct
+              fields:
+              - name: ack
+                type: boolean
+              - name: fin
+                type: boolean
+              - name: psh
+                type: boolean
+              - name: rst
+                type: boolean
+              - name: state
+                type: string
+              - name: syn
+                type: boolean
+              - name: tcp_flags
+                type: string
+              - name: tcp_flags_tc
+                type: string
+              - name: tcp_flags_ts
+                type: string
+          - name: tls
+            type:
+              type: struct
+              fields:
+              - name: fingerprint
+                type: string
+              - name: issuerdn
+                type: string
+              - name: ja3
+                type:
+                  type: struct
+                  fields:
+                  - name: hash
+                    type: string
+                  - name: string
+                    type: string
+              - name: ja3s
+                type:
+                  type: struct
+                  fields:
+                  - name: hash
+                    type: string
+                  - name: string
+                    type: string
+              - name: notafter
+                type: timestamp
+              - name: notbefore
+                type: timestamp
+              - name: serial
+                type: string
+              - name: session_resumed
+                type: boolean
+              - name: sni
+                type: string
+              - name: subject
+                type: string
+              - name: version
+                type: string
+          - name: tx_id
+            type: long
