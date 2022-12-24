@@ -403,10 +403,24 @@ transform: |-
   parsed, err = parse_url(.suricata.eve.http.url)
   if err == null {
       .url = object!(.url)                                                        
-      .url |= parsed                                          
+      .url |= parsed
+
+      if .url.query != null {
+          query = []
+          for_each(object!(.url.query)) -> |k, v| {
+              v = if v != "" { k + "=" + v } else { k }
+              query = push(query, v)
+          }
+          query = join(query, "&") ?? null
+          .url.query = query
+      }
+
+      del(.url.scheme)
+      del(.url.host)
   }                                                                         
 
   .url.original = del(.suricata.eve.http.url)
+  .url.path = .url.path || .url.original
 
   .http.request.referrer = del(.suricata.eve.http.http_refer)
 
