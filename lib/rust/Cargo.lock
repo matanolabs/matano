@@ -1523,6 +1523,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "csv-async"
+version = "1.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c19b33b32fd48f83388821bd8f534b59e1b1ffd5c6c83771d1b23abd3dac2685"
+dependencies = [
+ "bstr",
+ "cfg-if",
+ "csv-core",
+ "futures",
+ "itoa 1.0.1",
+ "ryu",
+ "serde",
+ "tokio",
+ "tokio-stream",
+]
+
+[[package]]
 name = "csv-core"
 version = "0.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4495,6 +4512,7 @@ dependencies = [
  "aws_lambda_events",
  "chrono",
  "config",
+ "csv-async",
  "dyn-clone",
  "flame",
  "futures",

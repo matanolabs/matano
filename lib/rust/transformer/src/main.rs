@@ -30,6 +30,7 @@ use async_stream::stream;
 use futures::future::join_all;
 use futures::{stream, Stream, StreamExt, TryStreamExt};
 use serde_json::json;
+use csv_async::AsyncReaderBuilder;
 use tokio_stream::StreamMap;
 use tokio_util::codec::{FramedRead, LinesCodec};
 use walkdir::WalkDir;
@@ -394,12 +395,34 @@ async fn read_events_s3<'a>(
                 }
             })
         }
-        None => FramedRead::new(reader, LinesCodec::new())
-            .map(|v| match v {
-                Ok(v) => Ok(Value::from(v)),
-                Err(e) => Err(anyhow!(e)),
-            })
-            .boxed(),
+        None => {
+            if r.key.ends_with("csv") {
+                let rdr = AsyncReaderBuilder::new()
+                    .has_headers(true)
+                    .create_deserializer(reader);
+
+                let records = rdr.into_deserialize::<HashMap<String, serde_json::Value>>();
+
+                records
+                    .map(|r| match r {
+                        Ok(r) => {
+                            let json_val: serde_json::Value = serde_json::Value::Object(serde_json::Map::from_iter(r.into_iter()));
+                            Ok(Value::from(json_val))
+                        },
+                        Err(e) => Err(anyhow!(e)),
+                    })
+                    .boxed()
+            } else {
+                FramedRead::new(reader, LinesCodec::new())
+                    .map(|v| match v {
+                        Ok(v) => {
+                            Ok(Value::from(v))
+                        },
+                        Err(e) => Err(anyhow!(e)),
+                    })
+                    .boxed()
+            }
+        },
     };
 
     let is_from_cloudwatch_log_subscription = LOG_SOURCES_CONFIG

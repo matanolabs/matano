@@ -8,3 +8,4 @@ log_sources_configuration.*
 **/*/test.json
 transformer/src/enrichment
 transformer/config
+.idea
