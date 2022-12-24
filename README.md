@@ -191,7 +191,7 @@ Adding this VRL program to your log source as a `transform` step would accomplis
 ###### log_source.yml
 ```yml
 transform: |
-  . = object!(parse_json!(string!(.line)))
+  . = object!(parse_json!(string!(.json.line)))
   .source.ip = del(.srcIpAddress)
   del(.username)
   .message = downcase(string!(.message))
