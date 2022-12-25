@@ -239,7 +239,7 @@ def run_detection(record_data: RecordData, detection_config):
         )
         alert_runbook = safe_call(detection_module, "runbook", record_data.record)
         alert_reference = safe_call(detection_module, "reference", record_data.record)
-        alert_context = safe_call(detection_module, "contextualize", record_data.record)
+        alert_context = safe_call(detection_module, "alert_context", record_data.record)
         alert_destinations = safe_call(
             detection_module, "destinations", record_data.record
         )
