@@ -81,6 +81,7 @@ We are on a mission to build the first open platform for threat hunting, detecti
 #### Enrichment / Threat Intel
 
 - **AbuseCH** ([URLhaus](https://urlhaus.abuse.ch), [MalwareBazaar](https://bazaar.abuse.ch), [ThreatFox](https://threatfox.abuse.ch))
+- [**AlientVault OTX**](https://otx.alienvault.com/api)
 - **MaxMind GeoIP** (_coming soon_)
 - **GreyNoise Intelligence** (_coming soon_)
 - **Custom 🔧** (_coming soon_)
@@ -318,10 +319,10 @@ select
   count(*) as match_count,
   min(matano.alert.first_matched_at) as first_matched_at,
   max(ts) as last_matched_at,
-  flatten(array_distinct(array_agg(related.ip))) as related_ip,
-  flatten(array_distinct(array_agg(related.user))) as related_user,
-  flatten(array_distinct(array_agg(related.hosts))) as related_hosts,
-  flatten(array_distinct(array_agg(related.hash))) as related_hash
+  array_distinct(flatten(array_agg(related.ip))) as related_ip,
+  array_distinct(flatten(array_agg(related.user))) as related_user,
+  array_distinct(flatten(array_agg(related.hosts))) as related_hosts,
+  array_distinct(flatten(array_agg(related.hash))) as related_hash
 from
   matano_alerts
 where
