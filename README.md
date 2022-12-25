@@ -360,6 +360,17 @@ For general help on using Matano, please refer to the official Matano [documenta
 - [GitHub](https://github.com/matanolabs/matano) \(Bug reports, Contributions\)
 - [Twitter](https://twitter.com/matanolabs) \(Get news hot off the press\)
 
+## Contributors
+
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
+
+<!-- markdownlint-restore -->
+<!-- prettier-ignore-end -->
+
+<!-- ALL-CONTRIBUTORS-LIST:END -->
+
 ## License
 
 - [Apache-2.0 License](LICENSE)
