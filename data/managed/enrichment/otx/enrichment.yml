@@ -1,0 +1,115 @@
+enrichment_type: dynamic
+write_mode: append
+
+transform: |
+  .event.kind = "enrichment"
+  .event.category = ["threat"]
+  .event.type = ["indicator"]
+  .event.id = to_string!(.json.id)
+
+  .tags = .json.tags
+
+  # TODO: correct?
+  .threat.software.alias = .json.malware_families
+
+  .threat.indicator.description = .json.description
+  .threat.indicator.reference = if (is_array(.json.references)) {
+      join!(.json.references, ",")
+  } else {
+      .json.reference
+  }
+
+  .threat.indicator.first_seen = to_timestamp(join([.json.created, "Z"]) ?? null) ?? null
+  .threat.indicator.modified_at = to_timestamp(join([.json.modified, "Z"]) ?? null) ?? null
+
+  .threat.indicator.marking.tlp = upcase!(.json.tlp)
+  .threat.indicator.provider = .json.author_name
+
+  .threat.technique.id = .json.attack_ids
+
+  otype, err = string(.json.type)
+  .threat.indicator.type =
+  if (starts_with(otype, "FileHash")) {
+      # "FileHash-MD5", "FileHash-SHA1", "FileHash-SHA256"
+      hash_type = downcase(replace(otype, "FileHash-", ""))
+      .threat.indicator.file.hash = set!({}, [hash_type], .json.indicator)
+      "file"
+  } else if otype == "IPv4" {
+      .threat.indicator.ip = .json.indicator
+      "ipv4-addr"
+  } else if otype == "URL" {
+      url = parse_url!(.json.indicator)
+      url.domain = del(url.host)
+
+      if url.query != null {
+          query = []
+          for_each(url.query) -> |k, v| {
+              query = push(query, k + "=" + v)
+          }
+          query = join(query, "&") ?? null
+          url.query = query
+      }
+      url = compact(url)
+      .threat.indicator.url = url
+      .threat.indicator.url.original = .json.indicator
+      .threat.indicator.url.full = .json.indicator
+      "url"
+  } else if otype == "hostname" || otype == "domain" {
+      .threat.indicator.url.domain = .json.indicator
+      "domain-name"
+  }
+
+  .otx.pulse_id = .json.pulse_id
+  .otx.revision = .json.revision
+  .otx.name = .json.name
+  .otx.title = .json.title
+  .otx.adversary = .json.adversary
+  .otx.role = .json.role
+  .otx.public = .json.public
+  .otx.targeted_countries = .json.targeted_countries
+  .otx.industries = .json.industries
+
+schema:
+  ecs_field_names:
+    - ecs.version
+    - event
+    - related
+    - threat.technique
+    - threat.indicator.description
+    - threat.indicator.reference
+    - threat.indicator.first_seen
+    - threat.indicator.last_seen
+    - threat.indicator.modified_at
+    - threat.indicator.marking.tlp
+    - threat.indicator.file.hash
+    - threat.indicator.url
+    - threat.indicator.ip
+    - threat.software.alias
+
+  fields:
+    - name: otx
+      type:
+        type: struct
+        fields:
+          - name: pulse_id
+            type: string
+          - name: revision
+            type: int
+          - name: name
+            type: string
+          - name: title
+            type: string
+          - name: adversary
+            type: string
+          - name: role
+            type: string
+          - name: public
+            type: int
+          - name: targeted_countries
+            type:
+              type: list
+              element: string
+          - name: industries
+            type:
+              type: list
+              element: string

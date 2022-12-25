@@ -13,6 +13,7 @@ use shared::secrets::load_secret;
 
 mod abusech;
 mod o365;
+mod otx;
 
 #[derive(Clone)]
 pub struct PullerCache {
@@ -101,6 +102,7 @@ pub trait PullLogs {
 #[enum_dispatch(PullLogs)]
 pub enum LogSource {
     O365Puller(o365::O365Puller),
+    Otx(otx::OtxPuller),
     AbuseChUrlhausPuller(abusech::AbuseChUrlhausPuller),
     AbuseChMalwareBazaarPuller(abusech::AbuseChMalwareBazaarPuller),
     AbuseChThreatfoxPuller(abusech::AbuseChThreatfoxPuller),
@@ -110,6 +112,7 @@ impl LogSource {
     pub fn from_str(s: &str) -> Option<LogSource> {
         match s.to_lowercase().as_str() {
             "o365" => Some(LogSource::O365Puller(o365::O365Puller {})),
+            "otx" => Some(LogSource::Otx(otx::OtxPuller {})),
             "abusech_urlhaus" => Some(LogSource::AbuseChUrlhausPuller(
                 abusech::AbuseChUrlhausPuller {},
             )),

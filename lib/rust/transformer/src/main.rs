@@ -504,7 +504,9 @@ async fn read_events_s3<'a>(
 }
 
 pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
-    info!("Request: {:?}", event);
+    event.payload.records.first().iter().for_each(|r| {
+        info!("Request: {}", serde_json::to_string(&json!({ "message_id": r.message_id, "body": r.body, "message_attributes": r.message_attributes })).unwrap_or_default());
+    });
 
     let s3_download_items = event
         .payload
