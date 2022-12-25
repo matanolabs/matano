@@ -37,7 +37,6 @@ interface EnrichmentTableProps {
   enrichConfig: any;
   enrichmentIngestionBucket: s3.IBucket;
   enrichmentSyncerQueue: sqs.IQueue;
-  syncerScheduleRule: events.Rule;
   realtimeTopic: sns.Topic;
   lakeWriterLambda: lambda.Function;
   dataFilePath?: any;
@@ -83,8 +82,13 @@ export class EnrichmentTable extends Construct {
       }
     }
 
+    const scheduleRule = new events.Rule(this, "EventsRule", {
+      description: `[Matano] Schedules the enrichment table log syncer for table: ${tableName}`,
+      schedule: events.Schedule.rate(cdk.Duration.minutes(3)),
+    });
+
     // run for both dynamic and static to do syncing (simplify)
-    props.syncerScheduleRule.addTarget(
+    scheduleRule.addTarget(
       new SqsQueueTarget(props.enrichmentSyncerQueue, {
         message: events.RuleTargetInput.fromObject({
           time: events.EventField.time,
@@ -185,18 +189,12 @@ export class Enrichment extends Construct {
     });
     this.enrichmentSyncerFunc.currentVersion.addEventSource(syncerEventSource);
 
-    const scheduleRule = new events.Rule(this, "EventsRule", {
-      description: "[Matano] Schedules the enrichment table log syncer.",
-      schedule: events.Schedule.rate(cdk.Duration.minutes(3)),
-    });
-
     for (const [tableName, { enrichConfig, dataFilePath }] of Object.entries(this.enrichmentConfigs)) {
       const enrichTable = new EnrichmentTable(this, `EnrichTable-${tableName}`, {
         enrichConfig,
         dataFilePath,
         enrichmentIngestionBucket: props.enrichmentIngestionBucket,
         enrichmentSyncerQueue,
-        syncerScheduleRule: scheduleRule,
         realtimeTopic: props.realtimeTopic,
         lakeWriterLambda: props.lakeWriterLambda,
       });

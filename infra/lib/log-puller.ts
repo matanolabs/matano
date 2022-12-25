@@ -86,30 +86,39 @@ export class ExternalLogPuller extends Construct {
       },
     });
 
-    const scheduleRules: Record<string, events.Rule> = {};
+    // Can only add 5 targets per rule.
+    let rateMap: Record<string, any[]> = {};
     for (const logSourceName of props.logSources) {
       const [_, rate] =
         Object.entries(LOG_SOURCE_RATES).find(([k, _]) => logSourceName.startsWith(k)) ?? fail("Invalid log source.");
-      let scheduleRule;
-      if (Object.keys(scheduleRules).includes(rate.toSeconds().toString())) {
-        scheduleRule = scheduleRules[rate.toSeconds()];
-      } else {
-        scheduleRule = new events.Rule(this, `EventsRule-${rate.toSeconds()}`, {
-          description: "[Matano] Schedules the external Log puller lambda function.",
-          schedule: events.Schedule.rate(rate),
-        });
-        scheduleRules[rate.toSeconds()] = scheduleRule;
-      }
 
-      scheduleRule.addTarget(
-        new SqsQueueTarget(queue, {
-          message: events.RuleTargetInput.fromObject({
-            time: events.EventField.time,
-            log_source_name: logSourceName,
-            rate_minutes: rate.toMinutes(),
-          }),
-        })
-      );
+      if (Object.keys(rateMap).includes(rate.toSeconds().toString())) {
+        rateMap[rate.toSeconds()].push(logSourceName);
+      } else {
+        rateMap[rate.toSeconds()] = [logSourceName];
+      }
+    }
+    rateMap = Object.fromEntries(Object.entries(rateMap).map(([k, v]) => [k, chunk(v, 5)]));
+
+    for (const [rate, logSourceChunks] of Object.entries(rateMap)) {
+      for (const [idx, logSourceChunk] of logSourceChunks.entries()) {
+        const scheduleRule = new events.Rule(this, `EventsRule-${rate}-${idx}`, {
+          description: "[Matano] Schedules the external Log puller lambda function.",
+          schedule: events.Schedule.rate(cdk.Duration.seconds(parseInt(rate))),
+        });
+
+        for (const logSourceName of logSourceChunk) {
+          scheduleRule.addTarget(
+            new SqsQueueTarget(queue, {
+              message: events.RuleTargetInput.fromObject({
+                time: events.EventField.time,
+                log_source_name: logSourceName,
+                rate_minutes: cdk.Duration.seconds(parseInt(rate)).toMinutes(),
+              }),
+            })
+          );
+        }
+      }
     }
 
     func.addEventSource(
@@ -120,4 +129,12 @@ export class ExternalLogPuller extends Construct {
       })
     );
   }
+}
+
+function chunk<T>(array: T[], size: number): T[][] {
+  const ret = [];
+  for (let i = 0, len = array.length; i < len; i += size) {
+    ret.push(array.slice(i, i + size));
+  }
+  return ret;
 }

@@ -212,7 +212,7 @@ export class DPMainStack extends MatanoStack {
     });
 
     const allResolvedSchemasHashStr = logSources
-      .flatMap((ls) => Object.values(ls.tablesSchemas))
+      .flatMap((ls) => [ls.name, ...Object.values(ls.tablesSchemas)])
       .reduce((prev, cur) => prev + JSON.stringify(cur), "");
     const schemasHash = md5Hash(allResolvedSchemasHashStr);
 
