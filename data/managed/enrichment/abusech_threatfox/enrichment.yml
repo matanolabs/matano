@@ -31,7 +31,21 @@ transform: |
 
   og_ioc_type = .json.ioc_type
   .threat.indicator.type = if og_ioc_type == "url" {
-      .threat.indicator.url = .json.ioc_value
+      url = parse_url!(.json.ioc_value)
+      url.domain = del(url.host)
+
+      if url.query != null {
+          query = []
+          for_each(url.query) -> |k, v| {
+              query = push(query, k + "=" + v)
+          }
+          query = join(query, "&") ?? null
+          url.query = query
+      }
+      url = compact(url)
+      .threat.indicator.url = url
+      .threat.indicator.url.original = .json.ioc_value
+      .threat.indicator.url.full = .json.ioc_value
       "url"
   } else if og_ioc_type == "domain" {
       .threat.indicator.url.domain = .json.ioc_value
@@ -39,20 +53,20 @@ transform: |
   } else if og_ioc_type == "ip:port" {
       if .json.ioc_value != null {
         ipinfo = parse_grok!(.json.ioc_value, "%{IP:ip}:%{NUMBER:port}")
-        ipinfo.port = int!(ipinfo.port)
+        ipinfo.port = to_int(ipinfo.port) ?? null
         .threat.indicator.ip = ipinfo.ip
         .threat.indicator.port = ipinfo.port
       }
       if contains(string(.threat.indicator.ip) ?? "", ":") { "ipv6-addr" } else {"ipv4-addr"}
   } else if includes(["md5_hash", "sha1_hash", "sha256_hash"], og_ioc_type) {
-      ioc_type = "file"
       hash_type = replace!(og_ioc_type, "_hash", "")
       .threat.indicator.file.hash = set!({}, [hash_type], .json.ioc_value)
+      "file"
   }
 
   .abusech.threatfox.confidence_level = .json.confidence_level
   .abusech.threatfox.malware = .json.malware
-  .abusech.threatfox.tags = if is_string(.json.tags) {
+  .tags = if is_string(.json.tags) {
     split(.json.tags, ",") ?? null
   } else { .json.tags }
   .abusech.threatfox.threat_type = .json.threat_type
@@ -93,9 +107,5 @@ schema:
                   type: int
                 - name: malware
                   type: string
-                - name: tags
-                  type:
-                    type: list
-                    element: string
                 - name: threat_type
                   type: string

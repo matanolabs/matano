@@ -38,7 +38,7 @@ transform: |
 
   .abusech.url.threat = .json.threat
   if .json.tags != "None" {
-    .abusech.url.tags = split(.json.tags, ",") ?? null
+    .tags = split(.json.tags, ",") ?? null
   }
   .abusech.url.url_status = .json.url_status
 
@@ -67,10 +67,6 @@ schema:
               fields:
                 - name: threat
                   type: string
-                - name: tags
-                  type:
-                    type: list
-                    element: string
                 - name: url_status
                   type: string
 
