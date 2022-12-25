@@ -168,8 +168,9 @@ class MatanoIcebergTableCustomResource : CFNCustomResource {
         logger.info("Received event: ${mapper.writeValueAsString(event)}")
 
         val requestProps = mapper.convertValue<MatanoTableRequest>(event.resourceProperties)
+        val schema = TypeUtil.assignIncreasingFreshIds(requestProps.schema)
         val tableProperties = requestProps.tableProperties
-        val mappingJson = NameMappingParser.toJson(MappingUtil.create(requestProps.schema))
+        val mappingJson = NameMappingParser.toJson(MappingUtil.create(schema))
         tableProperties[DEFAULT_NAME_MAPPING] = mappingJson
 
         val tableId = TableIdentifier.of(Namespace.of(MATANO_NAMESPACE), requestProps.tableName)
@@ -177,7 +178,7 @@ class MatanoIcebergTableCustomResource : CFNCustomResource {
         logger.info("Using partition: $partition")
         val table = icebergCatalog.createTable(
             tableId,
-            requestProps.schema,
+            schema,
             partition,
             tableProperties
         )
@@ -212,8 +213,8 @@ class MatanoIcebergTableCustomResource : CFNCustomResource {
 
             val highestExistingId = TypeUtil.indexById(existingSchema.asStruct()).keys.max()
             val newIdCounter = AtomicInteger(highestExistingId + 1)
-
             val resolvedNewSchema = TypeUtil.assignFreshIds(newProps.schema, existingSchema) { newIdCounter.incrementAndGet() }
+
             logger.info("Using resolved schema:")
             logger.info(SchemaParser.toJson(resolvedNewSchema))
 
