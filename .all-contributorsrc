@@ -1,0 +1,132 @@
+{
+  "projectName": "matano",
+  "projectOwner": "matanolabs",
+  "repoType": "github",
+  "repoHost": "https://github.com",
+  "files": [
+    "README.md"
+  ],
+  "imageSize": 100,
+  "commit": false,
+  "commitConvention": "angular",
+  "contributors": [
+    {
+      "login": "shaeqahmed",
+      "name": "Shaeq Ahmed",
+      "avatar_url": "https://avatars.githubusercontent.com/u/13088492?v=4",
+      "profile": "https://github.com/shaeqahmed",
+      "contributions": [
+        "maintenance"
+      ]
+    },
+    {
+      "login": "Samrose-Ahmed",
+      "name": "Samrose",
+      "avatar_url": "https://avatars.githubusercontent.com/u/9027301?v=4",
+      "profile": "https://www.matano.dev/",
+      "contributions": [
+        "maintenance"
+      ]
+    },
+    {
+      "login": "kai-ten",
+      "name": "Kai Herrera",
+      "avatar_url": "https://avatars.githubusercontent.com/u/11355908?v=4",
+      "profile": "https://github.com/kai-ten",
+      "contributions": [
+        "code",
+        "ideas",
+        "infra"
+      ]
+    },
+    {
+      "login": "rams3sh",
+      "name": "Ram",
+      "avatar_url": "https://avatars.githubusercontent.com/u/5143597?v=4",
+      "profile": "https://github.com/rams3sh",
+      "contributions": [
+        "bug",
+        "ideas",
+        "userTesting"
+      ]
+    },
+    {
+      "login": "zbmowrey",
+      "name": "Zach Mowrey",
+      "avatar_url": "https://avatars.githubusercontent.com/u/14931610?v=4",
+      "profile": "http://zbmowrey.com/",
+      "contributions": [
+        "ideas",
+        "bug",
+        "userTesting"
+      ]
+    },
+    {
+      "login": "marcin-kwasnicki",
+      "name": "marcin-kwasnicki",
+      "avatar_url": "https://avatars.githubusercontent.com/u/91739800?v=4",
+      "profile": "https://github.com/marcin-kwasnicki",
+      "contributions": [
+        "userTesting",
+        "bug",
+        "ideas"
+      ]
+    },
+    {
+      "login": "gdrapp",
+      "name": "Greg Rapp",
+      "avatar_url": "https://avatars.githubusercontent.com/u/346463?v=4",
+      "profile": "https://github.com/gdrapp",
+      "contributions": [
+        "bug",
+        "ideas"
+      ]
+    },
+    {
+      "login": "niheconomoum",
+      "name": "Matthew X. Economou",
+      "avatar_url": "https://avatars.githubusercontent.com/u/22075648?v=4",
+      "profile": "https://github.com/niheconomoum",
+      "contributions": [
+        "bug"
+      ]
+    },
+    {
+      "login": "jarretraim",
+      "name": "Jarret Raim",
+      "avatar_url": "https://avatars.githubusercontent.com/u/981154?v=4",
+      "profile": "https://github.com/jarretraim",
+      "contributions": [
+        "bug"
+      ]
+    },
+    {
+      "login": "mdfranz",
+      "name": "Matt Franz",
+      "avatar_url": "https://avatars.githubusercontent.com/u/47213?v=4",
+      "profile": "https://mdfranz.dev/",
+      "contributions": [
+        "bug"
+      ]
+    },
+    {
+      "login": "FrancescoFaenzi",
+      "name": "Francesco Faenzi",
+      "avatar_url": "https://avatars.githubusercontent.com/u/45026063?v=4",
+      "profile": "https://www.linkedin.com/in/francescofaenzi/",
+      "contributions": [
+        "ideas"
+      ]
+    },
+    {
+      "login": "dpnishant",
+      "name": "Nishant Das Patnaik",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1339669?v=4",
+      "profile": "https://nishant.daspatnaik.com/",
+      "contributions": [
+        "ideas"
+      ]
+    }
+  ],
+  "contributorsPerLine": 7
+}

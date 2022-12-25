@@ -63,6 +63,37 @@ We are on a mission to build the first open platform for threat hunting, detecti
 - Easier to use cloud-native open source SIEM alternative for detection & response.
 - ECS-compatible severless alternative to ELK / Elastic Security stack.
 
+## ✨ Integrations
+
+#### Managed log sources
+
+- [**AWS CloudTrail**](https://www.matano.dev/docs/log-sources/managed-log-sources/cloudtrail)
+- [**Office 365**](https://www.matano.dev/docs/log-sources/managed-log-sources/office365)
+- [**Suricata**](https://www.matano.dev/docs/log-sources/managed-log-sources/suricata)
+- [**Zeek**](https://www.matano.dev/docs/log-sources/managed-log-sources/zeek)
+- [**Custom 🔧**](#-log-transformation--data-normalization)
+
+#### Alert destinations
+
+- [**Amazon SNS**](https://www.matano.dev/docs/detections/alerting)
+- [**Slack**](https://www.matano.dev/docs/detections/alerting/slack)
+
+#### Enrichment / Threat Intel
+
+- **AbuseCH** ([URLhaus](https://urlhaus.abuse.ch), [MalwareBazaar](https://bazaar.abuse.ch), [ThreatFox](https://threatfox.abuse.ch))
+- **MaxMind GeoIP** (_coming soon_)
+- **GreyNoise Intelligence** (_coming soon_)
+- **Custom 🔧** (_coming soon_)
+
+#### Query engines
+
+- [**Amazon Athena**](https://docs.aws.amazon.com/athena/latest/ug/querying-iceberg.html) (default)
+- [**Snowflake**](https://www.snowflake.com/blog/iceberg-tables-powering-open-standards-with-snowflake-innovations/) (preview)
+- [**Spark**](https://iceberg.apache.org/spark-quickstart/)
+- [**Trino**](https://trino.io/docs/current/connector/iceberg.html)
+- [**BigQuery Omni (BigLake)**](https://cloud.google.com/biglake)
+- [**Dremio**](https://docs.dremio.com/software/data-formats/apache-iceberg/)
+
 ## Quick start
 
 [**View the complete installation instructions**](https://www.matano.dev/docs/installation)
@@ -128,36 +159,6 @@ Once initialized, your [Matano directory](https://www.matano.dev/docs/matano-dir
 
 When onboarding a new log source or authoring a detection, run `matano deploy` from anywhere in your project to deploy the changes to your account.
 
-## ✨ Integrations
-
-#### Managed log sources
-
-- [**AWS CloudTrail**](https://www.matano.dev/docs/log-sources/managed-log-sources/cloudtrail)
-- [**Office 365**](https://www.matano.dev/docs/log-sources/managed-log-sources/office365)
-- [**Suricata**](https://www.matano.dev/docs/log-sources/managed-log-sources/suricata)
-- [**Zeek**](https://www.matano.dev/docs/log-sources/managed-log-sources/zeek)
-- [**Custom 🔧**](#-log-transformation--data-normalization)
-
-#### Alert destinations
-
-- [**Amazon SNS**](https://www.matano.dev/docs/detections/alerting)
-- [**Slack**](https://www.matano.dev/docs/detections/alerting/slack)
-
-#### Enrichment / Threat Intel
-
-- **AbuseCH** ([URLhaus](https://urlhaus.abuse.ch), [MalwareBazaar](https://bazaar.abuse.ch), [ThreatFox](https://threatfox.abuse.ch))
-- **MaxMind GeoIP** (_coming soon_)
-- **GreyNoise Intelligence** (_coming soon_)
-- **Custom 🔧** (_coming soon_)
-
-#### Query engines
-
-- [**Amazon Athena**](https://docs.aws.amazon.com/athena/latest/ug/querying-iceberg.html) (default)
-- [**Snowflake**](https://www.snowflake.com/blog/iceberg-tables-powering-open-standards-with-snowflake-innovations/) (preview)
-- [**Spark**](https://iceberg.apache.org/spark-quickstart/)
-- [**Trino**](https://trino.io/docs/current/connector/iceberg.html)
-- [**BigQuery Omni (BigLake)**](https://cloud.google.com/biglake)
-- [**Dremio**](https://docs.dremio.com/software/data-formats/apache-iceberg/)
 
 ## 🔧 Log Transformation & Data Normalization
 [**Read the complete docs on configuring custom log sources**](https://www.matano.dev/docs/log-sources/configuration)
@@ -360,9 +361,39 @@ For general help on using Matano, please refer to the official Matano [documenta
 - [GitHub](https://github.com/matanolabs/matano) \(Bug reports, Contributions\)
 - [Twitter](https://twitter.com/matanolabs) \(Get news hot off the press\)
 
-## Contributors
+## 👷 Contributors
+
+Thanks go to these wonderful people ([emoji key](https://allcontributors.org/docs/en/emoji-key)):
+
 
 <!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
+<table>
+  <tbody>
+    <tr>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/shaeqahmed"><img src="https://avatars.githubusercontent.com/u/13088492?v=4?s=100" width="100px;" alt="Shaeq Ahmed"/><br /><sub><b>Shaeq Ahmed</b></sub></a><br /><a href="#maintenance-shaeqahmed" title="Maintenance">🚧</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://www.matano.dev/"><img src="https://avatars.githubusercontent.com/u/9027301?v=4?s=100" width="100px;" alt="Samrose"/><br /><sub><b>Samrose</b></sub></a><br /><a href="#maintenance-Samrose-Ahmed" title="Maintenance">🚧</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/kai-ten"><img src="https://avatars.githubusercontent.com/u/11355908?v=4?s=100" width="100px;" alt="Kai Herrera"/><br /><sub><b>Kai Herrera</b></sub></a><br /><a href="https://github.com/matanolabs/matano/commits?author=kai-ten" title="Code">💻</a> <a href="#ideas-kai-ten" title="Ideas, Planning, & Feedback">🤔</a> <a href="#infra-kai-ten" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/rams3sh"><img src="https://avatars.githubusercontent.com/u/5143597?v=4?s=100" width="100px;" alt="Ram"/><br /><sub><b>Ram</b></sub></a><br /><a href="https://github.com/matanolabs/matano/issues?q=author%3Arams3sh" title="Bug reports">🐛</a> <a href="#ideas-rams3sh" title="Ideas, Planning, & Feedback">🤔</a> <a href="#userTesting-rams3sh" title="User Testing">📓</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="http://zbmowrey.com/"><img src="https://avatars.githubusercontent.com/u/14931610?v=4?s=100" width="100px;" alt="Zach Mowrey"/><br /><sub><b>Zach Mowrey</b></sub></a><br /><a href="#ideas-zbmowrey" title="Ideas, Planning, & Feedback">🤔</a> <a href="https://github.com/matanolabs/matano/issues?q=author%3Azbmowrey" title="Bug reports">🐛</a> <a href="#userTesting-zbmowrey" title="User Testing">📓</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/marcin-kwasnicki"><img src="https://avatars.githubusercontent.com/u/91739800?v=4?s=100" width="100px;" alt="marcin-kwasnicki"/><br /><sub><b>marcin-kwasnicki</b></sub></a><br /><a href="#userTesting-marcin-kwasnicki" title="User Testing">📓</a> <a href="https://github.com/matanolabs/matano/issues?q=author%3Amarcin-kwasnicki" title="Bug reports">🐛</a> <a href="#ideas-marcin-kwasnicki" title="Ideas, Planning, & Feedback">🤔</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/gdrapp"><img src="https://avatars.githubusercontent.com/u/346463?v=4?s=100" width="100px;" alt="Greg Rapp"/><br /><sub><b>Greg Rapp</b></sub></a><br /><a href="https://github.com/matanolabs/matano/issues?q=author%3Agdrapp" title="Bug reports">🐛</a> <a href="#ideas-gdrapp" title="Ideas, Planning, & Feedback">🤔</a></td>
+    </tr>
+    <tr>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/niheconomoum"><img src="https://avatars.githubusercontent.com/u/22075648?v=4?s=100" width="100px;" alt="Matthew X. Economou"/><br /><sub><b>Matthew X. Economou</b></sub></a><br /><a href="https://github.com/matanolabs/matano/issues?q=author%3Aniheconomoum" title="Bug reports">🐛</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/jarretraim"><img src="https://avatars.githubusercontent.com/u/981154?v=4?s=100" width="100px;" alt="Jarret Raim"/><br /><sub><b>Jarret Raim</b></sub></a><br /><a href="https://github.com/matanolabs/matano/issues?q=author%3Ajarretraim" title="Bug reports">🐛</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://mdfranz.dev/"><img src="https://avatars.githubusercontent.com/u/47213?v=4?s=100" width="100px;" alt="Matt Franz"/><br /><sub><b>Matt Franz</b></sub></a><br /><a href="https://github.com/matanolabs/matano/issues?q=author%3Amdfranz" title="Bug reports">🐛</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://www.linkedin.com/in/francescofaenzi/"><img src="https://avatars.githubusercontent.com/u/45026063?v=4?s=100" width="100px;" alt="Francesco Faenzi"/><br /><sub><b>Francesco Faenzi</b></sub></a><br /><a href="#ideas-FrancescoFaenzi" title="Ideas, Planning, & Feedback">🤔</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://nishant.daspatnaik.com/"><img src="https://avatars.githubusercontent.com/u/1339669?v=4?s=100" width="100px;" alt="Nishant Das Patnaik"/><br /><sub><b>Nishant Das Patnaik</b></sub></a><br /><a href="#ideas-dpnishant" title="Ideas, Planning, & Feedback">🤔</a></td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- markdownlint-restore -->
+<!-- prettier-ignore-end -->
+
+<!-- ALL-CONTRIBUTORS-LIST:END -->
 <!-- prettier-ignore-start -->
 <!-- markdownlint-disable -->
 
@@ -370,6 +401,9 @@ For general help on using Matano, please refer to the official Matano [documenta
 <!-- prettier-ignore-end -->
 
 <!-- ALL-CONTRIBUTORS-LIST:END -->
+
+This project follows the [all-contributors](https://allcontributors.org) specification.
+Contributions of any kind are welcome!
 
 ## License
 
