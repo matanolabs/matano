@@ -38,21 +38,23 @@ transform: |
       .threat.indicator.ip = .json.indicator
       "ipv4-addr"
   } else if otype == "URL" {
-      url = parse_url!(.json.indicator)
-      url.domain = del(url.host)
+      url, err = parse_url(.json.indicator)
+      if (err == null) {
+        url.domain = del(url.host)
+        if url.query != null {
+            query = []
+            for_each(object!(url.query)) -> |k, v| {
+                query = push(query, k + "=" + v)
+            }
+            query = join(query, "&") ?? null
+            url.query = query
+        }
+        url = compact(url)
+        .threat.indicator.url = url
+        .threat.indicator.url.original = .json.indicator
+        .threat.indicator.url.full = .json.indicator
 
-      if url.query != null {
-          query = []
-          for_each(url.query) -> |k, v| {
-              query = push(query, k + "=" + v)
-          }
-          query = join(query, "&") ?? null
-          url.query = query
       }
-      url = compact(url)
-      .threat.indicator.url = url
-      .threat.indicator.url.original = .json.indicator
-      .threat.indicator.url.full = .json.indicator
       "url"
   } else if otype == "hostname" || otype == "domain" {
       .threat.indicator.url.domain = .json.indicator

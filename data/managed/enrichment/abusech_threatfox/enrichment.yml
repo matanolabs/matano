@@ -31,21 +31,23 @@ transform: |
 
   og_ioc_type = .json.ioc_type
   .threat.indicator.type = if og_ioc_type == "url" {
-      url = parse_url!(.json.ioc_value)
-      url.domain = del(url.host)
+      url, err = parse_url(.json.ioc_value)
+      if (err == null) {
+        url.domain = del(url.host)
+        if url.query != null {
+            query = []
+            for_each(object!(url.query)) -> |k, v| {
+                query = push(query, k + "=" + v)
+            }
+            query = join(query, "&") ?? null
+            url.query = query
+        }
+        url = compact(url)
+        .threat.indicator.url = url
+        .threat.indicator.url.original = .json.ioc_value
+        .threat.indicator.url.full = .json.ioc_value
 
-      if url.query != null {
-          query = []
-          for_each(url.query) -> |k, v| {
-              query = push(query, k + "=" + v)
-          }
-          query = join(query, "&") ?? null
-          url.query = query
       }
-      url = compact(url)
-      .threat.indicator.url = url
-      .threat.indicator.url.original = .json.ioc_value
-      .threat.indicator.url.full = .json.ioc_value
       "url"
   } else if og_ioc_type == "domain" {
       .threat.indicator.url.domain = .json.ioc_value

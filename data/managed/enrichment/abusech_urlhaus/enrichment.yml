@@ -18,22 +18,23 @@ transform: |
   }
 
   if .json.url != null {
-      url = parse_url!(.json.url)
-      url.domain = del(url.host)
+      url, err = parse_url(.json.url)
+      if (err == null) {
+        url.domain = del(url.host)
+        if url.query != null {
+            query = []
+            for_each(object!(url.query)) -> |k, v| {
+                query = push(query, k + "=" + v)
+            }
+            query = join(query, "&") ?? null
+            url.query = query
+        }
+        url = compact(url)
+        .threat.indicator.url = url
+        .threat.indicator.url.original = .json.url
+        .threat.indicator.url.full = .json.url
 
-      if url.query != null {
-          query = []
-          for_each(url.query) -> |k, v| {
-              query = push(query, k + "=" + v)
-          }
-          query = join(query, "&") ?? null
-          url.query = query
       }
-      url = compact(url)
-
-      .threat.indicator.url = url
-      .threat.indicator.url.original = .json.url
-      .threat.indicator.url.full = .json.url
   }
 
   .abusech.url.threat = .json.threat
