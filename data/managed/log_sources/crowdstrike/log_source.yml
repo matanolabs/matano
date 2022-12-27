@@ -1,0 +1,7 @@
+name: crowdstrike
+
+ingest:
+  select_table_from_payload_metadata: |
+    if match(.__metadata.s3.key, r'^data/|^fdr/') {
+      "fdr"
+    }

@@ -1,0 +1,666 @@
+name: crowdstrike_falcon
+
+schema:
+  ecs_field_names:
+    - agent.id
+    - agent.name
+    - agent.type
+    - cloud.account.id
+    - cloud.availability_zone
+    - cloud.instance.id
+    - cloud.instance.name
+    - cloud.machine.type
+    - cloud.project.id
+    - cloud.provider
+    - cloud.region
+    - container.image.name
+    - container.labels
+    - container.name
+    - destination.ip
+    - destination.port
+    - ecs.version
+    - error.message
+    - event.action
+    - event.category
+    - event.code
+    - event.dataset
+    - event.ingested
+    - event.kind
+    - event.module
+    - event.original
+    - event.outcome
+    - event.severity
+    - event.type
+    - event.url
+    - file.hash.md5
+    - file.hash.sha1
+    - file.hash.sha256
+    - host.architecture
+    - host.domain
+    - host.hostname
+    - host.id
+    - host.ip
+    - host.mac
+    - host.name
+    - host.os.family
+    - host.os.kernel
+    - host.os.name
+    - host.os.platform
+    - host.os.version
+    - host.type
+    - log.file.path
+    - message
+    - network.direction
+    - network.type
+    - process.args
+    - process.command_line
+    - process.executable
+    - process.name
+    - process.parent.command_line
+    - process.parent.executable
+    - process.pid
+    - related.hash
+    - related.hosts
+    - related.ip
+    - related.user
+    - rule.category
+    - rule.description
+    - rule.id
+    - rule.name
+    - rule.ruleset
+    - source.ip
+    - source.port
+    - tags
+    - threat.tactic.name
+    - threat.technique.name
+    - user.domain
+    - user.email
+    - user.name
+  fields:
+    - name: crowdstrike
+      type:
+        type: struct
+        fields:
+          - name: event
+            type:
+              type: struct
+              fields:
+                - name: AuditKeyValues
+                  type:
+                    type: list
+                    element: string
+                - name: CommandLine
+                  type: string
+                - name: Commands
+                  type:
+                    type: list
+                    element: string
+                - name: ComputerName
+                  type: string
+                - name: ConnectionDirection
+                  type: string
+                - name: CustomerId
+                  type: string
+                - name: DetectDescription
+                  type: string
+                - name: DetectId
+                  type: string
+                - name: DetectName
+                  type: string
+                - name: DeviceId
+                  type: string
+                - name: EndTimestamp
+                  type: timestamp
+                - name: EventType
+                  type: string
+                - name: ExecutablesWritten
+                  type:
+                    type: list
+                    element: string
+                - name: FalconHostLink
+                  type: string
+                - name: FileName
+                  type: string
+                - name: FilePath
+                  type: string
+                - name: FineScore
+                  type: float
+                - name: Flags
+                  type:
+                    type: struct
+                    fields:
+                      - name: Audit
+                        type: boolean
+                      - name: Log
+                        type: boolean
+                      - name: Monitor
+                        type: boolean
+                - name: GrandparentCommandLine
+                  type: string
+                - name: GrandparentImageFileName
+                  type: string
+                - name: HostName
+                  type: string
+                - name: HostnameField
+                  type: string
+                - name: ICMPCode
+                  type: string
+                - name: ICMPType
+                  type: string
+                - name: IOCType
+                  type: string
+                - name: IOCValue
+                  type: string
+                - name: ImageFileName
+                  type: string
+                - name: IncidentEndTime
+                  type: timestamp
+                - name: IncidentStartTime
+                  type: timestamp
+                - name: Ipv
+                  type: string
+                - name: LateralMovement
+                  type: long
+                - name: LocalAddress
+                  type: string
+                - name: LocalIP
+                  type: string
+                - name: LocalPort
+                  type: long
+                - name: MACAddress
+                  type: string
+                - name: MD5String
+                  type: string
+                - name: MachineDomain
+                  type: string
+                - name: MatchCount
+                  type: long
+                - name: MatchCountSinceLastReport
+                  type: long
+                - name: NetworkProfile
+                  type: string
+                - name: Objective
+                  type: string
+                - name: OperationName
+                  type: string
+                - name: PID
+                  type: long
+                - name: ParentCommandLine
+                  type: string
+                - name: ParentImageFileName
+                  type: string
+                - name: ParentProcessId
+                  type: int
+                - name: PatternDispositionDescription
+                  type: string
+                - name: PatternDispositionFlags
+                  type:
+                    type: struct
+                    fields:
+                      - name: BootupSafeguardEnabled
+                        type: boolean
+                      - name: CriticalProcessDisabled
+                        type: boolean
+                      - name: Detect
+                        type: boolean
+                      - name: FsOperationBlocked
+                        type: boolean
+                      - name: InddetMask
+                        type: boolean
+                      - name: Indicator
+                        type: boolean
+                      - name: KillParent
+                        type: boolean
+                      - name: KillProcess
+                        type: boolean
+                      - name: KillSubProcess
+                        type: boolean
+                      - name: OperationBlocked
+                        type: boolean
+                      - name: PolicyDisabled
+                        type: boolean
+                      - name: ProcessBlocked
+                        type: boolean
+                      - name: QuarantineFile
+                        type: boolean
+                      - name: QuarantineMachine
+                        type: boolean
+                      - name: RegistryOperationBlocked
+                        type: boolean
+                      - name: Rooting
+                        type: boolean
+                      - name: SensorOnly
+                        type: boolean
+                - name: PatternDispositionValue
+                  type: int
+                - name: PolicyID
+                  type: string
+                - name: PolicyName
+                  type: string
+                - name: ProcessEndTime
+                  type: timestamp
+                - name: ProcessId
+                  type: int
+                - name: ProcessStartTime
+                  type: timestamp
+                - name: Protocol
+                  type: string
+                - name: RemoteAddress
+                  type: string
+                - name: RemotePort
+                  type: long
+                - name: RuleAction
+                  type: string
+                - name: RuleDescription
+                  type: string
+                - name: RuleFamilyID
+                  type: string
+                - name: RuleGroupName
+                  type: string
+                - name: RuleId
+                  type: string
+                - name: RuleName
+                  type: string
+                - name: SHA1String
+                  type: string
+                - name: SHA256String
+                  type: string
+                - name: SensorId
+                  type: string
+                - name: ServiceName
+                  type: string
+                - name: SessionId
+                  type: string
+                - name: Severity
+                  type: int
+                - name: SeverityName
+                  type: string
+                - name: StartTimestamp
+                  type: timestamp
+                - name: State
+                  type: string
+                - name: Status
+                  type: string
+                - name: Success
+                  type: boolean
+                - name: Tactic
+                  type: string
+                - name: Technique
+                  type: string
+                - name: Timestamp
+                  type: timestamp
+                - name: TreeID
+                  type: string
+                - name: UTCTimestamp
+                  type: timestamp
+                - name: UserId
+                  type: string
+                - name: UserIp
+                  type: string
+                - name: UserName
+                  type: string
+          - name: metadata
+            type:
+              type: struct
+              fields:
+                - name: customerIDString
+                  type: string
+                - name: eventCreationTime
+                  type: timestamp
+                - name: eventType
+                  type: string
+                - name: offset
+                  type: int
+                - name: version
+                  type: string
+
+transform: |
+  .event.category = []
+  .event.type = []
+  .related.hosts = []
+
+  .event.original = encode_json(.json)
+  .crowdstrike = del(.json)
+
+  del(.host.name)
+
+  if .crowdstrike.event.ProcessStartTime == 0 { 
+    del(.crowdstrike.event.ProcessStartTime)
+  }
+  if .crowdstrike.event.ProcessStartTime != null && !is_string(.crowdstrike.event.ProcessStartTime) {
+    if int!(.crowdstrike.event.ProcessStartTime) > 1000000000000 {
+      .crowdstrike.event.ProcessStartTime = to_timestamp!(.crowdstrike.event.ProcessStartTime, "milliseconds")
+    } else {
+      .crowdstrike.event.ProcessStartTime = to_timestamp!(.crowdstrike.event.ProcessStartTime, "seconds")
+    }
+  }
+
+
+  if .crowdstrike.event.ProcessEndTime == 0 { 
+    del(.crowdstrike.event.ProcessEndTime)
+  }
+  if .crowdstrike.event.ProcessEndTime != null && !is_string(.crowdstrike.event.ProcessEndTime) {
+    if int!(.crowdstrike.event.ProcessEndTime) > 1000000000000 {
+      .crowdstrike.event.ProcessEndTime = to_timestamp!(.crowdstrike.event.ProcessEndTime, "milliseconds")
+    } else {
+      .crowdstrike.event.ProcessEndTime = to_timestamp!(.crowdstrike.event.ProcessEndTime, "seconds")
+    }
+  }
+
+
+  if .crowdstrike.event.IncidentStartTime == 0 { 
+    del(.crowdstrike.event.IncidentStartTime)
+  }
+  if .crowdstrike.event.IncidentStartTime != null && !is_string(.crowdstrike.event.IncidentStartTime) {
+    if int!(.crowdstrike.event.IncidentStartTime) > 1000000000000 {
+      .crowdstrike.event.IncidentStartTime = to_timestamp!(.crowdstrike.event.IncidentStartTime, "milliseconds")
+    } else {
+      .crowdstrike.event.IncidentStartTime = to_timestamp!(.crowdstrike.event.IncidentStartTime, "seconds")
+    }
+  }
+
+
+  if .crowdstrike.event.IncidentEndTime == 0 { 
+    del(.crowdstrike.event.IncidentEndTime)
+  }
+  if .crowdstrike.event.IncidentEndTime != null && !is_string(.crowdstrike.event.IncidentEndTime) {
+    if int!(.crowdstrike.event.IncidentEndTime) > 1000000000000 {
+      .crowdstrike.event.IncidentEndTime = to_timestamp!(.crowdstrike.event.IncidentEndTime, "milliseconds")
+    } else {
+      .crowdstrike.event.IncidentEndTime = to_timestamp!(.crowdstrike.event.IncidentEndTime, "seconds")
+    }
+  }
+
+
+  if .crowdstrike.event.StartTimestamp == 0 { 
+      del(.crowdstrike.event.StartTimestamp)
+  }
+  if .crowdstrike.event.StartTimestamp == 0 { 
+    del(.crowdstrike.event.StartTimestamp)
+  }
+  if .crowdstrike.event.StartTimestamp != null && !is_string(.crowdstrike.event.StartTimestamp) {
+    if int!(.crowdstrike.event.StartTimestamp) > 1000000000000 {
+      .crowdstrike.event.StartTimestamp = to_timestamp!(.crowdstrike.event.StartTimestamp, "milliseconds")
+    } else {
+      .crowdstrike.event.StartTimestamp = to_timestamp!(.crowdstrike.event.StartTimestamp, "seconds")
+    }
+  }
+
+
+  if .crowdstrike.event.EndTimestamp == 0 { 
+    del(.crowdstrike.event.EndTimestamp)
+  }
+  if .crowdstrike.event.EndTimestamp != null && !is_string(.crowdstrike.event.EndTimestamp) {
+    if int!(.crowdstrike.event.EndTimestamp) > 1000000000000 {
+      .crowdstrike.event.EndTimestamp = to_timestamp!(.crowdstrike.event.EndTimestamp, "milliseconds")
+    } else {
+      .crowdstrike.event.EndTimestamp = to_timestamp!(.crowdstrike.event.EndTimestamp, "seconds")
+    }
+  }
+      
+
+  if .crowdstrike.event.UTCTimestamp == 0 { 
+    del(.crowdstrike.event.UTCTimestamp)
+  }
+  if .crowdstrike.event.UTCTimestamp != null && !is_string(.crowdstrike.event.UTCTimestamp) {
+    if int!(.crowdstrike.event.UTCTimestamp) > 1000000000000 {
+      .crowdstrike.event.UTCTimestamp = to_timestamp!(.crowdstrike.event.UTCTimestamp, "milliseconds")
+    } else {
+      .crowdstrike.event.UTCTimestamp = to_timestamp!(.crowdstrike.event.UTCTimestamp, "seconds")
+    }
+  }
+
+
+  if .crowdstrike.metadata.eventCreationTime == 0 { 
+    del(.crowdstrike.metadata.eventCreationTime)
+  }
+  if .crowdstrike.metadata.eventCreationTime != null && !is_string(.crowdstrike.metadata.eventCreationTime) {
+    if int!(.crowdstrike.metadata.eventCreationTime) > 1000000000000 {
+      .crowdstrike.metadata.eventCreationTime = to_timestamp!(.crowdstrike.metadata.eventCreationTime, "milliseconds")
+    } else {
+      .crowdstrike.metadata.eventCreationTime = to_timestamp!(.crowdstrike.metadata.eventCreationTime, "seconds")
+    }
+  }
+
+      
+  if .crowdstrike.event.Success == true { 
+      .event.outcome = "success"
+  }
+  if .crowdstrike.event.Success == false { 
+      .event.outcome = "failure"
+  }
+  .event.outcome = .event.outcome || "unknown"
+
+  if .crowdstrike.metadata.eventCreationTime != null {
+    .ts = .crowdstrike.metadata.eventCreationTime
+  }
+  if .crowdstrike.event.LateralMovement != null {
+    .crowdstrike.event.LateralMovement = to_int!(.crowdstrike.event.LateralMovement)
+  }
+  if .crowdstrike.event.LocalPort != null {
+    .crowdstrike.event.LocalPort = to_int!(.crowdstrike.event.LocalPort)
+  }
+  if .crowdstrike.event.MatchCount != null {
+    .crowdstrike.event.MatchCount = to_int!(.crowdstrike.event.MatchCount)
+  }
+  if .crowdstrike.event.MatchCountSinceLastReport != null {
+    .crowdstrike.event.MatchCountSinceLastReport = to_int!(.crowdstrike.event.MatchCountSinceLastReport)
+  }
+  if .crowdstrike.event.PID != null {
+    .crowdstrike.event.PID = to_int!(.crowdstrike.event.PID)
+  }
+  if .crowdstrike.event.RemotePort != null {
+    .crowdstrike.event.RemotePort = to_int!(.crowdstrike.event.RemotePort)
+  }
+  if .source.port != null {
+    .source.port = to_int!(.source.port)
+  }
+  if .destination.port != null {
+    .destination.port = to_int!(.destination.port)
+  }
+
+  .user.name = to_string!(.crowdstrike.event.UserName)
+  if .user.name == null || .user.name == "" { 
+    .user.name = to_string!(.crowdstrike.event.UserId)
+  }
+
+  if .user.name != null && length(split(.user.name, "@")) == 2 { 
+    .user.email = .user.name
+  }
+                           
+  command_line = .crowdstrike.event.CommandLine
+  if command_line != null {
+    command_line = strip_whitespace!(command_line)
+
+    if command_line != "" {
+      args = filter(split(command_line, " ")) -> |_i,v| { v != "" }  
+      .process = {
+        "command_line": command_line,
+        "args": args,
+        "executable": args[0]
+      }
+    }
+  }
+
+
+  if .crowdstrike.metadata.eventType == "DetectionSummaryEvent" {
+    .event.kind = "alert"
+    .event.category = push(.event.category, "malware")
+    .event.type = push(.event.type, "info")
+    .agent.type = "falcon"
+    if !is_nullish(.crowdstrike.event.LocalIP) {
+      .source.ip = .crowdstrike.event.LocalIP
+    }
+    if !is_nullish(.crowdstrike.event.ProcessId) {
+      .process.pid = to_int(.crowdstrike.event.ProcessId) ?? null
+    }
+    .process.parent.executable = .crowdstrike.event.ParentImageFileName
+    .process.parent.command_line = .crowdstrike.event.ParentCommandLine
+    .event.action = .crowdstrike.event.PatternDispositionDescription
+    .event.url = .crowdstrike.event.FalconHostLink
+    if !is_nullish(.crowdstrike.event.Severity) {
+      .event.severity = to_int(.crowdstrike.event.Severity) ?? null
+    }
+    .message = .crowdstrike.event.DetectDescription
+    .process.name = .crowdstrike.event.FileName
+    .user.name = .crowdstrike.event.UserName
+    .user.domain = .crowdstrike.event.MachineDomain
+    .agent.id = .crowdstrike.event.SensorId
+    .host.name = .crowdstrike.event.ComputerName
+    .file.hash.sha256 = .crowdstrike.event.SHA256String
+    if !is_nullish(.file.hash.sha256) && !match(string!(.file.hash.sha256), r'^0+$') {
+      .related.hash = push(.related.hash, .file.hash.sha256)
+    }
+    .file.hash.md5 = .crowdstrike.event.MD5String
+    if !is_nullish(.file.hash.md5) && !match(string!(.file.hash.md5), r'^0+$') {
+      .related.hash = push(.related.hash, .file.hash.md5)
+    }
+    .file.hash.sha1 = .crowdstrike.event.SHA1String
+    if !is_nullish(.file.hash.sha1) && !match(string!(.file.hash.sha1), r'^0+$') {
+      .related.hash = push(.related.hash, .file.hash.sha1)
+    }
+    .rule.name = .crowdstrike.event.DetectName
+    .rule.description = .crowdstrike.event.DetectDescription
+    .threat.technique.name = .crowdstrike.event.Technique
+    .threat.technique.name = downcase(.threat.technique.name) ?? null
+    .threat.tactic.name = .crowdstrike.event.Tactic
+    .threat.tactic.name = downcase(.threat.tactic.name) ?? null
+    if .threat.tactic.name != null {
+      .threat.tactic.name = [ .threat.tactic.name ]
+    }
+    if .threat.technique.name != null {
+      .threat.technique.name = [ .threat.technique.name ]
+    }
+  } else if .crowdstrike.metadata.eventType == "IncidentSummaryEvent" {
+    .event.kind = "alert"
+    .event.category = push(.event.category, "malware")
+    .event.type = push(.event.type, "info")
+    .agent.type = "falcon"
+    .event.action = "incident"
+    .event.url = .crowdstrike.event.FalconHostLink
+    if .crowdstrike.event.FineScore != null {
+      .message = "Incident score " + to_string!(.crowdstrike.event.FineScore)
+    }
+  } else if .crowdstrike.metadata.eventType == "UserActivityAuditEvent" {
+    .event.kind = "event"
+    .event.category = push(.event.category, "iam")
+    .event.type = push(.event.type, "change")
+    .event.action = "user_activity_audit_event"
+    .message = .crowdstrike.event.OperationName
+    if !is_nullish(.crowdstrike.event.UserIp) {
+      .source.ip = .crowdstrike.event.UserIp
+    }
+  } else if .crowdstrike.metadata.eventType == "AuthActivityAuditEvent" {
+    .event.kind = "event"
+    .event.category = push(.event.category, "authentication")
+    .event.type = push(.event.type, "change")
+    .message = .crowdstrike.event.ServiceName
+    if !is_nullish(.crowdstrike.event.UserIp) {
+      .source.ip = .crowdstrike.event.UserIp
+    }
+    if !is_nullish(.crowdstrike.event.OperationName) {
+      # TODO(): convert to snake case
+      .event.action = .crowdstrike.event.OperationName
+    }
+  } else if .crowdstrike.metadata.eventType == "FirewallMatchEvent" {
+    .event.kind = "event"
+    .event.category = push(.event.category, "network")
+    .event.type = push(.event.type, "start")
+    .event.type = push(.event.type, "connection")
+    .event.action = "firewall_match_event"
+    .message = "Firewall Rule '" + to_string!(.crowdstrike.event.RuleName) + "' triggered"
+    .network.type = .crowdstrike.event.Ipv
+    if !is_nullish(.crowdstrike.event.PID) {
+      .process.pid = to_int(.crowdstrike.event.PID) ?? null
+    }
+    .rule.id = .crowdstrike.event.RuleId
+    .rule.name = .crowdstrike.event.RuleName
+    .rule.ruleset = .crowdstrike.event.RuleGroupName
+    .rule.description = .crowdstrike.event.RuleDescription
+    .rule.category = .crowdstrike.event.RuleFamilyID
+    .host.name = .crowdstrike.event.HostName
+    .event.code = .crowdstrike.event.EventType
+    if .crowdstrike.event.ConnectionDirection == "1" {
+      .network.direction = "ingress"
+      .source.ip = .crowdstrike.event.RemoteAddress
+      .source.port = to_int(.crowdstrike.event.RemotePort) ?? null
+      .destination.ip = .crowdstrike.event.LocalAddress
+      .destination.port = to_int(.crowdstrike.event.LocalPort) ?? null
+    } else {
+      .network.direction = "egress"
+      .source.ip = .crowdstrike.event.LocalAddress
+      .source.port = to_int(.crowdstrike.event.LocalPort) ?? null
+      .destination.ip = .crowdstrike.event.RemoteAddress
+      .destination.port = to_int(.crowdstrike.event.RemotePort) ?? null
+    }
+  } else if .crowdstrike.metadata.eventType == "RemoteResponseSessionStartEvent" || .crowdstrike.metadata.eventType == "RemoteResponseSessionEndEvent" {
+    word = if .crowdstrike.metadata.eventType == "RemoteResponseSessionStartEvent" {
+      "start"
+    } else {
+      "end"
+    }
+    .event.kind = "event"
+    .event.category = push(.event.category, "network")
+    .event.category = push(.event.category, "session")
+    .event.action = "remote_response_session_" + word + "_event"
+    .event.type = push(.event.type, word)
+    .message = "Remote response session " + word + "ed."
+    .host.name = .crowdstrike.event.HostnameField
+  }
+
+
+  # TODO(): should 0 be here too
+  nullish = [null, "", "-", "N/A", "NA",] 
+  if .crowdstrike.event != null {          
+    .crowdstrike.event = map_values(object!(.crowdstrike.event)) -> |v| {
+      if includes(nullish, v) {
+        null
+      } else {
+        v
+      }
+    }                  
+  }
+  if .crowdstrike.metadata != null {          
+    .crowdstrike.metadata = map_values(object!(.crowdstrike.metadata)) -> |v| {
+      if includes(nullish, v) {
+        null
+      } else {
+        v
+      }
+    }                  
+  }
+
+  if .user.name != null && .user.name != "" { 
+      .related.user = push(.related.user, .user.name) 
+  }
+      
+  if .source.ip != null && .source.ip != "" { 
+      .related.ip = push(.related.ip, .source.ip) 
+  }
+
+  if .destination.ip != null && .destination.ip != "" { 
+      .related.ip = push(.related.ip, .destination.ip) 
+  }
+
+  if .host.name != null && .host.name != "" { 
+      .related.hosts = push(.related.hosts, .host.name) 
+  }
+
+  if .crowdstrike.event.AuditKeyValues != null {
+    .crowdstrike.event.AuditKeyValues = map_values(array!(.crowdstrike.event.AuditKeyValues)) -> |v| {
+      if !is_string(v) {
+        encode_json(v)
+      } else {
+        v
+      }
+    }
+  }
+  if .crowdstrike.event.ExecutablesWritten != null {
+    .crowdstrike.event.ExecutablesWritten = map_values(array!(.crowdstrike.event.ExecutablesWritten)) -> |v| {
+      if !is_string(v) {
+        encode_json(v)
+      } else {
+        v
+      }
+    }
+  }

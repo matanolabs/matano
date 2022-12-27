@@ -95,6 +95,8 @@ const MANAGED_LOG_SOURCE_PREFIX_MAP: Record<string, string> = {
   zeek: "zeek",
   o365: "o365",
   suricata: "suricata",
+  crowdstrike_falcon: "crowdstrike",
+  crowdstrike: "crowdstrike",
   matano_alerts: "matano_alerts", // doesn't really make sense but OK
 };
 

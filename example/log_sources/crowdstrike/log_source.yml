@@ -1,0 +1,4 @@
+name: crowdstrike
+
+managed:
+  type: CROWDSTRIKE

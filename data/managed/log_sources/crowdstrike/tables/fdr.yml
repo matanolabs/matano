@@ -1,0 +1,3744 @@
+name: fdr
+
+schema:
+  ecs_field_names:
+    - destination.address
+    - destination.as.number
+    - destination.as.organization.name
+    - destination.geo.city_name
+    - destination.geo.continent_name
+    - destination.geo.country_iso_code
+    - destination.geo.country_name
+    - destination.geo.location
+    - destination.geo.region_iso_code
+    - destination.geo.region_name
+    - destination.ip
+    - destination.port
+    - dns.question.name
+    - dns.question.registered_domain
+    - dns.question.subdomain
+    - dns.question.top_level_domain
+    - dns.question.type
+    - dns.type
+    - ecs.version
+    - event.action
+    - event.category
+    - event.created
+    - event.dataset
+    - event.id
+    - event.kind
+    - event.module
+    - event.original
+    - event.outcome
+    - event.timezone
+    - event.type
+    - file.device
+    - file.directory
+    - file.extension
+    - file.hash.sha256
+    - file.inode
+    - file.name
+    - file.path
+    - file.size
+    - file.type
+    - host.geo.city_name
+    - host.geo.continent_name
+    - host.geo.country_name
+    - host.geo.timezone
+    - host.hostname
+    - host.name
+    - log.file.path
+    - network.community_id
+    - network.direction
+    - network.iana_number
+    - network.transport
+    - observer.geo.city_name
+    - observer.geo.continent_name
+    - observer.geo.country_iso_code
+    - observer.geo.country_name
+    - observer.geo.location
+    - observer.geo.region_iso_code
+    - observer.geo.region_name
+    - observer.ip
+    - observer.serial_number
+    - observer.type
+    - observer.vendor
+    - observer.version
+    - os.type
+    - os.version
+    - process.args
+    - process.args_count
+    - process.command_line
+    - process.end
+    - process.entity_id
+    - process.executable
+    - process.exit_code
+    - process.hash.md5
+    - process.hash.sha256
+    - process.name
+    - process.parent.entity_id
+    - process.parent.name
+    - process.pgid
+    - process.pid
+    - process.start
+    - process.thread.id
+    - process.title
+    - process.uptime
+    - related.hash
+    - related.hosts
+    - related.ip
+    - related.user
+    - server.address
+    - server.domain
+    - server.registered_domain
+    - server.subdomain
+    - server.top_level_domain
+    - source.address
+    - source.as.number
+    - source.as.organization.name
+    - source.geo.city_name
+    - source.geo.continent_name
+    - source.geo.country_iso_code
+    - source.geo.country_name
+    - source.geo.location
+    - source.geo.region_iso_code
+    - source.geo.region_name
+    - source.ip
+    - source.mac
+    - source.port
+    - tags
+    - url.domain
+    - url.extension
+    - url.original
+    - url.path
+    - url.registered_domain
+    - url.scheme
+    - url.subdomain
+    - url.top_level_domain
+    - user.domain
+    - user.email
+    - user.full_name
+    - user.group.id
+    - user.id
+    - user.name
+  fields:
+    - name: crowdstrike
+      type:
+        type: struct
+        fields:
+          - name: AgentLoadFlags
+            type: string
+          - name: AgentLocalTime
+            type: timestamp
+          - name: AgentTimeOffset
+            type: float
+          - name: AgentVersion
+            type: string
+          - name: AllocateVirtualMemoryCount
+            type: long
+          - name: ApiReturnValue
+            type: string
+          - name: ArchiveFileWrittenCount
+            type: long
+          - name: AsepWrittenCount
+            type: long
+          - name: AttemptNumber
+            type: long
+          - name: AuthenticationId
+            type: string
+          - name: AuthenticationPackage
+            type: string
+          - name: AuthenticationUuid
+            type: string
+          - name: AuthenticationUuidAsString
+            type: string
+          - name: BinaryExecutableWrittenCount
+            type: long
+          - name: BiosManufacturer
+            type: string
+          - name: BiosReleaseDate
+            type: timestamp
+          - name: BiosVersion
+            type: string
+          - name: BootArgs
+            type:
+              type: list
+              element: string
+          - name: BootTimeFunctionalityLevel
+            type: string
+          - name: BoundedCount
+            type: long
+          - name: BundleID
+            type: string
+          - name: CLICreationCount
+            type: long
+          - name: CallStackModuleNames
+            type: string
+          - name: CallStackModuleNamesVersion
+            type: string
+          - name: ChannelDiffStatus
+            type: string
+          - name: ChannelId
+            type: string
+          - name: ChannelVersion
+            type: string
+          - name: ChannelVersionRequired
+            type: string
+          - name: ChasisManufacturer
+            type: string
+          - name: ChassisType
+            type: string
+          - name: ClientComputerName
+            type: string
+          - name: CompletionEventId
+            type: string
+          - name: ConHostId
+            type: string
+          - name: ConHostProcessId
+            type: string
+          - name: ConfigBuild
+            type: string
+          - name: ConfigIDBase
+            type: string
+          - name: ConfigIDBuild
+            type: string
+          - name: ConfigIDPlatform
+            type: string
+          - name: ConfigStateData
+            type:
+              type: list
+              element: string
+          - name: ConfigStateHash
+            type: string
+          - name: ConfigurationVersion
+            type: string
+          - name: ConnectTime
+            type: timestamp
+          - name: ConnectType
+            type: string
+          - name: ConnectionFlags
+            type: string
+          - name: ContextProcessId
+            type: string
+          - name: CpuClockSpeed
+            type: string
+          - name: CpuFeaturesMask
+            type: string
+          - name: CpuProcessorName
+            type: string
+          - name: CpuSignature
+            type: string
+          - name: CpuVendor
+            type: string
+          - name: CreateProcessCount
+            type: long
+          - name: CreateProcessType
+            type: string
+          - name: CurrentFunctionalityLevel
+            type: string
+          - name: CycleTime
+            type: long
+          - name: DesiredAccess
+            type: string
+          - name: DeviceId
+            type: string
+          - name: DirectoryCreatedCount
+            type: long
+          - name: DirectoryEnumeratedCount
+            type: long
+          - name: DnsRequestCount
+            type: long
+          - name: DocumentFileWrittenCount
+            type: long
+          - name: DownloadPath
+            type: string
+          - name: DownloadPort
+            type: long
+          - name: DownloadServer
+            type: string
+          - name: DualRequest
+            type: string
+          - name: ELFSubType
+            type: string
+          - name: EffectiveTransmissionClass
+            type: string
+          - name: EnabledPrivilegesBitmask
+            type: string
+          - name: Entitlements
+            type: string
+          - name: ErrorCode
+            type: string
+          - name: ErrorStatus
+            type: string
+          - name: EtwRawThreadId
+            type: long
+          - name: ExeAndServiceCount
+            type: long
+          - name: ExecutableDeletedCount
+            type: long
+          - name: FXFileSize
+            type: string
+          - name: Facility
+            type: string
+          - name: FailedConnectCount
+            type: long
+          - name: FalconGroupingTags
+            type: string
+          - name: FeatureExtractionVersion
+            type: string
+          - name: FeatureVector
+            type: string
+          - name: File
+            type: string
+          - name: FileAttributes
+            type: string
+          - name: FileDeletedCount
+            type: long
+          - name: FileEcpBitmask
+            type: string
+          - name: FileObject
+            type: string
+          - name: FirmwareAnalysisEclConsumerInterfaceVersion
+            type: string
+          - name: FirmwareAnalysisEclControlInterfaceVersion
+            type: string
+          - name: FirstSeen
+            type: timestamp
+          - name: Flags
+            type: string
+          - name: GenericFileWrittenCount
+            type: long
+          - name: GrandParentBaseFileName
+            type: string
+          - name: HostHiddenStatus
+            type: string
+          - name: IOServiceClass
+            type: string
+          - name: IOServiceName
+            type: string
+          - name: IOServicePath
+            type: string
+          - name: ImageSubsystem
+            type: string
+          - name: InContext
+            type: string
+          - name: InDiscards
+            type: string
+          - name: InErrors
+            type: string
+          - name: InMulticastPkts
+            type: string
+          - name: InOctets
+            type: string
+          - name: InUcastPkts
+            type: string
+          - name: InUnknownProtos
+            type: string
+          - name: Information
+            type: string
+          - name: InjectedDllCount
+            type: long
+          - name: InjectedThreadCount
+            type: long
+          - name: IntegrityLevel
+            type: string
+          - name: InterfaceAlias
+            type: string
+          - name: InterfaceGuid
+            type: string
+          - name: InterfaceIndex
+            type: long
+          - name: InterfaceType
+            type: string
+          - name: InterfaceVersion
+            type: string
+          - name: IrpFlags
+            type: string
+          - name: IsOnNetwork
+            type: string
+          - name: IsOnRemovableDisk
+            type: string
+          - name: IsTransactedFile
+            type: string
+          - name: KernelTime
+            type: long
+          - name: LfoUploadFlags
+            type: string
+          - name: LightningLatencyState
+            type: string
+          - name: Line
+            type: string
+          - name: LogicalCoreCount
+            type: long
+          - name: LoginSessionId
+            type: string
+          - name: LogoffTime
+            type: timestamp
+          - name: LogonDomain
+            type: string
+          - name: LogonId
+            type: string
+          - name: LogonServer
+            type: string
+          - name: LogonTime
+            type: timestamp
+          - name: LogonType
+            type: string
+          - name: MLModelVersion
+            type: string
+          - name: MachOSubType
+            type: string
+          - name: MajorFunction
+            type: string
+          - name: MajorVersion
+            type: string
+          - name: Malicious
+            type: string
+          - name: MaxThreadCount
+            type: long
+          - name: MemoryTotal
+            type: string
+          - name: MicrocodeSignature
+            type: string
+          - name: MinorFunction
+            type: string
+          - name: MinorVersion
+            type: string
+          - name: MoboManufacturer
+            type: string
+          - name: MoboProductName
+            type: string
+          - name: ModelPrediction
+            type: string
+          - name: ModuleLoadCount
+            type: long
+          - name: NDRoot
+            type: string
+          - name: NeighborList
+            type:
+              type: list
+              element: string
+          - name: NetLuidIndex
+            type: long
+          - name: NetworkBindCount
+            type: long
+          - name: NetworkCapableAsepWriteCount
+            type: long
+          - name: NetworkCloseCount
+            type: long
+          - name: NetworkConnectCount
+            type: long
+          - name: NetworkConnectCountUdp
+            type: long
+          - name: NetworkContainmentState
+            type: string
+          - name: NetworkListenCount
+            type: long
+          - name: NetworkModuleLoadCount
+            type: long
+          - name: NetworkRecvAcceptCount
+            type: long
+          - name: NewExecutableWrittenCount
+            type: long
+          - name: NewFileIdentifier
+            type: string
+          - name: OSVersionFileData
+            type: string
+          - name: OSVersionFileName
+            type: string
+          - name: OU
+            type: string
+          - name: OperationFlags
+            type: string
+          - name: Options
+            type: string
+          - name: OutErrors
+            type: string
+          - name: OutMulticastPkts
+            type: string
+          - name: OutOctets
+            type: string
+          - name: OutUcastPkts
+            type: string
+          - name: Parameter1
+            type: string
+          - name: Parameter2
+            type: string
+          - name: Parameter3
+            type: string
+          - name: ParentAuthenticationId
+            type: string
+          - name: PasswordLastSet
+            type: string
+          - name: PciAttachmentState
+            type: string
+          - name: PhysicalAddressLength
+            type: long
+          - name: PhysicalCoreCount
+            type: long
+          - name: PointerSize
+            type: string
+          - name: PreviousConnectTime
+            type: timestamp
+          - name: PrivilegedProcessHandleCount
+            type: long
+          - name: PrivilegesBitmask
+            type: string
+          - name: ProcessCount
+            type: long
+          - name: ProcessCreateFlags
+            type: string
+          - name: ProcessParameterFlags
+            type: string
+          - name: ProcessSxsFlags
+            type: string
+          - name: ProcessorPackageCount
+            type: long
+          - name: ProductType
+            type: string
+          - name: ProtectVirtualMemoryCount
+            type: long
+          - name: ProvisionState
+            type: string
+          - name: PupAdwareConfidence
+            type: string
+          - name: PupAdwareDecisionValue
+            type: string
+          - name: QueueApcCount
+            type: long
+          - name: RFMState
+            type: string
+          - name: RGID
+            type: string
+          - name: RUID
+            type: string
+          - name: ReasonOfFunctionalityLevel
+            type: string
+          - name: RegKeySecurityDecreasedCount
+            type: long
+          - name: RemoteAccount
+            type: string
+          - name: RemovableDiskFileWrittenCount
+            type: long
+          - name: RequestType
+            type: string
+          - name: RpcClientProcessId
+            type: string
+          - name: RpcClientThreadId
+            type: string
+          - name: RpcNestingLevel
+            type: string
+          - name: RpcOpNum
+            type: string
+          - name: RunDllInvocationCount
+            type: long
+          - name: SVGID
+            type: string
+          - name: SVUID
+            type: string
+          - name: ScreenshotsTakenCount
+            type: long
+          - name: ScriptEngineInvocationCount
+            type: long
+          - name: SensorGroupingTags
+            type: string
+          - name: SensorStateBitMap
+            type: string
+          - name: ServiceDisplayName
+            type: string
+          - name: ServiceEventCount
+            type: long
+          - name: ServicePackMajor
+            type: string
+          - name: SessionId
+            type: string
+          - name: SessionProcessId
+            type: string
+          - name: SetThreadContextCount
+            type: long
+          - name: ShareAccess
+            type: string
+          - name: SiteName
+            type: string
+          - name: Size
+            type: long
+          - name: SnapshotFileOpenCount
+            type: long
+          - name: SourceFileName
+            type: string
+          - name: SourceProcessId
+            type: string
+          - name: SourceThreadId
+            type: string
+          - name: Status
+            type: string
+          - name: SubStatus
+            type: string
+          - name: SuppressType
+            type: string
+          - name: SuspectStackCount
+            type: long
+          - name: SuspiciousCredentialModuleLoadCount
+            type: long
+          - name: SuspiciousDnsRequestCount
+            type: long
+          - name: SuspiciousFontLoadCount
+            type: long
+          - name: SuspiciousRawDiskReadCount
+            type: long
+          - name: SyntheticPR2Flags
+            type: string
+          - name: SystemManufacturer
+            type: string
+          - name: SystemProductName
+            type: string
+          - name: SystemSerialNumber
+            type: string
+          - name: SystemSku
+            type: string
+          - name: SystemTableIndex
+            type: long
+          - name: Tags
+            type:
+              type: list
+              element: string
+          - name: TargetFileName
+            type: string
+          - name: TargetThreadId
+            type: string
+          - name: Time
+            type: timestamp
+          - name: Timeout
+            type: long
+          - name: TokenType
+            type: string
+          - name: USN
+            type: string
+          - name: UnixMode
+            type: string
+          - name: UnsignedModuleLoadCount
+            type: long
+          - name: UploadId
+            type: string
+          - name: UserFlags
+            type: string
+          - name: UserGroupsBitmask
+            type: string
+          - name: UserLogoffType
+            type: string
+          - name: UserLogonFlags
+            type: string
+          - name: UserMemoryAllocateExecutableCount
+            type: long
+          - name: UserMemoryAllocateExecutableRemoteCount
+            type: long
+          - name: UserMemoryProtectExecutableCount
+            type: long
+          - name: UserMemoryProtectExecutableRemoteCount
+            type: long
+          - name: UserSid
+            type: string
+          - name: UserTime
+            type: long
+          - name: VerifiedCertificate
+            type: string
+          - name: VnodeModificationType
+            type: string
+          - name: VnodeType
+            type: string
+          - name: VolumeAppearanceTime
+            type: string
+          - name: VolumeBusName
+            type: string
+          - name: VolumeBusPath
+            type: string
+          - name: VolumeDeviceCharacteristics
+            type: string
+          - name: VolumeDeviceInternal
+            type: string
+          - name: VolumeDeviceModel
+            type: string
+          - name: VolumeDeviceObjectFlags
+            type: string
+          - name: VolumeDevicePath
+            type: string
+          - name: VolumeDeviceProtocol
+            type: string
+          - name: VolumeDeviceRevision
+            type: string
+          - name: VolumeDeviceType
+            type: string
+          - name: VolumeDriveLetter
+            type: string
+          - name: VolumeFileSystemDevice
+            type: string
+          - name: VolumeFileSystemDriver
+            type: string
+          - name: VolumeFileSystemType
+            type: string
+          - name: VolumeIsEncrypted
+            type: string
+          - name: VolumeIsNetwork
+            type: string
+          - name: VolumeMediaBSDMajor
+            type: string
+          - name: VolumeMediaBSDMinor
+            type: string
+          - name: VolumeMediaBSDName
+            type: string
+          - name: VolumeMediaBSDUnit
+            type: string
+          - name: VolumeMediaContent
+            type: string
+          - name: VolumeMediaEjectable
+            type: string
+          - name: VolumeMediaName
+            type: string
+          - name: VolumeMediaPath
+            type: string
+          - name: VolumeMediaRemovable
+            type: string
+          - name: VolumeMediaSize
+            type: string
+          - name: VolumeMediaUUID
+            type: string
+          - name: VolumeMediaWhole
+            type: string
+          - name: VolumeMediaWritable
+            type: string
+          - name: VolumeMountPoint
+            type: string
+          - name: VolumeName
+            type: string
+          - name: VolumeRealDeviceName
+            type: string
+          - name: VolumeSectorSize
+            type: string
+          - name: VolumeType
+            type: string
+          - name: VolumeUUID
+            type: string
+          - name: WindowFlags
+            type: string
+          - name: cid
+            type: string
+          - name: name
+            type: string
+    - name: observer
+      type:
+        type: struct
+        fields:
+          - name: address
+            type: string
+transform: |-
+  .observer.vendor = "crowdstrike"
+  .observer.type = "agent"
+
+  .user.roles = []
+  .related.hosts = []
+
+  .event.original = encode_json(.json)
+  .crowdstrike = del(.json)
+
+  event_ts = .crowdstrike.UTCTimestamp || .crowdstrike.timestamp
+  if event_ts != null {
+    event_ts = to_int!(event_ts)
+    .event.created = to_timestamp!(event_ts, "milliseconds")
+  } else {
+    event_ts = to_float!(.crowdstrike.AgentLocalTime || .crowdstrike.CreationTimeStamp)
+    .event.created = to_timestamp(event_ts, "seconds") ?? null
+  }
+
+  if .crowdstrike.ContextTimeStamp != null {
+    .crowdstrike.ContextTimeStamp = to_timestamp!(to_float!(.crowdstrike.ContextTimeStamp), "seconds")
+  }
+  .ts = .crowdstrike.ContextTimeStamp || .event.created
+
+  .message = del(.crowdstrike.message)
+
+  .ecs.version = "8.5.0"
+
+  event_to_info = {
+    "AcUninstallConfirmation": {
+      "category": [
+        "package"
+      ],
+      "type": [
+        "deletion"
+      ],
+      "kind": "state",
+      "outcome": "success"
+    },
+    "AcUnloadConfirmation": {
+      "category": [
+        "package"
+      ],
+      "type": [
+        "deletion"
+      ],
+      "kind": "state",
+      "outcome": "success"
+    },
+    "AgentConnect": {
+      "category": [
+        "network",
+        "session"
+      ],
+      "type": [
+        "connection",
+        "info"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "AgentOnline": {
+      "category": [
+        "configuration",
+        "package",
+        "host"
+      ],
+      "type": [
+        "change",
+        "installation",
+        "start"
+      ],
+      "kind": "state",
+      "outcome": "success"
+    },
+    "AmsiRegistrationStatus": {
+      "category": [
+        "host"
+      ],
+      "type": [
+        "info"
+      ],
+      "kind": "state",
+      "outcome": "success"
+    },
+    "AsepFileChange": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "creation",
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "AsepKeyUpdate": {
+      "category": [
+        "registry"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "AsepValueUpdate": {
+      "category": [
+        "registry"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "AssociateIndicator": {
+      "category": [
+        "malware"
+      ],
+      "type": [
+        "info"
+      ],
+      "kind": "alert",
+      "outcome": "unknown"
+    },
+    "AssociateTreeIdWithRoot": {
+      "category": [
+        "malware"
+      ],
+      "type": [
+        "info"
+      ],
+      "kind": "alert",
+      "outcome": "success"
+    },
+    "BITSJobCreated": {
+      "category": [
+        "network",
+        "file"
+      ],
+      "type": [
+        "connection",
+        "creation"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "BZip2FileWritten": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "creation"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "BehaviorWhitelisted": {
+      "category": [
+        "configuration"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "BrowserInjectedThread": {
+      "category": [
+        "process"
+      ],
+      "type": [
+        "access",
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "CloudAssociateTreeIdWithRoot": {
+      "category": [
+        "malware"
+      ],
+      "type": [
+        "deletion"
+      ],
+      "kind": "alert",
+      "outcome": "success"
+    },
+    "CommandHistory": {
+      "category": [
+        "process"
+      ],
+      "type": [
+        "end",
+        "info"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "ConfigStateUpdate": {
+      "category": [
+        "configuration"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "CrashNotification": {
+      "category": [
+        "host"
+      ],
+      "type": [
+        "info"
+      ],
+      "kind": "event",
+      "outcome": "failure"
+    },
+    "CreateProcessArgs": {
+      "category": [
+        "process"
+      ],
+      "type": [
+        "start"
+      ],
+      "kind": "state",
+      "outcome": "success"
+    },
+    "CreateService": {
+      "category": [
+        "host"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "CreateThreadNoStartImage": {
+      "category": [
+        "process"
+      ],
+      "type": [
+        "start"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "CreateThreadReflectiveDll": {
+      "category": [
+        "process"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "CriticalEnvironmentVariableChanged": {
+      "category": [
+        "configuration",
+        "host"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "CriticalFileAccessed": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "access"
+      ],
+      "kind": "alert",
+      "outcome": "success"
+    },
+    "CriticalFileModified": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "alert",
+      "outcome": "success"
+    },
+    "CurrentSystemTags": {
+      "category": [
+        "host"
+      ],
+      "type": [
+        "info"
+      ],
+      "kind": "state",
+      "outcome": "success"
+    },
+    "CustomIOABasicProcessDetectionInfoEvent": {
+      "category": [
+        "malware"
+      ],
+      "type": [
+        "info"
+      ],
+      "kind": "alert",
+      "outcome": "unknown"
+    },
+    "DCSyncAttempted": {
+      "category": [
+        "configuration",
+        "iam"
+      ],
+      "type": [
+        "access"
+      ],
+      "kind": "event",
+      "outcome": "unknown"
+    },
+    "DcOffline": {
+      "category": [
+        "iam"
+      ],
+      "type": [
+        "info"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "DcOnline": {
+      "category": [
+        "iam"
+      ],
+      "type": [
+        "info"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "DcStatus": {
+      "category": [
+        "iam"
+      ],
+      "type": [
+        "info"
+      ],
+      "kind": "state",
+      "outcome": "success"
+    },
+    "DetectAnalysis": {
+      "category": [
+        "malware"
+      ],
+      "type": [
+        "info"
+      ],
+      "kind": "alert",
+      "outcome": "success"
+    },
+    "DetectionExcluded": {
+      "category": [
+        "configuration",
+        "malware"
+      ],
+      "type": [
+        "change",
+        "info"
+      ],
+      "kind": "alert",
+      "outcome": "success"
+    },
+    "DirectoryCreate": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "creation"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "DllInjection": {
+      "category": [
+        "process"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "DmpFileWritten": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "creation"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "DnsRequest": {
+      "category": [
+        "network"
+      ],
+      "type": [
+        "protocol"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "DocumentProgramInjectedThread": {
+      "category": [
+        "process"
+      ],
+      "type": [
+        "access",
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "DriverLoad": {
+      "category": [
+        "driver"
+      ],
+      "type": [
+        "start"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "DwgFileWritten": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "creation"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "EarlyExploitPivotDetect": {
+      "category": [
+        "malware"
+      ],
+      "type": [
+        "info"
+      ],
+      "kind": "event",
+      "outcome": "unknown"
+    },
+    "EndOfProcess": {
+      "category": [
+        "process"
+      ],
+      "type": [
+        "end"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "ErrorEvent": {
+      "category": [
+        "package"
+      ],
+      "type": [
+        "info"
+      ],
+      "kind": "alert",
+      "outcome": "failure"
+    },
+    "EtwErrorEvent": {
+      "category": [
+        "package",
+        "host"
+      ],
+      "type": [
+        "info"
+      ],
+      "kind": "event",
+      "outcome": "failure"
+    },
+    "ExecutableDeleted": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "deletion"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "FalconHostRegTamperingInfo": {
+      "category": [
+        "registry"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "alert",
+      "outcome": "unknown"
+    },
+    "FalconServiceStatus": {
+      "category": [
+        "package"
+      ],
+      "type": [
+        "info"
+      ],
+      "kind": "state",
+      "outcome": "unknown"
+    },
+    "FileCreateInfo": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "creation"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "FileDeleteInfo": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "deletion"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "FileDetectInfo": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "info"
+      ],
+      "kind": "alert",
+      "outcome": "unknown"
+    },
+    "FileInfo": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "info"
+      ],
+      "kind": "event",
+      "outcome": "unknown"
+    },
+    "FileOpenInfo": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "access"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "FileRenameInfo": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "FileSystemOperationBlocked": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "change",
+        "deletion"
+      ],
+      "kind": "event",
+      "outcome": "failure"
+    },
+    "FileSystemOperationDetectInfo": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "change",
+        "deletion"
+      ],
+      "kind": "alert",
+      "outcome": "unknown"
+    },
+    "FileTimestampsModified": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "FirewallChangeOption": {
+      "category": [
+        "configuration",
+        "host"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "FirewallDeleteRule": {
+      "category": [
+        "configuration"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "FirewallDeleteRuleIP4": {
+      "category": [
+        "configuration"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "FirewallDeleteRuleIP6": {
+      "category": [
+        "configuration"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "FirewallDisabled": {
+      "category": [
+        "configuration",
+        "host"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "FirewallEnabled": {
+      "category": [
+        "configuration",
+        "host"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "FirewallSetRule": {
+      "category": [
+        "configuration"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "FirewallSetRuleIP4": {
+      "category": [
+        "configuration"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "FirewallSetRuleIP6": {
+      "category": [
+        "configuration"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "FirmwareAnalysisErrorEvent": {
+      "category": [
+        "host"
+      ],
+      "type": [
+        "info"
+      ],
+      "kind": "state",
+      "outcome": "failure"
+    },
+    "FirmwareAnalysisHardwareData": {
+      "category": [
+        "host"
+      ],
+      "type": [
+        "info"
+      ],
+      "kind": "state",
+      "outcome": "success"
+    },
+    "FirmwareAnalysisStatus": {
+      "category": [
+        "host"
+      ],
+      "type": [
+        "info"
+      ],
+      "kind": "state",
+      "outcome": "success"
+    },
+    "FlashThreadCreateProcess": {
+      "category": [
+        "process"
+      ],
+      "type": [
+        "start"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "FsPostOpenSnapshotFile": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "access"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "FsVolumeMounted": {
+      "category": [
+        "host"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "FsVolumeUnmounted": {
+      "category": [
+        "host"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "HostInfo": {
+      "category": [
+        "host"
+      ],
+      "type": [
+        "info"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "HostedServiceStarted": {
+      "category": [
+        "package"
+      ],
+      "type": [
+        "start"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "HostedServiceStopped": {
+      "category": [
+        "package"
+      ],
+      "type": [
+        "end"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "HostnameChanged": {
+      "category": [
+        "host"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "HttpRequestDetect": {
+      "category": [
+        "network",
+        "session"
+      ],
+      "type": [
+        "connection",
+        "start"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "HttpVisibilityStatus": {
+      "category": [
+        "session"
+      ],
+      "type": [
+        "info"
+      ],
+      "kind": "state",
+      "outcome": "unknown"
+    },
+    "IOServiceRegister": {
+      "category": [
+        "package"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "ImageHash": {
+      "category": [
+        "process"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "InjectedThread": {
+      "category": [
+        "process"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "InjectedThreadFromUnsignedModule": {
+      "category": [
+        "process"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "alert",
+      "outcome": "success"
+    },
+    "InstallBundleDownloadComplete": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "creation"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "InstallServiceDownloadComplete": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "creation"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "InstalledApplication": {
+      "category": [
+        "package"
+      ],
+      "type": [
+        "installation"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "InstalledUpdates": {
+      "category": [
+        "host",
+        "package"
+      ],
+      "type": [
+        "change",
+        "installation"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "InstanceMetadata": {
+      "category": [
+        "host"
+      ],
+      "type": [
+        "info"
+      ],
+      "kind": "state",
+      "outcome": "unknown"
+    },
+    "IoSessionConnected": {
+      "category": [
+        "session"
+      ],
+      "type": [
+        "start"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "IoSessionLoggedOn": {
+      "category": [
+        "session"
+      ],
+      "type": [
+        "end"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "JarFileWritten": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "creation"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "JavaClassFileWritten": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "creation"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "JavaInjectedThread": {
+      "category": [
+        "process"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "KernelModeLoadImage": {
+      "category": [
+        "driver"
+      ],
+      "type": [
+        "start"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "KextLoad": {
+      "category": [
+        "driver"
+      ],
+      "type": [
+        "start"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "KextUnload": {
+      "category": [
+        "driver"
+      ],
+      "type": [
+        "end"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "LFODownloadConfirmation": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "creation"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "LfoUploadDataComplete": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "LfoUploadDataFailed": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "failure"
+    },
+    "LfoUploadDataUnneeded": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "failure"
+    },
+    "LocalIpAddressIP4": {
+      "category": [
+        "configuration",
+        "host"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "state",
+      "outcome": "success"
+    },
+    "LocalIpAddressIP6": {
+      "category": [
+        "configuration",
+        "host"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "state",
+      "outcome": "success"
+    },
+    "LocalIpAddressRemovedIP4": {
+      "category": [
+        "configuration",
+        "host"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "state",
+      "outcome": "success"
+    },
+    "LocalIpAddressRemovedIP6": {
+      "category": [
+        "configuration",
+        "host"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "state",
+      "outcome": "success"
+    },
+    "LsassHandleFromUnsignedModule": {
+      "category": [
+        "process"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "alert",
+      "outcome": "unknown"
+    },
+    "MachOFileWritten": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "ManifestDownloadComplete": {
+      "category": [
+        "configuration",
+        "file"
+      ],
+      "type": [
+        "change",
+        "creation"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "ModifyServiceBinary": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "alert",
+      "outcome": "unknown"
+    },
+    "ModuleBlockedEvent": {
+      "category": [
+        "process",
+        "malware"
+      ],
+      "type": [
+        "info",
+        "denied"
+      ],
+      "kind": "alert",
+      "outcome": "success"
+    },
+    "ModuleBlockedEventWithPatternId": {
+      "category": [
+        "process",
+        "malware"
+      ],
+      "type": [
+        "info"
+      ],
+      "kind": "event",
+      "outcome": "unknown"
+    },
+    "ModuleDetectInfo": {
+      "category": [
+        "process",
+        "malware"
+      ],
+      "type": [
+        "info"
+      ],
+      "kind": "event",
+      "outcome": "unknown"
+    },
+    "NeighborListIP4": {
+      "category": [
+        "host",
+        "network"
+      ],
+      "type": [
+        "info"
+      ],
+      "kind": "state",
+      "outcome": "unknown"
+    },
+    "NeighborListIP6": {
+      "category": [
+        "host",
+        "network"
+      ],
+      "type": [
+        "info"
+      ],
+      "kind": "state",
+      "outcome": "unknown"
+    },
+    "NetShareAdd": {
+      "category": [
+        "host"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "NetShareDelete": {
+      "category": [
+        "host"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "NetShareSecurityModify": {
+      "category": [
+        "configuration"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "NetworkCloseIP4": {
+      "category": [
+        "network"
+      ],
+      "type": [
+        "end",
+        "connection"
+      ],
+      "kind": "event",
+      "outcome": "unknown"
+    },
+    "NetworkCloseIP6": {
+      "category": [
+        "network"
+      ],
+      "type": [
+        "end",
+        "connection"
+      ],
+      "kind": "event",
+      "outcome": "unknown"
+    },
+    "NetworkConnectIP4": {
+      "category": [
+        "network"
+      ],
+      "type": [
+        "start",
+        "connection"
+      ],
+      "kind": "event",
+      "outcome": "unknown"
+    },
+    "NetworkConnectIP6": {
+      "category": [
+        "network"
+      ],
+      "type": [
+        "start",
+        "connection"
+      ],
+      "kind": "event",
+      "outcome": "unknown"
+    },
+    "NetworkListenIP4": {
+      "category": [
+        "network"
+      ],
+      "type": [
+        "start"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "NetworkListenIP6": {
+      "category": [
+        "network"
+      ],
+      "type": [
+        "start"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "NetworkReceiveAcceptIP4": {
+      "category": [
+        "network"
+      ],
+      "type": [
+        "allowed",
+        "access",
+        "connection"
+      ],
+      "kind": "event",
+      "outcome": "unknown"
+    },
+    "NetworkReceiveAcceptIP6": {
+      "category": [
+        "network"
+      ],
+      "type": [
+        "allowed",
+        "access",
+        "connection"
+      ],
+      "kind": "event",
+      "outcome": "unknown"
+    },
+    "NewExecutableRenamed": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "NewExecutableWritten": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "creation"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "NewScriptWritten": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "creation"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "OciContainerTelemetry": {
+      "category": [
+        "host"
+      ],
+      "type": [
+        "info"
+      ],
+      "kind": "state",
+      "outcome": "unknown"
+    },
+    "OleFileWritten": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "creation"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "OoxmlFileWritten": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "creation"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "OsVersionInfo": {
+      "category": [
+        "host"
+      ],
+      "type": [
+        "info"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "PackedExecutableWritten": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "creation"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "PdfFileWritten": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "creation"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "PeFileWritten": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "creation"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "PeVersionInfo": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "info"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "PrivilegedProcessHandleFromUnsignedModule": {
+      "category": [
+        "process"
+      ],
+      "type": [
+        "access"
+      ],
+      "kind": "alert",
+      "outcome": "success"
+    },
+    "ProcessBlocked": {
+      "category": [
+        "process"
+      ],
+      "type": [
+        "access"
+      ],
+      "kind": "alert",
+      "outcome": "failure"
+    },
+    "ProcessExecOnPackedExecutable": {
+      "category": [
+        "process",
+        "file"
+      ],
+      "type": [
+        "access"
+      ],
+      "kind": "alert",
+      "outcome": "success"
+    },
+    "ProcessExecOnSMBFile": {
+      "category": [
+        "process",
+        "file",
+        "network"
+      ],
+      "type": [
+        "access"
+      ],
+      "kind": "alert",
+      "outcome": "success"
+    },
+    "ProcessHandleOpDetectInfo": {
+      "category": [
+        "process",
+        "malware"
+      ],
+      "type": [
+        "info"
+      ],
+      "kind": "alert",
+      "outcome": "success"
+    },
+    "ProcessInjection": {
+      "category": [
+        "process"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "ProcessRollup2": {
+      "category": [
+        "process"
+      ],
+      "type": [
+        "start"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "ProcessRollup2Stats": {
+      "category": [
+        "process"
+      ],
+      "type": [
+        "info"
+      ],
+      "kind": "state",
+      "outcome": "unknown"
+    },
+    "ProcessSelfDeleted": {
+      "category": [
+        "process"
+      ],
+      "type": [
+        "end"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "PromiscuousBindIP4": {
+      "category": [
+        "host"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "state",
+      "outcome": "success"
+    },
+    "PtyCreated": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "creation"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "QuarantineActionResult": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "info"
+      ],
+      "kind": "alert",
+      "outcome": "unknown"
+    },
+    "QuarantinedFile": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "alert",
+      "outcome": "unknown"
+    },
+    "QuarantinedFileState": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "info"
+      ],
+      "kind": "alert",
+      "outcome": "unknown"
+    },
+    "QueueApcEtw": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "creation"
+      ],
+      "kind": "alert",
+      "outcome": "success"
+    },
+    "RansomwareCreateFile": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "creation"
+      ],
+      "kind": "alert",
+      "outcome": "success"
+    },
+    "RansomwareFileAccessPattern": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "access"
+      ],
+      "kind": "alert",
+      "outcome": "success"
+    },
+    "RansomwareOpenFile": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "access"
+      ],
+      "kind": "alert",
+      "outcome": "success"
+    },
+    "RarFileWritten": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "creation"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "RawBindIP4": {
+      "category": [
+        "network"
+      ],
+      "type": [
+        "start",
+        "connection"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "RawBindIP6": {
+      "category": [
+        "network"
+      ],
+      "type": [
+        "start",
+        "connection"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "ReflectiveDllOpenProcess": {
+      "category": [
+        "process"
+      ],
+      "type": [
+        "access"
+      ],
+      "kind": "alert",
+      "outcome": "success"
+    },
+    "RegGenericValueUpdate": {
+      "category": [
+        "registry"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "RegSystemConfigValueUpdate": {
+      "category": [
+        "registry",
+        "host",
+        "configuration"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "RegisterRawInputDevicesEtw": {
+      "category": [
+        "host",
+        "configuration"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "RegistryOperationDetectInfo": {
+      "category": [
+        "malware",
+        "registry"
+      ],
+      "type": [
+        "info"
+      ],
+      "kind": "alert",
+      "outcome": "success"
+    },
+    "RemoteBruteForceDetectInfo": {
+      "category": [
+        "malware",
+        "authentication"
+      ],
+      "type": [
+        "info"
+      ],
+      "kind": "alert",
+      "outcome": "success"
+    },
+    "RemovableDiskModuleLoadAttempt": {
+      "category": [
+        "configuration",
+        "host"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "RemovableMediaVolumeMounted": {
+      "category": [
+        "configuration",
+        "host"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "RtfFileWritten": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "creation"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "SAMHashDumpFromUnsignedModule": {
+      "category": [
+        "registry",
+        "file"
+      ],
+      "type": [
+        "access",
+        "creation"
+      ],
+      "kind": "alert",
+      "outcome": "success"
+    },
+    "ScheduledTaskDeleted": {
+      "category": [
+        "configuration"
+      ],
+      "type": [
+        "deletion"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "ScheduledTaskModified": {
+      "category": [
+        "configuration"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "ScheduledTaskRegistered": {
+      "category": [
+        "configuration"
+      ],
+      "type": [
+        "creation"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "ScreenshotTakenEtw": {
+      "category": [
+        "process"
+      ],
+      "type": [
+        "access"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "ScriptControlBlocked": {
+      "category": [
+        "malware",
+        "file"
+      ],
+      "type": [
+        "info"
+      ],
+      "kind": "alert",
+      "outcome": "success"
+    },
+    "ScriptControlDetectInfo": {
+      "category": [
+        "malware",
+        "file"
+      ],
+      "type": [
+        "info"
+      ],
+      "kind": "alert",
+      "outcome": "success"
+    },
+    "ScriptControlErrorEvent": {
+      "category": [
+        "malware",
+        "file"
+      ],
+      "type": [
+        "info"
+      ],
+      "kind": "alert",
+      "outcome": "failure"
+    },
+    "ScriptControlScanInfo": {
+      "category": [
+        "malware",
+        "file"
+      ],
+      "type": [
+        "info"
+      ],
+      "kind": "state",
+      "outcome": "success"
+    },
+    "ScriptControlScanTelemetry": {
+      "category": [
+        "malware",
+        "file"
+      ],
+      "type": [
+        "info"
+      ],
+      "kind": "state",
+      "outcome": "success"
+    },
+    "SensitiveWmiQuery": {
+      "category": [
+        "malware",
+        "process"
+      ],
+      "type": [
+        "info"
+      ],
+      "kind": "alert",
+      "outcome": "success"
+    },
+    "SensorHeartbeat": {
+      "category": [
+        "package"
+      ],
+      "type": [
+        "info"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "ServiceStarted": {
+      "category": [
+        "process"
+      ],
+      "type": [
+        "start"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "SetWinEventHookEtw": {
+      "category": [
+        "host",
+        "configuration"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "SevenZipFileWritten": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "creation"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "SignInfoError": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "info"
+      ],
+      "kind": "state",
+      "outcome": "failure"
+    },
+    "SignInfoWithCertAndContext": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "info"
+      ],
+      "kind": "state",
+      "outcome": "unknown"
+    },
+    "SignInfoWithContext": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "info"
+      ],
+      "kind": "state",
+      "outcome": "unknown"
+    },
+    "SmbClientNamedPipeConnectEtw": {
+      "category": [
+        "network"
+      ],
+      "type": [
+        "connection"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "SmbClientShareClosedEtw": {
+      "category": [
+        "network"
+      ],
+      "type": [
+        "connection",
+        "end"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "SmbClientShareOpenedEtw": {
+      "category": [
+        "network"
+      ],
+      "type": [
+        "connection",
+        "start"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "SmbServerShareOpenedEtw": {
+      "category": [
+        "network"
+      ],
+      "type": [
+        "connection",
+        "start"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "SmbServerV1AuditEtw": {
+      "category": [
+        "network"
+      ],
+      "type": [
+        "connection"
+      ],
+      "kind": "state",
+      "outcome": "unknown"
+    },
+    "SnapshotVolumeMounted": {
+      "category": [
+        "host",
+        "configuration"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "SuspiciousCreateSymbolicLink": {
+      "category": [
+        "malware",
+        "file"
+      ],
+      "type": [
+        "creation",
+        "info"
+      ],
+      "kind": "alert",
+      "outcome": "success"
+    },
+    "SuspiciousDnsRequest": {
+      "category": [
+        "network"
+      ],
+      "type": [
+        "start",
+        "protocol"
+      ],
+      "kind": "alert",
+      "outcome": "success"
+    },
+    "SuspiciousEseFileWritten": {
+      "category": [
+        "malware",
+        "file"
+      ],
+      "type": [
+        "creation",
+        "info"
+      ],
+      "kind": "alert",
+      "outcome": "success"
+    },
+    "SuspiciousRegAsepUpdate": {
+      "category": [
+        "malware",
+        "registry",
+        "configuration"
+      ],
+      "type": [
+        "change",
+        "info"
+      ],
+      "kind": "alert",
+      "outcome": "success"
+    },
+    "SuspiciousUserRemoteAPCAttempt": {
+      "category": [
+        "malware",
+        "process"
+      ],
+      "type": [
+        "info"
+      ],
+      "kind": "alert",
+      "outcome": "success"
+    },
+    "SyntheticProcessRollup2": {
+      "category": [
+        "process"
+      ],
+      "type": [
+        "start"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "SystemCapacity": {
+      "category": [
+        "host"
+      ],
+      "type": [
+        "info"
+      ],
+      "kind": "state",
+      "outcome": "success"
+    },
+    "TarFileWritten": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "creation"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "TelemetryCounters2": {
+      "category": [
+        "host"
+      ],
+      "type": [
+        "info"
+      ],
+      "kind": "state",
+      "outcome": "success"
+    },
+    "TelemetryNetworkConnections": {
+      "category": [
+        "network"
+      ],
+      "type": [
+        "connection"
+      ],
+      "kind": "state",
+      "outcome": "success"
+    },
+    "TelemetryStats": {
+      "category": [
+        "host"
+      ],
+      "type": [
+        "info"
+      ],
+      "kind": "state",
+      "outcome": "success"
+    },
+    "TerminateProcess": {
+      "category": [
+        "process"
+      ],
+      "type": [
+        "end"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "TokenImpersonated": {
+      "category": [
+        "process",
+        "authentication"
+      ],
+      "type": [
+        "info",
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "UACCOMElevation": {
+      "category": [
+        "process",
+        "authentication"
+      ],
+      "type": [
+        "info",
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "UACExeElevation": {
+      "category": [
+        "process",
+        "authentication"
+      ],
+      "type": [
+        "info",
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "UACMSIElevation": {
+      "category": [
+        "process",
+        "authentication"
+      ],
+      "type": [
+        "info",
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "UmppaErrorEvent": {
+      "category": [
+        "package"
+      ],
+      "type": [
+        "info"
+      ],
+      "kind": "event",
+      "outcome": "failure"
+    },
+    "UnsignedModuleLoad": {
+      "category": [
+        "process"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "alert",
+      "outcome": "success"
+    },
+    "UpdateManifestDownloadComplete": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "creation"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "UserAccountAddedToGroup": {
+      "category": [
+        "configuration",
+        "iam"
+      ],
+      "type": [
+        "change",
+        "group"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "UserAccountCreated": {
+      "category": [
+        "configuration",
+        "iam"
+      ],
+      "type": [
+        "creation"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "UserAccountDeleted": {
+      "category": [
+        "configuration",
+        "iam"
+      ],
+      "type": [
+        "deletion"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "UserExceptionDEP": {
+      "category": [
+        "process",
+        "malware"
+      ],
+      "type": [
+        "info"
+      ],
+      "kind": "alert",
+      "outcome": "success"
+    },
+    "UserFontLoad": {
+      "category": [
+        "configuration"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "UserIdentity": {
+      "category": [
+        "authentication",
+        "iam"
+      ],
+      "type": [
+        "info",
+        "user"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "UserLogoff": {
+      "category": [
+        "authentication"
+      ],
+      "type": [
+        "end"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "UserLogon": {
+      "category": [
+        "authentication"
+      ],
+      "type": [
+        "start"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "UserLogonFailed": {
+      "category": [
+        "authentication"
+      ],
+      "type": [
+        "start"
+      ],
+      "kind": "event",
+      "outcome": "failure"
+    },
+    "UserLogonFailed2": {
+      "category": [
+        "authentication"
+      ],
+      "type": [
+        "start"
+      ],
+      "kind": "event",
+      "outcome": "failure"
+    },
+    "VolumeSnapshotCreated": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "creation"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "VolumeSnapshotDeleted": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "deletion"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "WfpFilterTamperingFilterAdded": {
+      "category": [
+        "configuration"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "WfpFilterTamperingFilterDeleted": {
+      "category": [
+        "configuration"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "WmiCreateProcess": {
+      "category": [
+        "process"
+      ],
+      "type": [
+        "start"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "WmiFilterConsumerBindingEtw": {
+      "category": [
+        "configuration"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "WmiProviderRegistrationEtw": {
+      "category": [
+        "configuration"
+      ],
+      "type": [
+        "change"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "WroteExeAndGeneratedServiceEvent": {
+      "category": [
+        "process"
+      ],
+      "type": [
+        "access"
+      ],
+      "kind": "alert",
+      "outcome": "success"
+    },
+    "XarFileWritten": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "creation"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    },
+    "ZipFileWritten": {
+      "category": [
+        "file"
+      ],
+      "type": [
+        "creation"
+      ],
+      "kind": "event",
+      "outcome": "success"
+    }
+  }
+       
+  fields = get(event_to_info, [.crowdstrike.event_simpleName]) ?? null
+  if fields != null {
+    .event = merge(.event, object!(fields))
+  }
+
+  .event.id = del(.crowdstrike.id)
+  .event.action = string(del(.crowdstrike.event_simpleName)) ?? null
+
+              
+  for_each(object!(.crowdstrike)) -> |k, v| {
+    if match(k, r'Count$|Port$|CountUdp$') {
+      if is_string(v) {
+        .crowdstrike = set!(.crowdstrike, [k], to_int!(v))
+      }
+    }
+  }
+
+  nullish = ["", "-", "N/A", "NA", "none"]
+  if .crowdstrike != null {
+    .crowdstrike = map_values(object!(.crowdstrike)) -> |v| {
+      if includes(nullish, v) {
+        null
+      } else {
+        v
+      }
+    }
+  }
+              
+  md5_hash = del(.crowdstrike.MD5HashData)
+  sha1_hash = del(.crowdstrike.SHA1HashData)
+  sha256_hash = del(.crowdstrike.SHA256HashData)
+  hashes = {}
+  if !is_nullish(md5_hash) && !match(string!(md5_hash), r'^0*$') {
+    hashes.md5 = md5_hash
+    .related.hash = push(.related.hash, md5_hash)
+  }
+  if !is_nullish(sha1_hash) && !match(string!(sha1_hash), r'^0*$') {
+    hashes.sha1 = sha1_hash
+    .related.hash = push(.related.hash, sha1_hash)
+  }
+  if !is_nullish(sha256_hash) && !match(string!(sha256_hash), r'^0*$') {
+    hashes.sha256 = sha256_hash
+    .related.hash = push(.related.hash, sha256_hash)
+  }                       
+
+  .observer.serial_number = del(.crowdstrike.aid)
+
+  .crowdstrike.aip = to_string(.crowdstrike.aip) ?? null
+
+  .observer.ip = del(.crowdstrike.aip)
+
+  .observer.address = .observer.ip
+
+  .observer.version = del(.crowdstrike.AgentVersion)
+
+  .observer.version = .observer.version || del(.crowdstrike.ConfigBuild)
+
+  if .observer.ip != null && .observer.ip != "" { 
+    .related.ip = push(.related.ip, .observer.ip) 
+    .related.hosts = push(.related.hosts, .observer.ip)
+    .observer.ip = [ .observer.ip ]
+  } else {
+    del(.observer.ip)
+  }
+
+
+  .host.hostname = del(.crowdstrike.ComputerName)
+
+  .host.name = .host.hostname
+
+  if .host.name != null { 
+    .related.hosts = push(.related.hosts, .host.name) 
+  }
+
+  .host.geo.city_name = del(.crowdstrike.City)
+
+  .host.geo.continent_name = del(.crowdstrike.Continent)
+
+  .host.geo.country_name = del(.crowdstrike.Country)
+
+  .host.geo.timezone = del(.crowdstrike.Timezone)
+
+  .host.domain = del(.crowdstrike.MachineDomain)
+
+  .source.as.number = del(.source.as.asn)
+
+  .source.as.organization.name = del(.source.as.organization_name)
+
+  .destination.as.number = del(.destination.as.asn)
+
+  .destination.as.organization.name = del(.destination.as.organization_name)
+
+  if .crowdstrike.event_platform == "Lin" { 
+    .os.type = "linux"
+  } else if .crowdstrike.event_platform == "Mac" { 
+    .os.type = "macos"
+  } else if .crowdstrike.event_platform == "Win" { 
+    .os.type = "windows"
+  }
+   
+  .os.version = del(.crowdstrike.OSVersionString)
+
+  .os.version = del(.crowdstrike.Version) || .os.version
+
+  .process.command_line = del(.crowdstrike.CommandLine)
+
+  if .process.command_line != null && .process.command_line != "" && .os.type != null { 
+    # TODO() do this better
+    command_line = strip_whitespace!(.process.command_line)
+    .process.args = filter(split(command_line, " ")) -> |_i, v| { !is_empty(v) }
+    .process.args_count = length(.process.args)
+    .process.args = filter(split(command_line, " ")) -> |_i, v| { v != "-" }
+    .process.args = map_values(.process.args) -> |v| {
+      if starts_with(string!(v), "\"") && ends_with(string!(v), "\"") {
+        slice!(v, 1, -1)
+      } else {
+        v
+      }
+     }
+  }
+
+  .process.executable = del(.crowdstrike.ImageFileName)
+
+  if .process.executable != null && .process.executable != "" { 
+  	executable = string!(.process.executable)
+  	name = executable
+  	if starts_with(executable, "\\") || starts_with(executable, "/") {
+  	  name = split(executable, slice!(executable, 0, 1))[-1]
+  	}
+  	.process.name = name                        
+  }
+
+  if .crowdstrike.ExitCode != null {
+    .crowdstrike.ExitCode = to_int!(.crowdstrike.ExitCode)
+  }
+  .process.exit_code = del(.crowdstrike.ExitCode)
+
+  s = null
+  if !is_nullish(.crowdstrike.ProcessStartTime) {                          
+  	s = to_float!(del(.crowdstrike.ProcessStartTime))
+    .process.start = to_timestamp!(s, "seconds")                       
+  }
+
+  e = null
+  if !is_nullish(.crowdstrike.ProcessEndTime) {                          
+  	e = to_float!(del(.crowdstrike.ProcessEndTime))
+    .process.end = to_timestamp!(e, "seconds")
+  }
+  dur = (e-s)/1000 ?? null
+  .process.uptime = if dur != null { to_int(dur) } else { null }                
+
+  if .crowdstrike.RawProcessId != null {
+    .crowdstrike.RawProcessId = to_int!(.crowdstrike.RawProcessId)
+  }
+
+  .process.pid = del(.crowdstrike.RawProcessId)
+
+  .process.entity_id = del(.crowdstrike.TargetProcessId)
+
+  .process.parent.entity_id = del(.crowdstrike.ParentProcessId)
+
+  .process.parent.name = del(.crowdstrike.ParentBaseFileName)
+
+  if .crowdstrike.ProcessGroupId != null { 
+    .crowdstrike.ProcessGroupId = to_int!(.crowdstrike.ProcessGroupId)
+  }
+  .process.pgid = del(.crowdstrike.ProcessGroupId)
+
+  if .process.entity_id == null { 
+    .process.entity_id = del(.crowdstrike.ContextProcessId)
+  }
+
+  ctx_tid = del(.crowdstrike.ContextThreadId)
+  if ctx_tid != null {
+    .process.thread.id = to_int!(ctx_tid)
+  }
+
+  if .crowdstrike.EtwRawProcessId != null { 
+    .crowdstrike.EtwRawProcessId = to_int!(.crowdstrike.EtwRawProcessId)
+    if .process.pid == null { 
+      .process.pid = del(.crowdstrike.EtwRawProcessId)
+    }
+  }
+
+  if .crowdstrike.EtwRawThreadId != null { 
+    .crowdstrike.EtwRawThreadId = to_int!(.crowdstrike.EtwRawThreadId)
+    if .process.thread.id == null { 
+      .process.thread.id = del(.crowdstrike.EtwRawThreadId)
+    }
+  }
+
+  .process.title = del(.crowdstrike.ServiceDisplayName)
+
+  is_process_event = match(.event.action, r'Process|Service') ?? false
+  if is_process_event { 
+    .process.hash = hashes
+  }
+     
+  .user.id = del(.crowdstrike.UID)
+
+  .user.group.id = del(.crowdstrike.GID)
+
+  if .user.id == null || .user.id == "" { 
+    .user.id = del(.crowdstrike.UserSid) || .user.id
+  }
+
+    
+  if .crowdstrike.UserIsAdmin == "1" { 
+    .user.roles = push(.user.roles, "admin") 
+  }
+
+    
+  .user.name = del(.crowdstrike.UserName)
+
+  user_parts = null
+  if .crowdstrike.UserPrincipal != null { 
+    user_parts = split!(.crowdstrike.UserPrincipal, "@")  
+  }
+    
+  .user.email = del(.crowdstrike.UserPrincipal)
+
+  if .user.name != null {
+    .related.user = push(.related.user, .user.name)
+  }
+
+  if user_parts != null && length(array!(user_parts)) == 2 {
+    .user.full_name = user_parts[0]
+    .user.domain = user_parts[1]
+    .related.user = push(.related.user, .user.full_name) 
+  }
+
+  .source.ip = del(.crowdstrike.LocalAddressIP4)
+
+  .source.address = .source.ip
+
+  .source.ip = del(.crowdstrike.LocalAddressIP6) || .source.ip
+
+  .source.address = .source.ip
+
+  .source.port = del(.crowdstrike.LocalPort)
+
+  .destination.ip = del(.crowdstrike.RemoteAddressIP4)
+
+  .destination.address = .destination.ip
+
+  .destination.ip = del(.crowdstrike.RemoteAddressIP6) || .destination.ip
+
+  .destination.address = .destination.ip
+
+  .destination.port = del(.crowdstrike.RemotePort)
+
+  .network.iana_number = del(.crowdstrike.Protocol)
+
+  if .network.iana_number != null {           
+  	iana_number = .network.iana_number
+  	if iana_number == "0" {
+  	  .network.transport = "hopopt"
+  	} else if iana_number == "1" {
+  	  .network.transport = "icmp"
+  	} else if iana_number == "2" {
+  	  .network.transport = "igmp"
+  	} else if iana_number == "6" {
+  	  .network.transport = "tcp"
+  	} else if iana_number == "8" {
+  	  .network.transport = "egp"
+  	} else if iana_number == "17" {
+  	  .network.transport = "udp"
+  	} else if iana_number == "47" {
+  	  .network.transport = "gre"
+  	} else if iana_number == "50" {
+  	  .network.transport = "esp"
+  	} else if iana_number == "58" {
+  	  .network.transport = "ipv6-icmp"
+  	} else if iana_number == "112" {
+  	  .network.transport = "vrrp"
+  	} else if iana_number == "132" {
+  	  .network.transport = "sctp"
+  	}                       
+  }
+
+  if .crowdstrike.ConnectionDirection == "0" { 
+    .network.direction = "outbound"
+  }
+
+  if .crowdstrike.ConnectionDirection == "1" { 
+    .network.direction = "inbound"
+  }
+
+  if .network.direction == null && .crowdstrike.ConnectionDirection != null && .crowdstrike.ConnectionDirection != "" { 
+    .network.direction = "unknown"
+  }
+
+  # TODO(): add community network id
+
+  if .source.ip != null && .source.ip != "" { 
+    .related.ip = push(.related.ip, .source.ip) 
+    .related.hosts = push(.related.hosts, .source.ip)
+  }
+
+  if .destination.ip != null && .destination.ip != "" { 
+    .related.ip = push(.related.ip, .destination.ip)
+    .related.hosts = push(.related.hosts, .destination.ip)
+  }
+
+  .related.ip = unique(.related.ip)
+  .related.hosts = unique(.related.hosts)
+  .related.user = unique(.related.user)
+
+  .source.mac = del(.crowdstrike.PhysicalAddress)
+  .source.mac = upcase(.source.mac) ?? null                   
+
+  .server.address = del(.crowdstrike.DownloadServer)
+
+  .url.path = del(.crowdstrike.DownloadPath)
+  if .url.path != null && !starts_with(string!(.url.path), "/") { 
+    .url.path = "/" + string!(.url.path)
+  }
+       
+  # TODO(): parse domain from server.address
+  .server.domain = .server.address                  
+
+  if .crowdstrike.DownloadPort != null { 
+    .url.scheme = if .crowdstrike.DownloadPort == 443 { 
+      "https"
+    } else {
+      "http"
+    }
+  }
+
+  if .url.scheme != null && .server.address != null && .url.path != null { 
+    .url.full = string!(.url.scheme) + "://" + string!(.server.address) + string!(.url.path)
+  }
+
+  if .url.full != null { 
+    url_full = .url.full        
+  	.url = parse_url!(url_full)
+    if .url.query != null {
+      query = []
+      for_each(.url.query) -> |k, v| {
+        query = push(query, k + "=" + v)
+      }
+      query = join(query, "&") ?? null
+      .url.query = query
+    }    
+    .url.original = url_full
+    del(.url.full)
+    .url.domain = del(.url.host)
+    # TODO(): parse domain from url.domain
+  }
+
+  .source.as.number = del(.source.as.asn) || .source.as.number
+
+  .source.as.organization.name = del(.source.as.organization_name) || .source.as.organization.name
+
+  .destination.as.number = del(.destination.as.asn) || .destination.as.number
+
+  .destination.as.organization.name = del(.destination.as.organization_name) || .destination.as.organization.name
+
+  if .event.action == "DnsRequest" { 
+    .dns.type = "query"
+                 
+  	 # TODO(): parse domain from crowdstrike.DomainName to .dns.question     
+
+    .dns.question.name = del(.dns.question.domain)        
+
+    if !is_nullish(.crowdstrike.RequestType) {
+      req_num_to_type = {
+        "1": "A",
+        "2": "NS",
+        "5": "CNAME",
+        "6": "SOA",
+        "12": "PTR",
+        "13": "HINFO",
+        "15": "MX",
+        "16": "TXT",
+        "17": "RP",
+        "18": "AFSDB",
+        "24": "SIG",
+        "25": "KEY",
+        "28": "AAAA",
+        "29": "LOC",
+        "33": "SRV",
+        "35": "NAPTR",
+        "36": "KX",
+        "37": "CERT",
+        "39": "DNAME",
+        "42": "APL",
+        "43": "DS",
+        "44": "SSHFP",
+        "45": "IPSECKEY",
+        "46": "RRSIG",
+        "47": "NSEC",
+        "48": "DNSKEY",
+        "49": "DHCID",
+        "50": "NSEC3",
+        "51": "NSEC3PARAM",
+        "52": "TLSA",
+        "53": "SMIMEA",
+        "55": "HIP",
+        "59": "CDS",
+        "60": "CDNSKEY",
+        "61": "OPENPGPKEY",
+        "62": "CSYNC",
+        "63": "ZONEMD",
+        "64": "SVCB",
+        "65": "HTTPS",
+        "108": "EUI48",
+        "109": "EUI64",
+        "249": "TKEY",
+        "250": "TSIG",
+        "256": "URI",
+        "257": "CAA",
+        "32768": "TA",
+        "32769": "DLV"
+      }                  
+      req_type = get(req_num_to_type, [.crowdstrike.RequestType]) ?? null
+      if req_type != null {
+        .dns.question.type = req_type
+        del(.crowdstrike.RequestType)
+      }                        
+    }   
+  }
+
+  if .crowdstrike.Size != null { 
+    .crowdstrike.Size = to_int!(.crowdstrike.Size)
+  }
+  .file.size = del(.crowdstrike.Size)
+
+  .file.inode = del(.crowdstrike.FileIdentifier)
+
+  .file.path = del(.crowdstrike.SourceFileName)
+
+  .file.path = .file.path || del(.crowdstrike.TargetFileName)
+
+  .file.device = del(.crowdstrike.DiskParentDeviceInstanceId)
+
+
+  if .file.path != null {
+    .file.path = string!(.file.path)
+    .file.type = if (.event.action != null && contains!(.event.action, "Directory")) || ends_with(.file.path, "\\") || ends_with(.file.path, "/") {
+        "dir"
+    } else {
+        "file"
+    }
+
+    if !is_empty(.file.path) {
+      path = replace(.file.path, r'/$', "")
+      path = replace(.file.path, r'\\$', "")
+
+      split_char = null
+      idx = find(path, "\\")
+      if idx == -1 {
+        idx = find(path, "/")
+        if idx != -1 { split_char = "/" }
+      } else {
+        split_char = "\\"
+      }
+      if idx > -1 {
+          prefix = ""
+          if split_char != null && starts_with!(path, split_char) {
+              prefix = split_char
+          }
+          path_parts = split!(path, split_char)
+          path_parts = filter(path_parts) -> |_i, v| { !is_empty(v) }
+          .file.name = path_parts[-1]
+          .file.directory = prefix + join!(slice!(path_parts, 0, -1), split_char)
+
+          file_parts = split!(.file.name, ".")
+          if length(file_parts) > 1 && .file.type == "file" {
+              .file.extension = file_parts[-1]
+          }
+      }
+      if path[1] == ":" {
+        .file.drive_letter = upcase(string!(path[0]))
+      }                        
+    }
+  }
+
+  is_file_event = match(.event.action, r'File|Directory|Executable') ?? false
+  if is_file_event {
+    .file.hash = hashes
+  }
+
+  if .crowdstrike.FalconGroupingTags != null {                         
+    .crowdstrike.FalconGroupingTags = split!(.crowdstrike.FalconGroupingTags, r',\s?')  
+  }                                             
+
+  if .crowdstrike.SensorGroupingTags != null {                         
+    .crowdstrike.SensorGroupingTags = split!(.crowdstrike.SensorGroupingTags, r',\s?')  
+  }                                             
+
+  if .crowdstrike.Tags != null {                         
+    .crowdstrike.Tags = split!(.crowdstrike.Tags, r',\s?')  
+  }                                             
+
+  if .crowdstrike.CallStackModuleNames != null {                         
+    .crowdstrike.CallStackModuleNames = split!(.crowdstrike.CallStackModuleNames, r'\|')  
+  }                                             
+
+  if .crowdstrike.UserTime != null {
+    .crowdstrike.UserTime = to_int!(.crowdstrike.UserTime)
+  }
+
+  if .crowdstrike.KernelTime != null {
+    .crowdstrike.KernelTime = to_int!(.crowdstrike.KernelTime)
+  }
+
+  if .crowdstrike.CycleTime != null {
+    .crowdstrike.CycleTime = to_int!(.crowdstrike.CycleTime)
+  }
+
+  if !is_nullish(.crowdstrike.ConfigStateHash) { 
+    .related.hash = push(.related.hash, .crowdstrike.ConfigStateHash) 
+  }
+
+  .crowdstrike.BootArgs = strip_whitespace(.crowdstrike.BootArgs) ?? null                     
+
+  if .crowdstrike.BootArgs != null {                         
+    .crowdstrike.BootArgs = split!(.crowdstrike.BootArgs, r'\s+')  
+  }                                             
+
+  if .crowdstrike.LogonTime != null {                                               
+    .crowdstrike.LogonTime = to_timestamp(to_float!(.crowdstrike.LogonTime), "seconds") ?? null
+  }
+   
+  if .crowdstrike.LogoffTime != null {                                               
+    .crowdstrike.LogoffTime = to_timestamp(to_float!(.crowdstrike.LogoffTime), "seconds") ?? null
+  }
+   
+  if .crowdstrike.ConnectTime != null {                                               
+    .crowdstrike.ConnectTime = to_timestamp(to_float!(.crowdstrike.ConnectTime), "seconds") ?? null
+  }
+
+  if .crowdstrike.PreviousConnectTime != null {                                               
+    .crowdstrike.PreviousConnectTime = to_timestamp(to_float!(.crowdstrike.PreviousConnectTime), "seconds") ?? null
+  }
+
+  if .crowdstrike.AgentLocalTime != null {                                               
+    .crowdstrike.AgentLocalTime = to_timestamp(to_float!(.crowdstrike.AgentLocalTime), "seconds") ?? null
+  }
+
+  if .crowdstrike.FirstSeen != null {                                               
+    .crowdstrike.FirstSeen = to_timestamp(to_float!(.crowdstrike.FirstSeen), "seconds") ?? null
+  }
+
+  if .crowdstrike.Time != null {                                               
+    .crowdstrike.Time = to_timestamp(to_float!(.crowdstrike.Time), "seconds") ?? null
+  }
+
+  if .crowdstrike.BiosReleaseDate != null {
+    parts = split(string!(.crowdstrike.BiosReleaseDate), "/")
+    date_str, err = parts[2] + "-" + parts[0] + "-" + parts[1] + "T00:00:00Z"
+    .crowdstrike.BiosReleaseDate = to_timestamp(date_str , "seconds") ?? null
+  }
+
+  if .crowdstrike.AgentTimeOffset != null {
+    .crowdstrike.AgentTimeOffset = to_float!(.crowdstrike.AgentTimeOffset)
+  }
+
+  if .crowdstrike.Timeout != null {
+    .crowdstrike.Timeout = to_int!(.crowdstrike.Timeout)
+  }
+
+  if .crowdstrike.PhysicalAddressLength != null {
+    .crowdstrike.PhysicalAddressLength = to_int!(.crowdstrike.PhysicalAddressLength)
+  }
+
+  if .crowdstrike.InterfaceIndex != null {
+    .crowdstrike.InterfaceIndex = to_int!(.crowdstrike.InterfaceIndex)
+  }
+
+  if .crowdstrike.NetLuidIndex != null {
+    .crowdstrike.NetLuidIndex = to_int!(.crowdstrike.NetLuidIndex)
+  }
+
+  if .crowdstrike.AttemptNumber != null {
+    .crowdstrike.AttemptNumber = to_int!(.crowdstrike.AttemptNumber)
+  }
+
+  if .crowdstrike.SystemTableIndex != null {
+    .crowdstrike.SystemTableIndex = to_int!(.crowdstrike.SystemTableIndex)
+  }
+
+  if .crowdstrike.NeighborList != null {                         
+    .crowdstrike.NeighborList = split!(.crowdstrike.NeighborList, r'\|')  
+  }                                             
+
+  if .crowdstrike.ConfigStateData != null {                         
+    .crowdstrike.ConfigStateData = split!(.crowdstrike.ConfigStateData, r'\|')  
+  }                                             
+
+  if .crowdstrike.LogonServer != null { 
+    .related.hosts = push(.related.hosts, .crowdstrike.LogonServer) 
+  }
+
+      
+  if .crowdstrike.ClientComputerName != null { 
+    .related.hosts = push(.related.hosts, .crowdstrike.ClientComputerName) 
+  }
+
+      
+  if .os.type != null { 
+    del(.crowdstrike.event_platform)
+  }
+
+      
+  del(.crowdstrike.timestamp)
+  del(.crowdstrike._time)
+  del(.crowdstrike.ContextTimeStamp)
+  del(.crowdstrike.CreationTimeStamp)
+  del(.crowdstrike.DomainName)
+  del(.crowdstrike.ConnectionDirection)
+  del(.crowdstrike.UserIsAdmin)
+  del(.crowdstrike.UTCTimestamp)
+  del(.crowdstrike.TargetDirectoryName)

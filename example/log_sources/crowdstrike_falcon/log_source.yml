@@ -1,0 +1,4 @@
+name: crowdstrike_falcon
+
+managed:
+  type: CROWDSTRIKE_FALCON
