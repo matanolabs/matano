@@ -174,7 +174,7 @@ class MatanoIcebergTableCustomResource : CFNCustomResource {
         tableProperties[DEFAULT_NAME_MAPPING] = mappingJson
 
         val tableId = TableIdentifier.of(Namespace.of(MATANO_NAMESPACE), requestProps.tableName)
-        val partition = if (requestProps.partitions.isEmpty()) PartitionSpec.unpartitioned() else createIcebergPartitionSpec(requestProps.partitions, requestProps.schema)
+        val partition = if (requestProps.partitions.isEmpty()) PartitionSpec.unpartitioned() else createIcebergPartitionSpec(requestProps.partitions, schema)
         logger.info("Using partition: $partition")
         val table = icebergCatalog.createTable(
             tableId,
