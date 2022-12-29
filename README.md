@@ -68,6 +68,7 @@ We are on a mission to build the first open platform for threat hunting, detecti
 #### Managed log sources
 
 - [**AWS CloudTrail**](https://www.matano.dev/docs/log-sources/managed-log-sources/cloudtrail)
+- [**Crowdstrike**](https://www.matano.dev/docs/log-sources/managed-log-sources/crowdstrike)
 - [**Office 365**](https://www.matano.dev/docs/log-sources/managed-log-sources/office365)
 - [**Suricata**](https://www.matano.dev/docs/log-sources/managed-log-sources/suricata)
 - [**Zeek**](https://www.matano.dev/docs/log-sources/managed-log-sources/zeek)
