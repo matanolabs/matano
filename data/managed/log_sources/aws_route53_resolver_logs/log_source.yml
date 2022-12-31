@@ -1,0 +1,258 @@
+name: aws_route53_resolver_logs
+
+schema:
+  ecs_field_names:
+  - cloud.account.id
+  - cloud.availability_zone
+  - cloud.instance.id
+  - cloud.instance.name
+  - cloud.machine.type
+  - cloud.project.id
+  - cloud.provider
+  - cloud.region
+  - container.id
+  - container.image.name
+  - container.labels
+  - container.name
+  - dns.answers
+  - dns.question.class
+  - dns.question.name
+  - dns.question.registered_domain
+  - dns.question.subdomain
+  - dns.question.top_level_domain
+  - dns.question.type
+  - dns.response_code
+  - ecs.version
+  - error.message
+  - event.category
+  - event.dataset
+  - event.kind
+  - event.module
+  - event.outcome
+  - event.type
+  - host.architecture
+  - host.domain
+  - host.hostname
+  - host.id
+  - host.ip
+  - host.mac
+  - host.name
+  - host.os.family
+  - host.os.kernel
+  - host.os.name
+  - host.os.platform
+  - host.os.version
+  - host.type
+  - log.file.path
+  - message
+  - network.iana_number
+  - network.protocol
+  - network.transport
+  - network.type
+  - related.hosts
+  - related.ip
+  - source.address
+  - source.as.number
+  - source.as.organization.name
+  - source.geo.city_name
+  - source.geo.continent_name
+  - source.geo.country_iso_code
+  - source.geo.country_name
+  - source.geo.location
+  - source.geo.location.lat
+  - source.geo.location.lon
+  - source.geo.region_iso_code
+  - source.geo.region_name
+  - source.ip
+  - source.port
+  - tags
+  fields:
+  - name: aws
+    type:
+      type: struct
+      fields:
+      - name: instance_id
+        type: string
+      - name: vpc_id
+        type: string
+      - name: route53
+        type:
+          type: struct
+          fields:
+          - name: firewall
+            type:
+              type: struct
+              fields:
+              - name: action
+                type: string
+              - name: domain_list
+                type:
+                  type: struct
+                  fields:
+                  - name: id
+                    type: string
+              - name: rule_group
+                type:
+                  type: struct
+                  fields:
+                  - name: id
+                    type: string
+
+transform: |
+  .event.category = []
+  .event.type = []
+  .related.hosts = []
+
+  .event.original = encode_json(.json)
+
+  .cloud.provider = "aws"
+  .cloud.account.id = del(.json.account_id)
+
+  if .json.query_timestamp != null {                                               
+    .ts = to_timestamp!(.json.query_timestamp, "seconds") 
+  }
+
+  .cloud.region = .json.region
+
+  .aws.vpc_id = del(.json.vpc_id)
+
+  .aws.instance_id = del(.json.srcids.instance)
+
+  .cloud.instance.id = .aws.instance_id
+
+  if .json.query_name != null {
+      .json.query_name = replace(string!(.json.query_name), r'\\.$', "")
+      if !ends_with(.json.query_name, "in-addr.arpa") && !ends_with(.json.query_name, "ip6.arpa") {
+          todo = true
+          # TODO(): registered domain parsing into dns.question.*
+      }
+  }
+
+  .dns.question.name = del(.dns.question.domain) || del(.json.query_name)
+
+  .dns.question.class = del(.json.query_class)
+
+  .dns.question.type = del(.json.query_type)
+
+  .dns.response_code = del(.json.rcode)
+
+  .dns.answers = del(.json.answers)
+
+  if .dns.answers != null && is_array(.dns.answers) {
+    .dns.answers = map_values(array!(.dns.answers)) -> |ans| {
+      ans.class = del(ans.Class)
+      ans.type = string!(del(ans.Type))
+      ans.data = del(ans.Rdata)
+      if !is_nullish(ans.data) && ends_with!(ans.data, ".") {
+        ans.data = slice!(ans.data, 0, length!(ans.data) - 1)
+        if ans.type == "CNAME" {
+          ans.name = ans.data
+        }
+      }
+
+      if includes(["A", "AAAA"], ans.type) {
+        .related.ip = push(.related.ip, ans.data)
+      } else if includes(["CNAME", "PTR"], ans.type) {
+        .related.hosts = push(.related.hosts, ans.data)
+      }
+
+      ans
+    }                     
+  }
+
+  .network.transport = del(.json.transport)
+
+  .network.transport = downcase(.network.transport) ?? null                   
+
+  if .network.transport == "tcp" { 
+      .network.iana_number = "6"
+  } else if .network.transport == "udp" { 
+      .network.iana_number = "17"
+  }
+
+  .network.protocol = "dns"
+
+  if .json.srcport != null {                       
+      .source.port = to_int!(.json.srcport) 
+  }                                                  
+
+  .source.address = del(.json.srcaddr)
+
+  if .source.address != null {                       
+      .source.ip = to_string!(.source.address) 
+  }                                                  
+
+  .source.as.number = del(.source.as.asn)
+
+  .source.as.organization.name = del(.source.as.organization_name)
+
+  if .source.ip != null {
+    .source.ip = string!(.source.ip)
+    if contains(.source.ip, ".") { 
+      .network.type = "ipv4"
+    } else if contains(.source.ip, ":") { 
+      .network.type = "ipv6"
+    }
+  }
+   
+  .aws.route53.firewall.action = del(.json.firewall_rule_action)
+
+  .aws.route53.firewall.rule_group.id = del(.json.firewall_rule_group_id)
+
+  .aws.route53.firewall.domain_list.id = del(.json.firewall_domain_list_id)
+
+  .event.kind = "event"
+
+  .event.category = push(.event.category, "network") 
+
+  .event.type = push(.event.type, "protocol") 
+
+  .event.outcome = if .dns.response_code == "NOERROR" { "success" } else { "failure" }
+      
+  if .source.ip != null { 
+      .related.ip = push(.related.ip, .source.ip) 
+  }
+      
+  if .dns.question.name != null {
+    .dns.question.name = string!(.dns.question.name)
+    if ends_with(.dns.question.name, ".") {
+      .dns.question.name = slice!(.dns.question.name, 0, length(.dns.question.name) - 1)
+    }
+    if .dns.question.type == "PTR" { 
+      ip = null
+      if contains(.dns.question.name, ".in-addr.arpa") {
+        ip_arr = split(replace(.dns.question.name, ".in-addr.arpa", ""), ".")
+        reverse_ip = []
+        for_each(ip_arr) -> |_i, ip| {
+          reverse_ip = flatten([ip, reverse_ip])
+        }
+        ip = join!(reverse_ip, ".")
+      } else if contains(.dns.question.name, ".ip6.arpa") {
+        ip_arr = split(replace(.dns.question.name, ".ip6.arpa", ""), ".")
+        reverse_ip = []
+        for_each(ip_arr) -> |_i, ip| {
+          reverse_ip = flatten([ip, reverse_ip])
+        }
+        j = 1
+        final_ip_arr = []
+        for_each(reverse_ip) -> |i, ip| {
+          final_ip_arr = push(final_ip_arr, ip)
+          if mod(j, 4) == 0 && i != 0 && i != length(reverse_ip) - 1 {
+            j = 0
+            final_ip_arr = push(final_ip_arr, ":")
+          }
+          j = j + 1
+        }
+        ip = join!(final_ip_arr, "")
+      }
+      if !is_nullish(ip) {
+        .related.ip = push(.related.ip, ip)
+      }
+    } else {
+        .related.hosts = push(.related.hosts, .dns.question.name)
+    }
+  }
+
+  .related.ip = unique(.related.ip)
+
+  del(.json)

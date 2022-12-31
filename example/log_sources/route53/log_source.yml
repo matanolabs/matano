@@ -1,0 +1,4 @@
+name: aws_route53_resolver_logs
+
+managed:
+  type: AWS_ROUTE53_RESOLVER_LOGS
