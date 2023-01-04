@@ -27,7 +27,7 @@ export class LakeWriter extends Construct {
         OUT_BUCKET_NAME: props.outputBucketName,
         OUT_KEY_PREFIX: props.outputObjectPrefix,
       },
-      timeout: cdk.Duration.seconds(5),
+      timeout: cdk.Duration.seconds(60),
       initialPolicy: [
         new iam.PolicyStatement({
           actions: ["secretsmanager:*", "dynamodb:*", "s3:*"],

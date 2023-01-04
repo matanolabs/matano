@@ -63,6 +63,8 @@ dependencies {
     implementation("software.amazon.awssdk:url-connection-client:2.17.131")
     implementation("com.amazonaws:aws-java-sdk-s3:1.11.213")
     implementation("com.amazonaws:aws-lambda-java-events:3.11.0")
+
+    implementation("com.github.luben:zstd-jni:1.5.+")
 }
 
 application {

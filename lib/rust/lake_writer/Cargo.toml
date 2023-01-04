@@ -44,7 +44,7 @@ async_once = "0.2.6"
 tokio-stream = { version = "0.1.9", features = ["io-util"] }
 threadpool = "1.8.1"
 async-compat = "0.2.1"
-apache-avro = { git = "https://github.com/apache/avro.git", rev = "c78f12f", features = [
+apache-avro = { git = "https://github.com/apache/avro.git", rev = "05099c3", features = [
   "zstandard",
   "snappy",
 ] }

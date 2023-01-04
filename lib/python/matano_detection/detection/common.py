@@ -23,7 +23,7 @@ import jsonlines
 import nest_asyncio
 import pyston_lite
 from detection.cache import RemoteCache
-from detection.enrichment import Enrichment, EnrichmentTable, _load_enrichment_configs
+from detection.enrichment import _load_enrichment_tables
 from detection.util import ALERT_ECS_FIELDS, DeepDict, Timers, json_dumps_dt, timing
 
 logger = logging.getLogger()
@@ -68,9 +68,7 @@ async def ensure_clients():
 
 THREAD_EXECUTOR = concurrent.futures.ThreadPoolExecutor(max_workers=12)
 
-# TODO recreate client for now
-enrichment = Enrichment(aiobotocore_session.create_client("s3", **botocore_client_kwargs), _load_enrichment_configs(), event_loop)
-enrichment._patch_module(detection.enrichment)
+_load_enrichment_tables(detection.enrichment)
 
 
 DETECTION_CONFIGS = None

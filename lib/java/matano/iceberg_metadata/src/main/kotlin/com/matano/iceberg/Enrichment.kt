@@ -9,102 +9,46 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.kotlinModule
 import com.fasterxml.jackson.module.kotlin.readValue
+import com.github.luben.zstd.ZstdOutputStream
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import org.apache.iceberg.*
+import kotlinx.coroutines.withContext
+import org.apache.avro.file.CodecFactory
+import org.apache.avro.file.DataFileStream
+import org.apache.avro.file.DataFileWriter
+import org.apache.avro.generic.GenericDatumReader
+import org.apache.avro.generic.GenericDatumWriter
+import org.apache.avro.generic.GenericRecord
+import org.apache.iceberg.AppendFiles
+import org.apache.iceberg.DataFile
+import org.apache.iceberg.DataFiles
+import org.apache.iceberg.MetricsConfig
+import org.apache.iceberg.OverwriteFiles
+import org.apache.iceberg.PartitionSpec
+import org.apache.iceberg.Table
 import org.apache.iceberg.catalog.Catalog
 import org.apache.iceberg.catalog.Namespace
 import org.apache.iceberg.catalog.TableIdentifier
-import org.apache.iceberg.io.InputFile
-import org.apache.iceberg.parquet.ParquetSchemaUtil
 import org.apache.iceberg.parquet.ParquetUtil
+import org.apache.parquet.hadoop.ParquetFileReader
 import org.apache.parquet.hadoop.ParquetFileWriter
 import org.apache.parquet.hadoop.metadata.ParquetMetadata
-import org.apache.parquet.io.*
+import org.apache.parquet.io.InputFile
 import org.slf4j.LoggerFactory
 import software.amazon.awssdk.core.async.AsyncRequestBody
+import software.amazon.awssdk.core.async.AsyncResponseTransformer
 import software.amazon.awssdk.services.s3.S3AsyncClient
 import java.io.ByteArrayOutputStream
 import java.io.File
-import java.io.OutputStream
 import java.time.OffsetDateTime
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
 import java.util.stream.Stream
-
-class InMemoryOutputFile : OutputFile {
-    private val baos = ByteArrayOutputStream()
-
-    override fun create(blockSizeHint: Long): PositionOutputStream { // Mode.CREATE calls this method
-        return InMemoryPositionOutputStream(baos)
-    }
-
-    override fun createOrOverwrite(blockSizeHint: Long): PositionOutputStream {
-        return create(blockSizeHint)
-    }
-    override fun supportsBlockSize(): Boolean = false
-    override fun defaultBlockSize(): Long = 0
-
-    fun toArray(): ByteArray = baos.toByteArray()
-
-    private class InMemoryPositionOutputStream(outputStream: OutputStream?) : DelegatingPositionOutputStream(outputStream) {
-        override fun getPos(): Long {
-            return (stream as ByteArrayOutputStream).size().toLong()
-        }
-    }
-}
-
-class InMemoryIcebergOutputFile : org.apache.iceberg.io.OutputFile {
-    private val baos = ByteArrayOutputStream()
-    override fun create(): org.apache.iceberg.io.PositionOutputStream {
-        return InMemoryPositionOutputStream(baos)
-    }
-
-    override fun createOrOverwrite(): org.apache.iceberg.io.PositionOutputStream {
-        return create()
-    }
-
-    override fun location(): String? = null
-
-    override fun toInputFile(): InputFile? {
-        return null
-    }
-
-    fun toArray(): ByteArray = baos.toByteArray()
-
-    private class InMemoryPositionOutputStream(val outputStream: OutputStream) : org.apache.iceberg.io.PositionOutputStream() {
-        override fun write(b: Int) {
-            outputStream.write(b)
-        }
-
-        override fun getPos(): Long {
-            return (outputStream as ByteArrayOutputStream).size().toLong()
-        }
-    }
-}
-
-// ParquetIO is private...
-class ParquetInputStreamAdapter constructor(private val delegate: org.apache.iceberg.io.SeekableInputStream) : DelegatingSeekableInputStream(delegate) {
-    override fun getPos() = delegate.pos
-    override fun seek(newPos: Long) = delegate.seek(newPos)
-}
-class ParquetIcebergInputFile(private val inputFile: org.apache.iceberg.io.InputFile) : org.apache.parquet.io.InputFile {
-    override fun getLength(): Long = inputFile.length
-    override fun newStream(): SeekableInputStream = ParquetInputStreamAdapter(inputFile.newStream())
-}
-class ParquetOutputStreamAdapter(private val delegate: org.apache.iceberg.io.PositionOutputStream) : DelegatingPositionOutputStream(delegate) {
-    override fun getPos() = delegate.pos
-}
-class ParquetIcebergOutputFile(private val file: org.apache.iceberg.io.OutputFile) : OutputFile {
-    override fun create(ignored: Long): PositionOutputStream = ParquetOutputStreamAdapter(file.create())
-    override fun createOrOverwrite(ignored: Long): PositionOutputStream = ParquetOutputStreamAdapter(file.createOrOverwrite())
-
-    override fun supportsBlockSize() = false
-    override fun defaultBlockSize(): Long = 0
-}
+import kotlin.coroutines.coroutineContext
 
 data class EnrichmentConfig(
     val name: String,
@@ -163,7 +107,7 @@ class EnrichmentIcebergSyncer {
         }
     }
 
-    suspend fun syncTable(tableName: String, time: String, conf: EnrichmentConfig?) {
+    suspend fun syncTable(tableName: String, time: String, conf: EnrichmentConfig) {
         val enrichTableName = "enrich_$tableName"
         val icebergTable = icebergCatalog.loadTable(TableIdentifier.of(Namespace.of(IcebergMetadataWriter.MATANO_NAMESPACE), enrichTableName))
 
@@ -182,22 +126,113 @@ class EnrichmentIcebergSyncer {
         }
 
         // Run an Athena query to select data (resolve deletes). Iceberg Generics has bug? returns nulls.
+        // Converting Parquet to Avro in memory had some oddities so just run concurrent Athena unloads.
+        // TODO: what happens if iceberg commit fails? eh...
+        val dataFile = withContext(coroutineContext) {
+            launch { doAvroWrite(tableName, enrichTableName, conf) }
+            async { doParquetWrite(tableName, enrichTableName, icebergTable) }
+        }.await()
+
+        val currentFiles = icebergTable.newScan().planWith(planExecutorService).planFiles().map { it.file() }
+        icebergTable.newRewrite()
+            .scanManifestsWith(planExecutorService)
+            .validateFromSnapshot(currentSnapshot.snapshotId())
+            .rewriteFiles(currentFiles.toSet(), setOf(dataFile))
+            .commit()
+        logger.info("Completed syncing table: $enrichTableName")
+    }
+
+    suspend fun doAvroWrite(tableName: String, enrichTableName: String, conf: EnrichmentConfig) {
         val tempSyncBucket = enrichmentTablesBucket
         val uniquePath = UUID.randomUUID().toString()
-        val keyPrefix = "temp-enrich-sync/$uniquePath/"
+        val keyPrefix = "temp-enrich-sync/avro/$uniquePath/"
+
+        // Avro unload doesn't support compression
+        val qs = """
+            UNLOAD (SELECT * FROM $enrichTableName)
+            TO 's3://$tempSyncBucket/$keyPrefix'
+            WITH (format = 'AVRO')
+        """.trimIndent()
+        athenaQueryRunner.runAthenaQuery(qs)
+
+        // Make downloads concurrent
+        val futs = s3AsyncClient.listObjectsV2 { r -> r.bucket(tempSyncBucket).prefix(keyPrefix) }.await().contents().map { res ->
+            s3AsyncClient
+                .getObject({ it.bucket(tempSyncBucket).key(res.key()) }, AsyncResponseTransformer.toBytes())
+                .thenApply { it.asInputStream() }
+        }
+
+        CompletableFuture.allOf(*futs.toTypedArray()).await()
+        val data = futs.map { it.get() }
+
+        val writer = DataFileWriter(GenericDatumWriter<GenericRecord>())
+            .setCodec(CodecFactory.zstandardCodec(-3))
+            // We aim for ~10ish records in each block as needs to be scanned on lookup.
+            .setSyncInterval(2000)
+        val avroBaos = ByteArrayOutputStream()
+        var started = false
+
+        // Combine all the avro files into one
+        for (chunk in data) {
+            val reader = DataFileStream(chunk, GenericDatumReader<GenericRecord>())
+            // Use schema from file for writer. Need to do on first.
+            if (!started) {
+                writer.create(reader.schema, avroBaos, "matanoisawesome1".encodeToByteArray())
+                started = true
+            }
+            reader.use { rdr ->
+                rdr.forEach { writer.append(it) }
+            }
+        }
+        writer.close()
+        val avroBytes = avroBaos.toByteArray()
+
+        val primaryKey: String? = conf.schema.get("primary_key").textValue()
+
+        // Generate index for avro file
+        val indexUploadFut = if (primaryKey != null) {
+            logger.info("Generating index for table: $tableName")
+
+            val index = generateAvroIndex(avroBytes, primaryKey)
+
+            val indexBytes = ByteArrayOutputStream().let { baos ->
+                ZstdOutputStream(baos).use { zstd -> mapper.writeValue(zstd, index) }
+                baos.toByteArray()
+            }
+            val enrichmentTableIndexS3Key = "tables/${tableName}_index.json.zst"
+            s3AsyncClient.putObject({ it.bucket(enrichmentTablesBucket).key(enrichmentTableIndexS3Key) }, AsyncRequestBody.fromBytes(indexBytes))
+        } else {
+            CompletableFuture.completedFuture(null)
+        }
+
+        val enrichmentTableS3Key = "tables/$tableName.avro"
+        val avroUploadFut = s3AsyncClient.putObject({ it.bucket(enrichmentTablesBucket).key(enrichmentTableS3Key) }, AsyncRequestBody.fromBytes(avroBytes.clone()))
+
+        CompletableFuture.allOf(avroUploadFut, indexUploadFut).await()
+    }
+
+    suspend fun doParquetWrite(tableName: String, enrichTableName: String, icebergTable: Table): DataFile? {
+        // Run an Athena query to select data (resolve deletes). Iceberg Generics has bug? returns nulls.
+        val tempSyncBucket = enrichmentTablesBucket
+        val uniquePath = UUID.randomUUID().toString()
+        val keyPrefix = "temp-enrich-sync/parquet/$uniquePath/"
         val qs = """
             UNLOAD (SELECT * FROM $enrichTableName)
             TO 's3://$tempSyncBucket/$keyPrefix'
             WITH (format = 'PARQUET', compression='snappy')
         """.trimIndent()
         athenaQueryRunner.runAthenaQuery(qs)
-        val filePaths = s3AsyncClient.listObjectsV2 { r -> r.bucket(tempSyncBucket).prefix(keyPrefix) }.await().contents().map {
-            "s3://$tempSyncBucket/${it.key()}"
+
+        val futs = s3AsyncClient.listObjectsV2 { r -> r.bucket(tempSyncBucket).prefix(keyPrefix) }.await().contents().map { res ->
+            s3AsyncClient
+                .getObject({ it.bucket(tempSyncBucket).key(res.key()) }, AsyncResponseTransformer.toBytes())
+                .thenApply { InMemoryInputFile(it.asByteArray()) }
         }
-        val inputFiles = filePaths.map { icebergTable.io().newInputFile(it) }
-        // Athena can write multiple files, concat into one file
+        CompletableFuture.allOf(*futs.toTypedArray()).await()
+        val inputFiles = futs.map { it.get() }
+
         val outFile = InMemoryIcebergOutputFile()
-        val footer = concatIcebergParquetFiles(inputFiles, outFile, icebergTable.schema()) // parallelize?
+        val footer = concatIcebergParquetFiles(inputFiles, outFile)
 
         val icebergS3Path = icebergTable.locationProvider().newDataLocation("${UUID.randomUUID()}.parquet")
         val (s3Bucket, s3Key) = icebergS3Path.removePrefix("s3://").split('/', limit = 2)
@@ -220,28 +255,23 @@ class EnrichmentIcebergSyncer {
             .withFormat("PARQUET")
             .withMetrics(metrics)
             .build()
-
-        val currentFiles = icebergTable.newScan().planWith(planExecutorService).planFiles().map { it.file() }
-        icebergTable.newRewrite()
-            .scanManifestsWith(planExecutorService)
-            .validateFromSnapshot(currentSnapshot.snapshotId())
-            .rewriteFiles(currentFiles.toSet(), setOf(dataFile))
-            .commit()
-        logger.info("Completed syncing table: $enrichTableName")
+        return dataFile
     }
 
-    private fun concatIcebergParquetFiles(inputFiles: Iterable<InputFile>, outputFile: org.apache.iceberg.io.OutputFile, schema: Schema): ParquetMetadata {
+    private fun concatIcebergParquetFiles(inputFiles: Iterable<InputFile>, outputFile: org.apache.iceberg.io.OutputFile): ParquetMetadata {
+        // Get the schema from the file instead of using the table schema to avoid incompatibilities.
+        val schema = ParquetFileReader.open(inputFiles.first()).use { rdr -> rdr.footer.fileMetaData.schema }
         val rowGroupSize: Long = 128 * 1024 * 1024
         val writer = ParquetFileWriter(
             ParquetIcebergOutputFile(outputFile),
-            ParquetSchemaUtil.convert(schema, "table"),
+            schema,
             ParquetFileWriter.Mode.CREATE,
             rowGroupSize,
             0
         )
         writer.start()
         for (inputFile in inputFiles) {
-            writer.appendFile(ParquetIcebergInputFile(inputFile))
+            writer.appendFile(inputFile)
         }
         writer.end(mapOf())
         return writer.footer

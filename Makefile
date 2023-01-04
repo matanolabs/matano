@@ -17,8 +17,11 @@ build-cli:
 build-nodejs:
 	cd lib/nodejs && npm ci && npm run release -ws
 
-build-python:
-	cd lib/python/matano_detection && $(MAKE) release
+build-python-rust:
+	cd lib/rust/detection_lib && $(MAKE) build
+
+build-python: build-python-rust
+	rm -rf local-assets/MatanoDetectionsCommonLayer && cd lib/python/matano_detection && $(MAKE) release
 
 build-rust:
 	cd lib/rust && cargo lambda build --release --workspace && \

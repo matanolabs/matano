@@ -6,5 +6,6 @@ members = [
   "shared",
   "log_puller",
   "alert_forwarder",
+  "detection_lib",
 ]
 default-members = ["transformer"]

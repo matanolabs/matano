@@ -40,7 +40,7 @@ export class Transformer extends Construct {
         SQS_METADATA: props.sqsMetadata,
       },
       layers: [this.rustFunctionLayer.layer],
-      timeout: cdk.Duration.seconds(60),
+      timeout: cdk.Duration.seconds(100),
       initialPolicy: [
         new iam.PolicyStatement({
           actions: ["secretsmanager:*", "dynamodb:*", "s3:*", "sns:*"],

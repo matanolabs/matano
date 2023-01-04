@@ -185,8 +185,7 @@ class IcebergMetadataWriter {
             "catalog-impl" to "org.apache.iceberg.aws.glue.GlueCatalog",
             "warehouse" to WAREHOUSE_PATH,
             "io-impl" to "org.apache.iceberg.aws.s3.S3FileIO",
-            "write.metadata.delete-after-commit.enabled" to "true",
-            "fs.s3a.path.style.access" to "true"
+            "write.metadata.delete-after-commit.enabled" to "true"
         )
         private val ddb = AmazonDynamoDBClientBuilder.defaultClient()
 

@@ -36,3 +36,12 @@ pest = { version = "2.2.1", default-features = false, features = ["std"] }
 pest_derive = { version = "2.2.1", default-features = false, features = [
   "std",
 ] }
+
+apache-avro = { git = "https://github.com/apache/avro.git", rev = "05099c3", features = [
+  "zstandard",
+  "snappy",
+], optional = true }
+
+[features]
+default = []
+avro = ["dep:apache-avro"]
