@@ -18,7 +18,7 @@ build-nodejs:
 	cd lib/nodejs && npm ci && npm run release -ws
 
 build-python-rust:
-	cd lib/rust/detection_lib && $(MAKE) build
+	cd lib/rust/detection_lib && $(MAKE) release
 
 build-python: build-python-rust
 	rm -rf local-assets/MatanoDetectionsCommonLayer && cd lib/python/matano_detection && $(MAKE) release

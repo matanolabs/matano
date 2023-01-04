@@ -4,3 +4,5 @@ setup:
 
 build:
 	maturin build --strip --zig --compatibility manylinux2014 -i python3.9
+
+release: setup build
