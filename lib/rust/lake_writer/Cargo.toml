@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-shared = { path = "../shared" }
+shared = { path = "../shared", features = ["avro"] }
 rayon = "1.5.3"
 zstd = "0.11.2"
 base64 = "0.13.1"

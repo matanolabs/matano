@@ -2,7 +2,7 @@ use crate::{
     common::{load_table_arrow_schema, struct_wrap_arrow2_for_ffi, write_arrow_to_s3_parquet},
     ALERTS_TABLE_NAME, AWS_CONFIG,
 };
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use arrow2::chunk::Chunk;
 use arrow2::datatypes::*;
 use arrow2::io::avro::avro_schema;
@@ -33,6 +33,8 @@ use std::{
 };
 use tokio::fs;
 use tokio::task::spawn_blocking;
+
+use shared::avro::AvroValueExt;
 
 use base64::encode;
 use std::mem;
@@ -136,12 +138,7 @@ pub async fn process_alerts(s3: aws_sdk_s3::Client, data: Vec<Vec<u8>>) -> Resul
 
     type MaybeString = Option<String>;
 
-    let st11 = std::time::Instant::now();
     let existing_values_vecs = get_existing_values(&s3).await?;
-    println!(
-        "**************** TIME: EXISTING_VALUES {:?}",
-        st11.elapsed()
-    );
     info!("Loaded existing values.");
 
     let now = chrono::Utc::now();
@@ -153,25 +150,32 @@ pub async fn process_alerts(s3: aws_sdk_s3::Client, data: Vec<Vec<u8>>) -> Resul
     // Aggregate new values per (rule_name, dedupe)
     info!("Aggregating new values...");
     for new_value in new_values.iter() {
-        let matano_alert_rule_name = get_av_path(new_value, "matano.alert.rule.name");
-        let matano_alert_dedupe = get_av_path(new_value, "matano.alert.dedupe");
+        let matano_alert_rule_name = new_value
+            .get_nested("matano.alert.rule.name")
+            .and_then(|v| Some(v.as_str()?.to_string()));
+        let matano_alert_dedupe = new_value
+            .get_nested("matano.alert.dedupe")
+            .and_then(|v| Some(v.as_str()?.to_string()));
 
-        let matano_alert_rule_name_s = cast_av_str(matano_alert_rule_name);
-        let matano_alert_dedupe_s = cast_av_str(matano_alert_dedupe);
+        let matano_rule_match_id = new_value
+            .get_nested("matano.alert.rule.match.id")
+            .and_then(|v| v.as_str())
+            .context("Need Alert Id")?
+            .to_string();
 
-        let matano_rule_match_id = get_av_path(new_value, "matano.alert.rule.match.id");
-        let matano_rule_match_id_s = cast_av_str(matano_rule_match_id).unwrap();
-
-        let deduplication_window =
-            get_av_path(&new_value, "matano.alert.rule.deduplication_window");
-        let deduplication_window_seconds: i64 =
-            cast_av_int(deduplication_window).unwrap_or(3600).into();
+        let deduplication_window_seconds: i64 = new_value
+            .get_nested("matano.alert.rule.deduplication_window")
+            .and_then(|v| v.as_int())
+            .unwrap_or(3600)
+            .into();
         let deduplication_window_micros = deduplication_window_seconds * 1000000;
 
-        let alert_threshold = get_av_path(&new_value, "matano.alert.rule.threshold");
-        let alert_threshold = cast_av_int(alert_threshold).unwrap_or(1);
+        let alert_threshold = new_value
+            .get_nested("matano.alert.rule.threshold")
+            .and_then(|v| v.as_int())
+            .unwrap_or(1);
 
-        let key = (matano_alert_rule_name_s, matano_alert_dedupe_s);
+        let key = (matano_alert_rule_name, matano_alert_dedupe);
 
         let default = NewAlertData {
             rule_match_ids: vec![],
@@ -184,7 +188,7 @@ pub async fn process_alerts(s3: aws_sdk_s3::Client, data: Vec<Vec<u8>>) -> Resul
         };
 
         let entry = new_value_agg.entry(key).or_insert(default);
-        entry.rule_match_ids.push(matano_rule_match_id_s);
+        entry.rule_match_ids.push(matano_rule_match_id);
     }
 
     let st11 = std::time::Instant::now();
@@ -194,45 +198,50 @@ pub async fn process_alerts(s3: aws_sdk_s3::Client, data: Vec<Vec<u8>>) -> Resul
         HashMap::<(MaybeString, MaybeString), ExistingAlertsData>::new();
     for (_, existing_values) in existing_values_vecs.iter() {
         for value in existing_values.iter() {
-            let matano_rule_match_id = get_av_path(&value, "matano.alert.rule.match.id");
-            let matano_alert_rule_name = get_av_path(&value, "matano.alert.rule.name");
-            let matano_alert_dedupe = get_av_path(&value, "matano.alert.dedupe");
-            let matano_alert_id = get_av_path(&value, "matano.alert.id");
-            let matano_alert_first_matched_at =
-                get_av_path(&value, "matano.alert.first_matched_at");
-            let matano_alert_created = get_av_path(&value, "matano.alert.created");
+            let matano_rule_match_id = value
+                .get_nested("matano.alert.rule.match.id")
+                .and_then(|v| v.as_str());
 
-            let matano_alert_breached = get_av_path(&value, "matano.alert.breached");
+            let matano_alert_rule_name = value
+                .get_nested("matano.alert.rule.name")
+                .and_then(|v| Some(v.as_str()?.to_string()));
+            let matano_alert_dedupe = value
+                .get_nested("matano.alert.dedupe")
+                .and_then(|v| Some(v.as_str()?.to_string()));
 
-            let matano_alert_rule_name = cast_av_str(matano_alert_rule_name);
-            let matano_alert_dedupe = cast_av_str(matano_alert_dedupe);
+            let matano_alert_id = value.get_nested("matano.alert.id").and_then(|v| v.as_str());
+            let matano_alert_first_matched_at = value
+                .get_nested("matano.alert.first_matched_at")
+                .and_then(|v| v.as_ts());
+            let matano_alert_created = value
+                .get_nested("matano.alert.created")
+                .and_then(|v| v.as_ts());
 
-            let matano_alert_id_s = cast_av_str(matano_alert_id);
-            let matano_alert_first_matched_at_ts = cast_av_ts(matano_alert_first_matched_at);
-            let matano_alert_created_ts = cast_av_ts(matano_alert_created);
-
-            let matano_alert_breached_bool = cast_av_bool(matano_alert_breached).unwrap_or(false);
+            let matano_alert_breached = value
+                .get_nested("matano.alert.breached")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
 
             let new_alert_entry =
                 new_value_agg.get(&(matano_alert_rule_name.clone(), matano_alert_dedupe.clone()));
 
-            if matano_alert_id_s.is_some() && new_alert_entry.is_some() {
+            if matano_alert_id.is_some() && new_alert_entry.is_some() {
                 let deduplication_window_micros =
                     new_alert_entry.unwrap().deduplication_window_micros;
 
-                if matano_alert_first_matched_at_ts.map_or(false, |ts| {
+                if matano_alert_first_matched_at.map_or(false, |ts| {
                     ts + deduplication_window_micros > current_micros
                 }) {
-                    let alert_id = matano_alert_id_s.unwrap();
-                    let first_matched_at = matano_alert_first_matched_at_ts.unwrap();
+                    let alert_id = matano_alert_id.unwrap().to_string();
+                    let first_matched_at = matano_alert_first_matched_at.unwrap();
 
-                    let rule_match_id = cast_av_str(matano_rule_match_id).unwrap();
+                    let rule_match_id = matano_rule_match_id.unwrap().to_string();
                     let data = ExistingAlertsData {
                         alert_id,
                         rule_match_ids: vec![],
                         first_matched_at,
-                        created: matano_alert_created_ts,
-                        breached: matano_alert_breached_bool,
+                        created: matano_alert_created,
+                        breached: matano_alert_breached,
                         breached_changed: false,
                     };
                     let key = (matano_alert_rule_name, matano_alert_dedupe);
@@ -288,52 +297,46 @@ pub async fn process_alerts(s3: aws_sdk_s3::Client, data: Vec<Vec<u8>>) -> Resul
     // update the new values based on the alert it was added to
     info!("Updating new values...");
     for new_value in new_values.iter() {
-        let matano_alert_rule_name = get_av_path(new_value, "matano.alert.rule.name");
-        let matano_alert_dedupe = get_av_path(new_value, "matano.alert.dedupe");
+        let matano_alert_rule_name = new_value
+            .get_nested("matano.alert.rule.name")
+            .and_then(|v| Some(v.as_str()?.to_string()));
+        let matano_alert_dedupe = new_value
+            .get_nested("matano.alert.dedupe")
+            .and_then(|v| Some(v.as_str()?.to_string()));
 
-        let matano_alert_rule_name_s = cast_av_str(matano_alert_rule_name);
-        let matano_alert_dedupe_s = cast_av_str(matano_alert_dedupe);
-
-        let key = (matano_alert_rule_name_s, matano_alert_dedupe_s);
+        let key = (matano_alert_rule_name, matano_alert_dedupe);
         let new_alert_data = new_value_agg.get(&key).unwrap();
 
         let is_breached = existing_aggregation_map
             .get(&key)
             .map_or(new_alert_data.breached.unwrap_or(false), |e| e.breached);
-        let new_value_mut = unsafe { make_mut(new_value) };
+        let new_value_mut = new_value.as_mut();
 
-        insert_av_path(
-            new_value_mut,
-            "matano.alert.id".to_string(),
-            avro_null_union(apache_avro::types::Value::String(
-                new_alert_data.alert_id.as_ref().unwrap().clone(),
-            )),
-        );
-        insert_av_path(
-            new_value_mut,
-            "matano.alert.breached".to_string(),
-            avro_null_union(apache_avro::types::Value::Boolean(
-                *new_alert_data.breached.as_ref().unwrap(),
-            )),
-        );
-        insert_av_path(
-            new_value_mut,
-            "matano.alert.first_matched_at".to_string(),
-            avro_null_union(apache_avro::types::Value::TimestampMicros(
+        new_value_mut.insert_record_nested(
+            "matano.alert.id",
+            apache_avro::types::Value::String(new_alert_data.alert_id.as_ref().unwrap().clone())
+                .into_union(),
+        )?;
+
+        new_value_mut.insert_record_nested(
+            "matano.alert.breached",
+            apache_avro::types::Value::Boolean(*new_alert_data.breached.as_ref().unwrap())
+                .into_union(),
+        )?;
+
+        new_value_mut.insert_record_nested(
+            "matano.alert.first_matched_at",
+            apache_avro::types::Value::TimestampMicros(
                 new_alert_data.first_matched_at_micros.unwrap(),
-            )),
-        );
+            )
+            .into_union(),
+        )?;
+
         let created_av = match new_alert_data.created_micros {
-            Some(created_micros) => {
-                avro_null_union(apache_avro::types::Value::TimestampMicros(created_micros))
-            }
+            Some(created_micros) => apache_avro::types::Value::TimestampMicros(created_micros),
             None => apache_avro::types::Value::Null,
-        };
-        insert_av_path(
-            new_value_mut,
-            "matano.alert.created".to_string(),
-            created_av,
-        );
+        }.into_union();
+        new_value_mut.insert_record_nested("matano.alert.created", created_av)?;
 
         if is_breached {
             let rule_match = new_value_mut.clone();
@@ -363,25 +366,23 @@ pub async fn process_alerts(s3: aws_sdk_s3::Client, data: Vec<Vec<u8>>) -> Resul
     let mut modified_partitions = HashSet::with_capacity(existing_values_vecs.len());
     for ((_, partition), existing_values) in existing_values_vecs.iter() {
         for value in existing_values.iter() {
-            let matano_alert_rule_name = get_av_path(&value, "matano.alert.rule.name");
-            let matano_alert_dedupe = get_av_path(&value, "matano.alert.dedupe");
-            let matano_alert_id = get_av_path(&value, "matano.alert.id");
-            let matano_alert_id_s = cast_av_str(matano_alert_id);
+            let matano_alert_rule_name = value
+                .get_nested("matano.alert.rule.name")
+                .and_then(|v| Some(v.as_str()?.to_string()));
+            let matano_alert_dedupe = value
+                .get_nested("matano.alert.dedupe")
+                .and_then(|v| Some(v.as_str()?.to_string()));
+            let matano_alert_id = value.get_nested("matano.alert.id").and_then(|v| v.as_str());
 
-            let key = (
-                cast_av_str(matano_alert_rule_name),
-                cast_av_str(matano_alert_dedupe),
-            );
+            let key = (matano_alert_rule_name, matano_alert_dedupe);
             if let Some(existing_data) = existing_aggregation_map.get(&key) {
                 if existing_data.breached_changed
-                    && matano_alert_id_s.map_or(false, |id| id == existing_data.alert_id)
+                    && matano_alert_id.map_or(false, |id| id == existing_data.alert_id)
                 {
-                    let value_mut = unsafe { make_mut(value) };
-                    insert_av_path(
-                        value_mut,
-                        "matano.alert.breached".to_string(),
-                        avro_null_union(apache_avro::types::Value::Boolean(true)),
-                    );
+                    value.as_mut().insert_record_nested(
+                        "matano.alert.breached",
+                        apache_avro::types::Value::Boolean(true).into_union(),
+                    )?;
                     modified_partitions.insert(partition.clone());
 
                     // add the existing value to the alerts to deliver
@@ -412,10 +413,7 @@ pub async fn process_alerts(s3: aws_sdk_s3::Client, data: Vec<Vec<u8>>) -> Resul
             }
         }
     }
-    println!(
-        "**************** TIME: AVRO_MODIFICATION {:?}",
-        st11.elapsed()
-    );
+    debug!("avro modification time: {:?}", st11.elapsed());
 
     // if new data fits in existing partition, add there, else create a new partition
     let mut partition_data = existing_values_vecs;
@@ -469,7 +467,7 @@ pub async fn process_alerts(s3: aws_sdk_s3::Client, data: Vec<Vec<u8>>) -> Resul
             old_key
         })
         .collect::<Vec<_>>();
-    println!("**************** TIME: WRITE_PARQUET {:?}", st11.elapsed());
+    debug!("Time to write Parquet: {:?}", st11.elapsed());
 
     let written_keys = join_all(upload_join_handles)
         .await
@@ -494,7 +492,7 @@ pub async fn process_alerts(s3: aws_sdk_s3::Client, data: Vec<Vec<u8>>) -> Resul
     info!("Doing Iceberg commit...");
     let st11 = std::time::Instant::now();
     do_iceberg_commit(commit_req_items).await?;
-    println!("**************** TIME: DO_COMMIT {:?}", st11.elapsed());
+    info!("**************** Time to do commit: {:?}", st11.elapsed());
 
     // TODO: reduce intermediate byte vec allocations
     let alerts_to_deliver = alerts_to_deliver
@@ -509,7 +507,7 @@ pub async fn process_alerts(s3: aws_sdk_s3::Client, data: Vec<Vec<u8>>) -> Resul
             bytes_v
         })
         .collect::<Vec<_>>();
-    println!(
+    info!(
         "Delivering {} alerts that contained new rule matches...",
         alerts_to_deliver.len()
     );
@@ -654,8 +652,8 @@ async fn get_existing_values(
 ) -> Result<Vec<((Option<String>, String), Vec<apache_avro::types::Value>)>> {
     let st11 = std::time::Instant::now();
     let iceberg_paths = get_iceberg_read_files().await?;
-    println!("**************** TIME: READ_FILES {:?}", st11.elapsed());
-    println!("{:?}", iceberg_paths);
+    info!("Time to read files: {:?}", st11.elapsed());
+    debug!("{:?}", iceberg_paths);
     if iceberg_paths.is_empty() {
         return Ok(vec![]);
     }
@@ -687,8 +685,6 @@ async fn get_existing_values(
                     e
                 });
             let obj = obj_res.unwrap();
-            println!("Got object...");
-            println!("_________len: {}", obj.content_length());
 
             let stream = obj.body;
             let body = stream.collect().await.unwrap();
@@ -701,10 +697,7 @@ async fn get_existing_values(
 
     let s1 = Instant::now();
     let readers = readers.map(arrow_arrow2_parquet);
-    println!(
-        "********TIME: arrow parquet re serialization took: {:?}",
-        s1.elapsed()
-    );
+    debug!("Arrow parquet re serialization took: {:?}", s1.elapsed());
 
     use arrow2::io::parquet::read;
 
@@ -725,7 +718,7 @@ async fn get_existing_values(
                     .into_iter()
                     .map(|r| r.unwrap())
                     .collect::<Vec<_>>();
-            println!("**************** parq read time {:?}", start.elapsed());
+            debug!("Parquet deserialization time: {:?}", start.elapsed());
 
             if !avro_record.is_some() {
                 let record =
@@ -759,10 +752,7 @@ async fn get_existing_values(
         .zip(final_values.into_iter())
         .collect::<Vec<_>>();
 
-    println!(
-        "**************** TIME: LOAD_EXISTING_VALUES {:?}",
-        st11.elapsed()
-    );
+    debug!("Time to Load existing values: {:?}", st11.elapsed());
     Ok(ret)
 }
 
@@ -839,145 +829,6 @@ fn get_alerts_avro_schema() -> Result<apache_avro::Schema> {
 
     let schema = apache_avro::Schema::parse_str(avro_schema_json_string.as_str())?;
     Ok(schema)
-}
-
-fn get_single_record(
-    value: &apache_avro::types::Value,
-    path: String,
-) -> &apache_avro::types::Value {
-    match value {
-        apache_avro::types::Value::Record(ref vals) => {
-            let v = vals.iter().find(|(k, _)| k == &path);
-            match v {
-                Some((_, v)) => v,
-                None => panic!("No value for path {}", path),
-            }
-        }
-        apache_avro::types::Value::Union(pos, v) => {
-            if *pos == 0 {
-                panic!("gsr empty!!")
-            } else {
-                get_single_record(v, path)
-            }
-        }
-        _ => panic!("gsr!"),
-    }
-}
-
-fn get_av_path<'a>(
-    value: &'a apache_avro::types::Value,
-    path: &'a str,
-) -> &'a apache_avro::types::Value {
-    let parts = path.split(".");
-    let mut curval = value;
-    for part in parts {
-        let oldval = curval;
-        curval = get_single_record(oldval, part.to_string());
-    }
-    curval
-}
-
-fn insert_av(
-    record_value: &mut apache_avro::types::Value,
-    insert_field_name: String,
-    insert_value: apache_avro::types::Value,
-) {
-    match record_value {
-        apache_avro::types::Value::Record(ref mut vals) => {
-            let index = &vals.iter().position(|(k, _)| k == &insert_field_name);
-            if let Some(idx) = index {
-                let val_ref = vals.get_mut(*idx).unwrap();
-                *val_ref = (insert_field_name, insert_value);
-            }
-        }
-        apache_avro::types::Value::Union(pos, v) => {
-            if *pos == 0 {
-            } else {
-                insert_av(v, insert_field_name, insert_value)
-            }
-        }
-        _ => panic!("gsr!"),
-    }
-}
-
-fn insert_av_path(
-    value: &mut apache_avro::types::Value,
-    path: String,
-    insert_value: apache_avro::types::Value,
-) {
-    let parts = path.split(".").collect::<Vec<_>>();
-    let (tail, parts) = parts.split_last().unwrap();
-    let mut curval = value;
-    for part in parts {
-        let oldval = curval;
-        curval = unsafe { make_mut(get_single_record(oldval, part.to_string())) };
-    }
-    insert_av(curval, tail.to_string(), insert_value);
-}
-
-fn cast_av_ts(v: &apache_avro::types::Value) -> Option<i64> {
-    match v {
-        apache_avro::types::Value::TimestampMicros(micros) => Some(*micros),
-        apache_avro::types::Value::Union(pos, v) => {
-            if *pos == 0 {
-                None
-            } else {
-                cast_av_ts(v)
-            }
-        }
-        _ => panic!("gsr!"),
-    }
-}
-
-fn cast_av_str(v: &apache_avro::types::Value) -> Option<String> {
-    match v {
-        apache_avro::types::Value::String(s) => Some(s.clone()),
-        apache_avro::types::Value::Union(pos, v) => {
-            if *pos == 0 {
-                None
-            } else {
-                cast_av_str(v)
-            }
-        }
-        _ => panic!("gsr!"),
-    }
-}
-
-fn cast_av_int(v: &apache_avro::types::Value) -> Option<i32> {
-    match v {
-        apache_avro::types::Value::Int(x) => Some(*x),
-        apache_avro::types::Value::Union(pos, v) => {
-            if *pos == 0 {
-                None
-            } else {
-                cast_av_int(v)
-            }
-        }
-        _ => panic!("gsr!"),
-    }
-}
-
-fn cast_av_bool(v: &apache_avro::types::Value) -> Option<bool> {
-    match v {
-        apache_avro::types::Value::Boolean(s) => Some(*s),
-        apache_avro::types::Value::Union(pos, v) => {
-            if *pos == 0 {
-                None
-            } else {
-                cast_av_bool(v)
-            }
-        }
-        _ => panic!("gsr!"),
-    }
-}
-
-fn avro_null_union(v: apache_avro::types::Value) -> apache_avro::types::Value {
-    apache_avro::types::Value::Union(1, Box::new(v))
-}
-
-// TODO: remove this, get avro change merged.
-unsafe fn make_mut<T>(reference: &T) -> &mut T {
-    &mut *((reference as *const T) as *mut T)
 }
 
 #[derive(Debug, Clone)]
