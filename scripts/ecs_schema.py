@@ -20,7 +20,26 @@ filename, _ = urlretrieve(ECS_RELEASE_URL)  # "/home/samrose/Downloads/ecs-8.3.1
 
 extract_dir = tempfile.mkdtemp()
 with tarfile.open(filename) as tf:
-    tf.extractall(extract_dir)
+    def is_within_directory(directory, target):
+        
+        abs_directory = os.path.abspath(directory)
+        abs_target = os.path.abspath(target)
+    
+        prefix = os.path.commonprefix([abs_directory, abs_target])
+        
+        return prefix == abs_directory
+    
+    def safe_extract(tar, path=".", members=None, *, numeric_owner=False):
+    
+        for member in tar.getmembers():
+            member_path = os.path.join(path, member.name)
+            if not is_within_directory(path, member_path):
+                raise Exception("Attempted Path Traversal in Tar File")
+    
+        tar.extractall(path, members, numeric_owner) 
+        
+    
+    safe_extract(tf, extract_dir)
 
 csv_filepath = f"{extract_dir}/ecs-{ECS_VERSION}/generated/csv/fields.csv"
 
