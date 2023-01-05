@@ -1,15 +1,13 @@
-use arrow2::datatypes::Field;
 use arrow2::datatypes::Schema;
 use async_once::AsyncOnce;
 use aws_config::SdkConfig;
 use futures::future::join_all;
 use futures::AsyncReadExt;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use shared::*;
-use uuid::Uuid;
 
 use std::collections::HashMap;
-use std::path::Path;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::{time::Instant, vec};
@@ -22,17 +20,11 @@ use log::{error, info};
 use threadpool::ThreadPool;
 
 use anyhow::{anyhow, Result};
-
-// use tokio_stream::StreamExt;
 use futures::StreamExt;
 
-use arrow2::datatypes::DataType;
 use arrow2::io::avro::avro_schema::file::Block;
 use arrow2::io::avro::avro_schema::read_async::{block_stream, decompress_block, read_metadata};
-use arrow2::io::avro::read::{deserialize, infer_schema};
-use arrow2::io::parquet::write::{
-    transverse, CompressionOptions, Encoding, FileWriter, RowGroupIterator, Version, WriteOptions,
-};
+use arrow2::io::avro::read::deserialize;
 use tokio_util::compat::TokioAsyncReadCompatExt;
 
 mod common;
@@ -58,24 +50,21 @@ lazy_static! {
 #[tokio::main]
 async fn main() -> Result<(), LambdaError> {
     setup_logging();
-    let start = Instant::now();
-
-    // let ev11: SqsEvent = serde_json::from_reader(File::open(
-    //     "/home/samrose/workplace/matano/lib/rust/garbage2.json",
-    // )?)?;
-
-    // my_handler(ev11).await.unwrap();
 
     let func = service_fn(my_handler);
     run(func).await?;
-
-    info!("Call lambda took {:.2?}", start.elapsed());
 
     Ok(())
 }
 
 pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
-    info!("Request: {:?}", event);
+    let msg_logs = event.payload.records.iter().map(|r| {
+        json!({ "message_id": r.message_id, "body": r.body, "message_attributes": r.message_attributes })
+    }).collect::<Vec<_>>();
+    info!(
+        "Received messages: {}",
+        serde_json::to_string(&msg_logs).unwrap_or_default()
+    );
 
     let downloads = event
         .payload
@@ -103,18 +92,15 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
     let table_schema = table_schema_map
         .entry(resolved_table_name.clone())
         .or_insert_with_key(|k| load_table_arrow_schema(k).unwrap());
-    let table_schema_ref = Arc::new(table_schema.clone());
 
     info!("Starting {} downloads from S3", downloads.len());
 
     let s3 = S3_CLIENT.get().await.clone();
 
-    let start = Instant::now();
-
     let pool = ThreadPool::new(4);
     let pool_ref = Arc::new(pool);
-    let chunks = vec![];
-    let chunks_ref = Arc::new(Mutex::new(chunks));
+    let blocks = vec![];
+    let blocks_ref = Arc::new(Mutex::new(blocks));
 
     let alert_blocks = vec![];
     let alert_blocks_ref = Arc::new(Mutex::new(alert_blocks));
@@ -135,7 +121,6 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
                         e
                     });
                 let obj = obj_res.unwrap();
-                println!("Got object...");
 
                 let stream = obj.body;
                 let reader = TokioAsyncReadCompatExt::compat(stream.into_async_read());
@@ -148,11 +133,10 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
     let mut result = join_all(tasks).await;
 
     let work_futures = result.iter_mut().map(|reader| {
-        let chunks_ref = chunks_ref.clone();
+        let blocks_ref = blocks_ref.clone();
         let alert_blocks_ref = alert_blocks_ref.clone();
         let pool_ref = pool_ref.clone();
         let resolved_table_name = resolved_table_name.clone();
-        let table_schema = table_schema_ref.clone();
 
         async move {
             if resolved_table_name == ALERTS_TABLE_NAME {
@@ -166,53 +150,34 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
             };
 
             let metadata = read_metadata(reader).await.unwrap();
-            let schema = table_schema.clone();
-
-            // // TODO move out
-            let projection = Arc::new(schema.fields.iter().map(|_| true).collect::<Vec<_>>());
 
             let blocks = block_stream(reader, metadata.marker).await;
 
             let fut = blocks.for_each_concurrent(1000000, move |block| {
-                println!("Getting block....");
                 let mut block = block.unwrap();
 
-                let schema = schema.clone();
-                let metadata = metadata.clone();
-                let projection = projection.clone();
-                dbg!(block.number_of_rows);
-                let chunks_ref = chunks_ref.clone();
+                let blocks_ref = blocks_ref.clone();
                 let pool = pool_ref.clone();
 
                 // the content here is CPU-bounded. It should run on a dedicated thread pool
                 pool.execute(move || {
-                    let st1 = Instant::now();
                     let mut decompressed = Block::new(0, vec![]);
 
                     decompress_block(&mut block, &mut decompressed, metadata.compression).unwrap();
 
-                    let chunk = deserialize(
-                        &decompressed,
-                        &schema.fields,
-                        &metadata.record.fields,
-                        &projection,
-                    )
-                    .unwrap();
-
-                    let mut chunks = chunks_ref.lock().unwrap();
-                    chunks.push(chunk);
-                    info!("Thread Call took {:.2?}", st1.elapsed());
+                    let mut blocks = blocks_ref.lock().unwrap();
+                    blocks.push(decompressed);
                     ()
                 });
                 async {}
             });
 
             fut.await;
-            Some(())
+            Some(metadata)
         }
     });
 
-    join_all(work_futures).await;
+    let results = join_all(work_futures).await;
 
     let pool = pool_ref.clone();
     pool.join();
@@ -226,20 +191,29 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
         return Ok(());
     }
 
-    let chunks_ref = Arc::try_unwrap(chunks_ref).map_err(|e| anyhow!("fail get rowgroups"))?;
-    let chunks = Mutex::into_inner(chunks_ref)?;
+    let blocks_ref = Arc::try_unwrap(blocks_ref).map_err(|e| anyhow!("fail get rowgroups"))?;
+    let blocks = Mutex::into_inner(blocks_ref)?;
 
-    if chunks.len() == 0 {
+    if blocks.len() == 0 {
         return Ok(());
     }
 
-    println!("Writing...");
+    let metadata = results.first().unwrap().as_ref().unwrap();
+    let block = concat_blocks(blocks);
+    let projection = table_schema.fields.iter().map(|_| true).collect::<Vec<_>>();
+
+    let chunk = deserialize(
+        &block,
+        &table_schema.fields,
+        &metadata.record.fields,
+        &projection,
+    )?;
+    let chunks = vec![chunk];
+
     let (field, arrays) = struct_wrap_arrow2_for_ffi(&table_schema, chunks);
     // TODO: fix to use correct partition (@shaeq)
     let partition_hour = chrono::offset::Utc::now().format("%Y-%m-%d-%H").to_string();
     write_arrow_to_s3_parquet(s3, resolved_table_name, partition_hour, field, arrays).await?;
-
-    println!("----------------  Call took {:.2?}", start.elapsed());
 
     Ok(())
 }
@@ -249,4 +223,13 @@ pub(crate) struct S3SQSMessage {
     pub resolved_table_name: String,
     pub bucket: String,
     pub key: String,
+}
+
+fn concat_blocks(mut blocks: Vec<Block>) -> Block {
+    let mut ret = Block::new(0, vec![]);
+    for block in blocks.iter_mut() {
+        ret.number_of_rows += block.number_of_rows;
+        ret.data.extend(block.data.as_slice());
+    }
+    ret
 }

@@ -93,9 +93,8 @@ pub async fn write_arrow_to_s3_parquet(
         partition_hour,
         Uuid::new_v4()
     );
-    println!("Writing to: {}", key);
 
-    println!("Starting upload...");
+    info!("Writing to S3 Path: {}", key);
     let ws1 = Instant::now();
     let _upload_res = &s3
         .put_object()
@@ -104,7 +103,7 @@ pub async fn write_arrow_to_s3_parquet(
         .body(bytestream)
         .send()
         .await?;
-    println!("Upload took: {:.2?}", ws1.elapsed());
+    info!("Upload took: {:.2?}", ws1.elapsed());
 
     Ok((partition_hour, key, file_length))
 }
