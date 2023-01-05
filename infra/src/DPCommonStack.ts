@@ -57,7 +57,16 @@ export class DPCommonStack extends MatanoStack {
     const matanoDatabase = new glue.CfnDatabase(this, "MatanoDatabase", {
       databaseInput: {
         name: MATANO_DATABASE_NAME,
-        description: "Glue database storing Matano Iceberg tables.",
+        description: "[Matano] Main Glue database storing Matano Iceberg tables.",
+        locationUri: `s3://${this.matanoLakeStorageBucket.bucket.bucketName}/lake`,
+      },
+      catalogId: cdk.Aws.ACCOUNT_ID,
+    });
+
+    const matanoSystemDatabase = new glue.CfnDatabase(this, "MatanoSystemDatabase", {
+      databaseInput: {
+        name: "matano_system",
+        description: "[Matano] Glue database storing temporary and system Matano Iceberg tables.",
         locationUri: `s3://${this.matanoLakeStorageBucket.bucket.bucketName}/lake`,
       },
       catalogId: cdk.Aws.ACCOUNT_ID,
@@ -89,6 +98,19 @@ export class DPCommonStack extends MatanoStack {
         },
         resultConfiguration: {
           outputLocation: `s3://${this.matanoAthenaResultsBucket.bucketName}/results/matano-system`,
+        },
+      },
+    });
+
+    const matanoSystemV3AthenaWorkgroup = new athena.CfnWorkGroup(this, "MatanoSystemV3", {
+      name: "matano_system_v3",
+      description: "[Matano] Matano System Athena Work Group. Used for system queries such as table maintenance.",
+      workGroupConfiguration: {
+        engineVersion: {
+          selectedEngineVersion: "Athena engine version 3",
+        },
+        resultConfiguration: {
+          outputLocation: `s3://${this.matanoAthenaResultsBucket.bucketName}/results/matano-system_v3`,
         },
       },
     });

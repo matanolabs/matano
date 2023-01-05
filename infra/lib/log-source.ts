@@ -117,8 +117,10 @@ export interface MatanoTableProps {
 }
 export class MatanoTable extends Construct {
   icebergTable: MatanoIcebergTable;
+  schema: any;
   constructor(scope: Construct, id: string, props: MatanoTableProps) {
     super(scope, id);
+    this.schema = props.schema;
 
     this.icebergTable = new MatanoIcebergTable(this, `Default`, {
       tableName: props.tableName,

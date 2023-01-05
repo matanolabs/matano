@@ -5,7 +5,7 @@ import kotlinx.coroutines.future.await
 import software.amazon.awssdk.services.athena.AthenaAsyncClient
 import software.amazon.awssdk.services.athena.model.*
 
-class AthenaQueryRunner {
+class AthenaQueryRunner(val workGroup: String = "matano_system") {
     private val athenaClient: AthenaAsyncClient = AthenaAsyncClient.builder().build()
     val SLEEP_AMOUNT_MS = 500L
 
@@ -16,7 +16,7 @@ class AthenaQueryRunner {
 
         val startQueryExecutionRequest = StartQueryExecutionRequest.builder()
             .queryString(qs)
-            .workGroup("matano_system")
+            .workGroup(workGroup)
             .queryExecutionContext(queryExecutionContext)
             .build()
         val startQueryExecutionResponse = athenaClient.startQueryExecution(startQueryExecutionRequest).await()

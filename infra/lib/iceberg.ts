@@ -80,6 +80,7 @@ interface MatanoIcebergTableProps {
   tableName: string;
   schema: Record<string, any>;
   partitions?: any[];
+  glueDatabaseName?: string;
 }
 
 export class MatanoIcebergTable extends Construct {
@@ -103,6 +104,7 @@ export class MatanoIcebergTable extends Construct {
         schema: props.schema,
         partitions: props.partitions,
         tableProperties,
+        glueDatabaseName: props.glueDatabaseName,
       },
     });
   }

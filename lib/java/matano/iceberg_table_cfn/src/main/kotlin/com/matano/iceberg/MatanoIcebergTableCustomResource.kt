@@ -85,7 +85,8 @@ data class MatanoTableRequest(
     @JsonDeserialize(using = RelaxedIcebergSchemaDeserializer::class)
     val schema: Schema,
     val partitions: List<MatanoPartitionSpec> = listOf(),
-    val tableProperties: MutableMap<String, String> = mutableMapOf()
+    val tableProperties: MutableMap<String, String> = mutableMapOf(),
+    val glueDatabaseName: String? = null
 )
 
 sealed interface MatanoIcebergTransform {
@@ -173,7 +174,10 @@ class MatanoIcebergTableCustomResource : CFNCustomResource {
         val mappingJson = NameMappingParser.toJson(MappingUtil.create(schema))
         tableProperties[DEFAULT_NAME_MAPPING] = mappingJson
 
-        val tableId = TableIdentifier.of(Namespace.of(MATANO_NAMESPACE), requestProps.tableName)
+        // Now technically this should be a part of the logical ID since update requires replacement
+        // but we only use it internally for merge-mode enrichment tables so just will ignore prop change on update.
+        val namespace = requestProps.glueDatabaseName ?: MATANO_NAMESPACE
+        val tableId = TableIdentifier.of(Namespace.of(namespace), requestProps.tableName)
         val partition = if (requestProps.partitions.isEmpty()) PartitionSpec.unpartitioned() else createIcebergPartitionSpec(requestProps.partitions, schema)
         logger.info("Using partition: $partition")
         val table = icebergCatalog.createTable(
@@ -296,8 +300,7 @@ class MatanoIcebergTableCustomResource : CFNCustomResource {
             "catalog-name" to "iceberg",
             "catalog-impl" to "org.apache.iceberg.aws.glue.GlueCatalog",
             "warehouse" to "s3://${System.getenv("MATANO_ICEBERG_BUCKET")}/lake",
-            "io-impl" to "org.apache.iceberg.aws.s3.S3FileIO",
-            "fs.s3a.path.style.access" to "true"
+            "io-impl" to "org.apache.iceberg.aws.s3.S3FileIO"
         )
     }
 }

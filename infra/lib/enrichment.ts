@@ -66,6 +66,12 @@ export class EnrichmentTable extends Construct {
       noDefaultEcsFields: props.enrichConfig?.schema?.ecs_field_names == null,
       noDefaultTs: true,
     });
+    const schema = this.logSource.matanoTables[0].schema;
+    const tempTable = new MatanoIcebergTable(this, `MergeTempTable`, {
+      tableName: `${enrichTableName}_temp`,
+      schema,
+      glueDatabaseName: "matano_system",
+    });
 
     if (props.enrichConfig.enrichment_type === "static") {
       const dataFileDir = path.resolve(props.dataFilePath!!, "..");

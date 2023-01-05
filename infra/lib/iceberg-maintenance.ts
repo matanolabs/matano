@@ -227,17 +227,18 @@ export class IcebergMaintenance extends Construct {
   constructor(scope: Construct, id: string, props: IcebergMaintenanceProps) {
     super(scope, id);
 
+    const tableNames = props.tableNames.filter((n) => !n.endsWith("_temp"));
+
     new IcebergCompaction(this, "Compaction", {
-      ...props,
-      tableNames: props.tableNames.filter((n) => !n.startsWith("enrich_")),
+      tableNames: tableNames.filter((n) => !n.startsWith("enrich_")),
     });
 
     new IcebergExpireSnapshots(this, "ExpireSnapshots", {
-      ...props,
+      tableNames,
     });
 
     new IcebergRewriteManifests(this, "RewriteManifests", {
-      ...props,
+      tableNames,
     });
   }
 }

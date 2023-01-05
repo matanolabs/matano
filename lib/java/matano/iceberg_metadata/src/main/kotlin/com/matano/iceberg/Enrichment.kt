@@ -278,16 +278,41 @@ class EnrichmentIcebergSyncer {
     }
 }
 
+const val MATANO_SYSTEM_DB = "matano_system"
+
 /** Write Iceberg metadata for enrichment tables */
 class EnrichmentMetadataWriter(
     val configs: Map<String, EnrichmentConfig>
 ) {
     private val logger = LoggerFactory.getLogger(this::class.java)
+    val athenaQueryRunner = AthenaQueryRunner("matano_system_v3")
 
-    fun doMetadataWrite(
+    suspend fun doMerge(table: Table, pkCol: String, tempTableAthenaId: String) {
+        val (_, db, name) = table.name().split(".", limit = 3)
+        val mainTableAthenaId = "$db.$name"
+
+        val cols = table.schema().columns().map { it.name() }
+        val colsPart = cols.joinToString(",")
+        val updateColPart = cols.joinToString(",") { "$it = new.$it" }
+        val insertColPart = cols.joinToString(",") { "new.$it" }
+
+        val stmt = """
+        MERGE INTO $mainTableAthenaId main USING $tempTableAthenaId new
+            ON (main.$pkCol = new.$pkCol)
+            WHEN MATCHED
+                THEN UPDATE SET $updateColPart
+            WHEN NOT MATCHED
+                THEN INSERT ($colsPart) VALUES($insertColPart)
+        """.trimIndent()
+
+        athenaQueryRunner.runAthenaQuery(stmt)
+    }
+
+    suspend fun doMetadataWrite(
+        icebergCatalog: Catalog,
         icebergTable: Table,
         dataFile: DataFile,
-        appendFiles: AppendFiles,
+        appendFiles: () -> AppendFiles,
         overwriteFiles: () -> OverwriteFiles
     ) {
         val icebergTableName = icebergTable.name().split(".").last() // remove catalog, db
@@ -300,7 +325,21 @@ class EnrichmentMetadataWriter(
             }.addFile(dataFile)
         } else if (conf.write_mode == "append") {
             logger.info("Doing append for enrichment table: $icebergTableName")
-            appendFiles.appendFile(dataFile)
+            appendFiles().appendFile(dataFile)
+        } else if (conf.write_mode == "merge") {
+            logger.info("Doing merge for enrichment table: $icebergTableName")
+            val tempTableName = "${icebergTableName}_temp"
+            val tempTableId = TableIdentifier.of(Namespace.of(MATANO_SYSTEM_DB), tempTableName)
+            val tempTable = icebergCatalog.loadTable(tempTableId)
+
+            // Overwrite the temp table.
+            tempTable.newOverwrite().apply {
+                tempTable.newScan().planFiles().map { it.file() }.forEach { deleteFile(it) }
+            }.addFile(dataFile).commit()
+
+            // And merge the temp table into the main table.
+            val pkCol = conf.schema.get("primary_key")?.textValue() ?: throw RuntimeException("Need Primary key!")
+            doMerge(icebergTable, pkCol, "$MATANO_SYSTEM_DB.$tempTableName")
         }
     }
 }

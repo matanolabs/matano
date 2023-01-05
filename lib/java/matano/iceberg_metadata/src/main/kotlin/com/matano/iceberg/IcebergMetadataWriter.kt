@@ -22,7 +22,6 @@ import org.slf4j.LoggerFactory
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
-import java.util.Optional
 import java.util.concurrent.ConcurrentHashMap
 
 class LazyConcurrentMap<K, V>(
@@ -54,12 +53,15 @@ class IcebergMetadataWriter {
     private val logger = LoggerFactory.getLogger(this::class.java)
 
     val icebergCatalog: Catalog by lazy { createIcebergCatalog() }
-    lateinit var enrichmentMetadataWriter: EnrichmentMetadataWriter
+    val enrichmentMetadataWriter: EnrichmentMetadataWriter = EnrichmentMetadataWriter(loadEnrichmentConfiguration())
 
     inner class TableObj(tableName: String) {
         val table: Table = icebergCatalog.loadTable(TableIdentifier.of(Namespace.of(MATANO_NAMESPACE), tableName))
-        val appendFiles: AppendFiles = table.newAppend()
-        var overwriteFiles = Optional.empty<OverwriteFiles>()
+        val lazyAppendFiles = lazy { table.newAppend() }
+        fun getAppendFiles(): AppendFiles = lazyAppendFiles.value
+
+        val lazyOverwriteFiles = lazy { table.newOverwrite() }
+        fun getOverwrite(): OverwriteFiles = lazyOverwriteFiles.value
     }
 
     fun parseObjectKey(key: String): Pair<String, String> {
@@ -75,7 +77,7 @@ class IcebergMetadataWriter {
 
     fun handle(sqsEvent: SQSEvent) {
         val tableObjs = LazyConcurrentMap<String, TableObj>({ name -> TableObj(name) })
-        enrichmentMetadataWriter = EnrichmentMetadataWriter(loadEnrichmentConfiguration())
+
         runBlocking {
             for (record in sqsEvent.records) {
                 launch(Dispatchers.IO) { processRecord(record, tableObjs) }
@@ -85,8 +87,12 @@ class IcebergMetadataWriter {
         runBlocking {
             for (tableObj in tableObjs.values) {
                 launch(Dispatchers.IO) {
-                    tableObj.appendFiles.commit()
-                    tableObj.overwriteFiles.ifPresent { it.commit() }
+                    if (tableObj.lazyAppendFiles.isInitialized()) {
+                        tableObj.getAppendFiles().commit()
+                    }
+                    if (tableObj.lazyOverwriteFiles.isInitialized()) {
+                        tableObj.getOverwrite().commit()
+                    }
                 }
             }
         }
@@ -98,7 +104,7 @@ class IcebergMetadataWriter {
         return ParquetUtil.fileMetrics(inputFile, MetricsConfig.forTable(table))
     }
 
-    fun processRecord(sqsMessage: SQSMessage, tableObjs: Map<String, TableObj>) {
+    suspend fun processRecord(sqsMessage: SQSMessage, tableObjs: Map<String, TableObj>) {
         val record = S3EventNotification.parseJson(sqsMessage.body).records[0]
         val s3Bucket = record.s3.bucket.name
         val s3Object = record.s3.`object`
@@ -137,15 +143,9 @@ class IcebergMetadataWriter {
                 .build()
 
             if (isEnrichmentTable) {
-                enrichmentMetadataWriter.doMetadataWrite(icebergTable, dataFile, tableObj.appendFiles, {
-                    val overwriteOpt = tableObj.overwriteFiles
-                    if (overwriteOpt.isEmpty) {
-                        tableObj.overwriteFiles = Optional.of(icebergTable.newOverwrite())
-                    }
-                    tableObj.overwriteFiles.get()
-                })
+                enrichmentMetadataWriter.doMetadataWrite(icebergCatalog, icebergTable, dataFile, { tableObj.getAppendFiles() }, { tableObj.getOverwrite() })
             } else {
-                tableObj.appendFiles.appendFile(dataFile)
+                tableObj.getAppendFiles().appendFile(dataFile)
             }
         } catch (e: Exception) {
             // Need to delete on failure to avoid false duplicate skip.
