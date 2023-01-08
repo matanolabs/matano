@@ -5,6 +5,7 @@
 * [`matano autocomplete [SHELL]`](#matano-autocomplete-shell)
 * [`matano deploy`](#matano-deploy)
 * [`matano diff`](#matano-diff)
+* [`matano disable-metadata-reporting`](#matano-disable-metadata-reporting)
 * [`matano generate:matano-dir DIRECTORY-NAME`](#matano-generatematano-dir-directory-name)
 * [`matano help [COMMAND]`](#matano-help-command)
 * [`matano info`](#matano-info)
@@ -91,6 +92,26 @@ EXAMPLES
 ```
 
 _See code: [dist/commands/diff.ts](https://github.com/matanolabs/matano/blob/main/cli/src/commands/diff.ts)_
+
+## `matano disable-metadata-reporting`
+
+Disables metadata reporting.
+
+```
+USAGE
+  $ matano disable-metadata-reporting [--debug]
+
+FLAGS
+  --debug  View debug information.
+
+DESCRIPTION
+  Disables metadata reporting.
+
+EXAMPLES
+  $ matano disable-metadata-reporting
+```
+
+_See code: [dist/commands/disable-metadata-reporting.ts](https://github.com/matanolabs/matano/blob/main/cli/src/commands/disable-metadata-reporting.ts)_
 
 ## `matano generate:matano-dir DIRECTORY-NAME`
 

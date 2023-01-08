@@ -33,6 +33,14 @@ export function getMatanoCdkApp() {
   }
 }
 
+export function getCliExecutable() {
+  if (isPkg()) {
+    return path.resolve(path.dirname(process.execPath), "matano");
+  } else {
+    return path.resolve(PROJ_ROOT_DIR, "cli/bin/run");
+  }
+}
+
 export function getCdkOutputDir() {
   return makeTempDir("matanocdkout");
 }

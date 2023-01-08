@@ -1,4 +1,4 @@
-import * as fs from "fs";
+import * as fs from "fs-extra";
 import * as path from "path";
 import * as YAML from "yaml";
 
@@ -83,3 +83,9 @@ export const stackNameWithLabel = (name: string, projectLabel: string) => {
   if (projectLabel != null) validateProjectLabel(projectLabel);
   return `${name}${projectLabel ? `-${projectLabel}` : ""}`;
 };
+
+export const fileExists = (path: string) =>
+  fs
+    .stat(path)
+    .then(() => true)
+    .catch(() => false);

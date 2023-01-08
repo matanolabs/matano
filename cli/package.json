@@ -35,6 +35,7 @@
     "ora": "^4",
     "promptly": "^3.2.0",
     "proxy-agent": "^5.0.0",
+    "phin": "3.7.0",
     "tty-table": "^4.1.6",
     "yaml": "^2.1.1"
   },
@@ -80,6 +81,10 @@
       "generate": {
         "description": "Utilities to get started and generate boilerplate."
       }
+    },
+    "hooks": {
+      "prerun": "./dist/hooks/metadata-reporting",
+      "init": "./dist/hooks/metadata-reporting-info"
     }
   },
   "scripts": {
