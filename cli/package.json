@@ -1,6 +1,6 @@
 {
   "name": "matano",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Matano - the open source security lake platform for AWS.",
   "author": "🐻‍❄️ Samrose Ahmed 🐻‍❄️",
   "bin": {

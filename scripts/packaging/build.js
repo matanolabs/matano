@@ -19,6 +19,23 @@ const cdkPkgConfigPath = path.resolve(workDir, "cdkpkg.json");
 
 process.chdir(workDir);
 
+function getCommitHash() {
+  let commitHash;
+  try {
+    commitHash = execSync("git rev-parse HEAD").toString();
+  } catch (e) {
+    commitHash = process.env.GITHUB_SHA;
+  }
+  return commitHash.substring(0, 7);
+}
+
+function setCliPackageVersion() {
+  const pkgPath = path.resolve(projDir, "cli/package.json");
+  const pkg = JSON.parse(fs.readFileSync(pkgPath));
+  pkg.version = "0.0.1-" + getCommitHash();
+  fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2));
+}
+
 function prepareCdkPkg() {
   execSync("npm install aws-cdk@2.54.0", { cwd: workDir });
 
@@ -96,6 +113,8 @@ async function main() {
     path.join(projDir, "infra.pkg.json"),
     path.resolve(projDir, "infra/dist/bin/app.js"),
   ]);
+
+  setCliPackageVersion();
   await exec(["--no-bytecode", "--public", "--public-packages", "*", path.resolve(projDir, "cli")]);
 
   prepareCdkPkg();
