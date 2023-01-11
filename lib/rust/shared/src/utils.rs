@@ -1,6 +1,6 @@
 //! Shared utilities
 //!
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use config::{Config, File};
 use std::{
     cell::RefCell,
@@ -154,6 +154,31 @@ pub fn load_log_sources_configuration_map(
     log_sources_configuration_map
 }
 
+pub fn load_enrichment_config() -> Result<HashMap<String, serde_yaml::Value>> {
+    let config_path = "/opt/config/enrichment";
+    let ret = WalkDir::new(config_path)
+        .min_depth(2)
+        .max_depth(2)
+        .into_iter()
+        .flatten()
+        .filter_map(|p| {
+            (p.file_name() == "enrichment.yml").then_some(p.path().to_str()?.to_string())
+        })
+        .map(|p| {
+            let file = std::io::BufReader::new(std::fs::File::open(&p)?);
+            let config: serde_yaml::Value = serde_yaml::from_reader(file)?;
+            let name = config
+                .get("name")
+                .context("Need name in enrichment!")?
+                .as_str()
+                .context("Need name in enrichment!")?
+                .to_string();
+            anyhow::Ok((name, config))
+        })
+        .collect::<Result<HashMap<String, serde_yaml::Value>>>();
+    ret
+}
+
 pub trait JsonValueExt {
     fn into_array(self) -> Option<Vec<serde_json::Value>>;
     fn into_object(self) -> Option<serde_json::Map<String, serde_json::Value>>;
@@ -184,7 +209,7 @@ impl JsonValueExt for serde_json::Value {
 }
 
 pub fn convert_json_array_str_to_ndjson(s: &str) -> Result<String> {
-    let deserialized: Vec<Box<serde_json::value::RawValue>> = serde_json::from_str(s).unwrap();
+    let deserialized: Vec<Box<serde_json::value::RawValue>> = serde_json::from_str(s)?;
 
     let length = deserialized.len();
     let res = deserialized

@@ -217,7 +217,8 @@ export class Enrichment extends Construct {
       let enrichConfig = YAML.parse(fs.readFileSync(path.resolve(tableDir, "enrichment.yml"), "utf-8"));
 
       if (enrichConfig?.managed?.type) {
-        enrichConfig = loadManagedEnrichmentConfig(enrichConfig);
+        // Allows user addition of top level keys e.g. `lookup_keys`.
+        enrichConfig = { ...loadManagedEnrichmentConfig(enrichConfig), ...enrichConfig };
       }
 
       if (enrichConfig.enrichment_type === "static" && enrichConfig.write_mode != undefined) {

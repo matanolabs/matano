@@ -1,5 +1,5 @@
 mod models;
-mod utils;
+pub mod utils;
 
 pub use models::*;
 pub use utils::*;

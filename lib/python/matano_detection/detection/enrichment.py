@@ -17,16 +17,9 @@ def _load_enrichment_configs():
     return ret
 
 
-def _load_enrich_configs():
-    enrichment_configs = _load_enrichment_configs()
-    ret = []
-    for name, conf in enrichment_configs.items():
-        pk = conf.get("schema", {}).get("primary_key")
-        ret.append((name, pk))
-    return ret
-
 def _load_enrichment_tables(module):
-    tables = create_enrichment_tables(_load_enrich_configs())
+    all_table_names = list(_load_enrichment_configs().keys())
+    tables = create_enrichment_tables(all_table_names)
     names = [table.name for table in tables]
     for table in tables:
         setattr(module, table.name, table)

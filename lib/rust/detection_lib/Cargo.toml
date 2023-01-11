@@ -22,6 +22,7 @@ futures = "0.3"
 futures-util = "0.3.23"
 serde = "^1"
 serde_json = "^1"
+serde_yaml = "0.9"
 apache-avro = { git = "https://github.com/apache/avro.git", rev = "05099c3", features = [
   "zstandard",
   "snappy",

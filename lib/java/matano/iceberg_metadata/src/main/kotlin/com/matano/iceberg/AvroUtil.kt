@@ -16,7 +16,7 @@ fun getNestedAvro(record: GenericRecord, path: String): String {
     return (currentRecord as org.apache.avro.util.Utf8).toString()
 }
 
-fun generateAvroIndex(avroFile: ByteArray, keyPath: String): Map<String, Array<Long>> {
+fun generateAvroIndices(avroFile: ByteArray, lookupKeys: List<String>): Map<String, Map<String, Array<Long>>> {
     val avroFileLength = avroFile.size
 
     val bais = SeekableByteArrayInput(avroFile)
@@ -38,7 +38,7 @@ fun generateAvroIndex(avroFile: ByteArray, keyPath: String): Map<String, Array<L
     var decoder: BinaryDecoder? = null
     val datumReader = GenericDatumReader<GenericRecord>(reader.schema)
 
-    val index: MutableMap<String, Array<Long>> = mutableMapOf()
+    val indices: MutableMap<String, MutableMap<String, Array<Long>>> = mutableMapOf()
     for (syncPos in allSyncPositions) {
         reader.seek(syncPos)
 
@@ -50,10 +50,12 @@ fun generateAvroIndex(avroFile: ByteArray, keyPath: String): Map<String, Array<L
         var record: GenericRecord? = null
         for (i in 0 until reader.blockCount) {
             record = datumReader.read(record, decoder)
-
-            val key = getNestedAvro(record, keyPath)
-            index[key] = arrayOf(syncPos, blockLen)
+            for (lookupKey in lookupKeys) {
+                val index = indices.getOrPut(lookupKey) { mutableMapOf() }
+                val key = getNestedAvro(record, lookupKey)
+                index[key] = arrayOf(syncPos, blockLen)
+            }
         }
     }
-    return index
+    return indices
 }

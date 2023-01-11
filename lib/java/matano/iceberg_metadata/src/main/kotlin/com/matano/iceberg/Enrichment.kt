@@ -54,6 +54,7 @@ data class EnrichmentConfig(
     val name: String,
     val enrichment_type: String,
     val write_mode: String = "overwrite",
+    val lookup_keys: List<String>? = null,
     val schema: JsonNode
 )
 
@@ -186,21 +187,22 @@ class EnrichmentIcebergSyncer {
         }
         writer.close()
         val avroBytes = avroBaos.toByteArray()
-
-        val primaryKey: String? = conf.schema.get("primary_key").textValue()
-
-        // Generate index for avro file
-        val indexUploadFut = if (primaryKey != null) {
+        // Generate indices for avro file
+        val indexUploadFut = if (conf.lookup_keys != null) {
             logger.info("Generating index for table: $tableName")
 
-            val index = generateAvroIndex(avroBytes, primaryKey)
+            val indices = generateAvroIndices(avroBytes, conf.lookup_keys)
 
-            val indexBytes = ByteArrayOutputStream().let { baos ->
-                ZstdOutputStream(baos).use { zstd -> mapper.writeValue(zstd, index) }
-                baos.toByteArray()
+            val indexFutures = indices.map { (lookupKey, index) ->
+                val indexBytes = ByteArrayOutputStream().let { baos ->
+                    ZstdOutputStream(baos).use { zstd -> mapper.writeValue(zstd, index) }
+                    baos.toByteArray()
+                }
+                val indexKey = "tables/${tableName}_index_$lookupKey.json.zst"
+                s3AsyncClient.putObject({ it.bucket(enrichmentTablesBucket).key(indexKey) }, AsyncRequestBody.fromBytes(indexBytes))
             }
-            val enrichmentTableIndexS3Key = "tables/${tableName}_index.json.zst"
-            s3AsyncClient.putObject({ it.bucket(enrichmentTablesBucket).key(enrichmentTableIndexS3Key) }, AsyncRequestBody.fromBytes(indexBytes))
+
+            CompletableFuture.allOf(*indexFutures.toTypedArray())
         } else {
             CompletableFuture.completedFuture(null)
         }

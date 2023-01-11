@@ -244,6 +244,7 @@ export class DPMainStack extends MatanoStack {
     detections.detectionFunction.addLayers(configLayer);
     rawDataBatcher.batcherFunction.addLayers(configLayer);
     icebergMetadata.metadataWriterFunction.addLayers(configLayer);
+    transformer.transformerLambda.addLayers(configLayer);
     enrichment?.bindLayers(configLayer);
 
     const allIcebergTableNames = [...resolvedTableNames];
