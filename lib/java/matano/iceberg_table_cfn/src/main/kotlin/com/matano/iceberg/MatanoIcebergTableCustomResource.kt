@@ -196,7 +196,8 @@ class MatanoIcebergTableCustomResource : CFNCustomResource {
         val newProps = mapper.convertValue<MatanoTableRequest>(event.resourceProperties)
         val oldProps = mapper.convertValue<MatanoTableRequest>(event.oldResourceProperties)
 
-        val tableId = TableIdentifier.of(Namespace.of(MATANO_NAMESPACE), newProps.tableName)
+        val namespace = newProps.glueDatabaseName ?: MATANO_NAMESPACE
+        val tableId = TableIdentifier.of(Namespace.of(namespace), newProps.tableName)
         val table = icebergCatalog.loadTable(tableId)
         val existingSchema = table.schema()
 
