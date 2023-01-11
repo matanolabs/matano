@@ -1,5 +1,5 @@
 enrichment_type: dynamic
-write_mode: overwrite
+write_mode: merge
 
 # TODO: add related?
 transform: |
@@ -15,8 +15,11 @@ transform: |
   .threat.indicator.first_seen = to_timestamp(replace(.json.first_seen_utc, " UTC", "") ?? null) ?? null
   .threat.indicator.last_seen = to_timestamp(replace(.json.last_seen_utc, " UTC", "") ?? null) ?? null
 
+  .threat.indicator.description = .ioc_type_desc
+
   .threat.software.name = .json.malware_printable
   .threat.software.alias = split(.json.malware_alias, ",") ?? null
+  .threat.software.reference = .json.malware_malpedia
 
   th_confidence, err = to_int(.json.confidence_level)
   .threat.indicator.confidence = if th_confidence > 0 && th_confidence < 30 {
@@ -31,7 +34,7 @@ transform: |
 
   og_ioc_type = .json.ioc_type
   .threat.indicator.type = if og_ioc_type == "url" {
-      url, err = parse_url(.json.ioc_value)
+      url, err = parse_url(.json.ioc)
       if (err == null) {
         url.domain = del(url.host)
         if url.query != null {
@@ -44,17 +47,17 @@ transform: |
         }
         url = compact(url)
         .threat.indicator.url = url
-        .threat.indicator.url.original = .json.ioc_value
-        .threat.indicator.url.full = .json.ioc_value
+        .threat.indicator.url.original = .json.ioc
+        .threat.indicator.url.full = .json.ioc
 
       }
       "url"
   } else if og_ioc_type == "domain" {
-      .threat.indicator.url.domain = .json.ioc_value
+      .threat.indicator.url.domain = .json.ioc
       "domain-name"
   } else if og_ioc_type == "ip:port" {
-      if .json.ioc_value != null {
-        ipinfo = parse_grok!(.json.ioc_value, "%{IP:ip}:%{NUMBER:port}")
+      if .json.ioc != null {
+        ipinfo = parse_grok!(.json.ioc, "%{IP:ip}:%{NUMBER:port}")
         ipinfo.port = to_int(ipinfo.port) ?? null
         .threat.indicator.ip = ipinfo.ip
         .threat.indicator.port = ipinfo.port
@@ -62,7 +65,7 @@ transform: |
       if contains(string(.threat.indicator.ip) ?? "", ":") { "ipv6-addr" } else {"ipv4-addr"}
   } else if includes(["md5_hash", "sha1_hash", "sha256_hash"], og_ioc_type) {
       hash_type = replace!(og_ioc_type, "_hash", "")
-      .threat.indicator.file.hash = set!({}, [hash_type], .json.ioc_value)
+      .threat.indicator.file.hash = set!({}, [hash_type], .json.ioc)
       "file"
   }
 
@@ -76,6 +79,7 @@ transform: |
 
 
 schema:
+  primary_key: event.id
   ecs_field_names:
     - ecs.version
     - event.kind
@@ -85,6 +89,7 @@ schema:
     - related
     - threat.indicator.type
     - threat.indicator.reference
+    - threat.indicator.description
     - threat.indicator.provider
     - threat.indicator.first_seen
     - threat.indicator.last_seen

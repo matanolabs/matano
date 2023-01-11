@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 
-use anyhow::Result;
+use anyhow::{anyhow, Context, Result};
 use async_trait::async_trait;
+use aws_sdk_s3::types::ByteStream;
 use chrono::{DateTime, FixedOffset};
 use enum_dispatch::enum_dispatch;
 use log::{debug, error, info};
@@ -45,6 +46,7 @@ pub struct PullLogsContext {
     pub log_source_type: LogSource,
     config: HashMap<String, String>,
     cache: Arc<Mutex<PullerCache>>,
+    s3: aws_sdk_s3::Client,
 }
 
 impl PullLogsContext {
@@ -52,6 +54,7 @@ impl PullLogsContext {
         secret_arn: String,
         log_source_type: LogSource,
         config: HashMap<String, String>,
+        s3: aws_sdk_s3::Client,
     ) -> PullLogsContext {
         PullLogsContext {
             secret_cache: Arc::new(Mutex::new(None)),
@@ -59,6 +62,7 @@ impl PullLogsContext {
             log_source_type,
             config,
             cache: Arc::new(Mutex::new(PullerCache::new())),
+            s3,
         }
     }
 
@@ -75,6 +79,62 @@ impl PullLogsContext {
         };
 
         Ok(secrets_val.get(key).map(|s| s.to_owned()))
+    }
+
+    /// Returns true if this is the first time the puller has run. Useful for e.g. pulling more logs on first run.
+    pub async fn is_initial_run(&self) -> Result<bool> {
+        let bucket = std::env::var("INGESTION_BUCKET_NAME").context("need bucket!")?;
+
+        let initial_run_key = "__puller_initial_run__";
+        let s3_key = format!("{}/{}", initial_run_key, self.log_source_type.to_str());
+        let mut cache = self.cache.lock().await;
+
+        if cache.get(initial_run_key).is_some() {
+            return Ok(false);
+        }
+
+        let res = self
+            .s3
+            .head_object()
+            .bucket(&bucket)
+            .key(&s3_key)
+            .send()
+            .await;
+        let is_initial = match res {
+            Ok(_) => Ok(false),
+            Err(aws_sdk_s3::types::SdkError::ServiceError {
+                err:
+                    aws_sdk_s3::error::HeadObjectError {
+                        kind: aws_sdk_s3::error::HeadObjectErrorKind::NotFound(_),
+                        ..
+                    },
+                ..
+            }) => Ok(true),
+            Err(e) => Err(e),
+        }?;
+
+        if is_initial {
+            cache.set(initial_run_key, "".to_string(), None);
+        }
+
+        Ok(is_initial)
+    }
+
+    pub async fn mark_initial_run_complete(&self) -> Result<()> {
+        let bucket = std::env::var("INGESTION_BUCKET_NAME").context("need bucket!")?;
+
+        let initial_run_key = "__puller_initial_run__";
+        let s3_key = format!("{}/{}", initial_run_key, self.log_source_type.to_str());
+
+        self.s3
+            .put_object()
+            .bucket(&bucket)
+            .key(&s3_key)
+            .body(ByteStream::from(Vec::with_capacity(0)))
+            .send()
+            .await?;
+
+        Ok(())
     }
 
     pub fn config(&self) -> &HashMap<String, String> {
@@ -123,6 +183,15 @@ impl LogSource {
                 abusech::AbuseChThreatfoxPuller {},
             )),
             _ => None,
+        }
+    }
+    pub fn to_str(&self) -> &str {
+        match self {
+            LogSource::O365Puller(_) => "o365",
+            LogSource::Otx(_) => "otx",
+            LogSource::AbuseChUrlhausPuller(_) => "abusech_urlhaus",
+            LogSource::AbuseChMalwareBazaarPuller(_) => "abusech_malwarebazaar",
+            LogSource::AbuseChThreatfoxPuller(_) => "abusech_threatfox",
         }
     }
 }

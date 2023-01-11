@@ -30,7 +30,7 @@ const URLHAUS_HEADERS: [&str; 9] = [
     "reporter",
 ];
 const MALWAREBAZAAR_URL: &str = "https://mb-api.abuse.ch/api/v1/";
-const THREATFOX_FULL_URL: &str = "https://threatfox.abuse.ch/export/json/full/";
+const THREATFOX_URL: &str = "https://threatfox-api.abuse.ch/api/v1/";
 
 #[async_trait]
 impl PullLogs for AbuseChUrlhausPuller {
@@ -46,7 +46,7 @@ impl PullLogs for AbuseChUrlhausPuller {
         let mut zipfile = zip::ZipArchive::new(std::io::Cursor::new(resp))?;
         let csvfile = zipfile.by_name("csv.txt")?;
 
-        let mut json_writer = std::io::Cursor::new(vec![]);
+        let mut json_bytes = vec![];
 
         let mut csv_reader = csv::ReaderBuilder::new()
             .comment(Some(b'#'))
@@ -56,10 +56,9 @@ impl PullLogs for AbuseChUrlhausPuller {
         for result in csv_reader.deserialize() {
             let record: HashMap<String, String> = result?;
             let bytes = serde_json::to_vec(&record)?;
-            json_writer.write(bytes.as_slice())?;
-            json_writer.write(b"\n")?;
+            json_bytes.write(bytes.as_slice())?;
+            json_bytes.write(b"\n")?;
         }
-        let json_bytes = json_writer.into_inner();
 
         return Ok(json_bytes);
     }
@@ -112,25 +111,6 @@ impl PullLogs for AbuseChMalwareBazaarPuller {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize)]
-pub struct ThreatfoxRow {
-    pub id: Option<String>,
-    pub ioc_value: Option<String>,
-    pub ioc_type: Option<String>,
-    pub threat_type: Option<String>,
-    pub malware: Option<String>,
-    pub malware_alias: Option<String>,
-    pub malware_printable: Option<String>,
-    pub first_seen_utc: Option<String>,
-    pub last_seen_utc: Option<String>,
-    pub confidence_level: Option<i64>,
-    pub reference: Option<String>,
-    pub tags: Option<String>,
-    pub anonymous: Option<String>,
-    pub reporter: Option<String>,
-}
-type ThreatFoxDoc = HashMap<String, [ThreatfoxRow; 1]>;
-
 #[async_trait]
 impl PullLogs for AbuseChThreatfoxPuller {
     async fn pull_logs(
@@ -141,25 +121,43 @@ impl PullLogs for AbuseChThreatfoxPuller {
         end_dt: DateTime<FixedOffset>,
     ) -> Result<Vec<u8>> {
         info!("Pulling Threatfox...");
+        let is_initial_run = ctx.is_initial_run().await?;
 
-        let resp = client.get(THREATFOX_FULL_URL).send().await?.bytes().await?;
-        let mut zipfile = zip::ZipArchive::new(std::io::Cursor::new(resp))?;
-        let mut jsonfile = zipfile.by_name("full.json")?;
+        // This is a simple implementation. There's also a full export available
+        // that we could technically retrieve on the initial run, but keep it simple for now.
+        let days_to_retrieve = if is_initial_run {
+            "7" // maximum
+        } else {
+            "1"
+        };
+        let body = format!(
+            "{{\"query\":\"get_iocs\",\"days\":\"{}\"}}",
+            days_to_retrieve
+        );
+        let resp = client
+            .post(THREATFOX_URL)
+            .body(body)
+            .send()
+            .await?
+            .json::<serde_json::Value>()
+            .await?;
 
-        let mut buf = vec![];
-        jsonfile.read_to_end(&mut buf)?;
-        let json_obj: ThreatFoxDoc = serde_json::from_slice(buf.as_slice())?;
+        let data = resp
+            .get("data")
+            .context("data must exist")?
+            .as_array()
+            .context("data must be array")?;
 
-        let mut json_writer = std::io::Cursor::new(vec![]);
-        for (id, record) in json_obj {
-            // for loop but irl seem to be all one element arrays.
-            for mut row in record {
-                row.id = Some(id.to_owned());
-                json_writer.write(serde_json::to_vec(&row)?.as_slice())?;
-                json_writer.write(b"\n")?;
-            }
+        let mut json_bytes = vec![];
+        for record in data {
+            json_bytes.write(serde_json::to_vec(&record)?.as_slice())?;
+            json_bytes.write(b"\n")?;
         }
-        let json_bytes = json_writer.into_inner();
+
+        // TODO: should be integrated into puller to mark complete after upload succeeds.
+        if is_initial_run {
+            ctx.mark_initial_run_complete().await?;
+        }
 
         Ok(json_bytes)
     }

@@ -25,18 +25,21 @@ static ALLOC: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
 lazy_static! {
     static ref REQ_CLIENT: reqwest::Client = reqwest::Client::new();
-    static ref CONTEXTS: HashMap<String, PullLogsContext> = build_contexts();
+    static ref CONTEXTS: AsyncOnce<HashMap<String, PullLogsContext>> =
+        AsyncOnce::new(async { build_contexts().await });
     static ref AWS_CONFIG: AsyncOnce<SdkConfig> =
         AsyncOnce::new(async { aws_config::load_from_env().await });
     static ref S3_CLIENT: AsyncOnce<aws_sdk_s3::Client> =
         AsyncOnce::new(async { aws_sdk_s3::Client::new(AWS_CONFIG.get().await) });
 }
 
-fn build_contexts() -> HashMap<String, PullLogsContext> {
+async fn build_contexts() -> HashMap<String, PullLogsContext> {
     let puller_log_source_types: Vec<String> =
         serde_json::from_str(&std::env::var("PULLER_LOG_SOURCE_TYPES").unwrap()).unwrap();
     let log_source_to_secret_arn_map: HashMap<String, String> =
         serde_json::from_str(&std::env::var("LOG_SOURCE_TO_SECRET_ARN_MAP").unwrap()).unwrap();
+
+    let s3 = S3_CLIENT.get().await;
 
     let ret = WalkDir::new("/opt/config/log_sources")
         .min_depth(1)
@@ -108,7 +111,7 @@ fn build_contexts() -> HashMap<String, PullLogsContext> {
                 .context("Need secret arn.")
                 .unwrap();
 
-            let ctx = PullLogsContext::new(secret_arn.to_owned(), log_source, props);
+            let ctx = PullLogsContext::new(secret_arn.to_owned(), log_source, props, s3.clone());
 
             (ls_name.to_string(), ctx)
         })
@@ -151,7 +154,7 @@ struct SQSBatchResponse {
 async fn handler(event: LambdaEvent<SqsEvent>) -> Result<Option<SQSBatchResponse>> {
     info!("Starting....");
     let client = REQ_CLIENT.clone();
-    let contexts = &CONTEXTS;
+    let contexts = CONTEXTS.get().await;
 
     let mut failures = vec![];
 
