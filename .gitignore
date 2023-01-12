@@ -9,6 +9,7 @@ dist
 **/.DS_Store
 .matano
 lib/scripts
+.python-version
 
 # CDK asset staging directory
 .cdk.staging
