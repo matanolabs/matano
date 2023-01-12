@@ -20,19 +20,25 @@ const cdkPkgConfigPath = path.resolve(workDir, "cdkpkg.json");
 process.chdir(workDir);
 
 function getCommitHash() {
-  let commitHash;
-  try {
-    commitHash = execSync("git rev-parse HEAD").toString();
-  } catch (e) {
+  let commitHash = undefined;
+  if (process.env.GITHUB_SHA) {
     commitHash = process.env.GITHUB_SHA;
+  } else {
+    try {
+      commitHash = execSync("git rev-parse HEAD").toString();
+    } catch (e) {
+      // fail locally, no big deal.
+    }
   }
-  return commitHash.substring(0, 7);
+  return commitHash?.substring(0, 7);
 }
 
 function setCliPackageVersion() {
+  const commitHash = getCommitHash();
+  if (!commitHash) return;
   const pkgPath = path.resolve(projDir, "cli/package.json");
   const pkg = JSON.parse(fs.readFileSync(pkgPath));
-  pkg.version = "0.0.1-" + getCommitHash();
+  pkg.version = "0.0.1-" + commitHash;
   fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2));
 }
 
