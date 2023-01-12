@@ -1,5 +1,3 @@
-project_label: shaeq-test
-
 aws_account: "946413832404"
 aws_region: "us-east-1"
 aws_tags:
