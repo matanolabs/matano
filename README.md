@@ -41,7 +41,7 @@ We are on a mission to build the first open platform for threat hunting, detecti
 
 <div align="center">
   <br>
-  <img src="assets/matano_athena.png" width="600">
+  <img src="assets/matano_athena.png" width="700">
 </div>
 
 <br>
