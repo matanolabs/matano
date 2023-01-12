@@ -14,10 +14,24 @@ Since Matano is regularly distributed as a prebuilt binary, you may need to ensu
 - Cargo Lambda (Run `pip install cargo-lambda`)
 - Java 11
 - Python 3.9
-- Node JS >14
-- Docker
+- Node JS >=14
+<!-- - Docker -->
 
 This is the complete set of requirements. Of course, if you are only working on, for example, Rust code you may not need Python installed, or if you are only working on adding a managed log source parser, you may not need any dependencies at all.
+
+## Mac OS
+
+On Mac OS, some additional dependencies are required.
+
+- Install `patchelf` (this cannot be installed using pip). You can install this with `brew install patchelf`.
+
+## If you are using NVM for Node (important)
+
+If you are using NVM to install Node, you must set the `MATANO_REPO_DIR environment variable` to the root of directory where you have checked out the source repository. For example:
+
+```bash
+export MATANO_REPO_DIR="/home/myname/workplace/matano"
+```
 
 ## Components
 
@@ -39,7 +53,6 @@ make local-install
 ```
 
 This will build all the Matano packages and install the matano CLI locally using Matano (watch out for path conflicts if you have the Matano CLI installed from the published binary).
-
 
 ### Relevant commands
 
@@ -88,6 +101,7 @@ Of course, you can use any IDE you wish. Here are tips that have worked well in 
 First, follow the instructions above on [developing locally](#developing-locally).
 
 Managed log sources are defined in the `data/managed/log_sources/` subdirectory. You can take a look at existing examples for the structure. In short, you will need to
+
 - Create a new subdirectory under `data/managed/log_sources/` with the name of the managed log source.
 - Add the schema and transform definition as if you were building the transform yourself.
 - To test, create a log source in your Matano directory with `managed.type` set to your managed log source name.

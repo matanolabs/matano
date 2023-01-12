@@ -5,7 +5,7 @@ import ora from "ora";
 import chalk from "chalk";
 import * as fs from "fs";
 import path from "path";
-import { getCdkOutputDir, getMatanoCdkApp, isPkg, PROJ_ROOT_DIR } from "..";
+import { getCdkOutputDir, getMatanoCdkApp, isPkg, getLocalProjRootDir } from "..";
 import BaseCommand from "../base";
 import { getCdkExecutable } from "..";
 import { safeLoadMatanoContext } from "../util";
@@ -64,7 +64,7 @@ export default class Diff extends BaseCommand {
     if (process.env.DEBUG) cdkArgs.push(`-vvv`);
 
     const subprocess = execa(getCdkExecutable(), cdkArgs, {
-      cwd: isPkg() ? undefined : path.resolve(PROJ_ROOT_DIR, "infra"),
+      cwd: isPkg() ? undefined : path.resolve(getLocalProjRootDir(), "infra"),
       env: {
         MATANO_CDK_ACCOUNT: awsAccountId,
         MATANO_CDK_REGION: awsRegion,
@@ -125,6 +125,9 @@ export default class Diff extends BaseCommand {
           exit: 1,
         });
       } else {
+        if (flags.debug) {
+          console.debug((e as Error).message ?? e);
+        }
         const foundError = err.message.split("\n").find((s) => s.match(this.foundErrorPattern));
         let message: string;
         if (foundError) {

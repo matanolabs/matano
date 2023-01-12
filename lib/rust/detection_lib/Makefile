@@ -1,23 +1,17 @@
-SHELL := /bin/bash
-IMAGE ?= ghcr.io/pyo3/maturin
-NAME ?= build_detection_lib
-
-build:
-	python3 -m venv .venv && source .venv/bin/activate && pip install "maturin[zig,patchelf]" && maturin build --strip --zig --compatibility manylinux2014 -i python3.9 --release;
-
-build-docker:
-	{ \
-    set -e ;\
-	BASE_DIR=$$(echo ${CURDIR}/../../..);\
-	docker run -it --rm -v $$BASE_DIR:/io --entrypoint bash --name $(NAME) $(IMAGE) -c "cd lib/rust/detection_lib && python3 -m pip install maturin[zig] && maturin build --strip --zig --compatibility manylinux2014 -i python3.9 --release;";\
-    }
-# build on docker if OSX, otherwise build locally
-release:
+setup:
 	{ \
 	set -e ;\
+	(test -d .venv || python -m venv .venv);\
 	if [ "$$(uname)" = "Darwin" ]; then \
-		make build-docker; \
+		.venv/bin/pip install "maturin[zig]";\
+		echo "Make sure to install patchelf (e.g. using brew)";\
 	else \
-		make build; \
+		.venv/bin/pip install "maturin[zig,patchelf]";\
 	fi; \
 	}
+
+build:
+	PYO3_CROSS_PYTHON_VERSION=3.9 .venv/bin/python -m maturin build --release --strip --zig --compatibility manylinux2014 -i python3.9 --target x86_64-unknown-linux-gnu
+
+release: setup
+	$(MAKE) build

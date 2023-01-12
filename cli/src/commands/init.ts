@@ -11,7 +11,7 @@ import styles from "ansi-styles";
 import ora from "ora";
 import BaseCommand from "../base";
 import RefreshContext from "./refresh-context";
-import { getCdkExecutable, getCdkOutputDir, getMatanoCdkApp, isPkg, PROJ_ROOT_DIR } from "..";
+import { getCdkExecutable, getCdkOutputDir, getMatanoCdkApp, isPkg, getLocalProjRootDir } from "..";
 import GenerateMatanoDir from "./generate/matano-dir";
 import Deploy from "./deploy";
 import { AWS_REGIONS } from "../util";
@@ -148,7 +148,7 @@ export default class Init extends BaseCommand {
     if (process.env.DEBUG) cdkArgs.push(`-vvv`);
 
     const bootstrapSubprocess = execa(getCdkExecutable(), cdkArgs, {
-      cwd: isPkg() ? undefined : path.resolve(PROJ_ROOT_DIR, "infra"),
+      cwd: isPkg() ? undefined : path.resolve(getLocalProjRootDir(), "infra"),
       env: {
         MATANO_CDK_ACCOUNT: awsAccountId,
         MATANO_CDK_REGION: awsRegion,
