@@ -1,0 +1,9 @@
+name: okta
+
+ingest:
+  select_table_from_payload_metadata: |
+    if match(.__metadata.s3.key, r'.*') {
+      "system"
+    } else {
+      "default" # will error table not found
+    }

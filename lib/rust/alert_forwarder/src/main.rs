@@ -35,7 +35,7 @@ use async_compression::tokio::bufread::ZstdDecoder;
 use ::value::Value;
 use shared::secrets::load_secret;
 use shared::vrl_util::vrl;
-use shared::{load_log_sources_configuration_map, setup_logging, LogSourceConfiguration};
+use shared::{setup_logging, LOG_SOURCES_CONFIG};
 use vrl::{state, value};
 
 pub mod slack;
@@ -62,13 +62,6 @@ lazy_static! {
         let dest_secret_arn_map: HashMap<String, String> =
             serde_json::from_str(&dest_secret_arn_map_str).unwrap();
         dest_secret_arn_map
-    };
-}
-
-thread_local! {
-    pub static LOG_SOURCES_CONFIG: RefCell<BTreeMap<String, LogSourceConfiguration>> = {
-        let log_sources_configuration_map = load_log_sources_configuration_map();
-        RefCell::new(log_sources_configuration_map)
     };
 }
 

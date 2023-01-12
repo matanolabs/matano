@@ -1,0 +1,667 @@
+name: system
+
+transform: |
+  .event.kind = "event"
+  .event.category = []
+  .event.type = []
+      
+  if .json.published != null {                                               
+    .ts = to_timestamp!(.json.published, "seconds") 
+  }
+
+  .okta.display_message = del(.json.displayMessage)
+
+  .okta.event_type = string!(del(.json.eventType))
+
+  if match_any(.okta.event_type, [
+    r'group.user_membership.add',
+    r'group.user_membership.remove',
+    r'user.lifecycle.activate',
+    r'user.lifecycle.create',
+    r'user.lifecycle.deactivate',
+    r'user.lifecycle.suspend',
+    r'user.lifecycle.unsuspend'
+  ]) { 
+    .event.category = push(.event.category, "iam") 
+  }
+
+  if match_any(.okta.event_type, [
+    r'policy.lifecycle.activate',
+    r'policy.lifecycle.create',
+    r'policy.lifecycle.deactivate',
+    r'policy.lifecycle.delete',
+    r'policy.lifecycle.update',
+    r'policy.rule.activate',
+    r'policy.rule.add',
+    r'policy.rule.deactivate',
+    r'policy.rule.delete',
+    r'application.lifecycle.create',
+    r'application.lifecycle.delete',
+    r'policy.rule.update',
+    r'application.lifecycle.activate',
+    r'application.lifecycle.deactivate',
+    r'application.lifecycle.update'
+  ]) {
+    .event.category = push(.event.category, "configuration")
+  }
+    
+  if match_any(.okta.event_type, [
+    r'user.session.start',
+    r'user.session.end',
+    r'user.authentication.sso',
+    r'policy.evaluate_sign_on'
+  ]) { 
+    .event.category = push(.event.category, "authentication") 
+  }
+
+  if match_any(.okta.event_type, [
+    r'user.session.start',
+    r'user.session.end',
+  ]) { 
+    .event.category = push(.event.category, "session") 
+  }
+    
+  if match_any(.okta.event_type, [
+    r'system.org.rate_limit.warning',
+    r'system.org.rate_limit.violation',
+    r'core.concurrency.org.limit.violation',
+  ]) { 
+    .event.type = push(.event.type, "info") 
+  }
+
+  if match_any(.okta.event_type, [
+    r'security.request.blocked',
+  ]) { 
+    .event.type = push(.event.type, "network") 
+  }
+    
+  if match_any(.okta.event_type, [
+    r'system.org.rate_limit.warning',
+    r'system.org.rate_limit.violation',
+    r'core.concurrency.org.limit.violation',
+    r'security.request.blocked',
+  ]) { 
+    .event.type = push(.event.type, "network") 
+  }
+
+  if match_any(.okta.event_type, [
+    r'user.session.start',
+  ]) { 
+    .event.type = push(.event.type, "start") 
+  }
+
+  if match_any(.okta.event_type, [
+    r'user.session.end',
+  ]) { 
+    .event.type = push(.event.type, "end") 
+  }
+
+  if match_any(.okta.event_type, [
+    r'group.user_membership.add',
+    r'group.user_membership.remove',
+  ]) { 
+    .event.type = push(.event.type, "group") 
+  }
+   
+  if match_any(.okta.event_type, [
+    r'user.lifecycle.activate',
+    r'user.lifecycle.create',
+    r'user.lifecycle.deactivate',
+    r'user.lifecycle.suspend',
+    r'user.lifecycle.unsuspend',
+    r'user.authentication.sso',
+    r'user.session.start',
+    r'user.session.end',
+    r'application.user_membership.add',
+    r'application.user_membership.remove',
+    r'application.user_membership.change_username',
+  ]) {
+    .event.type = push(.event.type, "user") 
+  }
+
+  if match_any(.okta.event_type, [
+    r'user.lifecycle.activate',
+    r'user.lifecycle.deactivate',
+    r'user.lifecycle.suspend',
+    r'user.lifecycle.unsuspend',
+    r'group.user_membership.add',
+    r'group.user_membership.remove',
+    r'policy.lifecycle.activate',
+    r'policy.lifecycle.deactivate',
+    r'policy.lifecycle.update',
+    r'policy.rule.activate',
+    r'policy.rule.add',
+    r'policy.rule.deactivate',
+    r'policy.rule.update',
+    r'application.user_membership.add',
+    r'application.user_membership.remove',
+    r'application.user_membership.change_username',
+  ]) {
+    .event.type = push(.event.type, "change") 
+  }
+
+  if match_any(.okta.event_type, [
+    r'user.lifecycle.create',
+    r'policy.lifecycle.create',
+    r'application.lifecycle.create',
+  ]) {
+    .event.type = push(.event.type, "creation") 
+  }
+
+  if match_any(.okta.event_type, [
+    r'policy.lifecycle.delete',
+    r'application.lifecycle.delete',
+  ]) {
+    .event.type = push(.event.type, "deletion") 
+  }
+
+  if match_any(.okta.event_type, [
+    r'policy.evaluate_sign_on',
+  ]) {
+    .event.type = push(.event.type, "info") 
+  }
+
+  .okta.uuid = del(.json.uuid)
+
+  .okta.actor.alternate_id = del(.json.actor.alternateId)
+
+  .okta.actor.display_name = del(.json.actor.displayName)
+
+  .okta.actor.id = del(.json.actor.id)
+
+  .okta.actor.type = del(.json.actor.type)
+
+  .okta.client.device = del(.json.client.device)
+
+  .client.geo.location = del(.json.client.geographicalContext.geolocation)
+
+  .client.geo.city_name = del(.json.client.geographicalContext.city)
+
+  .client.geo.region_name = del(.json.client.geographicalContext.state)
+
+  .client.geo.country_name = del(.json.client.geographicalContext.country)
+
+  .okta.client.id = del(.json.client.id)
+
+  .okta.client.ip = to_string(.json.client.ipAddress) ?? null
+
+  if .okta.client.ip == "null" {
+    .okta.client.ip = null
+  }
+
+  .okta.client.user_agent.browser = del(.json.client.userAgent.browser)
+
+  .okta.client.user_agent.os = del(.json.client.userAgent.os)
+
+  .okta.client.user_agent.raw_user_agent = del(.json.client.userAgent.rawUserAgent)
+
+  .okta.client.zone = del(.json.client.zone)
+
+  .okta.outcome.reason = del(.json.outcome.reason)
+
+  .okta.outcome.result = del(.json.outcome.result)
+
+  .okta.target = del(.json.target)
+
+  .okta.transaction.id = del(.json.transaction.id)
+
+  .okta.transaction.type = del(.json.transaction.type)
+
+  debug_data = {
+    "flattened": .json.debugContext.debugData || {}
+  }
+  debug_data.flattened.logOnlySecurityData = parse_json(debug_data.flattened.logOnlySecurityData) ?? {}                   
+
+  behaviors = string!(debug_data.flattened.behaviors || "")
+  if match(behaviors, r'\{.*\}') {
+    behaviors = slice!(behaviors, 1, -1)
+  }
+  debug_data.flattened.behaviors = if !is_empty(behaviors) {
+    parse_key_value(behaviors, "=", ", ") ??  debug_data.flattened.logOnlySecurityData.behaviors
+  } else {
+    debug_data.flattened.logOnlySecurityData.behaviors
+  }   
+
+  # TODO: ugh can we use a more robust kv parser rather than do this manually?
+  risk = string!(debug_data.flattened.risk || "")
+  debug_data.flattened.risk = if !is_empty(risk) {
+    if match(risk, r'\{.*\}') {
+        risk = slice!(risk, 1, -1)
+    }
+    parts = split(risk, "=")
+    parts_obj = {}
+    if length(parts) >= 2 {
+        curr_key = parts[0]
+        parts = slice!(parts, 1)
+        for_each(parts) -> |i, v| {
+            is_last = i == length(parts) - 1
+            values = split(v, ", ")
+            if !is_last {
+                parts_obj = set!(parts_obj, [curr_key], join!(slice!(values, 0, -1), ", "))
+                curr_key = get!(values, [-1])
+            } else {
+                parts_obj = set!(parts_obj, [curr_key], join!(values, ", "))
+            }
+        }
+    }
+    parts_obj
+  } else {
+    debug_data.flattened.logOnlySecurityData.risk
+  }
+
+  if debug_data.flattened.risk.level != null && debug_data.flattened.risk.level != "" { 
+    debug_data.risk_level = debug_data.flattened.risk.level
+  }
+
+  debug_data.device_fingerprint = del(.json.debugContext.debugData.deviceFingerprint)
+
+  debug_data.request_id = del(.json.debugContext.debugData.requestId)
+
+  debug_data.request_uri = del(.json.debugContext.debugData.requestUri)
+
+  debug_data.threat_suspected = del(.json.debugContext.debugData.threatSuspected)
+
+  debug_data.url = del(.json.debugContext.debugData.url)
+
+  .okta.authentication_context.authentication_provider = del(.json.authenticationContext.authenticationProvider)
+
+  .okta.authentication_context.authentication_step = del(.json.authenticationContext.authenticationStep)
+
+  .okta.authentication_context.credential_provider = del(.json.authenticationContext.credentialProvider)
+
+  .okta.authentication_context.credential_type = del(.json.authenticationContext.credentialType)
+
+  .okta.authentication_context.external_session_id = del(.json.authenticationContext.externalSessionId)
+
+  .okta.authentication_context.authentication_provider = del(.json.authenticationContext.interface) || .okta.authentication_context.authentication_provider
+
+  .okta.authentication_context.issuer = del(.json.authenticationContext.issuer)
+
+  .okta.security_context.as.number = del(.json.securityContext.asNumber)
+
+  .okta.security_context.as.organization.name = del(.json.securityContext.asOrg)
+
+  .okta.security_context.domain = del(.json.securityContext.domain)
+
+  .okta.security_context.is_proxy = del(.json.securityContext.isProxy)
+
+  .okta.security_context.isp = del(.json.securityContext.isp)
+
+  .okta.request.ip_chain = array!(del(.json.request.ipChain) || [])
+
+  .okta.request.ip_chain = map_values(.okta.request.ip_chain) -> |v| {
+    v.geographical_context = del(v.geographicalContext)
+    v.geographical_context.postal_code = del(v.geographical_context.postalCode)
+    v
+  }
+                    
+  .user_agent.original = to_string(.okta.client.user_agent.raw_user_agent) ?? null
+
+  .client.ip = .okta.client.ip
+
+  .source.ip = .okta.client.ip
+
+  .event.action = .okta.event_type
+
+  .client.as.organization.name = to_string(.okta.security_context.as.organization.name) ?? null
+
+  .client.domain = to_string(.okta.security_context.domain) ?? null
+
+  .source.domain = to_string(.okta.security_context.domain) ?? null
+
+  .event.id = to_string(.okta.uuid) ?? null
+
+  result_lower = downcase(.okta.outcome.result) ?? null                    
+
+  if result_lower == "success" || result_lower == "allow" { 
+    .event.outcome = "success"
+  }
+
+  if result_lower == "failure" || result_lower == "deny" { 
+    .event.outcome = "failure"
+  }
+
+  if .event.outcome == null { 
+    .event.outcome = "unknown"
+  }
+
+  oktargets = {}
+  is_user_event = .okta.event_type != null && contains(.okta.event_type, "user.")
+  is_group_event = .okta.event_type != null && contains(.okta.event_type, "group.")
+  .okta.target = if .okta.target != null {
+    map_values(array!(.okta.target)) -> |v| {
+      v.alternate_id = del(v.alternateId)
+      v.display_name = del(v.displayName)
+      del(v.detailEntry)
+
+      type = downcase(v.type) ?? ""
+      if is_user_event && contains(type, "user") {
+        oktargets.user = v
+      } else if is_group_event && contains(type, "group") {
+        oktargets.group = v
+      }
+
+      v
+    }
+  }
+                       
+
+  .user.target.full_name = del(oktargets.user.display_name)
+
+  .user.target.id = del(oktargets.user.id)
+
+  .user.target.email = del(oktargets.user.login)
+
+  .user.target.group.name = del(oktargets.group.display_name)
+
+  .user.target.group.id = del(oktargets.group.id)
+
+  .client.user.id = .okta.actor.id
+
+  .source.user.id = .okta.actor.id
+
+  .client.user.full_name = .okta.actor.display_name
+
+  .source.user.full_name = .okta.actor.display_name
+    
+  .user.full_name = .okta.actor.display_name
+      
+  if .okta.actor.display_name != null { 
+      .related.user = push(.related.user, .okta.actor.display_name) 
+  }
+
+  if .user.target.full_name != null { 
+      .related.user = push(.related.user, .user.target.full_name) 
+  }
+
+  if .source.ip != null { 
+      .related.ip = push(.related.ip, .source.ip) 
+  }
+     
+  if .destination.ip != null { 
+      .related.ip = push(.related.ip, .destination.ip) 
+  }
+   
+  del(.json)
+
+  .user_agent = parse_user_agent!(del(.user_agent.original))
+
+  .source.as.number = del(.source.as.asn)
+
+  .source.as.organization.name = del(.source.as.organization_name)
+
+  .destination.as.number = del(.destination.as.asn)
+
+  .destination.as.organization.name = del(.destination.as.organization_name)
+
+  .okta.debug_context.debug_data = debug_data
+  # TODO(): should inject based on schema
+  .okta.debug_context.debug_data.flattened = encode_json(compact(.okta.debug_context.debug_data.flattened))
+
+schema:
+  ecs_field_names:
+    - client.as.number
+    - client.as.organization.name
+    - client.domain
+    - client.geo.city_name
+    - client.geo.country_name
+    - client.geo.location
+    - client.geo.region_name
+    - client.ip
+    - client.user.full_name
+    - client.user.id
+    - cloud.account.id
+    - cloud.availability_zone
+    - cloud.instance.id
+    - cloud.instance.name
+    - cloud.machine.type
+    - cloud.project.id
+    - cloud.provider
+    - cloud.region
+    - container.id
+    - container.image.name
+    - container.labels
+    - container.name
+    - destination.as.number
+    - destination.as.organization.name
+    - destination.geo.city_name
+    - destination.geo.continent_name
+    - destination.geo.country_iso_code
+    - destination.geo.country_name
+    - destination.geo.location
+    - destination.geo.name
+    - destination.geo.region_iso_code
+    - destination.geo.region_name
+    - destination.ip
+    - ecs.version
+    - error.message
+    - event.action
+    - event.category
+    - event.created
+    - event.dataset
+    - event.id
+    - event.ingested
+    - event.kind
+    - event.module
+    - event.original
+    - event.outcome
+    - event.type
+    - host.architecture
+    - host.domain
+    - host.hostname
+    - host.id
+    - host.ip
+    - host.mac
+    - host.name
+    - host.os.family
+    - host.os.kernel
+    - host.os.name
+    - host.os.platform
+    - host.os.version
+    - host.type
+    - log.file.path
+    - message
+    - related.ip
+    - related.user
+    - source.as.number
+    - source.as.organization.name
+    - source.domain
+    - source.geo.city_name
+    - source.geo.continent_name
+    - source.geo.country_iso_code
+    - source.geo.country_name
+    - source.geo.location
+    - source.geo.name
+    - source.geo.region_iso_code
+    - source.geo.region_name
+    - source.ip
+    - source.user.full_name
+    - source.user.id
+    - tags
+    - user.domain
+    - user.email
+    - user.full_name
+    - user.id
+    - user.name
+    - user.target.domain
+    - user.target.email
+    - user.target.full_name
+    - user.target.group.domain
+    - user.target.group.id
+    - user.target.group.name
+    - user.target.id
+    - user.target.name
+    - user_agent.device.name
+    - user_agent.name
+    - user_agent.original
+    - user_agent.os.full
+    - user_agent.os.name
+    - user_agent.os.version
+    - user_agent.version
+  fields:
+    - name: okta
+      type:
+        type: struct
+        fields:
+          - name: actor
+            type:
+              type: struct
+              fields:
+                - name: alternate_id
+                  type: string
+                - name: display_name
+                  type: string
+                - name: id
+                  type: string
+                - name: type
+                  type: string
+          - name: authentication_context
+            type:
+              type: struct
+              fields:
+                - name: authentication_provider
+                  type: string
+                - name: authentication_step
+                  type: int
+                - name: credential_provider
+                  type: string
+                - name: credential_type
+                  type: string
+                - name: external_session_id
+                  type: string
+                - name: interface
+                  type: string
+                - name: issuer
+                  type:
+                    type: list
+                    element: string
+          - name: client
+            type:
+              type: struct
+              fields:
+                - name: device
+                  type: string
+                - name: id
+                  type: string
+                - name: ip
+                  type: string
+                - name: user_agent
+                  type:
+                    type: struct
+                    fields:
+                      - name: browser
+                        type: string
+                      - name: os
+                        type: string
+                      - name: raw_user_agent
+                        type: string
+                - name: zone
+                  type: string
+          - name: debug_context
+            type:
+              type: struct
+              fields:
+                - name: debug_data
+                  type:
+                    type: struct
+                    fields:
+                      - name: device_fingerprint
+                        type: string
+                      - name: flattened
+                        type: string
+                      - name: request_id
+                        type: string
+                      - name: request_uri
+                        type: string
+                      - name: risk_level
+                        type: string
+                      - name: threat_suspected
+                        type: string
+                      - name: url
+                        type: string
+          - name: display_message
+            type: string
+          - name: event_type
+            type: string
+          - name: outcome
+            type:
+              type: struct
+              fields:
+                - name: reason
+                  type: string
+                - name: result
+                  type: string
+          - name: request
+            type:
+              type: struct
+              fields:
+                - name: ip_chain
+                  type:
+                    type: list
+                    element:
+                      type: struct
+                      fields:
+                        - name: geographical_context
+                          type:
+                            type: struct
+                            fields:
+                              - name: city
+                                type: string
+                              - name: country
+                                type: string
+                              - name: geolocation
+                                type:
+                                  type: struct
+                                  fields:
+                                    - name: lat
+                                      type: float
+                                    - name: lon
+                                      type: float
+                              - name: postal_code
+                                type: string
+                              - name: state
+                                type: string
+                        - name: ip
+                          type: string
+                        - name: source
+                          type: string
+                        - name: version
+                          type: string
+          - name: security_context
+            type:
+              type: struct
+              fields:
+                - name: as
+                  type:
+                    type: struct
+                    fields:
+                      - name: number
+                        type: int
+                      - name: organization
+                        type:
+                          type: struct
+                          fields:
+                            - name: name
+                              type: string
+                - name: domain
+                  type: string
+                - name: is_proxy
+                  type: boolean
+                - name: isp
+                  type: string
+          - name: severity
+            type: string
+          - name: target
+            type: string
+          - name: transaction
+            type:
+              type: struct
+              fields:
+                - name: id
+                  type: string
+                - name: type
+                  type: string
+          - name: uuid
+            type: string
+          - name: version
+            type: string

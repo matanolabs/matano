@@ -27,10 +27,10 @@ use aws_sdk_s3::types::ByteStream;
 
 use async_compression::tokio::bufread::{GzipDecoder, ZstdDecoder};
 use async_stream::stream;
+use csv_async::AsyncReaderBuilder;
 use futures::future::join_all;
 use futures::{stream, Stream, StreamExt, TryStreamExt};
 use serde_json::json;
-use csv_async::AsyncReaderBuilder;
 use tokio_stream::StreamMap;
 use tokio_util::codec::{FramedRead, LinesCodec};
 use walkdir::WalkDir;
@@ -230,11 +230,7 @@ del(.json)
 
 "#;
 
-fn format_transform_expr(
-    transform_expr: &str,
-    select_table_from_payload_expr: &Option<String>,
-    is_passthrough: bool,
-) -> String {
+fn format_transform_expr(transform_expr: &str, is_passthrough: bool) -> String {
     let mut ret = String::with_capacity(1000 + transform_expr.len());
     if !is_passthrough {
         ret.push_str(TRANSFORM_RELATED);
@@ -244,15 +240,7 @@ fn format_transform_expr(
     }
     ret.push_str(transform_expr);
     ret.push_str(TRANSFORM_BASE_FOOTER);
-    if let Some(select_table_from_payload_expr) = select_table_from_payload_expr {
-        ret.push_str(&format!(
-            r#"
-        .__mtn_table = {{
-            {}
-        }}"#,
-            select_table_from_payload_expr
-        ));
-    }
+
     return ret;
 }
 
@@ -357,10 +345,24 @@ async fn read_events_s3<'a>(
     let table_config = LOG_SOURCES_CONFIG.with(|c| {
         let log_sources_config = c.borrow();
 
-        (*log_sources_config)
+        let table_conf = (*log_sources_config)
         .get(log_source)
         .unwrap()
-        .tables.get(&table_name).cloned()
+        .tables.get(&table_name).cloned();
+
+        table_conf.or(match (*log_sources_config)
+        .get(log_source)
+        .unwrap()
+        .base.get_string("ingest.select_table_from_payload").ok() {
+            Some(s) if !s.is_empty()  => {
+                // TODO(shaeq): make this less hacky, we return a dummy config if select_table_from_payload is set
+                let config = config::Config::builder()
+                    .set_default("name", "dummy")
+                    .unwrap().build().unwrap();
+                Some(config)
+            }
+            Some(_) | None => None
+        })
     }).ok_or(anyhow!("Configuration doesn't exist for table name returned from select_table_from_payload_metadata expression: {}", &table_name))?;
 
     let expand_records_from_payload_expr = table_config
@@ -406,23 +408,23 @@ async fn read_events_s3<'a>(
                 records
                     .map(|r| match r {
                         Ok(r) => {
-                            let json_val: serde_json::Value = serde_json::Value::Object(serde_json::Map::from_iter(r.into_iter()));
+                            let json_val: serde_json::Value = serde_json::Value::Object(
+                                serde_json::Map::from_iter(r.into_iter()),
+                            );
                             Ok(Value::from(json_val))
-                        },
+                        }
                         Err(e) => Err(anyhow!(e)),
                     })
                     .boxed()
             } else {
                 FramedRead::new(reader, LinesCodec::new())
                     .map(|v| match v {
-                        Ok(v) => {
-                            Ok(Value::from(v))
-                        },
+                        Ok(v) => Ok(Value::from(v)),
                         Err(e) => Err(anyhow!(e)),
                     })
                     .boxed()
             }
-        },
+        }
     };
 
     let is_from_cloudwatch_log_subscription = LOG_SOURCES_CONFIG
@@ -549,7 +551,7 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
             let s3 = &s3;
 
             async move {
-                let (ingest_table_config, raw_lines): (
+                let (default_table_config, raw_lines): (
                     _,
                     Pin<Box<dyn Stream<Item = Result<Value, anyhow::Error>> + Send>>,
                 ) = read_events_s3(s3, &item, &log_source).await.unwrap();
@@ -567,16 +569,12 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
                         .ok()
                 });
 
-                let transform_expr = ingest_table_config.get_string("transform").unwrap_or_default();
-                let wrapped_transform_expr = format_transform_expr(&transform_expr, &select_table_from_payload_expr, log_source.starts_with("enrich_"));
-
                 let transformed_lines_as_json = reader
                     .chunks(400)
                     .filter_map(move |chunk| {
                         let log_source = log_source.clone();
-                        let wrapped_transform_expr = wrapped_transform_expr.clone(); // hmm
                         let select_table_from_payload_expr = select_table_from_payload_expr.clone();
-                        let default_table_name = ingest_table_config.get_string("name").unwrap();
+                        let default_table_name = default_table_config.get_string("name").unwrap();
 
                         async move {
                             let start = Instant::now();
@@ -587,8 +585,6 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
                                         Ok(line) => {
                                             let mut v = line;
 
-                                            // println!("v: {:?}", v);
-
                                             match vrl(PRE_TRANSFORM_JSON_PARSE, &mut v).map_err(|e| {
                                                 anyhow!("Failed to run pre-transform: {}", e)
                                             }) {
@@ -598,6 +594,7 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
                                                     return Err(e);
                                                 }
                                             }
+
 
                                             let table_name = match select_table_from_payload_expr {
                                                 Some(ref select_table_from_payload_expr) => match vrl(select_table_from_payload_expr, &mut v).map_err(|e| {
@@ -611,6 +608,20 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
                                                 },
                                                 None => default_table_name.to_owned(),
                                             };
+
+                                            let transform_expr = LOG_SOURCES_CONFIG.with(|c| {
+                                                let log_sources_config = c.borrow();
+
+                                                let transform = (*log_sources_config)
+                                                .get(&log_source)
+                                                .unwrap()
+                                                .tables.get(&table_name)?.get_string("transform");
+
+                                                transform.ok()
+                                            }).ok_or(anyhow!("Configuration / transform expr doesn't exist for table name: {}", &table_name))?;
+
+                                            // TODO(shaeq): does this have performance implications?
+                                            let wrapped_transform_expr = format_transform_expr(&transform_expr, log_source.starts_with("enrich_"));
 
                                             match vrl(&wrapped_transform_expr, &mut v).map_err(|e| {
                                                 anyhow!("Failed to transform: {}", e)

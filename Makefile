@@ -24,7 +24,7 @@ build-python: build-python-rust
 	rm -rf local-assets/MatanoDetectionsCommonLayer && cd lib/python/matano_detection && $(MAKE) release
 
 build-rust:
-	cd lib/rust && cargo lambda build --release --workspace && \
+	cd lib/rust && PYO3_CROSS_PYTHON_VERSION=3.9 cargo lambda build --release --workspace && \
 	cp -a target/lambda/* ${CURDIR}/local-assets
 
 build-jvm:

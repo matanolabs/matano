@@ -1,0 +1,67 @@
+name: summary
+
+schema:
+  ecs_field_names:
+    - cloud.account.id
+    - cloud.availability_zone
+    - cloud.instance.id
+    - cloud.instance.name
+    - cloud.machine.type
+    - cloud.project.id
+    - cloud.provider
+    - cloud.region
+    - container.id
+    - container.image.name
+    - container.labels
+    - container.name
+    - ecs.version
+    - event.created
+    - event.dataset
+    - event.module
+    - event.original
+    - host.architecture
+    - host.domain
+    - host.hostname
+    - host.id
+    - host.ip
+    - host.mac
+    - host.name
+    - host.os.family
+    - host.os.kernel
+    - host.os.name
+    - host.os.platform
+    - host.os.version
+    - host.type
+    - tags
+  fields:
+    - name: duo
+      type:
+        type: struct
+        fields:
+          - name: summary
+            type:
+              type: struct
+              fields:
+                - name: admin_count
+                  type: int
+                - name: integration_count
+                  type: int
+                - name: telephony_credits_remaining
+                  type: int
+                - name: user_count
+                  type: int
+
+transform: |
+  .ts = now()
+
+  .event.original = encode_json(.json)
+
+  .duo.summary.admin_count = del(.json.admin_count)
+
+  .duo.summary.integration_count = del(.json.integration_count)
+
+  .duo.summary.telephony_credits_remaining = del(.json.telephony_credits_remaining)
+
+  .duo.summary.user_count = del(.json.user_count)
+
+  del(.json)

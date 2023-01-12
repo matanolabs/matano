@@ -1,0 +1,417 @@
+name: auth
+
+schema:
+  ecs_field_names:
+    - cloud.account.id
+    - cloud.availability_zone
+    - cloud.instance.id
+    - cloud.instance.name
+    - cloud.machine.type
+    - cloud.project.id
+    - cloud.provider
+    - cloud.region
+    - container.id
+    - container.image.name
+    - container.labels
+    - container.name
+    - ecs.version
+    - event.agent_id_status
+    - event.category
+    - event.created
+    - event.dataset
+    - event.kind
+    - event.module
+    - event.original
+    - event.outcome
+    - event.reason
+    - event.type
+    - host.architecture
+    - host.domain
+    - host.hostname
+    - host.id
+    - host.ip
+    - host.mac
+    - host.name
+    - host.os.family
+    - host.os.kernel
+    - host.os.name
+    - host.os.platform
+    - host.os.version
+    - host.type
+    - related.hosts
+    - related.ip
+    - related.user
+    - source.address
+    - source.as.number
+    - source.as.organization.name
+    - source.geo.city_name
+    - source.geo.continent_name
+    - source.geo.country_iso_code
+    - source.geo.country_name
+    - source.geo.location
+    - source.geo.region_iso_code
+    - source.geo.region_name
+    - source.ip
+    - source.port
+    - source.user.email
+    - source.user.group.name
+    - source.user.id
+    - source.user.name
+    - tags
+    - user.email
+    - user.id
+    - user.name
+    - user_agent.name
+    - user_agent.os.name
+    - user_agent.os.version
+    - user_agent.version
+  fields:
+    - name: duo
+      type:
+        type: struct
+        fields:
+          - name: auth
+            type:
+              type: struct
+              fields:
+                - name: access_device
+                  type:
+                    type: struct
+                    fields:
+                      - name: flash_version
+                        type: string
+                      - name: hostname
+                        type: string
+                      - name: ip
+                        type: string
+                      - name: is_encryption_enabled
+                        type: string
+                      - name: is_firewall_enabled
+                        type: string
+                      - name: is_password_set
+                        type: string
+                      - name: java_version
+                        type: string
+                      - name: location
+                        type:
+                          type: struct
+                          fields:
+                            - name: city
+                              type: string
+                            - name: country
+                              type: string
+                            - name: state
+                              type: string
+                      - name: port
+                        type: long
+                      - name: security_agents
+                        type:
+                          type: list
+                          element:
+                            type: struct
+                            fields:
+                              - name: security_agent
+                                type: string
+                              - name: version
+                                type: string
+                - name: alias
+                  type: string
+                - name: application
+                  type:
+                    type: struct
+                    fields:
+                      - name: key
+                        type: string
+                      - name: name
+                        type: string
+                - name: auth_device
+                  type:
+                    type: struct
+                    fields:
+                      - name: as
+                        type:
+                          type: struct
+                          fields:
+                            - name: number
+                              type: long
+                            - name: organization
+                              type:
+                                type: struct
+                                fields:
+                                  - name: name
+                                    type: string
+                      - name: geo
+                        type:
+                          type: struct
+                          fields:
+                            - name: city_name
+                              type: string
+                            - name: continent_name
+                              type: string
+                            - name: country_iso_code
+                              type: string
+                            - name: country_name
+                              type: string
+                            - name: location
+                              type:
+                                type: struct
+                                fields:
+                                  - name: lat
+                                    type: float
+                                  - name: lon
+                                    type: float
+                            - name: region_iso_code
+                              type: string
+                            - name: region_name
+                              type: string
+                      - name: ip
+                        type: string
+                      - name: location
+                        type:
+                          type: struct
+                          fields:
+                            - name: city
+                              type: string
+                            - name: country
+                              type: string
+                            - name: state
+                              type: string
+                      - name: name
+                        type: string
+                      - name: port
+                        type: long
+                - name: email
+                  type: string
+                - name: event_type
+                  type: string
+                - name: factor
+                  type: string
+                - name: ood_software
+                  type: string
+                - name: reason
+                  type: string
+                - name: result
+                  type: string
+                - name: trusted_endpoint_status
+                  type: string
+                - name: txid
+                  type: string
+
+transform: |
+  .event.type = ["info"]
+  .event.category = ["authentication"]
+  .event.kind = "event"
+
+  .event.original = encode_json(.json)     
+
+  .related.hosts = []           
+
+  if is_array(.json.response) && length!(.json.response) == 0 { 
+      abort
+  }                 
+
+  if .json.timestamp != null { 
+  	.ts = to_timestamp!(.json.timestamp, "seconds") 
+  }
+
+  .event.outcome = "failure"
+  if .json.result == "success" { 
+      .event.outcome = "success"
+  }
+
+  .event.reason = .json.reason
+
+  .source.address = .json.access_device.hostname || .json.access_device.ip
+                                                      
+  _grokked, err = parse_groks(.json.access_device.ip,
+    [
+      "^%{IPV4:json.access_device.ip}:%{PORT:json.access_device.port}$",
+      "^\\[%{IPV6:json.access_device.ip}\\]:%{PORT:json.access_device.port}$",
+      "^%{IPV6NOCOMPRESS:json.access_device.ip}:%{PORT:json.access_device.port}$",
+      "^%{IPV6:json.access_device.ip}%{IPV6PORTSEP}%{PORT:json.access_device.port}$"
+    ],
+    {
+      "IPV6NOCOMPRESS": "([0-9A-Fa-f]{1,4}:){7}[0-9A-Fa-f]{1,4}",
+      "IPV6PORTSEP": "(?: port |[p#.])",
+      "PORT": "[0-9]+"
+    }
+  )
+
+  if err == null {       
+      .json.access_device = object!(.json.access_device)                                               
+      .json.access_device |= object!(_grokked.json.access_device)                                                           
+  }                                                                      
+
+  if .json.access_device.ip != null {                       
+      .json.access_device.ip = to_string!(.json.access_device.ip) 
+  }                                                  
+
+  if .json.access_device.port != null {                       
+      .json.access_device.port = to_int!(.json.access_device.port) 
+  }                                                  
+
+  .source.ip = .json.access_device.ip
+
+  .source.port = .json.access_device.port
+                                                                  
+  _grokked, err = parse_groks(.json.auth_device.ip,
+    [
+      "^%{IPV4:json.auth_device.ip}:%{PORT:json.auth_device.port}$",
+      "^\\[%{IPV6:json.auth_device.ip}\\]:%{PORT:json.auth_device.port}$",
+      "^%{IPV6NOCOMPRESS:json.auth_device.ip}:%{PORT:json.auth_device.port}$",
+      "^%{IPV6:json.auth_device.ip}%{IPV6PORTSEP}%{PORT:json.auth_device.port}$"
+    ],
+    {
+      "IPV6NOCOMPRESS": "([0-9A-Fa-f]{1,4}:){7}[0-9A-Fa-f]{1,4}",
+      "IPV6PORTSEP": "(?: port |[p#.])",
+      "PORT": "[0-9]+"
+    }
+  )   
+  if err == null {
+      .json.auth_device = object!(.json.auth_device)                                               
+      .json.auth_device |= object!(_grokked.json.auth_device)                                                      
+  }                                                                           
+
+  if .json.auth_device.ip != null {                       
+      .json.auth_device.ip = to_string!(.json.auth_device.ip) 
+  }                                                  
+
+  if .json.auth_device.port != null {                       
+      .json.auth_device.port = to_int!(.json.auth_device.port) 
+  }                                                  
+
+  .source.user.email = .json.email
+
+  .source.user.id = .json.user.key
+
+  .source.user.name = .json.user.name
+
+  .source.user.group.name = del(.json.user.groups)
+  if is_array(.source.user.group.name) {
+      .source.user.group.name = join!(.source.user.group.name, ", ")
+  }
+
+  .source.as.number = del(.source.as.asn)
+
+  .source.as.organization.name = del(.source.as.organization_name)
+
+  .duo.auth.auth_device.as.number = del(.duo.auth.auth_device.as.asn)
+
+  .duo.auth.auth_device.as.organization.name = del(.duo.auth.auth_device.as.organization_name)
+
+  .user.email = .json.email
+
+  .user.name = .json.user.name
+
+  .user.id = .json.user.key
+
+  .user_agent.name = .json.access_device.browser
+
+  .user_agent.version = .json.access_device.browser_version
+
+  .user_agent.os.name = .json.access_device.os
+
+  .user_agent.os.version = .json.access_device.os_version
+
+  .duo.auth.email = del(.json.email)
+
+  .duo.auth.event_type = del(.json.event_type)
+
+  .duo.auth.factor = del(.json.factor)
+
+  .duo.auth.ood_software = del(.json.ood_software)
+
+  .duo.auth.reason = del(.json.reason)
+
+  .duo.auth.result = del(.json.result)
+
+  .duo.auth.txid = del(.json.txid)
+
+  .duo.auth.alias = del(.json.alias)
+
+  .duo.auth.access_device.flash_version = del(.json.access_device.flash_version)
+
+  if .json.access_device.hostname != null { 
+      .duo.auth.access_device.hostname = del(.json.access_device.hostname)
+  }
+
+  .duo.auth.access_device.ip = del(.json.access_device.ip)
+
+  .duo.auth.access_device.port = del(.json.access_device.port)
+
+  .duo.auth.access_device.is_encryption_enabled = del(.json.access_device.is_encryption_enabled)
+
+  if .duo.auth.access_device.is_encryption_enabled != null {                       
+      .duo.auth.access_device.is_encryption_enabled = to_string!(.duo.auth.access_device.is_encryption_enabled) 
+  }                                                  
+
+  .duo.auth.access_device.is_firewall_enabled = del(.json.access_device.is_firewall_enabled)
+
+  if .duo.auth.access_device.is_firewall_enabled != null {                       
+      .duo.auth.access_device.is_firewall_enabled = to_string!(.duo.auth.access_device.is_firewall_enabled) 
+  }                                                  
+
+  .duo.auth.access_device.is_password_set = del(.json.access_device.is_password_set)
+
+  if .duo.auth.access_device.is_password_set != null {                       
+      .duo.auth.access_device.is_password_set = to_string!(.duo.auth.access_device.is_password_set) 
+  }                                                  
+
+  .duo.auth.access_device.java_version = del(.json.access_device.java_version)
+
+  .duo.auth.access_device.location.city = del(.json.access_device.location.city)
+
+  .duo.auth.access_device.location.country = del(.json.access_device.location.country)
+
+  .duo.auth.access_device.location.state = del(.json.access_device.location.state)
+
+  if .json.access_device.security_agents != null && ( !is_array(.json.access_device.security_agents) || .json.access_device.security_agents.length == 0 || !is_object(.json.access_device.security_agents[0]) ) { 
+      del(.json.access_device.security_agents)
+  }
+      
+  .duo.auth.access_device.security_agents = del(.json.access_device.security_agents)
+
+  .duo.auth.application.key = del(.json.application.key)
+
+  .duo.auth.application.name = del(.json.application.name)
+
+  .duo.auth.auth_device.ip = del(.json.auth_device.ip)
+
+  .duo.auth.auth_device.port = del(.json.auth_device.port)
+
+  .duo.auth.auth_device.location.city = del(.json.auth_device.location.city)
+
+  .duo.auth.auth_device.location.country = del(.json.auth_device.location.country)
+
+  .duo.auth.auth_device.location.state = del(.json.auth_device.location.state)
+
+  .duo.auth.auth_device.name = del(.json.auth_device.name)
+
+  .duo.auth.trusted_endpoint_status = del(.json.trusted_endpoint_status)
+
+  if .source.ip != null { 
+      .related.ip = push(.related.ip, .source.ip) 
+  }
+   
+  if .duo.auth.auth_device.ip != null { 
+      .related.ip = push(.related.ip, .duo.auth.auth_device.ip) 
+  }
+      
+  if .source.user.name != null { 
+      .related.user = push(.related.user, .source.user.name) 
+  }
+
+      
+  if .source.address != null { 
+      .related.hosts = push(.related.hosts, .source.address) 
+  }
+
+      
+  if .duo.auth.access_device.hostname != null { 
+      .related.hosts = push(.related.hosts, .duo.auth.access_device.hostname) 
+  }
+
+  .related.hosts = unique(.related.hosts)
+  .related.ip = unique(.related.ip)
+      
+  del(.json)

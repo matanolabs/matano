@@ -1,0 +1,4 @@
+name: okta
+
+managed:
+  type: OKTA

@@ -13,6 +13,7 @@ use tokio::sync::Mutex;
 use shared::secrets::load_secret;
 
 mod abusech;
+mod duo;
 mod o365;
 mod otx;
 
@@ -45,6 +46,7 @@ pub struct PullLogsContext {
     secret_arn: String,
     pub log_source_type: LogSource,
     config: HashMap<String, String>,
+    tables_config: HashMap<String, config::Config>,
     cache: Arc<Mutex<PullerCache>>,
     s3: aws_sdk_s3::Client,
 }
@@ -54,6 +56,7 @@ impl PullLogsContext {
         secret_arn: String,
         log_source_type: LogSource,
         config: HashMap<String, String>,
+        tables_config: HashMap<String, config::Config>,
         s3: aws_sdk_s3::Client,
     ) -> PullLogsContext {
         PullLogsContext {
@@ -61,6 +64,7 @@ impl PullLogsContext {
             secret_arn,
             log_source_type,
             config,
+            tables_config,
             cache: Arc::new(Mutex::new(PullerCache::new())),
             s3,
         }
@@ -141,6 +145,10 @@ impl PullLogsContext {
         &self.config
     }
 
+    pub fn tables_config(&self) -> &HashMap<String, config::Config> {
+        &self.tables_config
+    }
+
     pub fn cache(&self) -> Arc<Mutex<PullerCache>> {
         self.cache.clone()
     }
@@ -162,6 +170,7 @@ pub trait PullLogs {
 #[enum_dispatch(PullLogs)]
 pub enum LogSource {
     O365Puller(o365::O365Puller),
+    DuoPuller(duo::DuoPuller),
     Otx(otx::OtxPuller),
     AbuseChUrlhausPuller(abusech::AbuseChUrlhausPuller),
     AbuseChMalwareBazaarPuller(abusech::AbuseChMalwareBazaarPuller),
@@ -172,6 +181,7 @@ impl LogSource {
     pub fn from_str(s: &str) -> Option<LogSource> {
         match s.to_lowercase().as_str() {
             "o365" => Some(LogSource::O365Puller(o365::O365Puller {})),
+            "duo" => Some(LogSource::DuoPuller(duo::DuoPuller {})),
             "otx" => Some(LogSource::Otx(otx::OtxPuller {})),
             "abusech_urlhaus" => Some(LogSource::AbuseChUrlhausPuller(
                 abusech::AbuseChUrlhausPuller {},
@@ -187,6 +197,7 @@ impl LogSource {
     }
     pub fn to_str(&self) -> &str {
         match self {
+            LogSource::DuoPuller(_) => "duo",
             LogSource::O365Puller(_) => "o365",
             LogSource::Otx(_) => "otx",
             LogSource::AbuseChUrlhausPuller(_) => "abusech_urlhaus",

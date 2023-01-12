@@ -1,0 +1,7 @@
+name: duo
+
+managed:
+  type: DUO
+  properties:
+    api_hostname: api-eac94d5a.duosecurity.com
+    integration_key: DI62OFKPBEXHLW1DOB8A

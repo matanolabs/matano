@@ -38,3 +38,10 @@ async-stream = "0.3.3"
 zstd = "0.11.2"
 walkdir = "2.3.2"
 zip = "0.6.3"
+config = { version = "0.13.1", features = ["yaml"] }
+
+# duo
+ring = "0.16.20"
+hex = "0.4"
+base64 = "0.20"
+url = "2.1.1"

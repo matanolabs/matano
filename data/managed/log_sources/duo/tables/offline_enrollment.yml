@@ -1,0 +1,106 @@
+name: offline_enrollment
+
+schema:
+  ecs_field_names:
+    - cloud.account.id
+    - cloud.availability_zone
+    - cloud.instance.id
+    - cloud.instance.name
+    - cloud.machine.type
+    - cloud.project.id
+    - cloud.provider
+    - cloud.region
+    - container.id
+    - container.image.name
+    - container.labels
+    - container.name
+    - ecs.version
+    - event.created
+    - event.dataset
+    - event.module
+    - event.original
+    - host.architecture
+    - host.domain
+    - host.hostname
+    - host.id
+    - host.ip
+    - host.mac
+    - host.name
+    - host.os.family
+    - host.os.kernel
+    - host.os.name
+    - host.os.platform
+    - host.os.version
+    - host.type
+    - related.hosts
+    - related.user
+    - tags
+    - user.name
+  fields:
+    - name: duo
+      type:
+        type: struct
+        fields:
+          - name: offline_enrollment
+            type:
+              type: struct
+              fields:
+                - name: action
+                  type: string
+                - name: description
+                  type:
+                    type: struct
+                    fields:
+                      - name: factor
+                        type: string
+                      - name: hostname
+                        type: string
+                      - name: user_agent
+                        type: string
+                - name: object
+                  type: string
+                - name: user
+                  type:
+                    type: struct
+                    fields:
+                      - name: name
+                        type: string
+
+transform: |
+  .related.hosts = []
+
+  if is_array(.json.response) && length!(.json.response) == 0 { 
+      .json.response = null
+  } else {
+      .event.original = encode_json(.json)
+  }
+
+  if .json.timestamp != null { 
+  	.ts = to_timestamp!(.json.timestamp, "seconds")
+  }
+
+  json_description = parse_json(.json.description) ?? null                    
+
+  .user.name = .json.username
+
+  .duo.offline_enrollment.action = del(.json.action)
+
+  .duo.offline_enrollment.description.hostname = del(json_description.hostname)
+
+  .duo.offline_enrollment.description.user_agent = del(json_description.user_agent)
+
+  .duo.offline_enrollment.description.factor = del(json_description.factor)
+
+  .duo.offline_enrollment.object = del(.json.object)
+
+  .duo.offline_enrollment.user.name = del(.json.username)
+
+  if .duo.offline_enrollment.description.hostname != null { 
+      .related.hosts = push(.related.hosts, .duo.offline_enrollment.description.hostname) 
+  }
+
+  if .user.name != null { 
+      .related.user = push(.related.user, .user.name) 
+  }
+
+  del(.json)

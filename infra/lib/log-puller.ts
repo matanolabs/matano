@@ -19,6 +19,7 @@ interface ExternalLogPullerProps {
 // Managed log source types that support pulling.
 export const PULLER_LOG_SOURCE_TYPES: string[] = [
   "o365",
+  "duo",
   "enrich_abusech_urlhaus",
   "enrich_abusech_malwarebazaar",
   "enrich_abusech_threatfox",
@@ -26,6 +27,7 @@ export const PULLER_LOG_SOURCE_TYPES: string[] = [
 ];
 const LOG_SOURCE_RATES: Record<string, cdk.Duration> = {
   o365: cdk.Duration.minutes(1),
+  duo: cdk.Duration.minutes(1),
   enrich_abusech_urlhaus: cdk.Duration.minutes(5),
   enrich_abusech_malwarebazaar: cdk.Duration.hours(1),
   enrich_abusech_threatfox: cdk.Duration.hours(1),
@@ -50,6 +52,7 @@ export class ExternalLogPuller extends Construct {
         RUST_LOG: "warn,log_puller=info",
         PULLER_LOG_SOURCE_TYPES: JSON.stringify(PULLER_LOG_SOURCE_TYPES),
         INGESTION_BUCKET_NAME: props.ingestionBucket.bucketName,
+        LOG_SOURCES_CONFIG_DIR: "/opt/config/log_sources",
       },
     });
     this.function = func;
@@ -60,6 +63,10 @@ export class ExternalLogPuller extends Construct {
       if (logSourceName.startsWith("o365")) {
         placeholder = {
           client_secret: placeholder_val,
+        };
+      } else if (logSourceName.startsWith("duo")) {
+        placeholder = {
+          secret_key: placeholder_val,
         };
       } else {
         placeholder = {

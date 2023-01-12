@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::io::Write;
+use std::sync::Arc;
 
 use anyhow::{anyhow, Context as AnyhowContext, Error, Result};
 use async_once::AsyncOnce;
@@ -14,7 +15,7 @@ use lambda_runtime::{run, service_fn, Error as LambdaError, LambdaEvent};
 use lazy_static::lazy_static;
 use log::{debug, error, info};
 use serde::{Deserialize, Serialize};
-use shared::setup_logging;
+use shared::{setup_logging, LOG_SOURCES_CONFIG};
 use walkdir::WalkDir;
 
 mod pullers;
@@ -106,12 +107,28 @@ async fn build_contexts() -> HashMap<String, PullLogsContext> {
                 .collect::<HashMap<_, _>>();
             props.insert("log_source_type".to_string(), managed_type);
 
+            let tables_config = LOG_SOURCES_CONFIG.with(|c| {
+                let log_sources_config = c.borrow();
+
+                (*log_sources_config)
+                    .get(&ls_name)
+                    .unwrap()
+                    .tables
+                    .to_owned()
+            });
+
             let secret_arn = log_source_to_secret_arn_map
                 .get(&ls_name)
                 .context("Need secret arn.")
                 .unwrap();
 
-            let ctx = PullLogsContext::new(secret_arn.to_owned(), log_source, props, s3.clone());
+            let ctx = PullLogsContext::new(
+                secret_arn.to_owned(),
+                log_source,
+                props,
+                tables_config,
+                s3.clone(),
+            );
 
             (ls_name.to_string(), ctx)
         })

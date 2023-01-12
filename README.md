@@ -39,6 +39,13 @@ We are on a mission to build the first open platform for threat hunting, detecti
 
 ## Features
 
+<div align="center">
+  <br>
+  <img src="assets/matano_athena.png" width="600">
+</div>
+
+<br>
+
 - **Security Data Lake:** Matano normalizes unstructured security logs into a structured realtime data lake in your AWS account.
 - **Collect All Your Logs:** Matano integrates out of the box with [50+ sources](https://www.matano.dev/docs/log-sources/managed-log-sources) for security logs and can easily be extended with custom sources.
 - **Detection-as-Code:** Use Python to build realtime detections as code. Support for automatic import of [Sigma](https://www.matano.dev/docs/detections/importing-from-sigma-rules) detections to Matano.
@@ -162,8 +169,8 @@ Once initialized, your [Matano directory](https://www.matano.dev/docs/matano-dir
 
 When onboarding a new log source or authoring a detection, run `matano deploy` from anywhere in your project to deploy the changes to your account.
 
-
 ## 🔧 Log Transformation & Data Normalization
+
 [**Read the complete docs on configuring custom log sources**](https://www.matano.dev/docs/log-sources/configuration)
 
 Matano uses [Vector Remap Language (VRL)](https://vector.dev/docs/reference/vrl/), to allow users to easily onboard custom log sources and encourages you to normalize fields according to the [Elastic Common Schema (ECS)]() to enable enhanced pivoting and bulk search for IOCs across your security data lake.
@@ -179,7 +186,7 @@ HTTP log events that look like this:
 
 ```json
 {
-  "line":"{\"status\":200,\"srcIpAddress\":\"1.1.1.1\",\"message\":\"SUCCESS\",\"username\":\"ub40fan4life\"}"
+  "line": "{\"status\":200,\"srcIpAddress\":\"1.1.1.1\",\"message\":\"SUCCESS\",\"username\":\"ub40fan4life\"}"
 }
 ```
 
@@ -193,6 +200,7 @@ You want to apply these changes to each event:
 Adding this VRL program to your log source as a `transform` step would accomplish all of that:
 
 ###### log_source.yml
+
 ```yml
 transform: |
   . = object!(parse_json!(string!(.json.line)))
@@ -202,8 +210,8 @@ transform: |
 
 schema:
   ecs_field_names:
-  - source.ip
-  - http.status
+    - source.ip
+    - http.status
 ```
 
 The resulting event 🎉:
@@ -260,7 +268,7 @@ def dedupe(r):
 ###### detection.yml
 
 ```yaml
-...
+---
 tables:
   - aws_cloudtrail
   - okta_system
@@ -367,7 +375,6 @@ For general help on using Matano, please refer to the official Matano [documenta
 ## 👷 Contributors
 
 Thanks go to these wonderful people ([emoji key](https://allcontributors.org/docs/en/emoji-key)):
-
 
 <!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
 <!-- prettier-ignore-start -->

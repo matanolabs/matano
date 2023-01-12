@@ -83,7 +83,7 @@ dependencies = [
  "aws-sdk-secretsmanager",
  "aws-sdk-sqs",
  "aws_lambda_events",
- "base64",
+ "base64 0.13.1",
  "bytes 1.2.1",
  "chrono",
  "futures",
@@ -399,7 +399,7 @@ dependencies = [
  "ahash 0.7.6",
  "arrow-format",
  "avro-schema",
- "base64",
+ "base64 0.13.1",
  "bytemuck",
  "chrono",
  "comfy-table",
@@ -972,7 +972,7 @@ version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "20e4623e6898c4590b27eb26d64f498513b9e4c7b52537f64f75d3f423483c51"
 dependencies = [
- "base64",
+ "base64 0.13.1",
  "bytes 1.2.1",
  "chrono",
  "flate2",
@@ -991,6 +991,12 @@ name = "base64"
 version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9e1b586273c5702936fe7b7d6896644d8be71e6314cfe09d3167c95f712589e8"
+
+[[package]]
+name = "base64"
+version = "0.20.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0ea22880d78093b0cbe17c89f64a7d457941e65759157ec6cb31a31d652b05e5"
 
 [[package]]
 name = "base64ct"
@@ -2476,7 +2482,7 @@ dependencies = [
  "aws-sdk-s3",
  "aws-sdk-sns",
  "aws_lambda_events",
- "base64",
+ "base64 0.13.1",
  "bytes 1.2.1",
  "chrono",
  "futures",
@@ -2720,16 +2726,20 @@ dependencies = [
  "aws-sdk-s3",
  "aws-sdk-secretsmanager",
  "aws_lambda_events",
+ "base64 0.20.0",
  "chrono",
+ "config",
  "csv",
  "enum_dispatch",
  "futures",
  "futures-util",
+ "hex",
  "lambda_runtime",
  "lazy_static 1.4.0",
  "log",
  "regex",
  "reqwest",
+ "ring",
  "serde",
  "serde_json",
  "serde_yaml 0.9.10",
@@ -2739,6 +2749,7 @@ dependencies = [
  "tokio-util 0.7.3",
  "tracing",
  "tracing-subscriber",
+ "url",
  "uuid",
  "walkdir",
  "zip",
@@ -3165,7 +3176,7 @@ dependencies = [
  "arrow-ipc",
  "arrow-schema",
  "arrow-select",
- "base64",
+ "base64 0.13.1",
  "brotli",
  "bytes 1.2.1",
  "chrono",
@@ -3661,7 +3672,7 @@ version = "0.11.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "431949c384f4e2ae07605ccaa56d1d9d2ecdb5cadd4f9577ccfab29f2e5149fc"
 dependencies = [
- "base64",
+ "base64 0.13.1",
  "bytes 1.2.1",
  "encoding_rs",
  "futures-core",
@@ -3724,7 +3735,7 @@ version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "88073939a61e5b7680558e6be56b419e208420c2adb92be54921fa6b72283f1a"
 dependencies = [
- "base64",
+ "base64 0.13.1",
  "bitflags",
  "serde",
 ]
@@ -3798,7 +3809,7 @@ version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0864aeff53f8c05aa08d86e5ef839d3dfcf07aeba2db32f12db0ef716e87bd55"
 dependencies = [
- "base64",
+ "base64 0.13.1",
 ]
 
 [[package]]
@@ -3984,7 +3995,7 @@ version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "89df7a26519371a3cce44fbb914c2819c84d9b897890987fa3ab096491cc0ea8"
 dependencies = [
- "base64",
+ "base64 0.13.1",
  "chrono",
  "hex",
  "indexmap",
@@ -5063,7 +5074,7 @@ version = "0.1.0"
 source = "git+https://github.com/vectordotdev/vector?rev=8935681#8935681670a2ec5b6eddd42e8852f825a4860d05"
 dependencies = [
  "aes 0.8.1",
- "base64",
+ "base64 0.13.1",
  "bytes 1.2.1",
  "cbc",
  "cfb-mode",

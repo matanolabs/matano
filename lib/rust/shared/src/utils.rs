@@ -6,7 +6,7 @@ use std::{
     cell::RefCell,
     collections::{BTreeMap, HashMap},
     env::var,
-    path::Path,
+    path::{Path, PathBuf},
 };
 use tracing::log::{debug, error, info, warn};
 use tracing_subscriber::EnvFilter;
@@ -34,8 +34,10 @@ thread_local! {
 
 pub fn load_log_sources_configuration_map(
 ) -> BTreeMap<String, crate::models::LogSourceConfiguration> {
-    let log_sources_configuration_path =
-        Path::new(&var("LAMBDA_TASK_ROOT").unwrap().to_string()).join("log_sources");
+    let log_sources_configuration_path = match &var("LOG_SOURCES_CONFIG_DIR") {
+        Ok(v) => PathBuf::from(v),
+        Err(_) => Path::new(&var("LAMBDA_TASK_ROOT").unwrap().to_string()).join("log_sources"),
+    };
     let mut log_sources_configuration_map: BTreeMap<String, crate::models::LogSourceConfiguration> =
         BTreeMap::new();
 

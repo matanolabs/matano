@@ -61,6 +61,7 @@ export interface LogSourceConfig {
   };
   ingest?: {
     select_table_from_payload_metadata?: string;
+    select_table_from_payload?: string;
     expand_records_from_payload?: string;
     compression: string;
     s3_source?: {
@@ -93,11 +94,13 @@ interface MatanoLogSourceProps {
 const MANAGED_LOG_SOURCE_PREFIX_MAP: Record<string, string> = {
   aws_cloudtrail: "aws",
   aws_route53_resolver_logs: "aws",
-  zeek: "zeek",
-  o365: "o365",
-  suricata: "suricata",
-  crowdstrike_falcon: "crowdstrike",
   crowdstrike: "crowdstrike",
+  crowdstrike_falcon: "crowdstrike",
+  duo: "duo",
+  o365: "o365",
+  okta: "okta",
+  suricata: "suricata",
+  zeek: "zeek",
   matano_alerts: "matano_alerts", // doesn't really make sense but OK
 };
 
@@ -321,6 +324,7 @@ export class MatanoLogSource extends Construct {
         s3_source: this.logSourceConfig?.ingest?.s3_source,
         sqs_source: this.logSourceConfig?.ingest?.sqs_source,
         select_table_from_payload_metadata: this.logSourceConfig.ingest?.select_table_from_payload_metadata,
+        select_table_from_payload: this.logSourceConfig.ingest?.select_table_from_payload,
       },
       managed: this.logSourceConfig.managed,
     };
