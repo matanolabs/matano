@@ -9,7 +9,7 @@ import * as fse from "fs-extra";
 import path from "path";
 import * as YAML from "yaml";
 import { getCdkOutputDir, getCfnOutputsPath, getMatanoCdkApp, isPkg, PROJ_ROOT_DIR } from "..";
-import { readConfig } from "../util";
+import { readConfig, safeLoadMatanoContext } from "../util";
 import BaseCommand from "../base";
 import { getCdkExecutable } from "..";
 
@@ -60,7 +60,7 @@ export default class Deploy extends BaseCommand {
     }
 
     const matanoConfig = readConfig(matanoUserDirectory, "matano.config.yml");
-    const matanoContext = JSON.parse(fs.readFileSync(path.resolve(matanoUserDirectory, "matano.context.json"), "utf8"));
+    const matanoContext = safeLoadMatanoContext(matanoUserDirectory);
 
     const cdkContext: Record<string, any> = {
       matanoUserDirectory,

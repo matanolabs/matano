@@ -8,6 +8,7 @@ import path from "path";
 import { getCdkOutputDir, getMatanoCdkApp, isPkg, PROJ_ROOT_DIR } from "..";
 import BaseCommand from "../base";
 import { getCdkExecutable } from "..";
+import { safeLoadMatanoContext } from "../util";
 
 const MATANO_ERROR_PREFIX = "MATANO_ERROR: ";
 
@@ -48,7 +49,7 @@ export default class Diff extends BaseCommand {
       cdkArgs.push("--profile", awsProfile);
     }
 
-    const matanoContext = JSON.parse(fs.readFileSync(path.resolve(matanoUserDirectory, "matano.context.json"), "utf8"));
+    const matanoContext = safeLoadMatanoContext(matanoUserDirectory);
 
     const cdkContext: Record<string, any> = {
       matanoUserDirectory,

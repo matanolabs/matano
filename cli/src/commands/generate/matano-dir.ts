@@ -11,8 +11,10 @@ const sampleMatanoConfigYml = (awsAccountId?: string, awsRegion?: string) => `# 
 aws_account: "${awsAccountId ?? "123456789012"}" # Specify the AWS account to deploy to.
 aws_region: "${awsRegion ?? "us-east-1"}" # Specify the AWS region to deploy to.
 
-# vpc:
-#   id: vpc-0ea06dd2385eeb53c # Specify the VPC id to use, will use the default VPC if not specified.
+# Optionally, specify any tags to apply to the deployed resources.
+# aws_tags:
+#  key: "my_tag"
+
 `;
 const sampleDetectionPy = `# ${autogenerateNote}
 

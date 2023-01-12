@@ -89,3 +89,12 @@ export const fileExists = (path: string) =>
     .stat(path)
     .then(() => true)
     .catch(() => false);
+
+// Not using VPC context currently, just default to empty. Add when/if use.
+export function safeLoadMatanoContext(matanoUserDirectory: string) {
+  try {
+    return JSON.parse(fs.readFileSync(path.resolve(matanoUserDirectory, "matano.context.json"), "utf8"));
+  } catch {
+    return {};
+  }
+}

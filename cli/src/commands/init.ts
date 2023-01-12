@@ -119,12 +119,13 @@ export default class Init extends BaseCommand {
 
     const spinner1 = ora("Initializing AWS environment... (1/3)").start();
 
-    const matanoContext = await RefreshContext.refreshMatanoContext(
-      matanoUserDirectory,
-      awsAccountId,
-      awsRegion,
-      awsProfile
-    );
+    // Dont use VPC for now.
+    // const matanoContext = await RefreshContext.refreshMatanoContext(
+    //   matanoUserDirectory,
+    //   awsAccountId,
+    //   awsRegion,
+    //   awsProfile
+    // );
     spinner1.text = "Initializing AWS environment... (2/3)";
 
     const cdkEnvironment = `aws://${awsAccountId}/${awsRegion}`;
@@ -138,7 +139,7 @@ export default class Init extends BaseCommand {
       matanoUserDirectory,
       matanoAwsAccountId: awsAccountId,
       matanoAwsRegion: awsRegion,
-      matanoContext: JSON.stringify(matanoContext),
+      matanoContext: JSON.stringify({}),
     };
 
     for (const [key, value] of Object.entries(cdkContext)) {
