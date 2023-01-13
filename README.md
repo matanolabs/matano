@@ -68,7 +68,7 @@ We are on a mission to build the first open platform for threat hunting, detecti
 - Instantly search for matches to IOCs across your data lake using standardized fields.
 - Write detections-as-code using Python to detect suspicious behavior & create contextualized alerts.
 - Easier to use cloud-native open source SIEM alternative for detection & response.
-- ECS-compatible severless alternative to ELK / Elastic Security stack.
+- ECS-compatible serverless alternative to ELK / Elastic Security stack.
 
 ## ✨ Integrations
 
@@ -87,10 +87,10 @@ We are on a mission to build the first open platform for threat hunting, detecti
 - [**Amazon SNS**](https://www.matano.dev/docs/detections/alerting)
 - [**Slack**](https://www.matano.dev/docs/detections/alerting/slack)
 
-#### Enrichment / Threat Intel
+#### Enrichment / Threat Intelligence
 
 - **AbuseCH** ([URLhaus](https://urlhaus.abuse.ch), [MalwareBazaar](https://bazaar.abuse.ch), [ThreatFox](https://threatfox.abuse.ch))
-- [**AlientVault OTX**](https://otx.alienvault.com/api)
+- [**AlienVault OTX**](https://otx.alienvault.com/api)
 - **MaxMind GeoIP** (_coming soon_)
 - **GreyNoise Intelligence** (_coming soon_)
 - **Custom 🔧** (_coming soon_)

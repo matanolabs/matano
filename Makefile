@@ -25,6 +25,7 @@ build-python: build-python-rust
 
 build-rust:
 	cd lib/rust && PYO3_CROSS_PYTHON_VERSION=3.9 cargo lambda build --release --workspace && \
+	mkdir -p ${CURDIR}/local-assets && \
 	cp -a target/lambda/* ${CURDIR}/local-assets
 
 build-jvm:
