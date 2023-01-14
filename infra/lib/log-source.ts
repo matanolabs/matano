@@ -5,6 +5,7 @@ import * as cdk from "aws-cdk-lib";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as sqs from "aws-cdk-lib/aws-sqs";
 import * as sns from "aws-cdk-lib/aws-sns";
+import * as s3 from "aws-cdk-lib/aws-s3";
 import { MatanoIcebergTable } from "../lib/iceberg";
 import { resolveSchema, serializeToFields, mergeSchema, fieldsToSchema } from "./schema";
 import { SqsSubscription } from "aws-cdk-lib/aws-sns-subscriptions";
@@ -89,6 +90,7 @@ interface MatanoLogSourceProps {
   noDefaultEcsFields?: boolean;
   noDefaultTs?: boolean;
   eventSourceProps?: SqsEventSourceProps;
+  lakeStorageBucket: s3.IBucket;
 }
 
 const MANAGED_LOG_SOURCE_PREFIX_MAP: Record<string, string> = {
@@ -117,6 +119,7 @@ export interface MatanoTableProps {
   lakeWriterLambda: lambda.Function;
   eventSourceProps?: SqsEventSourceProps;
   partitions?: any[];
+  lakeStorageBucket: s3.IBucket;
 }
 export class MatanoTable extends Construct {
   icebergTable: MatanoIcebergTable;
@@ -129,6 +132,7 @@ export class MatanoTable extends Construct {
       tableName: props.tableName,
       schema: props.schema,
       partitions: props.partitions,
+      lakeStorageBucket: props.lakeStorageBucket,
     });
 
     const lakeWriterDlq = new sqs.Queue(this, `LakeWriterDLQ`, {
@@ -408,6 +412,7 @@ export class MatanoLogSource extends Construct {
           realtimeTopic: props.realtimeTopic,
           lakeWriterLambda: props.lakeWriterLambda,
           partitions: props.partitions,
+          lakeStorageBucket: props.lakeStorageBucket,
         })
       );
     }

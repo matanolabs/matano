@@ -5,7 +5,7 @@ import * as cdk from "aws-cdk-lib";
 import { DPCommonStack } from "../src/DPCommonStack";
 import { DPMainStack } from "../src/DPMainStack";
 import { tagResources } from "../lib/MatanoStack";
-import { stackNameWithLabel } from "../lib/utils";
+import { stackNameWithLabel, MATANO_MANAGED_AWS_TAG_KEY } from "../lib/utils";
 
 const app = new cdk.App();
 
@@ -40,5 +40,5 @@ userAwsTags = Object.fromEntries(Object.entries(userAwsTags).map(([k, v]) => [k,
 
 tagResources(app, () => ({
   ...userAwsTags,
-  "matano:managed": "true",
+  [MATANO_MANAGED_AWS_TAG_KEY]: "true",
 }));

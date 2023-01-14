@@ -3,11 +3,12 @@ import * as cdk from "aws-cdk-lib";
 import { Construct } from "constructs";
 import * as sns from "aws-cdk-lib/aws-sns";
 import * as iam from "aws-cdk-lib/aws-iam";
+import * as s3 from "aws-cdk-lib/aws-s3";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import { RustFunctionLayer } from "./rust-function-layer";
 
 interface TransformerProps {
-  realtimeBucketName: string;
+  realtimeBucket: s3.IBucket;
   realtimeTopic: sns.Topic;
   matanoSourcesBucketName: string;
   logSourcesConfigurationPath: string;
@@ -35,7 +36,7 @@ export class Transformer extends Construct {
       environment: {
         ...this.rustFunctionLayer.environmentVariables,
         MATANO_SOURCES_BUCKET: props.matanoSourcesBucketName,
-        MATANO_REALTIME_BUCKET_NAME: props.realtimeBucketName,
+        MATANO_REALTIME_BUCKET_NAME: props.realtimeBucket.bucketName,
         MATANO_REALTIME_TOPIC_ARN: props.realtimeTopic.topicArn,
         SQS_METADATA: props.sqsMetadata,
       },
@@ -43,10 +44,13 @@ export class Transformer extends Construct {
       timeout: cdk.Duration.seconds(100),
       initialPolicy: [
         new iam.PolicyStatement({
-          actions: ["secretsmanager:*", "dynamodb:*", "s3:*", "sns:*"],
+          // TODO: figure out permissions here, need to include BYOB
+          actions: ["s3:*"],
           resources: ["*"],
         }),
       ],
     });
+    props.realtimeBucket.grantWrite(this.transformerLambda);
+    props.realtimeTopic.grantPublish(this.transformerLambda);
   }
 }

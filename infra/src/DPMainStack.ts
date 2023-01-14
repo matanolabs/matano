@@ -74,14 +74,16 @@ export class DPMainStack extends MatanoStack {
     });
 
     const detections = new MatanoDetections(this, "Detections", {
+      realtimeBucket: props.realtimeBucket,
       realtimeTopic: props.realtimeBucketTopic,
-      matanoSourcesBucketName: props.matanoSourcesBucket.bucket.bucketName,
+      matanoSourcesBucket: props.matanoSourcesBucket.bucket,
     });
     this.addConfigFile("detections_config.json", JSON.stringify(detections.detectionConfigs));
 
     const lakeWriter = new LakeWriter(this, "LakeWriter", {
+      realtimeBucket: props.realtimeBucket,
       alertingSnsTopic: matanoAlerting.alertingTopic,
-      outputBucketName: props.lakeStorageBucket.bucket.bucketName,
+      outputBucket: props.lakeStorageBucket.bucket,
       outputObjectPrefix: "lake",
     });
 
@@ -95,6 +97,7 @@ export class DPMainStack extends MatanoStack {
           partitions: MATANO_LOG_PARTITION_SPEC,
           realtimeTopic: props.realtimeBucketTopic,
           lakeWriterLambda: lakeWriter.lakeWriterLambda,
+          lakeStorageBucket: props.lakeStorageBucket.bucket,
         }
       );
       const formattedName = matanoResourceToCdkName(logSource.logSourceLevelConfig.name!);
@@ -114,6 +117,7 @@ export class DPMainStack extends MatanoStack {
       partitions: MATANO_LOG_PARTITION_SPEC,
       realtimeTopic: props.realtimeBucketTopic,
       lakeWriterLambda: lakeWriter.alertsLakeWriterLambda,
+      lakeStorageBucket: props.lakeStorageBucket.bucket,
     });
     logSources.push(matanoAlertsSource);
 
@@ -184,7 +188,7 @@ export class DPMainStack extends MatanoStack {
     });
 
     const transformer = new Transformer(this, "Transformer", {
-      realtimeBucketName: props.realtimeBucket.bucketName,
+      realtimeBucket: props.realtimeBucket,
       realtimeTopic: props.realtimeBucketTopic,
       matanoSourcesBucketName: props.matanoSourcesBucket.bucket.bucketName,
       logSourcesConfigurationPath: path.join(this.configTempDir, "config"), // TODO: weird fix later (@shaeq)

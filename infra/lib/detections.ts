@@ -18,7 +18,8 @@ import { SqsSubscription } from "aws-cdk-lib/aws-sns-subscriptions";
 
 export interface MatanoDetectionsProps {
   realtimeTopic: sns.Topic;
-  matanoSourcesBucketName: string;
+  realtimeBucket: s3.IBucket;
+  matanoSourcesBucket: s3.IBucket;
 }
 
 export class MatanoDetections extends Construct {
@@ -82,12 +83,13 @@ export class MatanoDetections extends Construct {
       memorySize: 1800,
       timeout: cdk.Duration.seconds(60),
       environment: {
-        SOURCES_S3_BUCKET: props.matanoSourcesBucketName,
+        SOURCES_S3_BUCKET: props.matanoSourcesBucket.bucketName,
         REMOTE_CACHE_TABLE_NAME: remoteCacheTable.tableName,
       },
-      initialPolicy: [new iam.PolicyStatement({ actions: ["s3:*"], resources: ["*"] })],
     });
 
+    props.realtimeBucket.grantRead(this.detectionFunction);
+    props.matanoSourcesBucket.grantWrite(this.detectionFunction);
     remoteCacheTable.grantReadWriteData(this.detectionFunction);
 
     const detectionDLQ = new sqs.Queue(this, "DLQ");

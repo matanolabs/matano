@@ -5,6 +5,8 @@ import * as path from "path";
 import * as YAML from "yaml";
 import * as cdk from "aws-cdk-lib";
 import * as lambda from "aws-cdk-lib/aws-lambda";
+import { Construct } from "constructs";
+import { MatanoStack } from "./MatanoStack";
 
 export const getDirectories = (source: string) =>
   fs
@@ -185,4 +187,35 @@ export function makeLambdaSnapstart(func: lambda.Function) {
   (func.node.defaultChild as lambda.CfnFunction).addPropertyOverride("SnapStart", {
     ApplyOn: "PublishedVersions",
   });
+}
+
+export const MATANO_MANAGED_AWS_TAG_KEY = "matano:managed";
+
+export function getMatanoStack(c: Construct): MatanoStack {
+  return cdk.Stack.of(c) as MatanoStack;
+}
+
+export function getDefaultGlueCatalogArn(c: Construct): string {
+  const stack = getMatanoStack(c);
+  return `arn:${stack.partition}:glue:${stack.region}:${stack.account}:catalog`;
+}
+
+export function getGlueDBArn(c: Construct, dbName: string): string {
+  const stack = getMatanoStack(c);
+  return `arn:${stack.partition}:glue:${stack.region}:${stack.account}:database/${dbName}`;
+}
+
+export function getMatanoGlueTableArn(c: Construct, dbName: string) {
+  const stack = getMatanoStack(c);
+  return `arn:${stack.partition}:glue:${stack.region}:${stack.account}:table/${dbName}/*`;
+}
+
+export function getStandardGlueResourceArns(c: Construct) {
+  return [
+    getDefaultGlueCatalogArn(c),
+    getGlueDBArn(c, "matano"),
+    getGlueDBArn(c, "matano_system"),
+    getMatanoGlueTableArn(c, "matano"),
+    getMatanoGlueTableArn(c, "matano_system"),
+  ];
 }

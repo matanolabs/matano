@@ -4,6 +4,7 @@ import * as YAML from "yaml";
 import { Construct, Node } from "constructs";
 import * as cdk from "aws-cdk-lib";
 import * as ddb from "aws-cdk-lib/aws-dynamodb";
+import * as s3 from "aws-cdk-lib/aws-s3";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as cr from "aws-cdk-lib/custom-resources";
@@ -12,7 +13,7 @@ import { execSync } from "child_process";
 import { S3BucketWithNotifications } from "./s3-bucket-notifs";
 import { AwsCliLayer } from "aws-cdk-lib/lambda-layer-awscli";
 import { SqsEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
-import { getLocalAsset, makeLambdaSnapstart } from "./utils";
+import { getLocalAsset, getMatanoStack, getStandardGlueResourceArns, makeLambdaSnapstart } from "./utils";
 import { MatanoStack } from "./MatanoStack";
 
 interface MatanoSchemasProps {
@@ -58,16 +59,18 @@ export class SchemasProvider extends Construct {
       memorySize: 1024,
       timeout: cdk.Duration.minutes(5),
       environment: {
-        ASSETS_BUCKET_NAME: (cdk.Stack.of(this) as MatanoStack).cdkAssetsBucketName,
+        ASSETS_BUCKET_NAME: getMatanoStack(this).cdkAssetsBucketName,
       },
       code: getLocalAsset("iceberg_table_cfn"),
       initialPolicy: [
+        // only need to load tables to get schema
         new iam.PolicyStatement({
-          actions: ["glue:*", "s3:*"],
-          resources: ["*"],
+          actions: ["glue:GetDatabases", "glue:GetDatabase", "glue:GetTable", "glue:GetTables"],
+          resources: getStandardGlueResourceArns(this),
         }),
       ],
     });
+    getMatanoStack(this).cdkAssetsBucket.grantWrite(providerFunc);
     makeLambdaSnapstart(providerFunc);
 
     this.provider = new cr.Provider(this, "Default", {
@@ -81,6 +84,7 @@ interface MatanoIcebergTableProps {
   schema: Record<string, any>;
   partitions?: any[];
   glueDatabaseName?: string;
+  lakeStorageBucket: s3.IBucket;
 }
 
 export class MatanoIcebergTable extends Construct {
@@ -93,10 +97,11 @@ export class MatanoIcebergTable extends Construct {
       "write.avro.compression-codec": "zstd",
       "write.metadata.delete-after-commit.enabled": "true",
       write_compression: "zstd",
+      "glue.skip_archive": "true",
     };
 
     const resource = new CustomResource(this, "Default", {
-      serviceToken: IcebergTableProvider.getOrCreate(this, {}),
+      serviceToken: IcebergTableProvider.getOrCreate(this, { lakeStorageBucket: props.lakeStorageBucket }),
       resourceType: "Custom::MatanoIcebergTable",
       properties: {
         logSourceName: props.tableName,
@@ -110,7 +115,9 @@ export class MatanoIcebergTable extends Construct {
   }
 }
 
-interface IcebergTableProviderProps {}
+interface IcebergTableProviderProps {
+  lakeStorageBucket: s3.IBucket;
+}
 
 export class IcebergTableProvider extends Construct {
   provider: cr.Provider;
@@ -133,16 +140,28 @@ export class IcebergTableProvider extends Construct {
       memorySize: 1024,
       timeout: cdk.Duration.minutes(5),
       environment: {
-        ASSETS_BUCKET_NAME: (cdk.Stack.of(this) as MatanoStack).cdkAssetsBucketName,
+        MATANO_ICEBERG_BUCKET: props.lakeStorageBucket.bucketName,
       },
       code: getLocalAsset("iceberg_table_cfn"),
       initialPolicy: [
         new iam.PolicyStatement({
-          actions: ["glue:*", "s3:*"],
-          resources: ["*"],
+          actions: [
+            "glue:GetDatabases",
+            "glue:GetDatabase",
+            "glue:CreateDatabase",
+            "glue:UpdateDatabase",
+            "glue:DeleteDatabase",
+            "glue:GetTable",
+            "glue:GetTables",
+            "glue:CreateTable",
+            "glue:UpdateTable",
+            "glue:DeleteTable",
+          ],
+          resources: getStandardGlueResourceArns(this),
         }),
       ],
     });
+    props.lakeStorageBucket.grantReadWrite(providerFunc);
     makeLambdaSnapstart(providerFunc);
 
     this.provider = new cr.Provider(this, "Default", {
@@ -179,13 +198,21 @@ export class IcebergMetadata extends Construct {
       code: getLocalAsset("iceberg_metadata"),
       initialPolicy: [
         new iam.PolicyStatement({
-          actions: ["glue:*", "s3:*"],
-          resources: ["*"],
+          actions: [
+            "glue:GetDatabases",
+            "glue:GetDatabase",
+            "glue:UpdateDatabase",
+            "glue:GetTable",
+            "glue:GetTables",
+            "glue:UpdateTable",
+          ],
+          resources: getStandardGlueResourceArns(this),
         }),
       ],
       reservedConcurrentExecutions: 1,
     });
 
+    props.lakeStorageBucket.bucket.grantReadWrite(this.metadataWriterFunction);
     duplicatesTable.grantReadWriteData(this.metadataWriterFunction);
 
     const eventSource = new SqsEventSource(props.lakeStorageBucket.queue, {});
@@ -204,8 +231,15 @@ export class IcebergMetadata extends Construct {
       code: getLocalAsset("iceberg_metadata"),
       initialPolicy: [
         new iam.PolicyStatement({
-          actions: ["glue:*", "s3:*"],
-          resources: ["*"],
+          actions: [
+            "glue:GetDatabases",
+            "glue:GetDatabase",
+            "glue:UpdateDatabase",
+            "glue:GetTable",
+            "glue:GetTables",
+            "glue:UpdateTable",
+          ],
+          resources: getStandardGlueResourceArns(this),
         }),
       ],
     });
@@ -213,6 +247,8 @@ export class IcebergMetadata extends Construct {
     this.alertsHelperFunction.addAlias("current");
 
     duplicatesTable.grantReadWriteData(this.alertsHelperFunction);
+    props.lakeStorageBucket.bucket.grantReadWrite(this.alertsHelperFunction);
+
     [this.metadataWriterFunction, this.alertsHelperFunction].map(makeLambdaSnapstart);
   }
 }

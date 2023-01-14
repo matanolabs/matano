@@ -40,6 +40,7 @@ interface EnrichmentTableProps {
   realtimeTopic: sns.Topic;
   lakeWriterLambda: lambda.Function;
   dataFilePath?: any;
+  lakeStorageBucket: s3.IBucket;
 }
 
 const MANAGED_ENRICHMENT_DIR = path.join(dataDirPath, "managed/enrichment");
@@ -65,12 +66,14 @@ export class EnrichmentTable extends Construct {
       lakeWriterLambda: props.lakeWriterLambda,
       noDefaultEcsFields: props.enrichConfig?.schema?.ecs_field_names == null,
       noDefaultTs: true,
+      lakeStorageBucket: props.lakeStorageBucket,
     });
     const schema = this.logSource.matanoTables[0].schema;
     const tempTable = new MatanoIcebergTable(this, `MergeTempTable`, {
       tableName: `${enrichTableName}_temp`,
       schema,
       glueDatabaseName: "matano_system",
+      lakeStorageBucket: props.lakeStorageBucket,
     });
 
     if (props.enrichConfig.enrichment_type === "static") {
@@ -204,6 +207,7 @@ export class Enrichment extends Construct {
         enrichmentSyncerQueue,
         realtimeTopic: props.realtimeTopic,
         lakeWriterLambda: props.lakeWriterLambda,
+        lakeStorageBucket: props.lakeStorageBucket,
       });
       this.enrichmentLogSources[tableName] = enrichTable.logSource;
     }
