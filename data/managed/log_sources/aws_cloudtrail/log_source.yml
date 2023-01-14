@@ -67,8 +67,8 @@ transform: |
   if .json.requestParameters != null {
       .aws.cloudtrail.flattened.request_parameters = del(.json.requestParameters)
   }
-  if .json.responseParameters != null {
-      .aws.cloudtrail.flattened.response_parameters = del(.json.responseParameters)
+  if .json.responseElements != null {
+      .aws.cloudtrail.flattened.response_elements = del(.json.responseElements)
   }
   if .json.additionalEventData != null {
       .aws.cloudtrail.flattened.additional_eventdata = del(.json.additionalEventData)
@@ -77,7 +77,7 @@ transform: |
       .aws.cloudtrail.flattened.service_event_details = del(.json.serviceEventDetails)
   }
 
-  .aws.cloudtrail.request_id = del(.json.requestId)
+  .aws.cloudtrail.request_id = del(.json.requestID)
   .event.id = del(.json.eventID)
   .aws.cloudtrail.event_type = del(.json.eventType)
   .aws.cloudtrail.api_version = del(.json.apiVersion)
@@ -599,28 +599,58 @@ transform: |
   .user.target.name = .aws.cloudtrail.flattened.request_parameters.userName
   .aws.cloudtrail.flattened.insight_details = del(.aws.cloudtrail.insight_details)
 
-  # .aws.cloudtrail = merge(.aws.cloudtrail, map_values(.aws.cloudtrail.flattened) -> |value| { encode_json(value) }, deep: true)
-  .aws.cloudtrail.flattened = map_values(.aws.cloudtrail.flattened) -> |value| { encode_json(value) } # TODO(): should inject based on schema
+  .related.user = unique!(.related.user)
 
+  # .aws.cloudtrail = merge(.aws.cloudtrail, map_values(.aws.cloudtrail.flattened) -> |value| { encode_json(value) }, deep: true)
+  .aws.cloudtrail.flattened = map_values(compact(.aws.cloudtrail.flattened)) -> |value| { encode_json(value) } # TODO(): should inject based on schema
 schema:
   ecs_field_names:
-    - event.module
-    - event.dataset
     - cloud.account.id
+    - cloud.availability_zone
+    - cloud.instance.id
+    - cloud.instance.name
+    - cloud.machine.type
+    - cloud.project.id
+    - cloud.provider
     - cloud.region
+    - container.id
+    - container.image.name
+    - container.labels
+    - container.name
     - ecs.version
     - error.message
     - event.action
+    - event.category
     - event.created
+    - event.dataset
+    - event.id
     - event.ingested
     - event.kind
+    - event.module
     - event.original
+    - event.outcome
     - event.provider
     - event.type
-    - event.outcome
-    - event.id
+    - file.hash.md5
+    - file.hash.sha1
+    - file.hash.sha256
+    - file.hash.sha512
+    - file.path
     - group.id
     - group.name
+    - host.architecture
+    - host.domain
+    - host.hostname
+    - host.id
+    - host.ip
+    - host.mac
+    - host.name
+    - host.os.family
+    - host.os.kernel
+    - host.os.name
+    - host.os.platform
+    - host.os.version
+    - host.type
     - related.hash
     - related.user
     - source.address
@@ -630,6 +660,8 @@ schema:
     - source.geo.continent_name
     - source.geo.country_iso_code
     - source.geo.country_name
+    - source.geo.location.lat
+    - source.geo.location.lon
     - source.geo.region_iso_code
     - source.geo.region_name
     - source.ip
@@ -646,33 +678,6 @@ schema:
     - user_agent.os.name
     - user_agent.os.version
     - user_agent.version
-    - source.geo.location.lon
-    - source.geo.location.lat
-    - cloud.account.id
-    - cloud.availability_zone
-    - cloud.instance.id
-    - cloud.instance.name
-    - cloud.machine.type
-    - cloud.provider
-    - cloud.region
-    - cloud.project.id
-    - container.id
-    - container.image.name
-    - container.labels
-    - container.name
-    - host.architecture
-    - host.domain
-    - host.hostname
-    - host.id
-    - host.ip
-    - host.mac
-    - host.name
-    - host.os.family
-    - host.os.kernel
-    - host.os.name
-    - host.os.platform
-    - host.os.version
-    - host.type
   fields:
     - name: aws
       type:

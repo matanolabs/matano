@@ -1,7 +1,7 @@
 name: digest
 
 transform: |
-  .file.path = del(.json.previousDigestS3Object)
+  .file.path = del(.json.digestS3Object)
   .file.hash.sha256 = del(.json.previousDigestSignature)
   if .file.hash.sha256 != null {
       .related.hash = push!(.related.hash, .file.hash.sha256)
@@ -31,7 +31,7 @@ transform: |
   .aws.cloudtrail.digest.public_key_fingerprint = del(.json.publicKeyFingerprint)
   .aws.cloudtrail.digest.signature_algorithm = del(.json.digestSignatureAlgorithm)
 
-  .aws.cloudtrail.flattened.digest = encode_json(del(.aws.cloudtrail.digest))
+  .aws.cloudtrail.flattened.digest = encode_json(compact(del(.aws.cloudtrail.digest)))
 
 schema:
   ecs_field_names:

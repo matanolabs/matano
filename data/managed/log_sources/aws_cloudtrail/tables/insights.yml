@@ -4,8 +4,7 @@ ingest:
   expand_records_from_payload: parse_json!(.__raw).Records
 
 transform: |
-  .aws.cloudtrail.insight_details = del(.json.insightDetails)
-  .aws.cloudtrail.flattened.insight_details = encode_json(del(.aws.cloudtrail.insight_details))
+  del(.aws.cloudtrail.insight_details)
 
 schema:
   fields:
