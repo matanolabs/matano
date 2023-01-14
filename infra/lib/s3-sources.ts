@@ -24,7 +24,12 @@ export class MatanoS3Sources extends Construct {
 
     // Get sources with custom sources and collect them into buckets + associated prefixes
     for (const logSource of props.logSources) {
-      const { bucket_name, key_prefix } = logSource?.logSourceConfig?.ingest?.s3_source ?? {};
+      let { bucket_name, key_prefix } = logSource?.logSourceConfig?.ingest?.s3_source ?? {};
+
+      // Assume root if no prefix for BYOB
+      if (key_prefix == undefined) {
+        key_prefix = "";
+      }
 
       if (!bucket_name || !key_prefix) {
         continue;

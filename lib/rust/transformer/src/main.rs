@@ -119,7 +119,7 @@ fn get_log_source_from_bucket_and_key(
                     .map(|prefix| {
                         key.starts_with(prefix.as_str())
                             && v.base
-                                .get_string("ingest.s3_source.bucket")
+                                .get_string("ingest.s3_source.bucket_name")
                                 .ok()
                                 .map_or(managed_bucket == bucket, |b| b.as_str() == bucket)
                     })
