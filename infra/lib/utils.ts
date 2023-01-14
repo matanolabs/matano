@@ -21,8 +21,8 @@ export function walkdirSync(dir: string): string[] {
 }
 
 // cdk formatArn is confusing af
-export function makeRoleArn(account: string, roleName: string) {
-  return `arn:aws:iam::${account}:role/${roleName}`;
+export function makeRoleArn(partition: string, account: string, roleName: string) {
+  return `arn:${partition}:iam::${account}:role/${roleName}`;
 }
 
 export function readConfig(directory: string, filename: string): Record<string, any> {

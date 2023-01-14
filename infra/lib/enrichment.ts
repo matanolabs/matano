@@ -172,7 +172,7 @@ export class Enrichment extends Construct {
             "s3:GetObject",
           ],
           resources: [
-            `arn:aws:athena:*:${cdk.Stack.of(this).account}:workgroup/matano_system`
+            `arn:${cdk.Stack.of(this).partition}:athena:*:${cdk.Stack.of(this).account}:workgroup/matano_system`
           ],
         }),
       ],

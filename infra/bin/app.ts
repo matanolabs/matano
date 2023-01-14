@@ -31,10 +31,12 @@ const dpMainStack = new DPMainStack(app, "DPMainStack", {
   alertTrackerTable: dpCommonStack.alertTrackerTable,
 });
 
-const userAwsTags = dpMainStack.userAwsTags ?? {};
+let userAwsTags = dpMainStack.userAwsTags ?? {};
 if (userAwsTags.constructor !== Object || !Object.values(userAwsTags).every((x) => typeof x === "string")) {
   throw new Error("Custom AWS tags must be key value object of strings.");
 }
+
+userAwsTags = Object.fromEntries(Object.entries(userAwsTags).map(([k, v]) => [k, v.toString()]));
 
 tagResources(app, () => ({
   ...userAwsTags,

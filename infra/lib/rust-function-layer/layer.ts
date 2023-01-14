@@ -91,7 +91,7 @@ export class RustFunctionLayer extends Construct {
 
     this.layer = new LayerVersion(this, id, {
       ...props,
-      compatibleArchitectures: [this.arch],
+      // compatibleArchitectures: [this.arch], TODO(shaeq): disabled for now not supported by in govcloud
       code: RustFunctionCode.assetCode(props),
     });
   }
