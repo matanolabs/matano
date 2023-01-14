@@ -53,7 +53,7 @@ export class MatanoS3Sources extends Construct {
       const filters: s3.NotificationKeyFilter[] = commonPrefix === "" ? [] : [{ prefix: commonPrefix }];
 
       importedBucket.addEventNotification(
-        s3.EventType.OBJECT_CREATED_PUT,
+        s3.EventType.OBJECT_CREATED,
         new s3n.SnsDestination(props.sourcesIngestionTopic),
         ...filters
       );
