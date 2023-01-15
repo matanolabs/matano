@@ -7,11 +7,7 @@ import { Mode } from "aws-cdk/lib/api/plugin/credential-provider-source";
 import * as cxapi from "@aws-cdk/cx-api";
 import { CloudFormation } from "aws-sdk";
 import Table from "tty-table";
-import { promiseTimeout, readConfig, stackNameWithLabel } from "../util";
-
-function isInteractive({ stream = process.stdout } = {}) {
-  return Boolean(stream && stream.isTTY && process.env.TERM !== "dumb" && !("CI" in process.env));
-}
+import { promiseTimeout, readConfig, stackNameWithLabel, isInteractive } from "../util";
 
 export default class Info extends BaseCommand {
   static description = "Retrieves information about your Matano deployment in structured format.";

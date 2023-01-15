@@ -42,7 +42,8 @@ export default class Deploy extends BaseCommand {
     matanoUserDirectory: string,
     awsProfile: string | undefined,
     awsAccountId: string,
-    awsRegion: string
+    awsRegion: string,
+    debug = false
   ) {
     const cdkOutDir = getCdkOutputDir();
     const cdkArgs = [
@@ -88,6 +89,10 @@ export default class Deploy extends BaseCommand {
       },
     });
 
+    if (debug) {
+      subprocess.stdout?.pipe(process.stdout);
+      subprocess.stderr?.pipe(process.stdout);
+    }
     return subprocess;
   }
 
@@ -99,12 +104,7 @@ export default class Deploy extends BaseCommand {
     const { awsAccountId, awsRegion } = this.validateGetAwsRegionAccount(flags, matanoUserDirectory);
     const spinner = ora(chalk.dim("Deploying Matano...")).start();
 
-    const subprocess = Deploy.deployMatano(matanoUserDirectory, awsProfile, awsAccountId, awsRegion);
-
-    if (process.env.DEBUG) {
-      subprocess.stdout?.pipe(process.stdout);
-      subprocess.stderr?.pipe(process.stdout);
-    }
+    const subprocess = Deploy.deployMatano(matanoUserDirectory, awsProfile, awsAccountId, awsRegion, flags.debug);
 
     try {
       await subprocess;
