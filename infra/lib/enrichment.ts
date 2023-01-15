@@ -178,8 +178,6 @@ export class Enrichment extends Construct {
             "athena:StartQueryExecution",
             "athena:GetQueryExecution",
             "athena:GetQueryResults",
-            "s3:PutObject",
-            "s3:GetObject",
           ],
           resources: [
             `arn:${cdk.Stack.of(this).partition}:athena:*:${cdk.Stack.of(this).account}:workgroup/matano_system`

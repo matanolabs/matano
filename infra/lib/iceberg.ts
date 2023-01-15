@@ -213,13 +213,7 @@ export class IcebergMetadata extends Construct {
           resources: getStandardGlueResourceArns(this),
         }),
         new iam.PolicyStatement({
-          actions: [
-            "athena:StartQueryExecution",
-            "athena:GetQueryExecution",
-            "athena:GetQueryResults",
-            "s3:PutObject",
-            "s3:GetObject",
-          ],
+          actions: ["athena:StartQueryExecution", "athena:GetQueryExecution", "athena:GetQueryResults"],
           resources: [
             `arn:${getMatanoStack(this).partition}:athena:*:${getMatanoStack(this).account}:workgroup/matano_system`,
           ],

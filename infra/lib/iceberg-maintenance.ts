@@ -65,7 +65,7 @@ class IcebergCompaction extends Construct {
     const compactionQuery = new tasks.AthenaStartQueryExecution(this, "Compaction Query", {
       integrationPattern: sfn.IntegrationPattern.RUN_JOB,
       queryString: sfn.JsonPath.stringAt(optimizeQueryFormatStr),
-      workGroup: "matano_system",
+      workGroup: "matano_system_v3",
     });
 
     queryMap.iterator(compactionQuery);
@@ -79,7 +79,7 @@ class IcebergCompaction extends Construct {
     stateMachine.addToRolePolicy(
       new iam.PolicyStatement({
         actions: ["glue:Get*", "glue:UpdateDatabase", "glue:UpdateTable"],
-        resources: getStandardGlueResourceArns(this),
+        resources: [...getStandardGlueResourceArns(this), "*"],
       })
     );
 

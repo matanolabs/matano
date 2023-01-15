@@ -42,6 +42,18 @@ export class Transformer extends Construct {
       },
       layers: [this.rustFunctionLayer.layer],
       timeout: cdk.Duration.seconds(100),
+      initialPolicy: [
+        // Allow transformer to decrypt KMS based on user adding tags.
+        new iam.PolicyStatement({
+          actions: ["kms:Decrypt", "kms:GenerateDataKey"],
+          resources: ["*"],
+          conditions: {
+            StringEquals: {
+              "aws:ResourceTag/matano:trusted": "true",
+            },
+          },
+        }),
+      ],
     });
 
     props.matanoSourcesBucket.grantRead(this.transformerLambda);
