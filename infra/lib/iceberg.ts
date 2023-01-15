@@ -216,6 +216,7 @@ export class IcebergMetadata extends Construct {
           actions: ["athena:StartQueryExecution", "athena:GetQueryExecution", "athena:GetQueryResults"],
           resources: [
             `arn:${getMatanoStack(this).partition}:athena:*:${getMatanoStack(this).account}:workgroup/matano_system`,
+            `arn:${getMatanoStack(this).partition}:athena:*:${getMatanoStack(this).account}:workgroup/matano_system_v3`,
           ],
         }),
       ],

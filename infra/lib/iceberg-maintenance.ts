@@ -84,6 +84,7 @@ class IcebergCompaction extends Construct {
     );
 
     const smScheduleRule = new events.Rule(this, "Rule", {
+      description: "[Matano] Schedules the Iceberg compaction workflow.",
       schedule: events.Schedule.rate(cdk.Duration.hours(1)),
     });
 
@@ -97,6 +98,65 @@ class IcebergCompaction extends Construct {
   }
 }
 
+interface IcebergAthenaExpireSnapshotsProps {
+  tableNames: string[];
+}
+
+class IcebergAthenaExpireSnapshots extends Construct {
+  constructor(scope: Construct, id: string, props: IcebergAthenaExpireSnapshotsProps) {
+    super(scope, id);
+
+    const inputPass = new sfn.Pass(this, "Add Table Names", {
+      result: sfn.Result.fromArray(props.tableNames),
+      resultPath: "$.table_names",
+    });
+
+    const queryMap = new sfn.Map(this, "Query Map", {
+      itemsPath: sfn.JsonPath.stringAt("$.table_names"),
+      parameters: {
+        table_name: sfn.JsonPath.stringAt("$$.Map.Item.Value"),
+      },
+    });
+
+    const optimizeQueryString = "VACUUM matano.{};";
+    const optimizeQueryFormatStr = `States.Format('${optimizeQueryString}', $.table_name)`;
+
+    const vacuumQuery = new tasks.AthenaStartQueryExecution(this, "Expire Snapshots (Vacuum) Query", {
+      integrationPattern: sfn.IntegrationPattern.RUN_JOB,
+      queryString: sfn.JsonPath.stringAt(optimizeQueryFormatStr),
+      workGroup: "matano_system_v3",
+    });
+
+    queryMap.iterator(vacuumQuery);
+
+    const chain = inputPass.next(queryMap);
+
+    const stateMachine = new sfn.StateMachine(this, "Default", {
+      definition: chain,
+    });
+
+    stateMachine.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ["glue:Get*", "glue:UpdateDatabase", "glue:UpdateTable"],
+        resources: [...getStandardGlueResourceArns(this), "*"],
+      })
+    );
+
+    const smScheduleRule = new events.Rule(this, "Rule", {
+      description: "[Matano] Schedules the Iceberg expire snapshots workflow.",
+      schedule: events.Schedule.rate(cdk.Duration.hours(1)),
+    });
+
+    smScheduleRule.addTarget(
+      new SfnStateMachine(stateMachine, {
+        input: events.RuleTargetInput.fromObject({}),
+      })
+    );
+  }
+}
+
+// We use Athena vacuum command to expire snapshots for now.
+// Retaining this since we might want a custom snapshot expiry in future.
 class IcebergExpireSnapshots extends Construct {
   constructor(scope: Construct, id: string, props: IcebergMaintenanceProps) {
     super(scope, id);
@@ -241,15 +301,15 @@ export class IcebergMaintenance extends Construct {
   constructor(scope: Construct, id: string, props: IcebergMaintenanceProps) {
     super(scope, id);
 
-    const tableNames = props.tableNames.filter((n) => !n.endsWith("_temp"));
+    const tableNames = [...new Set(props.tableNames)];
+    const nonTempTableNames = tableNames.filter((n) => !n.endsWith("_temp"));
 
     new IcebergCompaction(this, "Compaction", {
-      tableNames: tableNames.filter((n) => !n.startsWith("enrich_")),
+      tableNames: nonTempTableNames.filter((n) => !n.startsWith("enrich_")),
     });
 
-    new IcebergExpireSnapshots(this, "ExpireSnapshots", {
+    new IcebergAthenaExpireSnapshots(this, "ExpireSnapshotsAthena", {
       tableNames,
-      lakeStorageBucket: props.lakeStorageBucket,
     });
 
     new IcebergRewriteManifests(this, "RewriteManifests", {
