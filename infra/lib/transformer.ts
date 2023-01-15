@@ -10,7 +10,7 @@ import { RustFunctionLayer } from "./rust-function-layer";
 interface TransformerProps {
   realtimeBucket: s3.IBucket;
   realtimeTopic: sns.Topic;
-  matanoSourcesBucketName: string;
+  matanoSourcesBucket: s3.IBucket;
   logSourcesConfigurationPath: string;
   sqsMetadata: string;
 }
@@ -35,21 +35,16 @@ export class Transformer extends Construct {
       architecture: this.rustFunctionLayer.arch,
       environment: {
         ...this.rustFunctionLayer.environmentVariables,
-        MATANO_SOURCES_BUCKET: props.matanoSourcesBucketName,
+        MATANO_SOURCES_BUCKET: props.matanoSourcesBucket.bucketName,
         MATANO_REALTIME_BUCKET_NAME: props.realtimeBucket.bucketName,
         MATANO_REALTIME_TOPIC_ARN: props.realtimeTopic.topicArn,
         SQS_METADATA: props.sqsMetadata,
       },
       layers: [this.rustFunctionLayer.layer],
       timeout: cdk.Duration.seconds(100),
-      initialPolicy: [
-        new iam.PolicyStatement({
-          // TODO: figure out permissions here, need to include BYOB
-          actions: ["s3:*"],
-          resources: ["*"],
-        }),
-      ],
     });
+
+    props.matanoSourcesBucket.grantRead(this.transformerLambda);
     props.realtimeBucket.grantWrite(this.transformerLambda);
     props.realtimeTopic.grantPublish(this.transformerLambda);
   }

@@ -121,7 +121,7 @@ export class DPMainStack extends MatanoStack {
     });
     logSources.push(matanoAlertsSource);
 
-    new MatanoS3Sources(this, "CustomIngestionLogSources", {
+    const customS3Sources = new MatanoS3Sources(this, "CustomIngestionLogSources", {
       logSources: logSources.filter((ls) => ls.isDataLogSource),
       sourcesIngestionTopic: props.matanoSourcesBucket.topic,
     });
@@ -190,7 +190,7 @@ export class DPMainStack extends MatanoStack {
     const transformer = new Transformer(this, "Transformer", {
       realtimeBucket: props.realtimeBucket,
       realtimeTopic: props.realtimeBucketTopic,
-      matanoSourcesBucketName: props.matanoSourcesBucket.bucket.bucketName,
+      matanoSourcesBucket: props.matanoSourcesBucket.bucket,
       logSourcesConfigurationPath: path.join(this.configTempDir, "config"), // TODO: weird fix later (@shaeq)
       sqsMetadata: sqsSources.sqsMetadata,
     });
@@ -251,6 +251,8 @@ export class DPMainStack extends MatanoStack {
     icebergMetadata.metadataWriterFunction.addLayers(configLayer);
     transformer.transformerLambda.addLayers(configLayer);
     enrichment?.bindLayers(configLayer);
+
+    customS3Sources.grantRead(transformer.transformerLambda);
 
     const allIcebergTableNames = [...resolvedTableNames];
     if (usesEnrichment) {

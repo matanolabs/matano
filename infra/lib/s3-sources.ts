@@ -1,10 +1,16 @@
 import * as cdk from "aws-cdk-lib";
 import { Construct } from "constructs";
 import * as s3 from "aws-cdk-lib/aws-s3";
+import * as iam from "aws-cdk-lib/aws-iam";
 import * as s3n from "aws-cdk-lib/aws-s3-notifications";
 import * as sns from "aws-cdk-lib/aws-sns";
 import { MatanoLogSource } from "./log-source";
 import { commonPathPrefix } from "./utils";
+
+type FilterSource = {
+  bucket_name: string;
+  key_prefixes: string[];
+};
 
 interface MatanoS3SourcesProps {
   logSources: MatanoLogSource[];
@@ -13,14 +19,11 @@ interface MatanoS3SourcesProps {
 
 /** Configures custom S3 sources (BYOB), primarily notifications. */
 export class MatanoS3Sources extends Construct {
+  finalCustomSources: FilterSource[];
   constructor(scope: Construct, id: string, props: MatanoS3SourcesProps) {
     super(scope, id);
 
-    type FilterSource = {
-      bucket_name: string;
-      key_prefixes: string[];
-    };
-    const finalSources: FilterSource[] = [];
+    this.finalCustomSources = [];
 
     // Get sources with custom sources and collect them into buckets + associated prefixes
     for (const logSource of props.logSources) {
@@ -35,14 +38,14 @@ export class MatanoS3Sources extends Construct {
         continue;
       }
 
-      if (!finalSources.map((ls) => ls?.bucket_name).includes(bucket_name)) {
-        finalSources.push({ bucket_name: bucket_name!!, key_prefixes: [key_prefix!!] });
+      if (!this.finalCustomSources.map((ls) => ls?.bucket_name).includes(bucket_name)) {
+        this.finalCustomSources.push({ bucket_name: bucket_name!!, key_prefixes: [key_prefix!!] });
       } else {
-        finalSources.find((ls) => ls?.bucket_name === bucket_name)!!.key_prefixes.push(key_prefix);
+        this.finalCustomSources.find((ls) => ls?.bucket_name === bucket_name)!!.key_prefixes.push(key_prefix);
       }
     }
 
-    for (const finalSource of finalSources) {
+    for (const finalSource of this.finalCustomSources) {
       const importedBucket = s3.Bucket.fromBucketName(
         this,
         `ImportedSourcesBucket-${finalSource!!.bucket_name!!}`,
@@ -57,6 +60,19 @@ export class MatanoS3Sources extends Construct {
         new s3n.SnsDestination(props.sourcesIngestionTopic),
         ...filters
       );
+    }
+  }
+
+  grantRead(construct: iam.IGrantable) {
+    for (const finalSource of this.finalCustomSources) {
+      const importedBucket = s3.Bucket.fromBucketName(
+        this,
+        `ImportedSourcesBucketForGrant-${finalSource!!.bucket_name!!}`,
+        finalSource!!.bucket_name!!
+      );
+      for (const keyPrefix of finalSource.key_prefixes) {
+        importedBucket.grantRead(construct, `${keyPrefix}/*`);
+      }
     }
   }
 }
