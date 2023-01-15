@@ -11,7 +11,7 @@ import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as sqs from "aws-cdk-lib/aws-sqs";
 import * as s3deploy from "aws-cdk-lib/aws-s3-deployment";
-import { dataDirPath, fail, getLocalAsset, makeLambdaSnapstart } from "./utils";
+import { dataDirPath, fail, getLocalAsset, getStandardGlueResourceArns, makeLambdaSnapstart } from "./utils";
 import { S3BucketWithNotifications } from "./s3-bucket-notifs";
 import { SqsEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
 import { MatanoStack } from "./MatanoStack";
@@ -163,8 +163,15 @@ export class Enrichment extends Construct {
       },
       initialPolicy: [
         new iam.PolicyStatement({
-          actions: ["glue:*"],
-          resources: ["*"],
+          actions: [
+            "glue:GetDatabases",
+            "glue:GetDatabase",
+            "glue:UpdateDatabase",
+            "glue:GetTable",
+            "glue:GetTables",
+            "glue:UpdateTable",
+          ],
+          resources: getStandardGlueResourceArns(this),
         }),
         new iam.PolicyStatement({
           actions: [

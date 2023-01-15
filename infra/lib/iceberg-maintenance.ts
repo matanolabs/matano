@@ -4,9 +4,10 @@ import * as events from "aws-cdk-lib/aws-events";
 import { SfnStateMachine } from "aws-cdk-lib/aws-events-targets";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as iam from "aws-cdk-lib/aws-iam";
+import * as s3 from "aws-cdk-lib/aws-s3";
 import * as sfn from "aws-cdk-lib/aws-stepfunctions";
 import * as tasks from "aws-cdk-lib/aws-stepfunctions-tasks";
-import { getLocalAsset, makeLambdaSnapstart } from "./utils";
+import { getLocalAsset, getStandardGlueResourceArns, makeLambdaSnapstart } from "./utils";
 
 const helperFunctionCode = `
 from datetime import datetime, timedelta
@@ -77,8 +78,8 @@ class IcebergCompaction extends Construct {
 
     stateMachine.addToRolePolicy(
       new iam.PolicyStatement({
-        actions: ["glue:*"],
-        resources: ["*"],
+        actions: ["glue:Get*", "glue:UpdateDatabase", "glue:UpdateTable"],
+        resources: getStandardGlueResourceArns(this),
       })
     );
 
@@ -121,16 +122,22 @@ class IcebergExpireSnapshots extends Construct {
       timeout: cdk.Duration.minutes(14),
       handler: "com.matano.iceberg.ExpireSnapshotsHandler::handleRequest",
       code: getLocalAsset("iceberg_metadata"),
+      initialPolicy: [
+        new iam.PolicyStatement({
+          actions: [
+            "glue:GetDatabases",
+            "glue:GetDatabase",
+            "glue:UpdateDatabase",
+            "glue:GetTable",
+            "glue:GetTables",
+            "glue:UpdateTable",
+          ],
+          resources: getStandardGlueResourceArns(this),
+        }),
+      ],
     });
+    props.lakeStorageBucket.grantReadWrite(expireSnapshotsFunc);
     makeLambdaSnapstart(expireSnapshotsFunc);
-
-    // TODO: scope down
-    expireSnapshotsFunc.addToRolePolicy(
-      new iam.PolicyStatement({
-        actions: ["glue:*", "s3:*"],
-        resources: ["*"],
-      })
-    );
 
     const expireSnapshotsInvoke = new tasks.LambdaInvoke(this, "Expire Table Snapshots", {
       lambdaFunction: expireSnapshotsFunc.currentVersion,
@@ -183,16 +190,22 @@ class IcebergRewriteManifests extends Construct {
       timeout: cdk.Duration.minutes(14),
       handler: "com.matano.iceberg.RewriteManifestsHandler::handleRequest",
       code: getLocalAsset("iceberg_metadata"),
+      initialPolicy: [
+        new iam.PolicyStatement({
+          actions: [
+            "glue:GetDatabases",
+            "glue:GetDatabase",
+            "glue:UpdateDatabase",
+            "glue:GetTable",
+            "glue:GetTables",
+            "glue:UpdateTable",
+          ],
+          resources: getStandardGlueResourceArns(this),
+        }),
+      ],
     });
+    props.lakeStorageBucket.grantReadWrite(rewriteManifestsFunc);
     makeLambdaSnapstart(rewriteManifestsFunc);
-
-    // TODO: scope down
-    rewriteManifestsFunc.addToRolePolicy(
-      new iam.PolicyStatement({
-        actions: ["glue:*", "s3:*"],
-        resources: ["*"],
-      })
-    );
 
     const rewriteManifestsInvoke = new tasks.LambdaInvoke(this, "Rewrite Manifests", {
       lambdaFunction: rewriteManifestsFunc.currentVersion,
@@ -221,6 +234,7 @@ class IcebergRewriteManifests extends Construct {
 
 interface IcebergMaintenanceProps {
   tableNames: string[];
+  lakeStorageBucket: s3.IBucket;
 }
 
 export class IcebergMaintenance extends Construct {
@@ -235,10 +249,12 @@ export class IcebergMaintenance extends Construct {
 
     new IcebergExpireSnapshots(this, "ExpireSnapshots", {
       tableNames,
+      lakeStorageBucket: props.lakeStorageBucket,
     });
 
     new IcebergRewriteManifests(this, "RewriteManifests", {
       tableNames,
+      lakeStorageBucket: props.lakeStorageBucket,
     });
   }
 }

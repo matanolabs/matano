@@ -19,6 +19,7 @@ import { MatanoStack } from "./MatanoStack";
 interface MatanoSchemasProps {
   schemaOutputPath: string;
   tables: string[];
+  lakeStorageBucket: s3.IBucket;
 }
 
 export class MatanoSchemas extends Construct {
@@ -26,7 +27,7 @@ export class MatanoSchemas extends Construct {
     super(scope, id);
 
     const resource = new CustomResource(this, "Resource", {
-      serviceToken: SchemasProvider.getOrCreate(this, {}),
+      serviceToken: SchemasProvider.getOrCreate(this, { lakeStorageBucket: props.lakeStorageBucket }),
       resourceType: "Custom::MatanoSchemas",
       properties: {
         schemaOutputPath: props.schemaOutputPath,
@@ -36,7 +37,9 @@ export class MatanoSchemas extends Construct {
   }
 }
 
-interface SchemasProviderProps {}
+interface SchemasProviderProps {
+  lakeStorageBucket: s3.IBucket;
+}
 
 export class SchemasProvider extends Construct {
   provider: cr.Provider;
@@ -71,6 +74,7 @@ export class SchemasProvider extends Construct {
       ],
     });
     getMatanoStack(this).cdkAssetsBucket.grantWrite(providerFunc);
+    props.lakeStorageBucket.grantReadWrite(providerFunc);
     makeLambdaSnapstart(providerFunc);
 
     this.provider = new cr.Provider(this, "Default", {
@@ -207,6 +211,18 @@ export class IcebergMetadata extends Construct {
             "glue:UpdateTable",
           ],
           resources: getStandardGlueResourceArns(this),
+        }),
+        new iam.PolicyStatement({
+          actions: [
+            "athena:StartQueryExecution",
+            "athena:GetQueryExecution",
+            "athena:GetQueryResults",
+            "s3:PutObject",
+            "s3:GetObject",
+          ],
+          resources: [
+            `arn:${getMatanoStack(this).partition}:athena:*:${getMatanoStack(this).account}:workgroup/matano_system`,
+          ],
         }),
       ],
       reservedConcurrentExecutions: 1,

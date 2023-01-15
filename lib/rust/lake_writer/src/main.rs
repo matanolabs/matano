@@ -43,6 +43,9 @@ lazy_static! {
         AsyncOnce::new(async { aws_config::load_from_env().await });
     static ref S3_CLIENT: AsyncOnce<aws_sdk_s3::Client> =
         AsyncOnce::new(async { aws_sdk_s3::Client::new(AWS_CONFIG.get().await) });
+}
+
+lazy_static! {
     static ref TABLE_SCHEMA_MAP: Arc<Mutex<HashMap<String, Schema>>> =
         Arc::new(Mutex::new(HashMap::new()));
 }
@@ -88,7 +91,9 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
         .unwrap();
     info!("Processing for table: {}", resolved_table_name);
 
-    let mut table_schema_map = TABLE_SCHEMA_MAP.lock().unwrap();
+    let mut table_schema_map = TABLE_SCHEMA_MAP
+        .lock()
+        .map_err(|e| anyhow!(e.to_string()))?;
     let table_schema = table_schema_map
         .entry(resolved_table_name.clone())
         .or_insert_with_key(|k| load_table_arrow_schema(k).unwrap());
@@ -202,6 +207,9 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
     let block = concat_blocks(blocks);
     let projection = table_schema.fields.iter().map(|_| true).collect::<Vec<_>>();
 
+    // There's an edge case bug here when schema is updated. Using static schema
+    // on old data before schema will throw since field length unequal.
+    // TODO: Group block's by schema and then deserialize.
     let chunk = deserialize(
         &block,
         &table_schema.fields,

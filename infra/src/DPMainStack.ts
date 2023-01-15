@@ -223,6 +223,7 @@ export class DPMainStack extends MatanoStack {
     const schemasCR = new MatanoSchemas(this, "SchemasCustomResource", {
       schemaOutputPath: schemasHash,
       tables: resolvedTableNames,
+      lakeStorageBucket: props.lakeStorageBucket.bucket,
     });
 
     for (const logSource of logSources) {
@@ -259,6 +260,7 @@ export class DPMainStack extends MatanoStack {
 
     new IcebergMaintenance(this, "MatanoIcebergMaintenance", {
       tableNames: allIcebergTableNames,
+      lakeStorageBucket: props.lakeStorageBucket.bucket,
     });
 
     const externalLogPuller = new ExternalLogPuller(this, "ExternalLogPuller", {
