@@ -1,18 +1,17 @@
 <p align="center">
-  <a href="https://www.matano.dev"><img src="assets/cover.png" width=350></a>
+  <a href="https://www.matano.dev"><img src="assets/cover_wide.png" width=600></a>
 </p>
 
 <p align="center">
-         <a href="#"><img src="https://img.shields.io/badge/Deploys%20to-AWS-%23FF9900.svg?style=for-the-badge&logo=amazon-aws&logoColor=white&labelColor=232F3E"/></a>
+         <!-- <a href="#"><img src="https://img.shields.io/badge/Deploys%20to-AWS-%23FF9900.svg?style=for-the-badge&logo=amazon-aws&logoColor=white&labelColor=232F3E"/></a>
         <a href="#"><img src="https://img.shields.io/badge/rust-%233A3B3C.svg?style=for-the-badge&logo=rust&labelColor=B1513E&logoColor=white"/></a>
-         <br/>
-<!--  <br>
- <a href="https://github.com/matanolabs/matano/stargazers/" target="_blank"><img src="https://img.shields.io/github/stars/matanolabs/matano?style=social&label=Star&maxAge=2792000"/></a> -->
-        <!-- <img src="https://img.shields.io/github/v/release/matanolabs/matano?style=flat-square"/> -->
+         <br/> -->
+         <a href="https://discord.gg/YSYfHMbfZQ" target="_blank"><img src="https://img.shields.io/badge/rust-%233A3B3C.svg?label=built with&logo=rust&logoColor=ffffff&color=B1513E&labelColor=0d1117"/></a>
+                  <a href="#"><img src="https://img.shields.io/badge/deploys%20to-aws-%23FF9900.svg?logo=amazon-aws&logoColor=white&labelColor=232F3E"/></a>
  <a href="https://discord.gg/YSYfHMbfZQ" target="_blank"><img src="https://img.shields.io/discord/996484553290022973.svg?label=join us&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2"/></a>
         <a href="https://twitter.com/intent/follow?screen_name=matanolabs" target="_blank"><img src="https://img.shields.io/twitter/follow/matanolabs?style=social" alt="Twitter Follow"/></a>
                 <a href="/LICENSE" target="_blank"><img src="https://img.shields.io/github/license/matanolabs/matano?style=flat"/></a>
-                <a href="https://bestpractices.coreinfrastructure.org/projects/6478"><img src="https://bestpractices.coreinfrastructure.org/projects/6478/badge"></a>
+<a href="https://bestpractices.coreinfrastructure.org/projects/6478"><img src="https://bestpractices.coreinfrastructure.org/projects/6478/badge"></a>
 </p>
 
 ## Matano is an open source security lake platform for AWS
