@@ -126,6 +126,16 @@
       "contributions": [
         "ideas"
       ]
+    },
+    {
+      "login": "timoguin",
+      "name": "Tim O'Guin",
+      "avatar_url": "https://avatars.githubusercontent.com/u/671968?v=4",
+      "profile": "https://github.com/timoguin",
+      "contributions": [
+        "ideas",
+        "bug"
+      ]
     }
   ],
   "contributorsPerLine": 7
