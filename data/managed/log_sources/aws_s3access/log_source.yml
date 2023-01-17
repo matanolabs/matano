@@ -1,0 +1,204 @@
+name: aws_s3access
+
+schema:
+  ecs_field_names:
+    - client.address
+    - client.ip
+    - client.user.id
+    - cloud.project.id
+    - cloud.provider
+    - cloud.region
+    - ecs.version
+    - error.message
+    - event.action
+    - event.category
+    - event.code
+    - event.dataset
+    - event.duration
+    - event.id
+    - event.kind
+    - event.module
+    - event.outcome
+    - event.type
+    - http.request.method
+    - http.request.referrer
+    - http.response.body.bytes
+    - http.response.status_code
+    - http.version
+    - related.ip
+    - related.user
+    - tags
+    - tls.cipher
+    - tls.version
+    - tls.version_protocol
+    - url.domain
+    - url.extension
+    - url.original
+    - url.path
+    - url.query
+    - url.scheme
+    - user_agent.device.name
+    - user_agent.name
+    - user_agent.original
+    - user_agent.os.full
+    - user_agent.os.name
+    - user_agent.os.version
+    - user_agent.version
+  fields:
+    - name: aws
+      type:
+        type: struct
+        fields:
+          - name: s3access
+            type:
+              type: struct
+              fields:
+                - name: authentication_type
+                  type: string
+                - name: bucket
+                  type: string
+                - name: bucket_owner
+                  type: string
+                - name: bytes_sent
+                  type: long
+                - name: cipher_suite
+                  type: string
+                - name: error_code
+                  type: string
+                - name: host_header
+                  type: string
+                - name: host_id
+                  type: string
+                - name: http_status
+                  type: long
+                - name: key
+                  type: string
+                - name: object_size
+                  type: long
+                - name: operation
+                  type: string
+                - name: referrer
+                  type: string
+                - name: remote_ip
+                  type: string
+                - name: request_id
+                  type: string
+                - name: request_uri
+                  type: string
+                - name: requester
+                  type: string
+                - name: signature_version
+                  type: string
+                - name: tls_version
+                  type: string
+                - name: total_time
+                  type: long
+                - name: turn_around_time
+                  type: long
+                - name: user_agent
+                  type: string
+                - name: version_id
+                  type: string
+
+transform: |-
+  .event.kind = "event"
+  .event.type = ["access"]
+  .event.category = ["web"]
+
+  .aws.s3access = parse_groks!(.message, [
+    "%{BASE16NUM:bucket_owner} %{HOSTNAME:bucket} \\[%{S3DATE:s3access_time}\\] (?:-|%{IP:remote_ip}) (?:-|%{S3REQUESTER:requester}) %{S3REQUESTID:request_id} %{S3OPERATION:operation} (?:-|%{S3KEY:key}) (?:-|\"%{DATA:request_uri}\") %{NUMBER:http_status} (?:-|%{WORD:error_code}) (?:-|%{NUMBER:bytes_sent}) (?:-|%{NUMBER:object_size}) (?:-|%{NUMBER:total_time}) (?:-|%{NUMBER:turn_around_time}) (?:-|\"-\"|\"%{DATA:referrer}\") (?:-|\"(-|%{DATA:user_agent})\") (?:-|%{S3KEY:version_id}) (?:-|%{S3ID:host_id}) (?:-|%{S3VERSION:signature_version}) (?:-|%{S3KEY:cipher_suite}) (?:-|%{WORD:authentication_type}) (?:-|%{S3ID:host_header}) (?:-|%{S3VERSION:tls_version})%{GREEDYDATA:leftover}"
+    ],
+    {
+        "S3DATE": "%{MONTHDAY}/%{MONTH}/%{YEAR}:%{TIME}\\s\\+%{INT}",
+        "S3REQUESTER": "[a-zA-Z0-9\\/_\\.\\-%:@]+",
+        "S3REQUESTID": "[a-zA-Z0-9]+",
+        "S3OPERATION": "%{WORD}.%{WORD}.%{WORD}",
+        "S3KEY": "[a-zA-Z0-9\\/_\\.\\-%+]+",
+        "S3ID": "[a-zA-Z0-9\\/_\\.\\-%+=]+",
+        "S3VERSION": "[a-zA-Z0-9.]+"
+    }
+  )
+
+  # New fields can be added at end.
+  del(.aws.s3access.leftover)
+
+  .aws.s3access.http_status = if (.aws.s3access.http_status != "-" && .aws.s3access.http_status != null) { to_int!(.aws.s3access.http_status) } else { null }
+  .aws.s3access.bytes_sent = if (.aws.s3access.bytes_sent != "-" && .aws.s3access.bytes_sent != null) { to_int!(.aws.s3access.bytes_sent) } else { null }
+  .aws.s3access.object_size = if (.aws.s3access.object_size != "-" && .aws.s3access.object_size != null) { to_int!(.aws.s3access.object_size) } else { null }
+  .aws.s3access.total_time = if (.aws.s3access.total_time != "-" && .aws.s3access.total_time != null) { to_int!(.aws.s3access.total_time) } else { null }
+  .aws.s3access.turn_around_time = if (.aws.s3access.turn_around_time != "-" && .aws.s3access.turn_around_time != null) { to_int!(.aws.s3access.turn_around_time) } else { null }
+
+  .cloud.provider = "aws"
+  _grokked, err = parse_groks(.aws.s3access.host_header, ["^%{DATA}s3\\.%{DATA:region}\\.%{DATA}$"])
+  if err == null {
+      .cloud |= _grokked
+  }
+
+  .http = {}
+  _grokked, err = parse_groks(.aws.s3access.request_uri, ["%{NOTSPACE:request.method} %{NOTSPACE:url} [hH][tT][tT][pP]/%{NOTSPACE:version}"])
+  if err == null {
+      .http |= _grokked
+  }
+
+  .http.response.status_code = .aws.s3access.http_status
+  .http.response.body.bytes = .aws.s3access.bytes_sent
+  .http.request.referrer = .aws.s3access.referrer
+  if is_string(.http.url) {
+    tempurl, err = "s3://" + .http.url
+    .url = parse_url!(tempurl)
+    .url.original = .http.url
+
+    if .url.query != null {
+          query = []
+          for_each(object(.url.query)) -> |k, v| {
+              v = if v != "" { k + "=" + v } else { k }
+              query = push(query, v)
+          }
+          query = join(query, "&") ?? null
+          .url.query = query
+    }
+    del(.url.scheme)
+    del(.http.url)
+  }
+
+  if is_string(.aws.s3access.s3access_time) {
+    .ts = to_timestamp!(del(.aws.s3access.s3access_time))
+  }
+
+  .client.ip = .aws.s3access.remote_ip
+
+  if .aws.s3access.bucket_owner != null {
+      .related.user = push(.related.user, .aws.s3access.bucket_owner)
+  }
+  if .aws.s3access.remote_ip != null {
+      .related.ip = push(.related.ip, .aws.s3access.remote_ip)
+  }
+
+  .client.address = .aws.s3access.remote_ip
+  .client.user.id = .aws.s3access.requester
+  .event.id = .aws.s3access.request_id
+  .event.action = .aws.s3access.operation
+
+  .event.outcome = if .aws.s3access.error_code != null {
+    "failure"
+  } else {
+    "success"
+  }
+  .event.code = .aws.s3access.error_code
+  .event.duration = .aws.s3access.total_time
+  if is_integer(.event.duration) {
+  	.event.duration, err = .event.duration * 1000000;
+  }
+
+  if is_string(.aws.s3access.user_agent) {
+    .user_agent.original = .aws.s3access.user_agent
+  }
+
+  .tls.cipher = .aws.s3access.cipher_suite
+  if .aws.s3access.tls_version != null { # e.g. TLSV1.2
+    parts = split(downcase!(.aws.s3access.tls_version), "v", limit: 2)
+    .tls.version = parts[1]
+    .tls.version_protocol = parts[0]
+  }
+
+  del(.message)

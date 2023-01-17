@@ -5,6 +5,7 @@ import * as cdk from "aws-cdk-lib";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as ddb from "aws-cdk-lib/aws-dynamodb";
 import * as glue from "aws-cdk-lib/aws-glue";
+import * as iam from "aws-cdk-lib/aws-iam";
 import * as athena from "aws-cdk-lib/aws-athena";
 import { MatanoStack, MatanoStackProps } from "../lib/MatanoStack";
 import { S3BucketWithNotifications } from "../lib/s3-bucket-notifs";
@@ -31,6 +32,22 @@ export class DPCommonStack extends MatanoStack {
         blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
       },
     });
+
+    // For delivering Cloudtrail, S3 access logs
+    // TODO: ideally parse and add sourceArn, sourceAccount here
+    this.matanoIngestionBucket.bucket.grantWrite(
+      new iam.CompositePrincipal(
+        new iam.ServicePrincipal("cloudtrail.amazonaws.com"),
+        new iam.ServicePrincipal("logging.s3.amazonaws.com")
+      )
+    );
+    this.matanoIngestionBucket.bucket.addToResourcePolicy(
+      new iam.PolicyStatement({
+        actions: ["s3:GetBucketAcl"],
+        principals: [new iam.ServicePrincipal("cloudtrail.amazonaws.com")],
+        resources: [this.matanoIngestionBucket.bucket.bucketArn],
+      })
+    );
 
     this.alertTrackerTable = new ddb.Table(this, "MatanoAlertTrackingTable", {
       partitionKey: { name: "id", type: ddb.AttributeType.STRING },

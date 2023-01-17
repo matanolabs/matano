@@ -96,6 +96,7 @@ interface MatanoLogSourceProps {
 const MANAGED_LOG_SOURCE_PREFIX_MAP: Record<string, string> = {
   aws_cloudtrail: "aws",
   aws_route53_resolver_logs: "aws",
+  aws_s3access: "aws",
   crowdstrike: "crowdstrike",
   crowdstrike_falcon: "crowdstrike",
   duo: "duo",
@@ -206,7 +207,8 @@ export class MatanoLogSource extends Construct {
         fail("Invalid Managed Log source type: cannot be empty");
       }
       const managedConfigPath = path.join(MANAGED_LOG_SOURCES_DIR, managedLogSourceType);
-      if (!fs.existsSync(managedConfigPath)) {
+      const prefix = getPrefixForManagedLogSourceType(managedLogSourceType);
+      if (!fs.existsSync(managedConfigPath) || !prefix) {
         fail(
           `The managed log source type: ${managedLogSourceType} does not exist. Available managed log sources: ${JSON.stringify(
             Object.keys(MANAGED_LOG_SOURCE_PREFIX_MAP)
@@ -214,7 +216,6 @@ export class MatanoLogSource extends Construct {
         );
       }
 
-      const prefix = getPrefixForManagedLogSourceType(managedLogSourceType);
       if (!logSourceConfig.name.startsWith(prefix)) {
         fail(
           `Since you are using the managed log source type: ${managedLogSourceType}, your log source name must be prefixed with ${prefix}. Please rename your log source as: ${prefix}_${logSourceConfig.name}`
