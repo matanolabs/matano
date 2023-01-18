@@ -254,7 +254,7 @@ async fn read_events_s3<'a>(
     Pin<Box<dyn Stream<Item = Result<Value>> + Send>>,
 )> {
     println!("Starting download");
-    let dec_key = decode(&r.key.clone()).unwrap().to_string();
+    let dec_key = decode(&r.key.clone())?.into_owned();
 
     let res = s3
         .get_object()
