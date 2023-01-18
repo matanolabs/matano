@@ -52,6 +52,7 @@ use aws_config::SdkConfig;
 use aws_lambda_events::event::sqs::{SqsEvent, SqsMessage};
 use lambda_runtime::{run, service_fn, Context, Error as LambdaError, LambdaEvent};
 use log::{debug, error, info, log_enabled, warn};
+use urlencoding::decode;
 
 use crate::avro::TryIntoAvro;
 
@@ -253,14 +254,16 @@ async fn read_events_s3<'a>(
     Pin<Box<dyn Stream<Item = Result<Value>> + Send>>,
 )> {
     println!("Starting download");
+    let dec_key = decode(&r.key.clone())?.into_owned();
+
     let res = s3
         .get_object()
         .bucket(r.bucket.clone())
-        .key(r.key.clone())
+        .key(dec_key.clone())
         .send()
         .await
         .map_err(|e| {
-            error!("Error downloading {} from S3: {}", r.key, e);
+            error!("Error downloading {} from S3: {}", dec_key, e);
             e
         });
     let mut obj = res?;
@@ -273,7 +276,7 @@ async fn read_events_s3<'a>(
             &mut reader,
             obj.content_encoding.as_deref(),
             obj.content_type.as_deref(),
-            &r.key,
+            dec_key.as_str(),
         )
         .await
         .unwrap_or(Compression::None),
@@ -398,7 +401,7 @@ async fn read_events_s3<'a>(
             })
         }
         None => {
-            if r.key.ends_with("csv") {
+            if dec_key.as_str().ends_with("csv") {
                 let rdr = AsyncReaderBuilder::new()
                     .has_headers(true)
                     .create_deserializer(reader);
