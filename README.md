@@ -75,6 +75,8 @@ We are on a mission to build the first open platform for threat hunting, detecti
 
 - [**AWS CloudTrail**](https://www.matano.dev/docs/log-sources/managed-log-sources/cloudtrail)
 - [**AWS Route53**](https://www.matano.dev/docs/log-sources/managed-log-sources/route53-resolver-logs)
+- [**AWS ELB Logs**](https://www.matano.dev/docs/log-sources/managed-log-sources/aws-elb)
+- [**Amazon S3 Server Access Logs**](https://www.matano.dev/docs/log-sources/managed-log-sources/amazon-s3-server-access-logs)
 - [**Crowdstrike**](https://www.matano.dev/docs/log-sources/managed-log-sources/crowdstrike)
 - [**Office 365**](https://www.matano.dev/docs/log-sources/managed-log-sources/office365)
 - [**Suricata**](https://www.matano.dev/docs/log-sources/managed-log-sources/suricata)

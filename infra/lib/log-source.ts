@@ -97,6 +97,7 @@ const MANAGED_LOG_SOURCE_PREFIX_MAP: Record<string, string> = {
   aws_cloudtrail: "aws",
   aws_route53_resolver_logs: "aws",
   aws_s3access: "aws",
+  aws_elb: "aws",
   crowdstrike: "crowdstrike",
   crowdstrike_falcon: "crowdstrike",
   duo: "duo",

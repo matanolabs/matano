@@ -1,0 +1,263 @@
+name: aws_elb
+
+schema:
+  ecs_field_names:
+  - cloud.provider
+  - cloud.region
+  - destination.bytes
+  - destination.domain
+  - ecs.version
+  - error.message
+  - event.category
+  - event.dataset
+  - event.end
+  - event.kind
+  - event.module
+  - event.outcome
+  - event.start
+  - http.request.body.bytes
+  - http.request.method
+  - http.request.referrer
+  - http.response.body.bytes
+  - http.response.status_code
+  - http.version
+  - source.address
+  - source.as.number
+  - source.as.organization.name
+  - source.ip
+  - source.port
+  - tags
+  - trace.id
+  - url.domain
+  - url.original
+  - url.path
+  - url.port
+  - url.query
+  - url.scheme
+  - user_agent.device.name
+  - user_agent.name
+  - user_agent.original
+  - user_agent.version
+  fields:
+  - name: aws
+    type:
+      type: struct
+      fields:
+      - name: elb
+        type:
+          type: struct
+          fields:
+          - name: action_executed
+            type:
+              type: list
+              element: string
+          - name: backend
+            type:
+              type: struct
+              fields:
+              - name: http
+                type:
+                  type: struct
+                  fields:
+                  - name: response
+                    type:
+                      type: struct
+                      fields:
+                      - name: status_code
+                        type: long
+              - name: ip
+                type: string
+              - name: port
+                type: string
+          - name: backend_processing_time
+            type:
+              type: struct
+              fields:
+              - name: sec
+                type: float
+          - name: chosen_cert
+            type:
+              type: struct
+              fields:
+              - name: arn
+                type: string
+              - name: serial
+                type: string
+          - name: classification
+            type: string
+          - name: classification_reason
+            type: string
+          - name: connection_time
+            type:
+              type: struct
+              fields:
+              - name: ms
+                type: long
+          - name: error
+            type:
+              type: struct
+              fields:
+              - name: reason
+                type: string
+          - name: incoming_tls_alert
+            type: string
+          - name: listener
+            type: string
+          - name: matched_rule_priority
+            type: string
+          - name: name
+            type: string
+          - name: protocol
+            type: string
+          - name: redirect_url
+            type: string
+          - name: request_processing_time
+            type:
+              type: struct
+              fields:
+              - name: sec
+                type: float
+          - name: response_processing_time
+            type:
+              type: struct
+              fields:
+              - name: sec
+                type: float
+          - name: ssl_cipher
+            type: string
+          - name: ssl_protocol
+            type: string
+          - name: target_group
+            type:
+              type: struct
+              fields:
+              - name: arn
+                type: string
+          - name: target_port
+            type: string
+          - name: target_status_code
+            type: string
+          - name: tls_handshake_time
+            type:
+              type: struct
+              fields:
+              - name: ms
+                type: long
+          - name: tls_named_group
+            type: string
+          - name: trace_id
+            type: string
+          - name: type
+            type: string
+
+transform: |2
+
+  _grokked, err = parse_groks(.message, [
+    "%{ELBHTTPLOG}",
+    "%{ELBTCPLOG}",
+    "%{ELBV2TYPE} %{ELBHTTPLOG} %{NOTSPACE:aws.elb.target_group.arn} \\\"%{DATA:aws.elb.trace_id}\\\" \\\"(?:-|%{DATA:destination.domain})\\\" \\\"(?:-|%{DATA:aws.elb.chosen_cert.arn})\\\" (?:-1|%{NUMBER:aws.elb.matched_rule_priority}) %{TIMESTAMP_ISO8601:event.start} \\\"(?:-|%{DATA:_tmp.actions_executed})\\\" \\\"(?:-|%{DATA:aws.elb.redirect_url})\\\" \\\"(?:-|%{DATA:aws.elb.error.reason})\\\"( \\\"(?:-|%{DATA:_tmp.target_port})\\\")?( \\\"(?:-|%{DATA:_tmp.target_status_code})\\\")?( \\\"(?:-|%{DATA:aws.elb.classification})\\\")?( \\\"(?:-|%{DATA:aws.elb.classification_reason})\\\")?",
+    "%{ELBV2TYPE} %{ELBV2LOGVERSION} %{ELBTIMESTAMP} %{ELBNAME} %{NOTSPACE:aws.elb.listener} %{ELBSOURCE} %{ELBBACKEND} %{NUMBER:aws.elb.connection_time.ms} %{NUMBER:aws.elb.tls_handshake_time.ms} %{NUMBER:source.bytes} %{NUMBER:destination.bytes} (?:-|%{NUMBER:aws.elb.incoming_tls_alert}) (?:-|%{NOTSPACE:aws.elb.chosen_cert.arn}) (?:-|%{NOTSPACE:aws.elb.chosen_cert.serial}) %{ELBSSL} (?:-|%{NOTSPACE:aws.elb.ssl_named_group}) (?:-|%{NOTSPACE:destination.domain})"
+    ],
+    {
+      "ELBTIMESTAMP": "%{TIMESTAMP_ISO8601:ts}",
+      "ELBNAME": "%{NOTSPACE:aws.elb.name}",
+      "ELBSOURCE": "%{IP:source.address}:%{POSINT:source.port}",
+      "ELBBACKEND": "(?:-|%{IP:aws.elb.backend.ip}:%{POSINT:aws.elb.backend.port})",
+      "ELBPROCESSINGTIME": "(?:-1|%{NUMBER:aws.elb.request_processing_time.sec}) (?:-1|%{NUMBER:aws.elb.backend_processing_time.sec}) (?:-1|%{NUMBER:aws.elb.response_processing_time.sec})",
+      "ELBSSL": "(?:-|%{NOTSPACE:aws.elb.ssl_cipher}) (?:-|%{NOTSPACE:aws.elb.ssl_protocol})",
+      "ELBCOMMON": "%{ELBTIMESTAMP} %{ELBNAME} %{ELBSOURCE} %{ELBBACKEND} %{ELBPROCESSINGTIME}",
+      "ELBHTTPLOG": "%{ELBCOMMON} %{NUMBER:http.response.status_code} (?:-|%{NUMBER:aws.elb.backend.http.response.status_code}) %{NUMBER:http.request.body.bytes} %{NUMBER:http.response.body.bytes} \"(?:-|%{WORD:http.request.method}) (?:-|%{DATA:_tmp.uri_orig}) (?:-|HTTP/%{NOTSPACE:http.version})\" \"%{DATA:_tmp.user_agent}\" %{ELBSSL}",
+      "ELBTCPLOG": "%{ELBCOMMON} - - %{NUMBER:source.bytes} %{NUMBER:destination.bytes} \"- - - \" \"-\" %{ELBSSL}",
+      "ELBV2TYPE": "%{WORD:aws.elb.type}",
+      "ELBV2LOGVERSION": "%{NOTSPACE}"
+    }
+  )
+  if err == null {
+      . |= _grokked
+  }
+
+  .event.kind = "event"
+  .event.end = .ts
+  .cloud.provider = "aws"
+
+  if ._tmp.actions_executed != null {
+    .aws.elb.action_executed = split!(._tmp.actions_executed, ",")
+  }
+
+  # Split on space? TODO: verify.
+  .aws.elb.target_status_code = ._tmp.target_status_code
+  .aws.elb.target_port = ._tmp.target_port
+
+  .trace.id = .aws.elb.trace_id
+
+  .source.ip = to_string!(.source.address)
+  .source.port = to_int(.source.port) ?? null
+
+  if .aws.elb.backend.http.response.status_code != null {
+    .aws.elb.backend.http.response.status_code = to_int!(.aws.elb.backend.http.response.status_code)
+  }
+
+  if .aws.elb.request_processing_time.sec != null {
+    .aws.elb.request_processing_time.sec = to_float!(.aws.elb.request_processing_time.sec)
+  }
+  if .aws.elb.response_processing_time.sec != null {
+    .aws.elb.response_processing_time.sec = to_float!(.aws.elb.response_processing_time.sec)
+  }
+  if .aws.elb.backend_processing_time.sec != null {
+    .aws.elb.backend_processing_time.sec = to_float!(.aws.elb.backend_processing_time.sec)
+  }
+
+  .http.request.body.bytes = to_int(.http.request.body.bytes) ?? null
+  .http.response.body.bytes = to_int(.http.response.body.bytes) ?? null
+  .http.response.status_code = to_int(.http.response.status_code) ?? null
+
+  if is_string(._tmp.uri_orig) {
+    .url = parse_url!(._tmp.uri_orig, default_known_ports:true)
+    .url.original = del(._tmp.uri_orig)
+
+    # Some issues with VRL removing special chars when doing parse, do manually.
+    .url.query = split!(.url.original, "?", limit: 2)[1]
+    .url.domain = del(.url.host)
+  }
+
+  .tls.cipher = .aws.elb.ssl_cipher
+
+  if .aws.elb.ssl_protocol != null { # e.g. TLSv1.2
+  	parts = split!(.aws.elb.ssl_protocol, "v", limit: 2)
+  	if (contains!(parts[1], ".")) {
+  	  .tls.version = parts[1]
+  	} else {
+  	  ver, err = slice!(parts, start: 0, end: 1) + "." + slice!(parts, start: 1)
+      if err == null {
+        .tls.version = ver
+      }
+  	}
+    .tls.version_protocol = downcase!(parts[0]);
+  }
+
+  if ._tmp.user_agent != null {
+    .user_agent.original = ._tmp.user_agent
+  }
+
+  .event.outcome = if is_integer(.http.response.status_code) {
+    if to_int(.http.response.status_code) >= 400 {
+      "failure"
+    } else if to_int(.http.response.status_code) < 400 {
+      "success"
+    }
+  }
+
+  if .http != null {
+      .event.category = "web"
+  } else {
+      .event.category = "network"
+  }
+
+  if .http != null {
+    .aws.elb.protocol = "http"
+  } else {
+    .aws.elb.protocol = "tcp"
+  }
+
+  del(._tmp)
+  del(.message)
