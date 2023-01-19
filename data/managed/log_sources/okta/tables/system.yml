@@ -652,7 +652,19 @@ schema:
           - name: severity
             type: string
           - name: target
-            type: string
+            type:
+              type: list
+              element:
+                type: struct
+                fields:
+                  - name: id
+                    type: string
+                  - name: alternate_id
+                    type: string
+                  - name: type
+                    type: string
+                  - name: display_name
+                    type: string
           - name: transaction
             type:
               type: struct
