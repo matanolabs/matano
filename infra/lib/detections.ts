@@ -1,5 +1,4 @@
-import * as fs from "fs";
-import * as fse from "fs-extra";
+import * as fs from "fs-extra";
 import * as path from "path";
 import { Construct } from "constructs";
 import * as cdk from "aws-cdk-lib";
@@ -64,11 +63,14 @@ export class MatanoDetections extends Construct {
                     recursive: true,
                   });
                 }
-                fse.copySync(detectionsDirectory, targetDirectory, {
+                fs.copySync(detectionsDirectory, targetDirectory, {
                   overwrite: true,
                   errorOnExist: false,
                   recursive: true,
                 });
+                if (!fs.readdirSync(targetDirectory).length) {
+                  fs.writeFileSync(path.join(targetDirectory, "placeholder"), "");
+                }
               } catch (error) {
                 console.error("Error with local bundling", error);
                 return false;
@@ -76,7 +78,11 @@ export class MatanoDetections extends Construct {
               return true;
             },
           },
-          command: ["bash", "-c", `cp -rT /asset-input/ /asset-output`],
+          command: [
+            "bash",
+            "-c",
+            `cp -rT /asset-input/ /asset-output && ([ -z "$(ls -A /asset-output)" ] && touch /asset-output/placeholder)`,
+          ],
         },
       }),
       layers: [detectionsLayer],
