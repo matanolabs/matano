@@ -609,6 +609,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "aws-sdk-inspector2"
+version = "0.21.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9e80854e1ea28a63b5dbb8a9ba9843ab2d8a57ee5a15c18a86c10756fd78daca"
+dependencies = [
+ "aws-endpoint",
+ "aws-http",
+ "aws-sig-auth",
+ "aws-smithy-async",
+ "aws-smithy-client",
+ "aws-smithy-http",
+ "aws-smithy-http-tower",
+ "aws-smithy-json",
+ "aws-smithy-types",
+ "aws-types",
+ "bytes 1.2.1",
+ "fastrand",
+ "http",
+ "tokio-stream",
+ "tower",
+]
+
+[[package]]
 name = "aws-sdk-lambda"
 version = "0.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -939,6 +962,16 @@ dependencies = [
  "num-integer",
  "ryu",
  "time 0.3.13",
+]
+
+[[package]]
+name = "aws-smithy-types-convert"
+version = "0.51.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f9e06afdc7e63242bd0b6d84a8a7f7f1a4d51db5cb2ac7f2eb920878ed7bb25a"
+dependencies = [
+ "aws-smithy-types",
+ "chrono",
 ]
 
 [[package]]
@@ -2723,8 +2756,12 @@ dependencies = [
  "async-trait",
  "async_once",
  "aws-config",
+ "aws-sdk-inspector2",
  "aws-sdk-s3",
  "aws-sdk-secretsmanager",
+ "aws-smithy-client",
+ "aws-smithy-types",
+ "aws-smithy-types-convert",
  "aws_lambda_events",
  "base64 0.20.0",
  "chrono",

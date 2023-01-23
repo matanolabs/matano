@@ -18,6 +18,7 @@ interface ExternalLogPullerProps {
 
 // Managed log source types that support pulling.
 export const PULLER_LOG_SOURCE_TYPES: string[] = [
+  "aws_inspector",
   "o365",
   "duo",
   "enrich_abusech_urlhaus",
@@ -26,6 +27,7 @@ export const PULLER_LOG_SOURCE_TYPES: string[] = [
   "enrich_otx",
 ];
 const LOG_SOURCE_RATES: Record<string, cdk.Duration> = {
+  aws_inspector: cdk.Duration.minutes(10),
   o365: cdk.Duration.minutes(1),
   duo: cdk.Duration.minutes(1),
   enrich_abusech_urlhaus: cdk.Duration.minutes(5),
@@ -83,7 +85,14 @@ export class ExternalLogPuller extends Construct {
 
     func.addEnvironment("LOG_SOURCE_TO_SECRET_ARN_MAP", JSON.stringify(logSourceSecretMap));
 
-    props.ingestionBucket.grantWrite(func);
+    props.ingestionBucket.grantReadWrite(func);
+    // Used for managed log source.
+    func.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ["inspector2:ListFindings"],
+        resources: ["*"],
+      })
+    );
 
     const dlq = new sqs.Queue(this, "DLQ", {});
 

@@ -121,7 +121,7 @@ impl PullLogs for AbuseChThreatfoxPuller {
         end_dt: DateTime<FixedOffset>,
     ) -> Result<Vec<u8>> {
         info!("Pulling Threatfox...");
-        let is_initial_run = ctx.is_initial_run().await?;
+        let is_initial_run = ctx.is_initial_run();
 
         // This is a simple implementation. There's also a full export available
         // that we could technically retrieve on the initial run, but keep it simple for now.
@@ -152,11 +152,6 @@ impl PullLogs for AbuseChThreatfoxPuller {
         for record in data {
             json_bytes.write(serde_json::to_vec(&record)?.as_slice())?;
             json_bytes.write(b"\n")?;
-        }
-
-        // TODO: should be integrated into puller to mark complete after upload succeeds.
-        if is_initial_run {
-            ctx.mark_initial_run_complete().await?;
         }
 
         Ok(json_bytes)
