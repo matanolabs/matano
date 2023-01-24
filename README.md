@@ -174,7 +174,7 @@ When onboarding a new log source or authoring a detection, run `matano deploy` f
 
 [**Read the complete docs on configuring custom log sources**](https://www.matano.dev/docs/log-sources/configuration)
 
-Matano uses [Vector Remap Language (VRL)](https://vector.dev/docs/reference/vrl/), to allow users to easily onboard custom log sources and encourages you to normalize fields according to the [Elastic Common Schema (ECS)]() to enable enhanced pivoting and bulk search for IOCs across your security data lake.
+Matano uses [Vector Remap Language (VRL)](https://vector.dev/docs/reference/vrl/), to allow users to easily onboard custom log sources and encourages you to normalize fields according to the [Elastic Common Schema (ECS)](https://www.elastic.co/guide/en/ecs/current/ecs-reference.html) to enable enhanced pivoting and bulk search for IOCs across your security data lake.
 
 Users can define custom VRL programs to parse and transform unstructured logs as they are being ingested through one of the supported mechanisms for a log source (e.g. S3, SQS).
 
