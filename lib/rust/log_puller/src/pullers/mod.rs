@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::atomic::AtomicBool};
 
 use anyhow::{anyhow, Context, Result};
 use async_trait::async_trait;
@@ -13,6 +13,7 @@ use tokio::sync::Mutex;
 use shared::secrets::load_secret;
 
 mod abusech;
+mod amazon_inspector;
 mod duo;
 mod o365;
 mod otx;
@@ -49,6 +50,7 @@ pub struct PullLogsContext {
     tables_config: HashMap<String, config::Config>,
     cache: Arc<Mutex<PullerCache>>,
     s3: aws_sdk_s3::Client,
+    is_initial_run: AtomicBool,
 }
 
 impl PullLogsContext {
@@ -67,6 +69,7 @@ impl PullLogsContext {
             tables_config,
             cache: Arc::new(Mutex::new(PullerCache::new())),
             s3,
+            is_initial_run: AtomicBool::new(false),
         }
     }
 
@@ -86,16 +89,11 @@ impl PullLogsContext {
     }
 
     /// Returns true if this is the first time the puller has run. Useful for e.g. pulling more logs on first run.
-    pub async fn is_initial_run(&self) -> Result<bool> {
+    pub async fn load_is_initial_run(&self) -> Result<bool> {
         let bucket = std::env::var("INGESTION_BUCKET_NAME").context("need bucket!")?;
 
         let initial_run_key = "__puller_initial_run__";
         let s3_key = format!("{}/{}", initial_run_key, self.log_source_type.to_str());
-        let mut cache = self.cache.lock().await;
-
-        if cache.get(initial_run_key).is_some() {
-            return Ok(false);
-        }
 
         let res = self
             .s3
@@ -118,7 +116,8 @@ impl PullLogsContext {
         }?;
 
         if is_initial {
-            cache.set(initial_run_key, "".to_string(), None);
+            self.is_initial_run
+                .swap(true, std::sync::atomic::Ordering::Relaxed);
         }
 
         Ok(is_initial)
@@ -139,6 +138,11 @@ impl PullLogsContext {
             .await?;
 
         Ok(())
+    }
+
+    pub fn is_initial_run(&self) -> bool {
+        self.is_initial_run
+            .load(std::sync::atomic::Ordering::Relaxed)
     }
 
     pub fn config(&self) -> &HashMap<String, String> {
@@ -169,6 +173,7 @@ pub trait PullLogs {
 #[derive(Clone)]
 #[enum_dispatch(PullLogs)]
 pub enum LogSource {
+    AmazonInspectorPuller(amazon_inspector::AmazonInspectorPuller),
     O365Puller(o365::O365Puller),
     DuoPuller(duo::DuoPuller),
     Otx(otx::OtxPuller),
@@ -180,6 +185,9 @@ pub enum LogSource {
 impl LogSource {
     pub fn from_str(s: &str) -> Option<LogSource> {
         match s.to_lowercase().as_str() {
+            "aws_inspector" => Some(LogSource::AmazonInspectorPuller(
+                amazon_inspector::AmazonInspectorPuller {},
+            )),
             "o365" => Some(LogSource::O365Puller(o365::O365Puller {})),
             "duo" => Some(LogSource::DuoPuller(duo::DuoPuller {})),
             "otx" => Some(LogSource::Otx(otx::OtxPuller {})),
@@ -197,6 +205,7 @@ impl LogSource {
     }
     pub fn to_str(&self) -> &str {
         match self {
+            LogSource::AmazonInspectorPuller(_) => "aws_inspector",
             LogSource::DuoPuller(_) => "duo",
             LogSource::O365Puller(_) => "o365",
             LogSource::Otx(_) => "otx",

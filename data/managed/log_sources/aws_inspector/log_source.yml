@@ -1,0 +1,577 @@
+name: aws_inspector
+schema:
+  ecs_field_names:
+    - cloud.account.id
+    - cloud.account.name
+    - cloud.provider
+    - cloud.region
+    - ecs.version
+    - event.category
+    - event.created
+    - event.dataset
+    - event.kind
+    - event.module
+    - event.original
+    - event.severity
+    - event.type
+    - message
+    - network.transport
+    - related.hash
+    - related.ip
+    - tags
+    - vulnerability.id
+    - vulnerability.reference
+    - vulnerability.score.base
+    - vulnerability.score.version
+    - vulnerability.severity
+  fields:
+    - name: aws
+      type:
+        type: struct
+        fields:
+          - name: inspector
+            type:
+              type: struct
+              fields:
+                - name: finding_arn
+                  type: string
+                - name: first_observed_at
+                  type: timestamp
+                - name: fix_available
+                  type: string
+                - name: inspector_score
+                  type: double
+                - name: inspector_score_details
+                  type:
+                    type: struct
+                    fields:
+                      - name: adjusted_cvss
+                        type:
+                          type: struct
+                          fields:
+                            - name: adjustments
+                              type:
+                                type: list
+                                element:
+                                  type: struct
+                                  fields:
+                                    - name: metric
+                                      type: string
+                                    - name: reason
+                                      type: string
+                            - name: cvss_source
+                              type: string
+                            - name: score
+                              type:
+                                type: struct
+                                fields:
+                                  - name: source
+                                    type: string
+                                  - name: value
+                                    type: double
+                            - name: scoring_vector
+                              type: string
+                            - name: version
+                              type: string
+                - name: last_observed_at
+                  type: timestamp
+                - name: network_reachability_details
+                  type:
+                    type: struct
+                    fields:
+                      - name: network_path
+                        type:
+                          type: struct
+                          fields:
+                            - name: steps
+                              type:
+                                type: list
+                                element:
+                                  type: struct
+                                  fields:
+                                    - name: component
+                                      type:
+                                        type: struct
+                                        fields:
+                                          - name: id
+                                            type: string
+                                          - name: type
+                                            type: string
+                      - name: open_port_range
+                        type:
+                          type: struct
+                          fields:
+                            - name: begin
+                              type: long
+                            - name: end
+                              type: long
+                - name: package_vulnerability_details
+                  type:
+                    type: struct
+                    fields:
+                      - name: cvss
+                        type:
+                          type: list
+                          element:
+                            type: struct
+                            fields:
+                              - name: base_score
+                                type: double
+                              - name: scoring_vector
+                                type: string
+                              - name: source
+                                type: string
+                              - name: version
+                                type: string
+                      - name: reference_urls
+                        type:
+                          type: list
+                          element: string
+                      - name: related_vulnerabilities
+                        type:
+                          type: list
+                          element: string
+                      - name: source
+                        type:
+                          type: struct
+                          fields:
+                            - name: url
+                              type:
+                                type: struct
+                                fields:
+                                  - name: domain
+                                    type: string
+                                  - name: extension
+                                    type: string
+                                  - name: original
+                                    type: string
+                                  - name: path
+                                    type: string
+                                  - name: query
+                                    type: string
+                                  - name: scheme
+                                    type: string
+                            - name: value
+                              type: string
+                      - name: vendor
+                        type:
+                          type: struct
+                          fields:
+                            - name: created_at
+                              type: timestamp
+                            - name: severity
+                              type: string
+                            - name: updated_at
+                              type: timestamp
+                      - name: vulnerability_id
+                        type: string
+                      - name: vulnerable_packages
+                        type:
+                          type: list
+                          element:
+                            type: struct
+                            fields:
+                              - name: arch
+                                type: string
+                              - name: epoch
+                                type: long
+                              - name: file_path
+                                type: string
+                              - name: fixed_in_version
+                                type: string
+                              - name: name
+                                type: string
+                              - name: package_manager
+                                type: string
+                              - name: release
+                                type: string
+                              - name: source_layer_hash
+                                type: string
+                              - name: version
+                                type: string
+                              - name: remediation
+                                type: string
+                - name: remediation
+                  type:
+                    type: struct
+                    fields:
+                      - name: recommendation
+                        type:
+                          type: struct
+                          fields:
+                            - name: text
+                              type: string
+                            - name: url
+                              type:
+                                type: struct
+                                fields:
+                                  - name: domain
+                                    type: string
+                                  - name: extension
+                                    type: string
+                                  - name: original
+                                    type: string
+                                  - name: path
+                                    type: string
+                                  - name: query
+                                    type: string
+                                  - name: scheme
+                                    type: string
+                - name: resources
+                  type:
+                    type: list
+                    element:
+                      type: struct
+                      fields:
+                        - name: details
+                          type:
+                            type: struct
+                            fields:
+                              - name: aws
+                                type:
+                                  type: struct
+                                  fields:
+                                    - name: ec2_instance
+                                      type:
+                                        type: struct
+                                        fields:
+                                          - name: iam_instance_profile_arn
+                                            type: string
+                                          - name: image_id
+                                            type: string
+                                          - name: ipv4_addresses
+                                            type:
+                                              type: list
+                                              element: string
+                                          - name: ipv6_addresses
+                                            type:
+                                              type: list
+                                              element: string
+                                          - name: key_name
+                                            type: string
+                                          - name: launched_at
+                                            type: timestamp
+                                          - name: platform
+                                            type: string
+                                          - name: subnet_id
+                                            type: string
+                                          - name: type
+                                            type: string
+                                          - name: vpc_id
+                                            type: string
+                                    - name: ecr_container_image
+                                      type:
+                                        type: struct
+                                        fields:
+                                          - name: architecture
+                                            type: string
+                                          - name: author
+                                            type: string
+                                          - name: image
+                                            type:
+                                              type: struct
+                                              fields:
+                                                - name: hash
+                                                  type: string
+                                                - name: tags
+                                                  type:
+                                                    type: list
+                                                    element: string
+                                          - name: platform
+                                            type: string
+                                          - name: pushed_at
+                                            type: timestamp
+                                          - name: registry
+                                            type: string
+                                          - name: repository_name
+                                            type: string
+                                    - name: lambda_function
+                                      type:
+                                        type: struct
+                                        fields:
+                                          - name: architectures
+                                            type:
+                                              type: list
+                                              element: string
+                                          - name: code_sha256
+                                            type: string
+                                          - name: execution_role_name
+                                            type: string
+                                          - name: last_modified_at
+                                            type: timestamp
+                                          - name: name
+                                            type: string
+                                          - name: package_type
+                                            type: string
+                                          - name: runtime
+                                            type: string
+                                          - name: version
+                                            type: string
+                        - name: id
+                          type: string
+                        - name: partition
+                          type: string
+                        - name: region
+                          type: string
+                        - name: tags
+                          type: string
+                        - name: type
+                          type: string
+                - name: severity
+                  type: string
+                - name: status
+                  type: string
+                - name: title
+                  type: string
+                - name: type
+                  type: string
+                - name: updated_at
+                  type: timestamp
+transform: |2-
+
+  .event.kind = "event"
+
+  .event.type = ["info"]
+  .cloud.provider = "aws"
+
+  .aws.inspector.updated_at = to_timestamp(.json.updatedAt) ?? null
+  .ts = .aws.inspector.updated_at
+
+  .aws.inspector.description = del(.json.description)
+
+  .message = .aws.inspector.description
+
+  .aws.inspector.aws_account_id = del(.json.awsAccountId)
+
+  .cloud.account.id = .aws.inspector.aws_account_id
+
+  .aws.inspector.severity = del(.json.severity)
+
+  .aws.inspector.network_reachability_details.protocol = del(.json.networkReachabilityDetails.protocol)
+
+  .network.transport = downcase(.aws.inspector.network_reachability_details.protocol) ?? null
+
+  .aws.inspector.package_vulnerability_details.reference_urls = del(.json.packageVulnerabilityDetails.referenceUrls)
+
+  if is_array(.aws.inspector.package_vulnerability_details.reference_urls) {
+    .vulnerability.reference = join!(.aws.inspector.package_vulnerability_details.reference_urls, separator: ",")
+  }
+
+  .aws.inspector.package_vulnerability_details.vulnerability_id = del(.json.packageVulnerabilityDetails.vulnerabilityId)
+
+  .vulnerability.id = .aws.inspector.package_vulnerability_details.vulnerability_id
+
+  .aws.inspector.finding_arn = del(.json.findingArn)
+
+  .aws.inspector.first_observed_at = to_timestamp(.json.firstObservedAt) ?? null
+
+  .aws.inspector.fix_available = del(.json.fixAvailable)
+
+  if .json.inspectorScore != null {
+      .aws.inspector.inspector_score = to_float!(.json.inspectorScore)
+  }
+
+  .aws.inspector.inspector_score_details.adjusted_cvss.adjustments = del(.json.inspectorScoreDetails.adjustedCvss.adjustments)
+
+  .aws.inspector.inspector_score_details.adjusted_cvss.cvss_source = del(.json.inspectorScoreDetails.adjustedCvss.cvssSource)
+
+  if .json.inspectorScoreDetails.adjustedCvss.score != null {
+      .aws.inspector.inspector_score_details.adjusted_cvss.score.value = to_float!(.json.inspectorScoreDetails.adjustedCvss.score)
+  }
+
+  .aws.inspector.inspector_score_details.adjusted_cvss.score.source = del(.json.inspectorScoreDetails.adjustedCvss.scoreSource)
+
+  .aws.inspector.inspector_score_details.adjusted_cvss.scoring_vector = del(.json.inspectorScoreDetails.adjustedCvss.scoringVector)
+
+  .aws.inspector.inspector_score_details.adjusted_cvss.version = del(.json.inspectorScoreDetails.adjustedCvss.version)
+
+  .aws.inspector.last_observed_at = to_timestamp(.json.lastObservedAt) ?? null
+
+
+  if is_array(.json.networkReachabilityDetails.networkPath.steps) {
+    steps = map_values(array!(.json.networkReachabilityDetails.networkPath.steps)) -> |value| {
+      {
+        "component": {
+          "id": value.componentId,
+          "type": value.componentType,
+        }
+      }
+    }
+    .aws.inspector.network_reachability_details.network_path.steps = steps
+  }
+
+  if .json.networkReachabilityDetails.openPortRange.begin != null {
+      .aws.inspector.network_reachability_details.open_port_range.begin = to_int!(.json.networkReachabilityDetails.openPortRange.begin)
+  }
+
+  if .json.networkReachabilityDetails.openPortRange.end != null {
+      .aws.inspector.network_reachability_details.open_port_range.end = to_int!(.json.networkReachabilityDetails.openPortRange.end)
+  }
+
+  if is_array(.json.packageVulnerabilityDetails.cvss) {
+    base_score = []
+    scoring_version = []
+    cvss = map_values(array!(.json.packageVulnerabilityDetails.cvss)) -> |value| {
+      value.base_score = del(value.baseScore)
+      value.scoring_vector = del(value.scoringVector)
+
+      base_score = push(base_score, value.base_score)
+      scoring_version = push(scoring_version, value.version)
+      value
+    }
+    .aws.inspector.package_vulnerability_details.cvss = cvss
+    .vulnerability.score.version = join!(scoring_version, separator: ",")
+
+    max_score = to_float(base_score[0])
+    for_each(base_score) -> |i, val| {
+      v = to_float!(val)
+      if v > max_score {
+        max_score = v
+      }
+    }
+    .vulnerability.score.base = max_score
+  }
+
+  .aws.inspector.package_vulnerability_details.related_vulnerabilities = del(.json.packageVulnerabilityDetails.relatedVulnerabilities)
+  .aws.inspector.package_vulnerability_details.source.value = del(.json.packageVulnerabilityDetails.source)
+
+  if .json.packageVulnerabilityDetails.sourceUrl != null {
+    url = parse_url!(.json.packageVulnerabilityDetails.sourceUrl)
+    url.domain = del(url.host)
+    url.original = .json.packageVulnerabilityDetails.sourceUrl
+    if url.query != null {
+      query = []
+      for_each(object(url.query)) -> |k, v| {
+          v = if v != "" { k + "=" + v } else { k }
+          query = push(query, v)
+      }
+      query = join(query, "&") ?? null
+      url.query = query
+    }
+    .aws.inspector.package_vulnerability_details.source.url = url
+  }
+
+  .aws.inspector.package_vulnerability_details.vendor.created_at = to_timestamp(.json.packageVulnerabilityDetails.vendorCreatedAt) ?? null
+
+  .aws.inspector.package_vulnerability_details.vendor.severity = del(.json.packageVulnerabilityDetails.vendorSeverity)
+  .vulnerability.severity = .aws.inspector.package_vulnerability_details.vendor.severity
+
+  .aws.inspector.package_vulnerability_details.vendor.updated_at = to_timestamp(.json.packageVulnerabilityDetails.vendorUpdatedAt) ?? null
+
+  if is_array(.json.packageVulnerabilityDetails.vulnerablePackages) {
+    hashes = []
+    pkgs = map_values(array!(.json.packageVulnerabilityDetails.vulnerablePackages)) -> |value| {
+      value.file_path = del(value.filePath)
+      value.fixed_in_version = del(value.fixedInVersion)
+      value.package_manager = del(value.packageManager)
+      value.source_layer_hash = del(value.sourceLayerHash)
+
+      hashes = push(hashes, value.source_layer_hash)
+
+      value
+    }
+  	.aws.inspector.package_vulnerability_details.vulnerable_packages = pkgs
+    .related.hash = hashes
+  }
+
+  .aws.inspector.remediation.recommendation.text = del(.json.remediation.recommendation.text)
+  if .json.remediation.recommendation.Url != null {
+    url = parse_url!(.json.remediation.recommendation.Url)
+    url.domain = del(url.host)
+    url.original = .json.remediation.recommendation.Url
+    if url.query != null {
+      query = []
+      for_each(url.query) -> |k, v| {
+          v = if v != "" { k + "=" + v } else { k }
+          query = push(query, v)
+      }
+      query = join(query, "&") ?? null
+      url.query = query
+    }
+    .aws.inspector.remediation.recommendation.url = url
+  }
+
+  if is_array(.json.resources) {
+    ips = []
+    resources = map_values(array!(.json.resources)) -> |value| {
+
+      if value.details.awsEc2Instance != null {
+        ec2_instance = {}
+        ec2Instance = del(value.details.awsEc2Instance)
+
+        ec2_instance.iam_instance_profile_arn = ec2Instance.iamInstanceProfileArn
+        ec2_instance.image_id = ec2Instance.imageId
+        ec2_instance.ipv4_addresses = ec2Instance.ipV4Addresses
+        ec2_instance.ipv6_addresses = ec2Instance.ipV6Addresses
+
+        for_each(array!(ec2_instance.ipv4_addresses)) -> |i, v| {
+          ips = push(ips, v)
+        }
+        for_each(array!(ec2_instance.ipv6_addresses)) -> |i, v| {
+          ips = push(ips, v)
+        }
+
+        ec2_instance.key_name = ec2Instance.keyName
+
+        ec2_instance.launched_at = to_timestamp!(ec2Instance.launchedAt)
+        ec2_instance.platform = ec2Instance.platform
+        ec2_instance.subnet_id = ec2Instance.subnetId
+        ec2_instance.type = ec2Instance.type
+        ec2_instance.vpc_id = ec2Instance.vpcId
+
+        value.details.aws.ec2_instance = ec2_instance
+        .related.ip = ips
+      }
+
+      if value.details.awsEcrContainerImage != null {
+        ecr_container_image = {}
+        ecrContainerImage = del(value.details.awsEcrContainerImage)
+
+        ecr_container_image.architecture = ecrContainerImage.architecture
+        ecr_container_image.author = ecrContainerImage.author
+        ecr_container_image.image = {}
+        ecr_container_image.image.hash = ecrContainerImage.imageHash
+
+        .related.hash = push(.related.hash, ecr_container_image.image.hash)
+
+        ecr_container_image.image.tags = ecrContainerImage.imageTags
+
+        ecr_container_image.platform = ecrContainerImage.platform
+        ecr_container_image.pushed_at = to_timestamp!(ecrContainerImage.pushedAt)
+        ecr_container_image.registry = ecrContainerImage.registry
+        ecr_container_image.repository_name = ecrContainerImage.repositoryName
+
+        value.details.aws.ecr_container_image = ecr_container_image
+      }
+
+      if value.details.awsLambdaFunction != null {
+        lambda_function = del(value.details.awsLambdaFunction)
+        lambda_function.code_sha256 = del(lambda_function.codeSha256)
+        lambda_function.execution_role_name = del(lambda_function.executionRoleArn)
+        lambda_function.name = del(lambda_function.functionName)
+        lambda_function.last_modified_at = to_timestamp(del(lambda_function.lastModifiedAt)) ?? null
+        lambda_function.package_type = del(lambda_function.packageType)
+
+        value.details.aws.lambda_function = lambda_function
+      }
+
+      .cloud.region = value.region
+
+      if is_object(value.tags) {
+        value.tags = encode_json(value.tags)
+      }
+
+      value
+    }
+    .aws.inspector.resources = resources
+
+  }
+
+  .aws.inspector.status = del(.json.status)
+  .aws.inspector.title = del(.json.title)
+  .aws.inspector.type = del(.json.type)
+
+  # duplicate custom fields
+  del(.aws.inspector.description)
+  del(.aws.inspector.aws_account_id)
+  del(.aws.inspector.network_reachability_details.protocol)

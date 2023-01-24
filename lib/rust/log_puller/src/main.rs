@@ -217,12 +217,20 @@ async fn handler(event: LambdaEvent<SqsEvent>) -> Result<Option<SQSBatchResponse
 
             let puller = ctx.log_source_type.clone();
             let log_source_name = record.log_source_name.clone();
-            let fut = puller
-                .pull_logs(client.clone(), ctx, start_dt, end_dt)
-                .and_then(|data| async move { upload_data(data, &record.log_source_name).await })
-                .map(move |r| {
-                    r.with_context(|| format!("Error for log_source: {}", log_source_name))
-                });
+            let client = client.clone();
+
+            let fut = async move {
+                ctx.load_is_initial_run().await?;
+                let data = puller
+                    .pull_logs(client.clone(), ctx, start_dt, end_dt)
+                    .await?;
+                let did_upload = upload_data(data, &record.log_source_name).await?;
+                if did_upload {
+                    ctx.mark_initial_run_complete().await?;
+                }
+                anyhow::Ok(())
+            }
+            .map(move |r| r.with_context(|| format!("Error for log_source: {}", log_source_name)));
             anyhow::Ok(fut)
         })
         .zip(msg_ids.iter())
@@ -266,10 +274,10 @@ async fn handler(event: LambdaEvent<SqsEvent>) -> Result<Option<SQSBatchResponse
     }
 }
 
-async fn upload_data(data: Vec<u8>, log_source: &str) -> Result<()> {
+async fn upload_data(data: Vec<u8>, log_source: &str) -> Result<bool> {
     if data.is_empty() {
         info!("No new data for log_source: {}", log_source);
-        return Ok(());
+        return Ok(false);
     }
     info!("Uploading data for {}", log_source);
     let bucket = std::env::var("INGESTION_BUCKET_NAME")?;
@@ -297,5 +305,5 @@ async fn upload_data(data: Vec<u8>, log_source: &str) -> Result<()> {
             e
         })?;
 
-    Ok(())
+    Ok(true)
 }
