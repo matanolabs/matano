@@ -26,7 +26,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 class LazyConcurrentMap<K, V>(
     private val compute: (K) -> V,
-    private val map: ConcurrentHashMap<K, V> = ConcurrentHashMap()
+    private val map: ConcurrentHashMap<K, V> = ConcurrentHashMap(),
 ) : Map<K, V> by map {
     override fun get(key: K): V? = map.getOrPut(key) { compute(key) }
 }
@@ -158,7 +158,7 @@ class IcebergMetadataWriter {
         val expireTime = ((System.currentTimeMillis() / 1000L) + DDB_ITEM_EXPIRE_SECONDS).toString()
         val attrs = mapOf(
             "sequencer" to AttributeValue(sequencer),
-            "ttl" to AttributeValue().apply { this.setN(expireTime) }
+            "ttl" to AttributeValue().apply { this.setN(expireTime) },
         )
         val req = PutItemRequest(DUPLICATES_DDB_TABLE_NAME, attrs)
             .apply { this.conditionExpression = "attribute_not_exists(sequencer)" }
@@ -185,7 +185,8 @@ class IcebergMetadataWriter {
             "catalog-impl" to "org.apache.iceberg.aws.glue.GlueCatalog",
             "warehouse" to WAREHOUSE_PATH,
             "io-impl" to "org.apache.iceberg.aws.s3.S3FileIO",
-            "write.metadata.delete-after-commit.enabled" to "true"
+            "write.metadata.delete-after-commit.enabled" to "true",
+            "glue.skip-archive" to "true",
         )
         private val ddb = AmazonDynamoDBClientBuilder.defaultClient()
 

@@ -19,7 +19,7 @@ lazy_static! {
         AsyncOnce::new(async { aws_config::load_from_env().await });
     static ref SQS_CLIENT: AsyncOnce<aws_sdk_sqs::Client> =
         AsyncOnce::new(async { aws_sdk_sqs::Client::new(AWS_CONFIG.get().await) });
-    static ref LOG_SOURCE_KEY_PREFIX_MAP: HashMap<String, Option<String>> =
+    static ref LOG_SOURCE_KEY_PREFIX_MAP: HashMap<String, (Option<String>, Option<String>)> =
         build_log_source_key_prefix_map();
 }
 
@@ -33,7 +33,7 @@ async fn main() -> Result<(), LambdaError> {
     Ok(())
 }
 
-fn build_log_source_key_prefix_map() -> HashMap<String, Option<String>> {
+fn build_log_source_key_prefix_map() -> HashMap<String, (Option<String>, Option<String>)> {
     let mut ret = HashMap::new();
     for entry in WalkDir::new("/opt/config/log_sources")
         .min_depth(1)
@@ -64,33 +64,41 @@ fn build_log_source_key_prefix_map() -> HashMap<String, Option<String>> {
         let ls_name = config.get("name").and_then(|v| v.as_str());
 
         if let Some(log_source_name) = ls_name {
-            let key_prefix = config
-                .get("ingest")
-                .and_then(|v| v.get("s3_source"))
+            let s3_source = config.get("ingest").and_then(|v| v.get("s3_source"));
+            let bucket_name = s3_source
+                .and_then(|v| v.get("bucket_name"))
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+            let key_prefix = s3_source
                 .and_then(|v| v.get("key_prefix"))
-                .and_then(|v| v.as_str());
-            ret.insert(
-                log_source_name.to_string(),
-                key_prefix.map(|s| s.to_string()),
-            );
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+            ret.insert(log_source_name.to_string(), (bucket_name, key_prefix));
         }
     }
     ret
 }
 
-fn get_log_source_from_key(key: &str) -> Option<String> {
+fn get_log_source_from_object(bucket: &str, key: &str) -> Option<String> {
     LOG_SOURCE_KEY_PREFIX_MAP
         .iter()
-        .find(|(_, v)| v.as_ref().map_or(false, |s| key.starts_with(&*s)))
+        .find(|(_, (ls_bucket, ls_key_prefix))| {
+            let bucket_matches = ls_bucket.as_ref().map_or(false, |b| b == bucket);
+            let ls_key_prefix = ls_key_prefix
+                .as_ref()
+                .map(|s| s.to_string())
+                .unwrap_or("".to_string());
+            let key_matches = key.starts_with(&ls_key_prefix);
+            bucket_matches && key_matches
+        })
         .map(|(ls, _)| ls.to_owned())
         .or_else(|| {
             // try managed
-            let ls = key
-                .split(std::path::MAIN_SEPARATOR)
-                .next()
-                .unwrap()
-                .to_string();
-            LOG_SOURCE_KEY_PREFIX_MAP.contains_key(&ls).then_some(ls)
+            key.split(std::path::MAIN_SEPARATOR).next().and_then(|ls| {
+                LOG_SOURCE_KEY_PREFIX_MAP
+                    .contains_key(ls)
+                    .then_some(ls.to_string())
+            })
         })
 }
 
@@ -120,13 +128,14 @@ async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
 
     let mut total_input_bytes: i64 = 0;
     let mut relevant_input_records = 0;
-    info!("{:?}", LOG_SOURCE_KEY_PREFIX_MAP.clone());
+
     let mut new_records = s3_records
         .into_iter()
         .flat_map(|record| {
             let object = &record.s3.object;
+            let bucket = record.s3.bucket.name.as_ref().unwrap().to_owned();
             let key = object.key.as_ref().unwrap().to_owned();
-            let log_source = get_log_source_from_key(&key);
+            let log_source = get_log_source_from_object(&bucket, &key);
             let size = object.size.unwrap();
 
             if let Some(ls) = log_source {
@@ -134,7 +143,7 @@ async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
                 relevant_input_records += 1;
 
                 let r = DataBatcherOutputRecord {
-                    bucket: record.s3.bucket.name.unwrap(),
+                    bucket,
                     key,
                     size,
                     sequencer: object.sequencer.as_ref().unwrap().to_owned(),

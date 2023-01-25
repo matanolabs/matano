@@ -34,7 +34,7 @@ export class MatanoS3Sources extends Construct {
         key_prefix = "";
       }
 
-      if (!bucket_name || !key_prefix) {
+      if (bucket_name == null || key_prefix == null) {
         continue;
       }
 
@@ -71,7 +71,8 @@ export class MatanoS3Sources extends Construct {
         finalSource!!.bucket_name!!
       );
       for (const keyPrefix of finalSource.key_prefixes) {
-        importedBucket.grantRead(construct, `${keyPrefix}/*`);
+        const prefix = keyPrefix === "" ? undefined : `${keyPrefix}/*`;
+        importedBucket.grantRead(construct, prefix);
       }
     }
   }

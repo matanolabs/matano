@@ -38,7 +38,7 @@ fun main() {
 data class CfnResponse(
     val PhysicalResourceId: String? = null,
     val Data: Map<String, String>? = null,
-    val NoEcho: Boolean = false
+    val NoEcho: Boolean = false,
 )
 
 // Cloudformation stringifies all values in properties!
@@ -69,7 +69,7 @@ fun convertCfnSchema(node: JsonNode) {
 
 data class MatanoPartitionSpec(
     val column: String,
-    val transform: String = "identity"
+    val transform: String = "identity",
 )
 
 class RelaxedIcebergSchemaDeserializer : StdNodeBasedDeserializer<Schema>(Schema::class.java) {
@@ -86,7 +86,7 @@ data class MatanoTableRequest(
     val schema: Schema,
     val partitions: List<MatanoPartitionSpec> = listOf(),
     val tableProperties: MutableMap<String, String> = mutableMapOf(),
-    val glueDatabaseName: String? = null
+    val glueDatabaseName: String? = null,
 )
 
 sealed interface MatanoIcebergTransform {
@@ -184,7 +184,7 @@ class MatanoIcebergTableCustomResource : CFNCustomResource {
             tableId,
             schema,
             partition,
-            tableProperties
+            tableProperties,
         )
         logger.info("Successfully created table.")
         return CfnResponse(PhysicalResourceId = requestProps.tableName)
@@ -301,7 +301,8 @@ class MatanoIcebergTableCustomResource : CFNCustomResource {
             "catalog-name" to "iceberg",
             "catalog-impl" to "org.apache.iceberg.aws.glue.GlueCatalog",
             "warehouse" to "s3://${System.getenv("MATANO_ICEBERG_BUCKET")}/lake",
-            "io-impl" to "org.apache.iceberg.aws.s3.S3FileIO"
+            "io-impl" to "org.apache.iceberg.aws.s3.S3FileIO",
+            "glue.skip-archive" to "true",
         )
     }
 }

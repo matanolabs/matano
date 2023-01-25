@@ -101,7 +101,7 @@ export class MatanoIcebergTable extends Construct {
       "write.avro.compression-codec": "zstd",
       "write.metadata.delete-after-commit.enabled": "true",
       write_compression: "zstd",
-      "glue.skip_archive": "true",
+      "glue.skip-archive": "true",
     };
 
     const resource = new CustomResource(this, "Default", {
