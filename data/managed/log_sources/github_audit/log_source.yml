@@ -1,0 +1,182 @@
+name: github_audit
+schema:
+  ecs_field_names:
+    - client.geo.country_iso_code
+    - ecs.version
+    - error.message
+    - event.action
+    - event.category
+    - event.created
+    - event.dataset
+    - event.duration
+    - event.end
+    - event.id
+    - event.ingested
+    - event.kind
+    - event.module
+    - event.original
+    - event.outcome
+    - event.start
+    - event.type
+    - group.name
+    - message
+    - related.user
+    - tags
+    - user.email
+    - user.name
+    - user.target.group.name
+    - user.target.name
+  fields:
+    - name: github
+      type:
+        type: struct
+        fields:
+          - name: category
+            type: string
+          - name: org
+            type: string
+          - name: repo
+            type: string
+          - name: team
+            type: string
+          - name: repository_public
+            type: boolean
+          - name: name
+            type: string
+          - name: business
+            type:
+              type: struct
+              fields:
+                - name: name
+                  type: string
+                - name: id
+                  type: int
+          - name: transport_protocol
+            type:
+              type: struct
+              fields:
+                - name: name
+                  type: string
+                - name: id
+                  type: int
+          - name: workflow_id
+            type: long
+          - name: workflow_run_id
+            type: long
+transform: |2-
+
+  .event.original = encode_json(.json)
+
+  .event.kind = "event"
+  .event.category = ["configuration", "web"]
+  .event.type = []
+
+  if .json.created_at != null {
+    .ts = to_timestamp!(.json.created_at, "milliseconds")
+  } else if (get(object!(.json), ["@timestamp"]) ?? null) != null {
+    .ts = to_timestamp!(get!(object!(.json), ["@timestamp"]), "milliseconds")
+  }
+
+  .event.id = del(.json._document_id)
+  .event.action = del(.json.action)
+  .user.name = del(.json.actor)
+  .user.email = .json.data.email
+
+  if .user.name != null {
+    .related.user = push(.related.user, .user.name)
+  }
+
+  .user.target.name = del(.json.user)
+
+  if .user.target.name != null {
+    .related.user = push(.related.user, .user.target.name)
+  }
+
+  # CI events
+  .github.workflow_id = .json.workflow_id || .json.data.workflow_id
+  .github.workflow_run_id = .json.workflow_run_id || .json.data.workflow_run_id
+
+  # git audit events
+  .github.transport_protocol.id = .json.transport_protocol
+  .github.transport_protocol.name = .json.transport_protocol_name
+  .github.repository_public = .json.repository_public
+
+  # start/end
+  if .json.started_at != null {
+    .event.start = to_timestamp!(.json.started_at)
+  }
+  if .json.completed_at != null {
+    .event.end = to_timestamp!(.json.completed_at)
+  }
+  if .event.start != null && .event.end != null {
+    end_epoch_ns = to_unix_timestamp!(.event.end, unit: "nanoseconds")
+    start_epoch_ns = to_unix_timestamp!(.event.start, unit: "nanoseconds")
+    .event.duration = end_epoch_ns - start_epoch_ns
+  }
+
+  .github.name = .json.name
+  .github.business.name = .json.business
+  .github.business.id = .json.business_id
+  .github.org = del(.json.org)
+  .github.repo = del(.json.repo)
+  .github.team = del(.json.team) || del(.json.data.team)
+
+  if is_string(.event.action) {
+    .event.action = string!(.event.action)
+    if starts_with(.event.action, "team.") {
+      .group.name = .github.team
+      if .user.target.name != null {
+        .user.target.group.name = .github.team
+      }
+    } else if starts_with(.event.action, "org.") {
+        .group.name = .github.org
+        if .user.target.name != null {
+        .user.target.group.name = .github.org
+      }
+    }
+  }
+
+  if .user.target.group.name == null {
+    .user.target.group.name = del(.json.data.old_user)
+  }
+
+  .client.geo.country_iso_code = del(.json.actor_location.country_code)
+
+  action_info, err = parse_groks(
+    .event.action,
+    ["^%{GH_CAT:category}\\.%{GREEDYDATA:action}"],
+    {
+      "GH_CAT": "[a-z_]+"
+    }
+  )
+  if err == null {
+      .github.category = action_info.category
+      ._temp.action = action_info.action
+  }
+
+  if .github.category == "team" || .github.category == "org" {
+      .event.category = push(.event.category, "iam")
+      .event.type = push(.event.type, "group")
+      .event.type = push(.event.type, "user")
+  }
+
+  if is_string(._temp.action) {
+    ._temp.action = string!(._temp.action)
+    if contains(._temp.action, "create") || contains(._temp.action, "add") {
+      .event.type = push(.event.type, "creation")
+    }
+
+    if contains(._temp.action, "delete") || contains(._temp.action, "remove") {
+      .event.type = push(.event.type, "deletion")
+    }
+  }
+
+  if .event.type == null || length(.event.type) == 0 {
+    .event.type = push(.event.type, "change")
+  }
+
+  if .json.operation_type == "create" && !includes(.event.type, "creation") {
+    .event.type = push(.event.type, "creation")
+  }
+
+  del(._temp)
