@@ -99,6 +99,7 @@ const MANAGED_LOG_SOURCE_PREFIX_MAP: Record<string, string> = {
   aws_s3access: "aws",
   aws_elb: "aws",
   aws_inspector: "aws",
+  aws_config_history: "aws",
   crowdstrike: "crowdstrike",
   crowdstrike_falcon: "crowdstrike",
   duo: "duo",

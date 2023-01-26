@@ -179,4 +179,8 @@ transform: |2-
     .event.type = push(.event.type, "creation")
   }
 
+  .related.user = unique(.related.user)
+  .event.type = unique(.event.type)
+  .event.category = unique(.event.category)
+
   del(._temp)
