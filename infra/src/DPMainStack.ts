@@ -128,6 +128,7 @@ export class DPMainStack extends MatanoStack {
 
     const icebergMetadata = new IcebergMetadata(this, "IcebergMetadata", {
       lakeStorageBucket: props.lakeStorageBucket,
+      athenaResultsBucket: props.matanoAthenaResultsBucket,
     });
 
     lakeWriter.alertsLakeWriterLambda.addEnvironment(

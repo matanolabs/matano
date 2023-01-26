@@ -176,6 +176,7 @@ export class IcebergTableProvider extends Construct {
 
 interface IcebergMetadataProps {
   lakeStorageBucket: S3BucketWithNotifications;
+  athenaResultsBucket: s3.IBucket;
 }
 export class IcebergMetadata extends Construct {
   alertsHelperFunction: lambda.Function;
@@ -224,6 +225,7 @@ export class IcebergMetadata extends Construct {
     });
 
     props.lakeStorageBucket.bucket.grantReadWrite(this.metadataWriterFunction);
+    props.athenaResultsBucket.grantReadWrite(this.metadataWriterFunction);
     duplicatesTable.grantReadWriteData(this.metadataWriterFunction);
 
     const eventSource = new SqsEventSource(props.lakeStorageBucket.queue, {});
