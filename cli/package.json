@@ -37,7 +37,7 @@
     "proxy-agent": "^5.0.0",
     "phin": "3.7.0",
     "tty-table": "^4.1.6",
-    "yaml": "^2.1.1"
+    "yaml": "1.10.2"
   },
   "devDependencies": {
     "@oclif/test": "^2",
