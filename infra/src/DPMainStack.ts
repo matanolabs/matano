@@ -238,7 +238,9 @@ export class DPMainStack extends MatanoStack {
     schemasLayer.node.addDependency(schemasCR);
 
     const configLayer = new lambda.LayerVersion(this, "ConfigurationLayer", {
-      code: lambda.Code.fromAsset(this.configTempDir),
+      code: lambda.Code.fromAsset(this.configTempDir, {
+        exclude: ["**/.DS_Store"],
+      }),
       description: "A layer for static Matano configurations.",
     });
 

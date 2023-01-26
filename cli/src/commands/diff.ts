@@ -56,6 +56,7 @@ export default class Diff extends BaseCommand {
       matanoAwsAccountId: awsAccountId,
       matanoAwsRegion: awsRegion,
       matanoContext: JSON.stringify(matanoContext),
+      "@aws-cdk/aws-lambda:recognizeLayerVersion": true,
     };
 
     for (const [key, value] of Object.entries(cdkContext)) {
