@@ -30,11 +30,11 @@ export class MatanoS3Sources extends Construct {
       let { bucket_name, key_prefix } = logSource?.logSourceConfig?.ingest?.s3_source ?? {};
 
       // Assume root if no prefix for BYOB
-      if (key_prefix == undefined) {
+      if (key_prefix == null) {
         key_prefix = "";
       }
 
-      if (bucket_name == null || key_prefix == null) {
+      if (bucket_name == null) {
         continue;
       }
 
@@ -70,7 +70,8 @@ export class MatanoS3Sources extends Construct {
         `ImportedSourcesBucketForGrant-${finalSource!!.bucket_name!!}`,
         finalSource!!.bucket_name!!
       );
-      for (const keyPrefix of finalSource.key_prefixes) {
+      for (const rawPrefix of finalSource.key_prefixes) {
+        const keyPrefix = rawPrefix.endsWith("/") ? rawPrefix.slice(0, -1) : rawPrefix;
         const prefix = keyPrefix === "" ? undefined : `${keyPrefix}/*`;
         importedBucket.grantRead(construct, prefix);
       }
