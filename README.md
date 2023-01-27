@@ -107,7 +107,7 @@ We are on a mission to build the first open platform for threat hunting, detecti
 
 ## Quick start
 
-[**View the complete installation instructions**](https://www.matano.dev/docs/installation)
+[**View the complete installation instructions**](https://www.matano.dev/docs/getting-started#installation)
 
 ### Installation
 
