@@ -136,6 +136,15 @@
         "ideas",
         "bug"
       ]
+    },
+    {
+      "login": "francescor",
+      "name": "Francesco R.",
+      "avatar_url": "https://avatars.githubusercontent.com/u/424577?v=4",
+      "profile": "https://github.com/francescor",
+      "contributions": [
+        "bug"
+      ]
     }
   ],
   "contributorsPerLine": 7
