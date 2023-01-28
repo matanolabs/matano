@@ -228,7 +228,10 @@ export class IcebergMetadata extends Construct {
     props.athenaResultsBucket.grantReadWrite(this.metadataWriterFunction);
     duplicatesTable.grantReadWriteData(this.metadataWriterFunction);
 
-    const eventSource = new SqsEventSource(props.lakeStorageBucket.queue, {});
+    const eventSource = new SqsEventSource(props.lakeStorageBucket.queue, {
+      batchSize: 1000,
+      maxBatchingWindow: cdk.Duration.seconds(1),
+    });
     this.metadataWriterFunction.currentVersion.addEventSource(eventSource);
 
     this.alertsHelperFunction = new lambda.Function(this, "AlertsHelper", {
