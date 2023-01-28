@@ -1,0 +1,158 @@
+name: aws_config_history
+
+ingest:
+  expand_records_from_payload: "parse_json!(.__raw).configurationItems"
+
+schema:
+  ecs_field_names:
+    - cloud.account.id
+    - cloud.account.name
+    - cloud.availability_zone
+    - cloud.provider
+    - cloud.region
+    - cloud.service.name
+    - ecs.version
+    - event.kind
+    - event.category
+    - event.created
+    - event.type
+    - event.hash
+    - tags
+
+  fields:
+    - name: aws
+      type:
+        type: struct
+        fields:
+          - name: config_history
+            type:
+              type: struct
+              fields:
+                - name: version
+                  type: string
+                - name: item
+                  type:
+                    type: struct
+                    fields:
+                      - name: status
+                        type: string
+                      - name: capture_time
+                        type: timestamp
+                      - name: md5_hash
+                        type: string
+                      - name: state_id
+                        type: string
+                - name: arn
+                  type: string
+                - name: resource
+                  type:
+                    type: struct
+                    fields:
+                      - name: type
+                        type: string
+                      - name: id
+                        type: string
+                      - name: name
+                        type: string
+                      - name: created
+                        type: timestamp
+                - name: related_events
+                  type:
+                    type: list
+                    element: string
+                - name: relationship
+                  type:
+                    type: list
+                    element:
+                      type: struct
+                      fields:
+                        - name: name
+                          type: string
+                        - name: resource
+                          type:
+                            type: struct
+                            fields:
+                              - name: name
+                                type: string
+                              - name: type
+                                type: string
+                              - name: id
+                                type: string
+                - name: configuration
+                  type: string
+                - name: supplementary_configuration
+                  type: string
+                - name: tags
+                  type: string
+
+transform: |
+  .ts = now() # TODO see if anything better can use.
+
+  .aws.config_history.version = .json.version
+  .aws.config_history.item.capture_time = to_timestamp(.json.configurationItemCaptureTime) ?? null
+  .aws.config_history.item.md5_hash = .json.configurationItemMD5Hash
+  .aws.config_history.item.state_id = to_string(.json.configurationStateId) ?? null
+  .aws.config_history.item.status = .json.configurationItemStatus
+  .aws.config_history.arn = .json.arn
+  .aws.config_history.resource.type = .json.resourceType
+  .aws.config_history.resource.id = .json.resourceId
+  .aws.config_history.resource.name = .json.resourceName
+  .aws.config_history.resource.created = to_timestamp(.json.resourceCreationTime) ?? null
+  .aws.config_history.related_events = .json.relatedEvents
+
+  .aws.config_history.relationship = map_values(array(.json.relationships) ?? []) -> |v| {
+    ret = {}
+    ret.resource = {}
+    ret.resource.name = v.resourceName
+    ret.resource.type = v.resourceType
+    ret.resource.id = v.resourceId
+    ret.name = strip_whitespace(v.relationshipName) ?? null
+    ret
+  }
+
+  .cloud.provider = "aws"
+  .cloud.region = .json.awsRegion
+  .cloud.account.id = .json.awsAccountId || .json.accountId
+  if .json.availabilityZone != "Not Applicable" && .json.availabilityZone != "Regional" {
+    .cloud.availability_zone = .json.availabilityZone
+  }
+  if is_string(.aws.config_history.resource.type) {
+    # AWS::SQS::Queue -> sqs
+    .cloud.service.name = downcase!(split!(.aws.config_history.resource.type, "::", limit: 3)[1])
+  }
+
+  .aws.config_history.configuration = if is_string(.json.configuration) {
+    .json.configuration
+  } else if !is_empty(object(.json.configuration) ?? {}) {
+    encode_json(.json.configuration)
+  }
+
+  if !is_empty(object(.json.supplementaryConfiguration) ?? {}) {
+    .aws.config_history.supplementary_configuration = encode_json(.json.supplementaryConfiguration)
+  }
+
+  if !is_empty(object(.json.tags) ?? {}) {
+    .aws.config_history.tags = encode_json(.json.tags)
+
+    obj_tags = object!(.json.tags)
+    .tags = []
+    for_each(obj_tags) -> |k, v| {
+      tag = join!([k, v], "=")
+      .tags = push(.tags, tag)
+    }
+  }
+
+  .event.kind = "event"
+  .event.category = ["configuration"]
+  .event.hash = .aws.config_history.item.md5_hash
+
+  if is_string(.aws.config_history.item.status) {
+    status = string!(.aws.config_history.item.status)
+    .event.type = if contains(status, "ResourceDeleted") {
+      ["deletion"]
+    } else if status == "ResourceDiscovered" || status == "ResourceNotRecorded" {
+      ["creation"]
+    } else {
+      ["change"]
+    }
+  }
