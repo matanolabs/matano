@@ -294,8 +294,8 @@ transform: |
     v.geographical_context.postal_code = del(v.geographical_context.postalCode)
     v
   }
-                    
-  .user_agent.original = to_string(.okta.client.user_agent.raw_user_agent) ?? null
+             
+  user_agent_original = to_string(.okta.client.user_agent.raw_user_agent) ?? null
 
   .client.ip = .okta.client.ip
 
@@ -384,7 +384,10 @@ transform: |
    
   del(.json)
 
-  .user_agent = parse_user_agent!(del(.user_agent.original))
+  .user_agent = parse_user_agent(user_agent_original) ?? null
+  .user_agent.original = user_agent_original
+
+  .related.user = unique(.related.user)
 
   .source.as.number = del(.source.as.asn)
 

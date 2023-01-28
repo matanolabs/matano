@@ -16,6 +16,7 @@ mod abusech;
 mod amazon_inspector;
 mod duo;
 mod o365;
+mod okta;
 mod otx;
 
 #[derive(Clone)]
@@ -176,6 +177,7 @@ pub enum LogSource {
     AmazonInspectorPuller(amazon_inspector::AmazonInspectorPuller),
     O365Puller(o365::O365Puller),
     DuoPuller(duo::DuoPuller),
+    OktaPuller(okta::OktaPuller),
     Otx(otx::OtxPuller),
     AbuseChUrlhausPuller(abusech::AbuseChUrlhausPuller),
     AbuseChMalwareBazaarPuller(abusech::AbuseChMalwareBazaarPuller),
@@ -190,6 +192,7 @@ impl LogSource {
             )),
             "o365" => Some(LogSource::O365Puller(o365::O365Puller {})),
             "duo" => Some(LogSource::DuoPuller(duo::DuoPuller {})),
+            "okta" => Some(LogSource::OktaPuller(okta::OktaPuller {})),
             "otx" => Some(LogSource::Otx(otx::OtxPuller {})),
             "abusech_urlhaus" => Some(LogSource::AbuseChUrlhausPuller(
                 abusech::AbuseChUrlhausPuller {},
@@ -207,6 +210,7 @@ impl LogSource {
         match self {
             LogSource::AmazonInspectorPuller(_) => "aws_inspector",
             LogSource::DuoPuller(_) => "duo",
+            LogSource::OktaPuller(_) => "okta",
             LogSource::O365Puller(_) => "o365",
             LogSource::Otx(_) => "otx",
             LogSource::AbuseChUrlhausPuller(_) => "abusech_urlhaus",

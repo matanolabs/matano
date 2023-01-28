@@ -100,6 +100,12 @@ async fn build_contexts() -> HashMap<String, PullLogsContext> {
                 log_source.is_some()
             );
 
+            if managed_type == Some("okta".to_string())
+                && !managed_properties.contains_key("base_url")
+            {
+                return None;
+            }
+
             Some((ls_name?, log_source?, managed_type?, managed_properties))
         })
         .map(|(ls_name, log_source, managed_type, managed_properties)| {
@@ -187,6 +193,13 @@ async fn handler(event: LambdaEvent<SqsEvent>) -> Result<Option<SQSBatchResponse
 
     let futs = records
         .into_iter()
+        .filter(|record| {
+            let ctx = contexts.get(&record.log_source_name);
+            if ctx.is_none() {
+                debug!("Skipping invalid log source: {}", &record.log_source_name);
+            }
+            ctx.is_some()
+        })
         .map(|(msg_id, record)| {
             process_record(msg_id.clone(), record, client.clone(), contexts)
                 .map_err(|e| SQSLambdaError::new(e.to_string(), msg_id))

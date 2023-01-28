@@ -19,7 +19,7 @@ use ring::hmac;
 use serde::{de::DeserializeOwned, Deserialize, Deserializer};
 
 use super::{PullLogs, PullLogsContext};
-use shared::{convert_json_array_str_to_ndjson, JsonValueExt};
+use shared::JsonValueExt;
 
 #[derive(Clone)]
 pub struct DuoPuller;
@@ -49,6 +49,13 @@ impl PullLogs for DuoPuller {
             .await?
             .context("Missing admin secret key")?;
 
+        let mut ret: Vec<u8> = vec![];
+
+        // skip early if secret_key is equal <placeholder>
+        if secret_key == "<placeholder>" {
+            return Ok(ret);
+        }
+
         println!(
             "Collecting Logs from Start: {} - End: {} (or -2)",
             start_dt.format("%Y-%m-%dT%H:%M:%S"),
@@ -70,7 +77,6 @@ impl PullLogs for DuoPuller {
         let maxtime = end_dt.timestamp_millis();
 
         let duo = DuoClient::new(api_hostname, integration_key, secret_key, client.clone())?;
-        let mut ret: Vec<u8> = vec![];
         let newline_u8 = "\n".to_string().into_bytes();
 
         // Authentication logs (v2)
