@@ -193,7 +193,7 @@ async fn handler(event: LambdaEvent<SqsEvent>) -> Result<Option<SQSBatchResponse
 
     let futs = records
         .into_iter()
-        .filter(|record| {
+        .filter(|(_, record)| {
             let ctx = contexts.get(&record.log_source_name);
             if ctx.is_none() {
                 debug!("Skipping invalid log source: {}", &record.log_source_name);
