@@ -1,20 +1,21 @@
 use lru::LruCache;
 use std::{cell::RefCell, collections::BTreeMap, time::Instant};
 
-use vrl::TimeZone;
 use vrl::{diagnostic::Formatter, state, Program, Runtime, TargetValueRef};
+use vrl::{Terminate, TimeZone};
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use log::{debug, error, info, warn};
 
 thread_local! {
     pub static RUNTIME: RefCell<Runtime> = RefCell::new(Runtime::new(state::Runtime::default()));
 }
 
-pub fn vrl<'a>(
+/// Returns None if program was aborted.
+pub fn vrl_opt<'a>(
     program: &'a str,
     value: &'a mut ::value::Value,
-) -> Result<(::value::Value, &'a mut ::value::Value)> {
+) -> Result<Option<(::value::Value, &'a mut ::value::Value)>> {
     thread_local!(
         static CACHE: RefCell<LruCache<String, Result<Program, String>>> =
             RefCell::new(LruCache::new(std::num::NonZeroUsize::new(400).unwrap()));
@@ -85,11 +86,20 @@ pub fn vrl<'a>(
             let mut runtime = r.borrow_mut();
 
             match (*runtime).resolve(&mut target, &compiled, &time_zone) {
-                Ok(result) => Ok(result),
-                Err(err) => Err(anyhow!(err)),
+                Ok(result) => Ok(Some(result)),
+                Err(Terminate::Abort(_)) => Ok(None),
+                Err(e) => Err(anyhow!(e)),
             }
-        });
+        })?;
 
-        result.and_then(|output| Ok((output, value)))
+        Ok(result.and_then(|output| Some((output, value))))
     })
+}
+
+/// Fails if program aborted.
+pub fn vrl<'a>(
+    program: &'a str,
+    value: &'a mut ::value::Value,
+) -> Result<(::value::Value, &'a mut ::value::Value)> {
+    vrl_opt(program, value)?.context("vrl program aborted")
 }

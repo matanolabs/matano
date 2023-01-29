@@ -5,6 +5,7 @@ mod avro;
 mod models;
 use aws_sdk_sns::model::MessageAttributeValue;
 use chrono::Utc;
+use shared::vrl_util::vrl_opt;
 use std::borrow::Cow;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -18,6 +19,8 @@ use tokio::fs;
 use tokio::io::AsyncBufReadExt;
 use tokio::io::AsyncReadExt;
 use tokio::task::spawn_blocking;
+use vrl::prelude::expression::Abort;
+use vrl::Terminate;
 
 #[global_allocator]
 static ALLOC: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
@@ -251,11 +254,12 @@ async fn read_events_s3<'a>(
     s3: &aws_sdk_s3::Client,
     r: &DataBatcherOutputRecord,
     log_source: &String,
-) -> Result<(
-    config::Config,
-    Pin<Box<dyn Stream<Item = Result<Value>> + Send>>,
-)> {
-    println!("Starting download");
+) -> Result<
+    Option<(
+        config::Config,
+        Pin<Box<dyn Stream<Item = Result<Value>> + Send>>,
+    )>,
+> {
     let dec_key = decode(&r.key.clone())?.into_owned();
 
     let res = s3
@@ -264,11 +268,8 @@ async fn read_events_s3<'a>(
         .key(dec_key.clone())
         .send()
         .await
-        .map_err(|e| {
-            error!("Error downloading {} from S3: {}", dec_key, e);
-            e
-        });
-    let mut obj = res?;
+        .map_err(|e| anyhow!(e).context(format!("Error downloading {} from S3", dec_key)));
+    let obj = res?;
 
     let mut reader = tokio::io::BufReader::new(obj.body.into_async_read());
 
@@ -334,14 +335,20 @@ async fn read_events_s3<'a>(
                 ",
                 prog
             );
-            let (table_name, _) = vrl(&wrapped_prog, &mut value)?;
 
-            match &table_name {
-                Value::Null => Ok("default".to_owned()),
-                Value::Bytes(b) => Ok(table_name.to_string_lossy()),
-                _ => {
-                    Err(anyhow!("Invalid table_name returned from select_table_from_payload_metadata expression: {}", table_name))
-                }
+            match vrl_opt(&wrapped_prog, &mut value) {
+                Ok(Some((table_name, _))) => match &table_name {
+                    Value::Null => Ok("default".to_owned()),
+                    Value::Bytes(b) => Ok(table_name.to_string_lossy()),
+                    _ => {
+                        Err(anyhow!("Invalid table_name returned from select_table_from_payload_metadata expression: {}", table_name))
+                    }
+                },
+                Ok(None) => {
+                    debug!("Skipping object: {} for log_source: {} due to select_table_from_payload_metadata aborting", dec_key, log_source);
+                    return Ok(None)
+                },
+                Err(e) => Err(e),
             }
         }
         None => Ok("default".to_owned()),
@@ -386,11 +393,12 @@ async fn read_events_s3<'a>(
             );
             let start = Instant::now();
 
-            // println!("{}", file_string);
             let mut value = value!({ "__raw": file_string });
-            let (expanded_records, _) = vrl(&prog, &mut value)
-                .map_err(|e| anyhow!(e).context("Failed to expand records"))?;
-            println!("Expanded records from payload: took {:?}", start.elapsed(),);
+            let (expanded_records, _) = vrl_opt(&prog, &mut value)
+                .map_err(|e| anyhow!(e).context("Failed to expand records"))?
+                .unwrap_or((Value::Array(Vec::with_capacity(0)), &mut Value::Null));
+
+            info!("Expanded records from payload: took {:?}", start.elapsed(),);
             let expanded_records = match expanded_records {
                 Value::Array(records) => records,
                 _ => return Err(anyhow!("Expanded records must be an array")),
@@ -507,7 +515,7 @@ async fn read_events_s3<'a>(
                 .boxed()
         };
 
-    Ok((table_config, events))
+    Ok(Some((table_config, events)))
 }
 
 pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
@@ -519,14 +527,11 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
         .payload
         .records
         .iter()
-        .flat_map(|record| {
+        .filter_map(|record| {
             let body = record.body.as_ref().expect("SQS message body is required");
-            let data_batcher_request_items: Vec<DataBatcherOutputRecord> = serde_json::from_str(
-                &body,
-            )
-            .expect("Could not deserialize SQS message body as list of DataBatcherRequestItems.");
-            data_batcher_request_items
+            serde_json::from_str::<Vec<DataBatcherOutputRecord>>(&body).ok()
         })
+        .flatten()
         .filter(|d| d.size > 0)
         .filter_map(|d| {
             let managed_bucket = var("MATANO_SOURCES_BUCKET").unwrap();
@@ -556,10 +561,16 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
             let s3 = &s3;
 
             async move {
+                let events = read_events_s3(s3, &item, &log_source).await.unwrap();
+                if events.is_none() {
+                    debug!("Skipped S3 object: {:?}", item.key);
+                    return None;
+                }
+
                 let (default_table_config, raw_lines): (
                     _,
                     Pin<Box<dyn Stream<Item = Result<Value, anyhow::Error>> + Send>>,
-                ) = read_events_s3(s3, &item, &log_source).await.unwrap();
+                ) = events.unwrap();
 
                 let reader = raw_lines;
 
@@ -602,10 +613,13 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
 
 
                                             let table_name = match select_table_from_payload_expr {
-                                                Some(ref select_table_from_payload_expr) => match vrl(select_table_from_payload_expr, &mut v).map_err(|e| {
+                                                Some(ref select_table_from_payload_expr) => match vrl_opt(select_table_from_payload_expr, &mut v).map_err(|e| {
                                                     anyhow!("Failed to select table: {}", e)
                                                 }) {
-                                                    Ok((table_name, _)) => table_name.as_str().unwrap_or_else(|| Cow::from(default_table_name.to_owned())).to_string(),
+                                                    Ok(Some((table_name, _))) => table_name.as_str().unwrap_or_else(|| Cow::from(default_table_name.to_owned())).to_string(),
+                                                    Ok(None) => {
+                                                        return Ok(None);
+                                                    },
                                                     Err(e) => {
                                                         error!("Failed to process event, mutated event state: {}\n {}", v.to_string_lossy(), e);
                                                         return Err(e);
@@ -628,10 +642,13 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
                                             // TODO(shaeq): does this have performance implications?
                                             let wrapped_transform_expr = format_transform_expr(&transform_expr, log_source.starts_with("enrich_"));
 
-                                            match vrl(&wrapped_transform_expr, &mut v).map_err(|e| {
+                                            match vrl_opt(&wrapped_transform_expr, &mut v).map_err(|e| {
                                                 anyhow!("Failed to transform: {}", e)
                                             }) {
-                                                Ok(_) => {},
+                                                Ok(Some(_)) => {},
+                                                Ok(None) => {
+                                                    return Ok(None);
+                                                }
                                                 Err(e) => {
                                                     error!("Failed to process event, mutated event state: {}\n {}", v.to_string_lossy(), e);
                                                     return Err(e);
@@ -665,7 +682,7 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
                                                 }
                                             })?;
 
-                                            Ok((resolved_table_name, v_avro))
+                                            Ok(Some((resolved_table_name, v_avro)))
                                         }
                                         Err(e) => Err(anyhow!("Malformed line: {}", e)),
                                     })
@@ -682,7 +699,7 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
 
                 let stream = transformed_lines_as_json.filter_map(|line| async move {
                     match line {
-                        Ok(line) => Some(line),
+                        Ok(line) => line,
                         Err(e) => {
                             error!("{}", e);
                             None
@@ -690,12 +707,16 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
                     }
                 });
 
-                stream
+                Some(stream)
             }
         })
         .collect::<Vec<_>>();
 
-    let result = join_all(transformed_lines_streams).await;
+    let result = join_all(transformed_lines_streams)
+        .await
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>();
 
     let mut writers_by_table: RefCell<HashMap<String, (Writer<Vec<u8>>, usize)>> =
         RefCell::new(HashMap::new());

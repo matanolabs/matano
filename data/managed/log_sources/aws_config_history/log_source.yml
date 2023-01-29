@@ -1,7 +1,19 @@
 name: aws_config_history
 
 ingest:
-  expand_records_from_payload: "parse_json!(.__raw).configurationItems"
+  select_table_from_payload_metadata: |
+    if contains(.__metadata.s3.key, "ConfigWritabilityCheckFile") ||
+      contains(.__metadata.s3.key, "OversizedChangeNotification")
+    {
+      abort
+    }
+  expand_records_from_payload: |
+    ret, err = parse_json(.__raw)
+    if err != null || !is_array(ret) {
+      abort
+    } else {
+      ret.configurationItems
+    }
 
 schema:
   ecs_field_names:
