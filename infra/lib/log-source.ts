@@ -164,8 +164,9 @@ export class MatanoTable extends Construct {
 
     props.lakeWriterLambda.addEventSource(
       new SqsEventSource(lakeWriterQueue, {
-        batchSize: 10,
+        batchSize: 25,
         maxBatchingWindow: cdk.Duration.seconds(20),
+        reportBatchItemFailures: true,
         ...props.eventSourceProps,
       })
     );

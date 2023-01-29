@@ -8,6 +8,7 @@ use aws_config::SdkConfig;
 use aws_lambda_events::event::sqs::SqsEvent;
 use aws_sdk_s3::types::ByteStream;
 use chrono::{DateTime, Duration, DurationRound};
+use futures::future::join_all;
 use futures::stream::FuturesOrdered;
 use futures::{FutureExt, TryFutureExt};
 use futures_util::stream::StreamExt;
@@ -15,6 +16,7 @@ use lambda_runtime::{run, service_fn, Error as LambdaError, LambdaEvent};
 use lazy_static::lazy_static;
 use log::{debug, error, info};
 use serde::{Deserialize, Serialize};
+use shared::sqs_util::*;
 use shared::{setup_logging, LOG_SOURCES_CONFIG};
 use walkdir::WalkDir;
 
@@ -153,27 +155,12 @@ struct PullerRequest {
     rate_minutes: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-struct SQSBatchResponseItemFailure {
-    itemIdentifier: String,
-}
-impl SQSBatchResponseItemFailure {
-    fn new(id: String) -> SQSBatchResponseItemFailure {
-        SQSBatchResponseItemFailure { itemIdentifier: id }
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-struct SQSBatchResponse {
-    batchItemFailures: Vec<SQSBatchResponseItemFailure>,
-}
-
 async fn handler(event: LambdaEvent<SqsEvent>) -> Result<Option<SQSBatchResponse>> {
     info!("Starting....");
     let client = REQ_CLIENT.clone();
     let contexts = CONTEXTS.get().await;
 
-    let mut failures = vec![];
+    let mut errors = vec![];
 
     let records = event
         .payload
@@ -183,16 +170,16 @@ async fn handler(event: LambdaEvent<SqsEvent>) -> Result<Option<SQSBatchResponse
         .filter_map(|(id, body)| {
             let maybe_req = serde_json::from_str::<PullerRequest>(&body)
                 .map_err(|e| {
-                    error!("Failed to deserialize for msg id: {}, err: {:#}", &id, e);
-                    failures.push(SQSBatchResponseItemFailure::new(id.clone()));
-                    e
+                    let sqs_err = SQSLambdaError::new(
+                        anyhow!(e).context("Failed to deserialize").to_string(),
+                        id.clone(),
+                    );
+                    errors.push(sqs_err)
                 })
                 .ok();
             Some((id, maybe_req?))
         })
         .collect::<Vec<_>>();
-
-    let (msg_ids, records): (Vec<_>, Vec<_>) = records.into_iter().unzip();
 
     info!("Processing {} messages.", records.len());
 
@@ -200,78 +187,60 @@ async fn handler(event: LambdaEvent<SqsEvent>) -> Result<Option<SQSBatchResponse
 
     let futs = records
         .into_iter()
-        .map(|record| {
-            let event_dt = DateTime::parse_from_rfc3339(&record.time).expect("failed to parse");
-
-            let end_dt = event_dt.duration_trunc(Duration::minutes(1)).unwrap();
-            let start_dt = end_dt - Duration::minutes(record.rate_minutes as i64);
-
-            info!(
-                "Processing log_source: {}, from {} to {}",
-                &record.log_source_name, &start_dt, &end_dt
-            );
-
-            let ctx = contexts
-                .get(&record.log_source_name)
-                .context("Invalid log source.")?;
-
-            let puller = ctx.log_source_type.clone();
-            let log_source_name = record.log_source_name.clone();
-            let client = client.clone();
-
-            let fut = async move {
-                ctx.load_is_initial_run().await?;
-                let data = puller
-                    .pull_logs(client.clone(), ctx, start_dt, end_dt)
-                    .await?;
-                let did_upload = upload_data(data, &record.log_source_name).await?;
-                if did_upload {
-                    ctx.mark_initial_run_complete().await?;
-                }
-                anyhow::Ok(())
-            }
-            .map(move |r| r.with_context(|| format!("Error for log_source: {}", log_source_name)));
-            anyhow::Ok(fut)
+        .map(|(msg_id, record)| {
+            process_record(msg_id.clone(), record, client.clone(), contexts)
+                .map_err(|e| SQSLambdaError::new(e.to_string(), msg_id))
         })
-        .zip(msg_ids.iter())
-        .filter_map(|(r, msg_id)| {
-            r.map_err(|e| {
-                error!("{:?}", e);
-                failures.push(SQSBatchResponseItemFailure::new(msg_id.to_string()));
-                e
-            })
-            .ok()
-            .and_then(|r| Some((msg_id, r)))
-        });
-    let (msg_ids, futs): (Vec<_>, Vec<_>) = futs.unzip();
+        .filter_map(|r| r.map_err(|e| errors.push(e)).ok())
+        .collect::<Vec<_>>();
 
-    let results = futs
+    join_all(futs)
+        .await
         .into_iter()
-        .collect::<FuturesOrdered<_>>()
-        .collect::<Vec<_>>()
-        .await;
+        .filter_map(|r| r.map_err(|e| errors.push(e)).ok())
+        .for_each(drop);
 
-    for (result, msg_id) in results.into_iter().zip(msg_ids) {
-        match result {
-            Ok(_) => (),
-            Err(e) => {
-                error!("Failed: {:#}", e);
-                failures.push(SQSBatchResponseItemFailure::new(msg_id.to_owned()));
-            }
-        };
-    }
+    sqs_errors_to_response(errors)
+}
 
-    if failures.is_empty() {
-        Ok(None)
-    } else {
-        error!(
-            "Encountered {} errors processing messages, returning to SQS",
-            failures.len()
-        );
-        Ok(Some(SQSBatchResponse {
-            batchItemFailures: failures,
-        }))
+fn process_record(
+    msg_id: String,
+    record: PullerRequest,
+    client: reqwest::Client,
+    contexts: &'static HashMap<String, PullLogsContext>,
+) -> Result<impl futures::Future<Output = Result<(), SQSLambdaError>>> {
+    let event_dt = DateTime::parse_from_rfc3339(&record.time)?;
+
+    let end_dt = event_dt.duration_trunc(Duration::minutes(1))?;
+    let start_dt = end_dt - Duration::minutes(record.rate_minutes as i64);
+
+    info!(
+        "Processing log_source: {}, from {} to {}",
+        &record.log_source_name, &start_dt, &end_dt
+    );
+
+    let ctx = contexts
+        .get(&record.log_source_name)
+        .context("Invalid log source.")?;
+
+    let puller = ctx.log_source_type.clone();
+    let log_source_name = record.log_source_name.clone();
+    let client = client.clone();
+
+    let fut = async move {
+        ctx.load_is_initial_run().await?;
+        let data = puller.pull_logs(client, ctx, start_dt, end_dt).await?;
+        let did_upload = upload_data(data, &record.log_source_name).await?;
+        if did_upload {
+            ctx.mark_initial_run_complete().await?;
+        }
+        anyhow::Ok(())
     }
+    .map_err(move |e| {
+        let e = e.context(format!("Error for log_source: {}", log_source_name));
+        SQSLambdaError::new(e.to_string(), msg_id)
+    });
+    Ok(fut)
 }
 
 async fn upload_data(data: Vec<u8>, log_source: &str) -> Result<bool> {
@@ -300,10 +269,7 @@ async fn upload_data(data: Vec<u8>, log_source: &str) -> Result<bool> {
         .content_encoding("application/zstd".to_string())
         .send()
         .await
-        .map_err(|e| {
-            error!("Error putting {} to S3: {}", key, e);
-            e
-        })?;
+        .map_err(|e| anyhow!(e).context(format!("Error putting {} to S3", key)))?;
 
     Ok(true)
 }

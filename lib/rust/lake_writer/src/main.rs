@@ -3,8 +3,12 @@ use async_once::AsyncOnce;
 use aws_config::SdkConfig;
 use futures::future::join_all;
 use futures::AsyncReadExt;
+use futures::TryFutureExt;
+use futures::TryStreamExt;
+use log::warn;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use shared::sqs_util::*;
 use shared::*;
 
 use std::collections::HashMap;
@@ -13,13 +17,13 @@ use std::sync::Mutex;
 use std::{time::Instant, vec};
 
 use aws_lambda_events::event::sqs::SqsEvent;
-use lambda_runtime::{run, service_fn, Context, Error as LambdaError, LambdaEvent};
+use lambda_runtime::{run, service_fn, Error as LambdaError, LambdaEvent};
 
 use lazy_static::lazy_static;
 use log::{error, info};
 use threadpool::ThreadPool;
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use futures::StreamExt;
 
 use arrow2::io::avro::avro_schema::file::Block;
@@ -60,35 +64,41 @@ async fn main() -> Result<(), LambdaError> {
     Ok(())
 }
 
-pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
-    let msg_logs = event.payload.records.iter().map(|r| {
-        json!({ "message_id": r.message_id, "body": r.body, "message_attributes": r.message_attributes })
-    }).collect::<Vec<_>>();
+pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<Option<SQSBatchResponse>> {
+    let msg_logs = event
+        .payload
+        .records
+        .iter()
+        .map(|r| json!({ "message_id": r.message_id, "body": r.body }))
+        .collect::<Vec<_>>();
     info!(
         "Received messages: {}",
         serde_json::to_string(&msg_logs).unwrap_or_default()
     );
 
-    let downloads = event
-        .payload
-        .records
+    let records = event.payload.records;
+    let downloads = records
         .iter()
-        .flat_map(|record| {
-            let body = record.body.as_ref().ok_or("SQS message body is required")?;
-            let items = serde_json::from_str::<S3SQSMessage>(&body).map_err(|e| e.to_string());
-            items
+        .flat_map(|r| Some((r.message_id.as_ref()?, r.body.as_ref()?)))
+        .flat_map(|(message_id, body)| {
+            let items = serde_json::from_str::<S3SQSMessage>(&body);
+            anyhow::Ok((message_id.clone(), items?))
         })
         .collect::<Vec<_>>();
+    let skipped_records = records.len() - downloads.len();
+    if skipped_records > 0 {
+        warn!("Skipped {} records not matching structure", skipped_records);
+    }
 
     if downloads.len() == 0 {
         info!("Empty event, returning...");
-        return Ok(());
+        return Ok(None);
     }
 
     let resolved_table_name = downloads
         .first()
-        .map(|m| m.resolved_table_name.clone())
-        .unwrap();
+        .map(|(_, msg)| msg.resolved_table_name.clone())
+        .context("No resolved table name")?;
     info!("Processing for table: {}", resolved_table_name);
 
     let mut table_schema_map = TABLE_SCHEMA_MAP
@@ -110,79 +120,103 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
     let alert_blocks = vec![];
     let alert_blocks_ref = Arc::new(Mutex::new(alert_blocks));
 
+    let mut errors = vec![];
+
     let tasks = downloads
         .into_iter()
-        .map(|r| {
+        .map(|(msg_id, r)| {
             let s3 = &s3;
-            let ret = (async move {
-                let obj_res = s3
+            let msg_id_copy = msg_id.clone();
+            let ret = async move {
+                let obj = s3
                     .get_object()
                     .bucket(r.bucket)
                     .key(r.key.clone())
                     .send()
                     .await
-                    .map_err(|e| {
-                        error!("Error downloading {} from S3: {}", r.key, e);
-                        e
-                    });
-                let obj = obj_res.unwrap();
+                    .context(format!("Error downloading {} from S3", r.key))?;
 
                 let stream = obj.body;
                 let reader = TokioAsyncReadCompatExt::compat(stream.into_async_read());
-                reader
-            });
+                anyhow::Ok((msg_id, reader))
+            }
+            .map_err(|e| SQSLambdaError::new(e.to_string(), msg_id_copy));
             ret
         })
         .collect::<Vec<_>>();
 
-    let mut result = join_all(tasks).await;
+    let result = join_all(tasks)
+        .await
+        .into_iter()
+        .filter_map(|r| r.map_err(|e| errors.push(e)).ok());
 
-    let work_futures = result.iter_mut().map(|reader| {
+    let work_futures = result.map(|(msg_id, mut reader)| {
         let blocks_ref = blocks_ref.clone();
         let alert_blocks_ref = alert_blocks_ref.clone();
         let pool_ref = pool_ref.clone();
         let resolved_table_name = resolved_table_name.clone();
+        let msg_id_copy = msg_id.clone();
 
         async move {
-            if resolved_table_name == ALERTS_TABLE_NAME {
+            let ret = if resolved_table_name == ALERTS_TABLE_NAME {
                 let mut buf = vec![];
-                reader.read_to_end(&mut buf).await.unwrap();
-
-                let mut alert_blocks = alert_blocks_ref.lock().unwrap();
+                reader.read_to_end(&mut buf).await?;
+                let mut alert_blocks = alert_blocks_ref
+                    .lock()
+                    .map_err(|e| anyhow!(e.to_string()))?;
                 alert_blocks.push(buf);
 
-                return None;
+                anyhow::Ok(None)
+            } else {
+                let metadata = read_metadata(&mut reader).await.map_err(|e| anyhow!(e))?;
+
+                let blocks = block_stream(&mut reader, metadata.marker).await;
+
+                let fut = blocks.map_err(|e| anyhow!(e)).try_for_each_concurrent(
+                    1000000,
+                    move |mut block| {
+                        let pool = pool_ref.clone();
+                        let blocks_ref = blocks_ref.clone();
+                        let msg_id = msg_id.clone();
+                        async move {
+                            // the content here is CPU-bounded. It should run on a dedicated thread pool
+                            pool.execute(move || {
+                                let decompressed = Ok(Block::new(0, vec![]))
+                                    .and_then(|mut decompressed_block| {
+                                        decompress_block(
+                                            &mut block,
+                                            &mut decompressed_block,
+                                            metadata.compression,
+                                        )
+                                        .map_err(|e| anyhow!(e))?;
+                                        anyhow::Ok(decompressed_block)
+                                    })
+                                    .map_err(|e| {
+                                        SQSLambdaError::new(e.to_string(), msg_id.clone())
+                                    });
+
+                                let mut blocks = blocks_ref.lock().unwrap();
+                                blocks.push(decompressed);
+                                ()
+                            });
+                            anyhow::Ok(())
+                        }
+                    },
+                );
+
+                fut.await?;
+                anyhow::Ok(Some(metadata))
             };
-
-            let metadata = read_metadata(reader).await.unwrap();
-
-            let blocks = block_stream(reader, metadata.marker).await;
-
-            let fut = blocks.for_each_concurrent(1000000, move |block| {
-                let mut block = block.unwrap();
-
-                let blocks_ref = blocks_ref.clone();
-                let pool = pool_ref.clone();
-
-                // the content here is CPU-bounded. It should run on a dedicated thread pool
-                pool.execute(move || {
-                    let mut decompressed = Block::new(0, vec![]);
-
-                    decompress_block(&mut block, &mut decompressed, metadata.compression).unwrap();
-
-                    let mut blocks = blocks_ref.lock().unwrap();
-                    blocks.push(decompressed);
-                    ()
-                });
-                async {}
-            });
-
-            fut.await;
-            Some(metadata)
+            ret
         }
+        .map_err(move |e| SQSLambdaError::new(e.to_string(), msg_id_copy))
     });
 
-    let results = join_all(work_futures).await;
+    let results = join_all(work_futures)
+        .await
+        .into_iter()
+        .filter_map(|r| r.map_err(|e| errors.push(e)).ok())
+        .collect::<Vec<_>>();
 
     let pool = pool_ref.clone();
     pool.join();
@@ -190,40 +224,46 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
     if resolved_table_name == ALERTS_TABLE_NAME {
         info!("Processing alerts...");
         let alert_blocks_ref =
-            Arc::try_unwrap(alert_blocks_ref).map_err(|e| anyhow!("fail get rowgroups"))?;
+            Arc::try_unwrap(alert_blocks_ref).map_err(|_| anyhow!("fail get rowgroups"))?;
         let alert_blocks = Mutex::into_inner(alert_blocks_ref)?;
         matano_alerts::process_alerts(s3, alert_blocks).await?;
-        return Ok(());
+    } else {
+        let blocks_ref = Arc::try_unwrap(blocks_ref).map_err(|_| anyhow!("fail get rowgroups"))?;
+        let blocks = Mutex::into_inner(blocks_ref)?;
+
+        let blocks = blocks
+            .into_iter()
+            .filter_map(|r| r.map_err(|e| errors.push(e)).ok())
+            .collect::<Vec<_>>();
+        if !blocks.is_empty() {
+            let metadata = results
+                .first()
+                .unwrap()
+                .as_ref()
+                .context("Need metadata!")?;
+            let block = concat_blocks(blocks);
+            let projection = table_schema.fields.iter().map(|_| true).collect::<Vec<_>>();
+
+            // There's an edge case bug here when schema is updated. Using static schema
+            // on old data before schema will throw since field length unequal.
+            // TODO: Group block's by schema and then deserialize.
+            let chunk = deserialize(
+                &block,
+                &table_schema.fields,
+                &metadata.record.fields,
+                &projection,
+            )?;
+            let chunks = vec![chunk];
+
+            let (field, arrays) = struct_wrap_arrow2_for_ffi(&table_schema, chunks);
+            // TODO: fix to use correct partition (@shaeq)
+            let partition_hour = chrono::offset::Utc::now().format("%Y-%m-%d-%H").to_string();
+            write_arrow_to_s3_parquet(s3, resolved_table_name, partition_hour, field, arrays)
+                .await?;
+        }
     }
 
-    let blocks_ref = Arc::try_unwrap(blocks_ref).map_err(|e| anyhow!("fail get rowgroups"))?;
-    let blocks = Mutex::into_inner(blocks_ref)?;
-
-    if blocks.len() == 0 {
-        return Ok(());
-    }
-
-    let metadata = results.first().unwrap().as_ref().unwrap();
-    let block = concat_blocks(blocks);
-    let projection = table_schema.fields.iter().map(|_| true).collect::<Vec<_>>();
-
-    // There's an edge case bug here when schema is updated. Using static schema
-    // on old data before schema will throw since field length unequal.
-    // TODO: Group block's by schema and then deserialize.
-    let chunk = deserialize(
-        &block,
-        &table_schema.fields,
-        &metadata.record.fields,
-        &projection,
-    )?;
-    let chunks = vec![chunk];
-
-    let (field, arrays) = struct_wrap_arrow2_for_ffi(&table_schema, chunks);
-    // TODO: fix to use correct partition (@shaeq)
-    let partition_hour = chrono::offset::Utc::now().format("%Y-%m-%d-%H").to_string();
-    write_arrow_to_s3_parquet(s3, resolved_table_name, partition_hour, field, arrays).await?;
-
-    Ok(())
+    sqs_errors_to_response(errors)
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

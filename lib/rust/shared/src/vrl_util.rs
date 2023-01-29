@@ -86,7 +86,7 @@ pub fn vrl<'a>(
 
             match (*runtime).resolve(&mut target, &compiled, &time_zone) {
                 Ok(result) => Ok(result),
-                Err(err) => Err(anyhow!(err.to_string())),
+                Err(err) => Err(anyhow!(err)),
             }
         });
 
