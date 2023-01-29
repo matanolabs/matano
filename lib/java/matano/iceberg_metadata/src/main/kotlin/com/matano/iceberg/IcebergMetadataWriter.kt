@@ -6,6 +6,8 @@ import com.amazonaws.services.dynamodbv2.model.DeleteItemRequest
 import com.amazonaws.services.dynamodbv2.model.PutItemRequest
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestHandler
+import com.amazonaws.services.lambda.runtime.events.SQSBatchResponse
+import com.amazonaws.services.lambda.runtime.events.SQSBatchResponse.BatchItemFailure
 import com.amazonaws.services.lambda.runtime.events.SQSEvent
 import com.amazonaws.services.lambda.runtime.events.SQSEvent.SQSMessage
 import com.amazonaws.services.s3.event.S3EventNotification
@@ -31,11 +33,11 @@ class LazyConcurrentMap<K, V>(
     override fun get(key: K): V? = map.getOrPut(key) { compute(key) }
 }
 
-class IcebergMetadataHandler : RequestHandler<SQSEvent, Void?> {
+class IcebergMetadataHandler : RequestHandler<SQSEvent, SQSBatchResponse> {
     val writer = IcebergMetadataWriter()
-    override fun handleRequest(event: SQSEvent, context: Context): Void? {
-        writer.handle(event)
-        return null
+
+    override fun handleRequest(event: SQSEvent, context: Context?): SQSBatchResponse {
+        return writer.handle(event)
     }
 }
 
@@ -62,6 +64,8 @@ class IcebergMetadataWriter {
 
         val lazyOverwriteFiles = lazy { table.newOverwrite() }
         fun getOverwrite(): OverwriteFiles = lazyOverwriteFiles.value
+
+        var sqsMessageIds = mutableSetOf<String>()
     }
 
     fun parseObjectKey(key: String): Pair<String, String> {
@@ -75,28 +79,40 @@ class IcebergMetadataWriter {
         return Pair(tableName, partitionPath)
     }
 
-    fun handle(sqsEvent: SQSEvent) {
+    fun handle(sqsEvent: SQSEvent): SQSBatchResponse {
         val tableObjs = LazyConcurrentMap<String, TableObj>({ name -> TableObj(name) })
+        val failures = mutableListOf<String>()
 
         runBlocking {
             for (record in sqsEvent.records) {
-                launch(Dispatchers.IO) { processRecord(record, tableObjs) }
+                launch(Dispatchers.IO) {
+                    try { processRecord(record, tableObjs) } catch (e: Exception) {
+                        logger.error(e.message)
+                        failures.add(record.messageId)
+                    }
+                }
             }
         }
         logger.info("Committing...")
         runBlocking {
             for (tableObj in tableObjs.values) {
                 launch(Dispatchers.IO) {
-                    if (tableObj.lazyAppendFiles.isInitialized()) {
-                        tableObj.getAppendFiles().commit()
-                    }
-                    if (tableObj.lazyOverwriteFiles.isInitialized()) {
-                        tableObj.getOverwrite().commit()
+                    try {
+                        if (tableObj.lazyAppendFiles.isInitialized()) {
+                            tableObj.getAppendFiles().commit()
+                        }
+                        if (tableObj.lazyOverwriteFiles.isInitialized()) {
+                            tableObj.getOverwrite().commit()
+                        }
+                    } catch (e: Exception) {
+                        logger.error(e.message)
+                        failures.addAll(tableObj.sqsMessageIds)
                     }
                 }
             }
         }
         logger.info("DONE!")
+        return SQSBatchResponse(failures.map { BatchItemFailure(it) })
     }
 
     fun readParquetMetrics(s3Path: String, table: Table): Metrics {
@@ -126,6 +142,7 @@ class IcebergMetadataWriter {
 
         try {
             val tableObj = tableObjs[tableName] ?: throw RuntimeException("table must exist.")
+            tableObj.sqsMessageIds.add(sqsMessage.messageId)
             val icebergTable = tableObj.table
 
             val isEnrichmentTable = icebergTable.name().split(".").last().startsWith("enrich_")

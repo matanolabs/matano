@@ -231,6 +231,7 @@ export class IcebergMetadata extends Construct {
     const eventSource = new SqsEventSource(props.lakeStorageBucket.queue, {
       batchSize: 1000,
       maxBatchingWindow: cdk.Duration.seconds(1),
+      reportBatchItemFailures: true,
     });
     this.metadataWriterFunction.currentVersion.addEventSource(eventSource);
 
