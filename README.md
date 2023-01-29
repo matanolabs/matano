@@ -73,12 +73,18 @@ We are on a mission to build the first open platform for threat hunting, detecti
 
 #### Managed log sources
 
-- [**AWS CloudTrail**](https://www.matano.dev/docs/log-sources/managed-log-sources/cloudtrail)
-- [**AWS Route53**](https://www.matano.dev/docs/log-sources/managed-log-sources/route53-resolver-logs)
-- [**AWS ELB Logs**](https://www.matano.dev/docs/log-sources/managed-log-sources/aws-elb)
-- [**Amazon S3 Server Access Logs**](https://www.matano.dev/docs/log-sources/managed-log-sources/amazon-s3-server-access-logs)
+- [**AWS CloudTrail**](https://www.matano.dev/docs/log-sources/managed-log-sources/aws/cloudtrail)
+- [**AWS Route53**](https://www.matano.dev/docs/log-sources/managed-log-sources/aws/route53-resolver-logs)
+- [**AWS VPC Flow**](https://www.matano.dev/docs/log-sources/managed-log-sources/aws/vpcflow)
+- [**AWS Config**](https://www.matano.dev/docs/log-sources/managed-log-sources/aws/aws-config)
+- [**AWS ELB**](https://www.matano.dev/docs/log-sources/managed-log-sources/aws/aws-elb)
+- [**Amazon S3 Server Access**](https://www.matano.dev/docs/log-sources/managed-log-sources/aws/amazon-s3-server-access-logs)
+- [**Amazon Inspector**](https://www.matano.dev/docs/log-sources/managed-log-sources/aws/amazon-inspector)
 - [**Crowdstrike**](https://www.matano.dev/docs/log-sources/managed-log-sources/crowdstrike)
+- [**Duo**](https://www.matano.dev/docs/log-sources/managed-log-sources/duo)
+- [**GitHub**](https://www.matano.dev/docs/log-sources/managed-log-sources/github)
 - [**Office 365**](https://www.matano.dev/docs/log-sources/managed-log-sources/office365)
+- [**Okta**](https://www.matano.dev/docs/log-sources/managed-log-sources/okta)
 - [**Suricata**](https://www.matano.dev/docs/log-sources/managed-log-sources/suricata)
 - [**Zeek**](https://www.matano.dev/docs/log-sources/managed-log-sources/zeek)
 - [**Custom 🔧**](#-log-transformation--data-normalization)
