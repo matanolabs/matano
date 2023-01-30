@@ -34,6 +34,11 @@ impl PullLogs for O365Puller {
             .await?
             .context("Missing client secret")?;
 
+        // skip early if client_secret is equal <placeholder>
+        if client_secret == "<placeholder>" {
+            return Ok(vec![]);
+        }
+
         let access_token = match cache.get("access_token") {
             Some(token) => token.to_owned(),
             None => {

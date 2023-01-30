@@ -21,6 +21,7 @@ export const PULLER_LOG_SOURCE_TYPES: string[] = [
   "aws_inspector",
   "o365",
   "duo",
+  "okta",
   "enrich_abusech_urlhaus",
   "enrich_abusech_malwarebazaar",
   "enrich_abusech_threatfox",
@@ -30,6 +31,7 @@ const LOG_SOURCE_RATES: Record<string, cdk.Duration> = {
   aws_inspector: cdk.Duration.minutes(10),
   o365: cdk.Duration.minutes(1),
   duo: cdk.Duration.minutes(1),
+  okta: cdk.Duration.minutes(1),
   enrich_abusech_urlhaus: cdk.Duration.minutes(5),
   enrich_abusech_malwarebazaar: cdk.Duration.hours(1),
   enrich_abusech_threatfox: cdk.Duration.hours(1),
@@ -69,6 +71,10 @@ export class ExternalLogPuller extends Construct {
       } else if (logSourceName.startsWith("duo")) {
         placeholder = {
           secret_key: placeholder_val,
+        };
+      } else if (logSourceName.startsWith("okta")) {
+        placeholder = {
+          api_token: placeholder_val,
         };
       } else {
         placeholder = {

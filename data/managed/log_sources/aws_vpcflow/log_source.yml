@@ -1,0 +1,319 @@
+name: aws_vpcflow
+
+transform: |
+  .event.original = string!(del(.message) || del(.json.message))
+  .event.type = ["connection"]
+  .event.category = ["network"]
+  .event.kind  = "event"
+
+  if starts_with(.event.original, "version") || starts_with(.event.original, "instance-id") {
+    abort
+  }
+
+  token_count = length(split(.event.original, " "))
+
+  if token_count == 14 {
+    .aws.vpcflow = parse_aws_vpc_flow_log!(.event.original)
+  } else if token_count == 6 {
+    .aws.vpcflow = parse_aws_vpc_flow_log!(.event.original, "instance_id interface_id srcaddr dstaddr pkt_srcaddr pkt_dstaddr")
+  } else if token_count == 17 {
+    .aws.vpcflow = parse_aws_vpc_flow_log!(.event.original, "version interface_id account_id vpc_id subnet_id instance_id srcaddr dstaddr srcport dstport protocol tcp_flags type pkt_srcaddr pkt_dstaddr action log_status")
+  } else if token_count == 21 {
+    .aws.vpcflow = parse_aws_vpc_flow_log!(.event.original, "version vpc_id subnet_id instance_id interface_id account_id type srcaddr dstaddr srcport dstport pkt_srcaddr pkt_dstaddr protocol bytes packets start end action tcp_flags log_status")
+  } else if token_count == 29 {
+    _grokked = parse_groks!(.event.original, ["%{INT:aws.vpcflow.version} %{INT:aws.vpcflow.account_id} %{DATA:aws.vpcflow.interface_id} %{IP:aws.vpcflow.srcaddr} %{IP:aws.vpcflow.dstaddr} %{INT:aws.vpcflow.srcport} %{INT:aws.vpcflow.dstport} %{INT:aws.vpcflow.protocol} %{INT:aws.vpcflow.packets} %{INT:aws.vpcflow.bytes} %{INT:aws.vpcflow.start} %{INT:aws.vpcflow.end} %{DATA:aws.vpcflow.action} %{DATA:aws.vpcflow.log_status} %{DATA:aws.vpcflow.vpc_id} %{DATA:aws.vpcflow.subnet_id} %{DATA:aws.vpcflow.instance_id} %{INT:aws.vpcflow.tcp_flags} %{DATA:aws.vpcflow.type} %{IP:aws.vpcflow.pkt_srcaddr} %{IP:aws.vpcflow.pkt_dstaddr} %{DATA:cloud.region} %{DATA:cloud.availability_zone} %{DATA:aws.vpcflow.sublocation.type} %{DATA:aws.vpcflow.sublocation.id} %{DATA:aws.vpcflow.pkt_src_service} %{DATA:aws.vpcflow.pkt_dst_service} %{DATA:network.direction} %{INT:aws.vpcflow.traffic_path}"])
+    _grokked = map_values(_grokked, recursive: true) -> |v| {
+      if is_nullish(v) { null } else if is_string(v) { to_int(v) ?? v } else { v }
+    }
+    . = merge(., _grokked, deep: true)
+  } else {
+    .aws.vpcflow = parse_aws_vpc_flow_log!(.event.original)
+  }
+
+  # cast certain fields to string
+  if .aws.vpcflow.account_id != null {
+    .aws.vpcflow.account_id = to_string!(.aws.vpcflow.account_id)
+  }
+  if .aws.vpcflow.version != null {
+    .aws.vpcflow.version = to_string!(.aws.vpcflow.version)
+  }
+  if .aws.vpcflow.protocol != null {
+    .aws.vpcflow.protocol = to_string!(.aws.vpcflow.protocol)
+  }
+  if .aws.vpcflow.tcp_flags != null {
+    .aws.vpcflow.tcp_flags = to_string!(.aws.vpcflow.tcp_flags)
+  }
+  if .aws.vpcflow.traffic_path != null {
+    .aws.vpcflow.traffic_path = to_string!(.aws.vpcflow.traffic_path)
+  }
+
+  if .aws.vpcflow.end != null {                 
+    .ts = to_timestamp!(.aws.vpcflow.end, "seconds")
+  }
+
+  if .aws.vpcflow.start != null {                                        
+    .event.start = to_timestamp!(.aws.vpcflow.start, "seconds")
+  }
+
+  if .aws.vpcflow.end != null {
+     .event.end = to_timestamp!(.aws.vpcflow.end, "seconds")
+  }
+
+  del(.aws.vpcflow.start)
+  del(.aws.vpcflow.end)
+
+  if .aws.vpcflow.action  == "ACCEPT" {
+      .event.outcome = "success"
+  }
+
+  if .aws.vpcflow.action  == "REJECT" {
+      .event.outcome = "failure"
+  }
+
+
+  .source.address  = del(.aws.vpcflow.srcaddr)
+
+  .source.ip = .source.address
+
+  if .aws.vpcflow.srcport != null {
+      .source.port = .aws.vpcflow.srcport
+  }
+
+  .destination.address  = del(.aws.vpcflow.dstaddr)
+
+  .destination.ip = .destination.address
+
+  if .aws.vpcflow.dstport  != null {
+      .destination.port = .aws.vpcflow.dstport
+  }
+
+  .network.iana_number  = del(.aws.vpcflow.protocol)
+
+  if .aws.vpcflow.packets != null {             
+      .source.packets = .aws.vpcflow.packets
+  }           
+
+  if .aws.vpcflow.bytes != null {    
+      .source.bytes = .aws.vpcflow.bytes
+  }      
+
+  .network.bytes = .source.bytes
+
+  .network.packets = .source.packets
+
+  if .source.ip != null{
+    .source.ip = string!(.source.ip)
+    if contains(.source.ip,  ".") {
+      .network.type = "ipv4"
+    } else if contains(.source.ip,  ":") {
+      .network.type = "ipv6"
+    }
+  }
+
+  if .network.iana_number !=  null {
+    iana_number = .network.iana_number
+    if (iana_number == "0") {
+        .network.transport = "hopopt"
+    }  else if (iana_number == "1") {
+        .network.transport = "icmp"
+    }  else if (iana_number == "2") {
+        .network.transport = "igmp"
+    }  else if (iana_number == "6") {
+        .network.transport = "tcp"
+    }  else if (iana_number == "8") {
+        .network.transport = "egp"
+    }  else if (iana_number == "17") {
+        .network.transport = "udp"
+    }  else if (iana_number == "47") {
+        .network.transport = "gre"
+    }  else if (iana_number == "50") {
+        .network.transport = "esp"
+    }  else if (iana_number == "58") {
+        .network.transport = "ipv6-icmp"
+    } else if (iana_number == "112") {
+        .network.transport = "vrrp"
+    } else if (iana_number == "132") {
+        .network.transport = "sctp"
+    }
+  }
+
+  # TODO(): add community network  id
+
+  .source.as.number = del(.source.as.asn)
+
+  .source.as.organization.name = del(.source.as.organization_name)
+
+  .destination.as.number = del(.destination.as.asn)
+
+  .destination.as.organization.name = del(.destination.as.organization_name)
+
+  if .source.ip != null && .destination.ip != null {
+    .related.ip = [ .source.ip, .destination.ip ]
+  }
+
+  .cloud.provider = "aws"
+
+  if .aws.vpcflow.account_id != null {
+    .cloud.account.id = .aws.vpcflow.account_id
+  }
+
+  if .aws.vpcflow.instance_id != null && .aws.vpcflow.instance_id != "  -" {
+    .cloud.instance.id = .aws.vpcflow.instance_id
+  }
+
+  if .aws.vpcflow.tcp_flags != null {
+    flags = to_int!(.aws.vpcflow.tcp_flags)
+    .aws.vpcflow.tcp_flags_array = []
+    if bitwise_and(flags, 1) != 0 {
+      .aws.vpcflow.tcp_flags_array = push(.aws.vpcflow.tcp_flags_array, "fin")
+    }
+    if bitwise_and(flags, 2) != 0 {
+      .aws.vpcflow.tcp_flags_array = push(.aws.vpcflow.tcp_flags_array, "syn")
+    }
+    if bitwise_and(flags, 4) != 0 {
+      .aws.vpcflow.tcp_flags_array = push(.aws.vpcflow.tcp_flags_array, "rst")
+    }
+    if bitwise_and(flags, 8) != 0 {
+      .aws.vpcflow.tcp_flags_array = push(.aws.vpcflow.tcp_flags_array, "psh")
+    }
+    if bitwise_and(flags, 16) != 0 {
+      .aws.vpcflow.tcp_flags_array = push(.aws.vpcflow.tcp_flags_array, "ack")
+    }
+    if bitwise_and(flags, 32) != 0 {
+      .aws.vpcflow.tcp_flags_array = push(.aws.vpcflow.tcp_flags_array, "urg")
+    }
+  }
+
+  del(.json)
+  del(.aws.vpcflow.srcaddr)
+  del(.aws.vpcflow.srcport)
+  del(.aws.vpcflow.dstaddr)
+  del(.aws.vpcflow.dstport)
+  del(.aws.vpcflow.bytes)
+  del(.aws.vpcflow.packets)
+  del(.aws.vpcflow.protocol)
+
+schema:
+  ecs_field_names:
+    - cloud.account.id
+    - cloud.availability_zone
+    - cloud.instance.id
+    - cloud.instance.name
+    - cloud.machine.type
+    - cloud.project.id
+    - cloud.provider
+    - cloud.region
+    - container.id
+    - container.image.name
+    - container.labels
+    - container.name
+    - destination.address
+    - destination.as.number
+    - destination.as.organization.name
+    - destination.geo.city_name
+    - destination.geo.continent_name
+    - destination.geo.country_iso_code
+    - destination.geo.country_name
+    - destination.geo.location
+    - destination.geo.region_iso_code
+    - destination.geo.region_name
+    - destination.ip
+    - destination.port
+    - ecs.version
+    - error.message
+    - event.category
+    - event.dataset
+    - event.end
+    - event.kind
+    - event.module
+    - event.original
+    - event.outcome
+    - event.start
+    - event.type
+    - host.architecture
+    - host.domain
+    - host.hostname
+    - host.id
+    - host.ip
+    - host.mac
+    - host.name
+    - host.os.family
+    - host.os.kernel
+    - host.os.name
+    - host.os.platform
+    - host.os.version
+    - host.type
+    - network.bytes
+    - network.community_id
+    - network.direction
+    - network.iana_number
+    - network.packets
+    - network.transport
+    - network.type
+    - related.ip
+    - source.address
+    - source.as.number
+    - source.as.organization.name
+    - source.bytes
+    - source.geo.city_name
+    - source.geo.continent_name
+    - source.geo.country_iso_code
+    - source.geo.country_name
+    - source.geo.location
+    - source.geo.region_iso_code
+    - source.geo.region_name
+    - source.ip
+    - source.packets
+    - source.port
+    - tags
+  fields:
+    - name: aws
+      type:
+        type: struct
+        fields:
+          - name: vpcflow
+            type:
+              type: struct
+              fields:
+                - name: account_id
+                  type: string
+                - name: action
+                  type: string
+                - name: instance_id
+                  type: string
+                - name: interface_id
+                  type: string
+                - name: log_status
+                  type: string
+                - name: pkt_dst_service
+                  type: string
+                - name: pkt_dstaddr
+                  type: string
+                - name: pkt_src_service
+                  type: string
+                - name: pkt_srcaddr
+                  type: string
+                - name: sublocation
+                  type:
+                    type: struct
+                    fields:
+                      - name: id
+                        type: string
+                      - name: type
+                        type: string
+                - name: subnet_id
+                  type: string
+                - name: tcp_flags
+                  type: string
+                - name: tcp_flags_array
+                  type:
+                    type: list
+                    element: string
+                - name: traffic_path
+                  type: string
+                - name: type
+                  type: string
+                - name: version
+                  type: string
+                - name: vpc_id
+                  type: string
