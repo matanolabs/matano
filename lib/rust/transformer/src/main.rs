@@ -384,7 +384,14 @@ async fn read_events_s3<'a>(
                 Some(_) | None => None,
             },
         )
-    }).ok_or(anyhow!("Configuration doesn't exist for table name returned from select_table_from_payload_metadata expression: {}", &table_name))?;
+    });
+
+    // TODO: might want to differentiate between a valid or invalid table.
+    if table_config.is_none() {
+        info!("Skipping key: {} as configuration doesn't exist for table name: {} returned from select_table_from_payload_metadata expression", r.key, &table_name);
+        return Ok(None);
+    }
+    let table_config = table_config.unwrap();
 
     let expand_records_from_payload_expr = table_config
         .get_string("ingest.expand_records_from_payload")
@@ -583,7 +590,7 @@ pub(crate) async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
             async move {
                 let events = read_events_s3(s3, &item, &log_source).await?;
                 if events.is_none() {
-                    info!("Skipped S3 object: {:?} due to user abort instruction", item.key);
+                    info!("Skipped S3 object: {}", item.key);
                     return Ok(None);
                 }
 
