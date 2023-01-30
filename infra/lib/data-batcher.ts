@@ -46,11 +46,15 @@ export class DataBatcher extends Construct {
     });
     this.batcherFunction.addEventSource(sqsEventSource);
     this.outputQueue.grantSendMessages(this.batcherFunction);
+    this.outputQueue.grantSendMessages(props.transformerFunction);
+    this.outputDLQ.grantSendMessages(props.transformerFunction);
 
     props.transformerFunction.addEventSource(
       new SqsEventSource(this.outputQueue, {
         batchSize: 1,
       })
     );
+    props.transformerFunction.addEnvironment("MATANO_BATCHER_QUEUE_URL", this.outputQueue.queueUrl);
+    props.transformerFunction.addEnvironment("MATANO_BATCHER_DLQ_URL", this.outputDLQ.queueUrl);
   }
 }

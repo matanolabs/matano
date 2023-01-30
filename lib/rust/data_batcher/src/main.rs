@@ -148,6 +148,7 @@ async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
                     size,
                     sequencer: object.sequencer.as_ref().unwrap().to_owned(),
                     log_source: ls,
+                    retry_depth: Some(0),
                 };
                 Some(r)
             } else {

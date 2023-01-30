@@ -4,16 +4,13 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone)]
 pub struct SQSLambdaError {
-    msg: String,
-    sqs_message_id: String,
+    pub msg: String,
+    pub id: String,
 }
 
 impl SQSLambdaError {
-    pub fn new(msg: String, sqs_message_id: String) -> Self {
-        SQSLambdaError {
-            msg,
-            sqs_message_id,
-        }
+    pub fn new(msg: String, id: String) -> Self {
+        SQSLambdaError { msg, id }
     }
 }
 
@@ -21,11 +18,7 @@ impl std::error::Error for SQSLambdaError {}
 
 impl std::fmt::Display for SQSLambdaError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(
-            f,
-            "Failure for SQS message ID:{} - {} ",
-            self.sqs_message_id, self.msg
-        )
+        write!(f, "Failure for SQS message ID:{} - {} ", self.id, self.msg)
     }
 }
 
@@ -68,7 +61,7 @@ pub fn sqs_errors_to_response(errors: Vec<SQSLambdaError>) -> Result<Option<SQSB
             .into_iter()
             .map(|e| {
                 error!("Encountered error: {}", e.msg);
-                e.sqs_message_id
+                e.id
             })
             .collect::<Vec<_>>();
         Ok(Some(SQSBatchResponse::new(ids)))

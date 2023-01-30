@@ -11,6 +11,17 @@ pub struct DataBatcherOutputRecord {
     pub sequencer: String,
     #[serde(skip)]
     pub log_source: String,
+    #[serde(default)]
+    pub retry_depth: Option<i64>,
+}
+
+impl DataBatcherOutputRecord {
+    pub fn increment_retry_depth(&mut self) {
+        self.retry_depth = match self.retry_depth {
+            Some(depth) => Some(depth + 1),
+            None => Some(1),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

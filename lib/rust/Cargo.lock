@@ -4738,6 +4738,7 @@ dependencies = [
  "aws-config",
  "aws-sdk-s3",
  "aws-sdk-sns",
+ "aws-sdk-sqs",
  "aws_lambda_events",
  "chrono",
  "config",

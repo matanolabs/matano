@@ -1,10 +1,13 @@
-// This example requires the following input to succeed:
-// { "command": "do something" }
 mod arrow;
 mod avro;
 mod models;
 use aws_sdk_sns::model::MessageAttributeValue;
+use aws_sdk_sqs::model::SendMessageBatchRequestEntry;
 use chrono::Utc;
+use futures::join;
+use futures::try_join;
+use futures::TryFutureExt;
+use shared::sqs_util::SQSLambdaError;
 use shared::vrl_util::vrl_opt;
 use std::borrow::Cow;
 use std::cell::RefCell;
@@ -66,6 +69,8 @@ lazy_static! {
         AsyncOnce::new(async { aws_sdk_s3::Client::new(AWS_CONFIG.get().await) });
     static ref SNS_CLIENT: AsyncOnce<aws_sdk_sns::Client> =
         AsyncOnce::new(async { aws_sdk_sns::Client::new(AWS_CONFIG.get().await) });
+    static ref SQS_CLIENT: AsyncOnce<aws_sdk_sqs::Client> =
+        AsyncOnce::new(async { aws_sdk_sqs::Client::new(AWS_CONFIG.get().await) });
     static ref AVRO_SCHEMAS: HashMap<String, Schema> = {
         let mut m = HashMap::new();
         let schemas_path = Path::new("/opt/schemas");
@@ -150,7 +155,7 @@ async fn main() -> Result<(), LambdaError> {
     setup_logging();
     let start = Instant::now();
 
-    let func = service_fn(my_handler);
+    let func = service_fn(handler);
     run(func).await?;
 
     debug!("Call lambda took {:.2?}", start.elapsed());
@@ -305,8 +310,7 @@ async fn read_events_s3<'a>(
         let log_sources_config = c.borrow();
 
         (*log_sources_config)
-            .get(log_source)
-            .unwrap()
+            .get(log_source)?
             .base
             .get_string("ingest.select_table_from_payload_metadata")
             .ok()
@@ -314,7 +318,7 @@ async fn read_events_s3<'a>(
 
     let table_name = match select_table_expr {
         Some(prog) => {
-            let r_json = serde_json::to_value(r).unwrap();
+            let r_json = serde_json::to_value(r)?;
             let mut value = value!({
                 "__metadata": {
                     "s3": {
@@ -358,23 +362,28 @@ async fn read_events_s3<'a>(
         let log_sources_config = c.borrow();
 
         let table_conf = (*log_sources_config)
-        .get(log_source)
-        .unwrap()
-        .tables.get(&table_name).cloned();
+            .get(log_source)?
+            .tables
+            .get(&table_name)
+            .cloned();
 
-        table_conf.or(match (*log_sources_config)
-        .get(log_source)
-        .unwrap()
-        .base.get_string("ingest.select_table_from_payload").ok() {
-            Some(s) if !s.is_empty()  => {
-                // TODO(shaeq): make this less hacky, we return a dummy config if select_table_from_payload is set
-                let config = config::Config::builder()
-                    .set_default("name", "dummy")
-                    .unwrap().build().unwrap();
-                Some(config)
-            }
-            Some(_) | None => None
-        })
+        table_conf.or(
+            match (*log_sources_config)
+                .get(log_source)?
+                .base
+                .get_string("ingest.select_table_from_payload")
+                .ok()
+            {
+                Some(s) if !s.is_empty() => {
+                    // TODO(shaeq): make this less hacky, we return a dummy config if select_table_from_payload is set
+                    config::Config::builder()
+                        .set_default("name", "dummy")
+                        .ok()
+                        .and_then(|c| c.build().ok())
+                }
+                Some(_) | None => None,
+            },
+        )
     }).ok_or(anyhow!("Configuration doesn't exist for table name returned from select_table_from_payload_metadata expression: {}", &table_name))?;
 
     let expand_records_from_payload_expr = table_config
@@ -445,8 +454,7 @@ async fn read_events_s3<'a>(
             let log_sources_config = c.borrow();
 
             (*log_sources_config)
-                .get(log_source)
-                .unwrap()
+                .get(log_source)?
                 .base
                 .get_bool("ingest.s3_source.is_from_cloudwatch_log_subscription")
                 .ok()
@@ -472,9 +480,7 @@ async fn read_events_s3<'a>(
                     Ok(Value::Object(mut line)) => {
                         let log_events = line
                             .remove("logEvents")
-                            .ok_or(anyhow!(
-                                "logEvents not found in cloudwatch log subscription payload"
-                            ))
+                            .context("logEvents not found in cloudwatch log subscription payload")
                             .unwrap();
 
                         match log_events {
@@ -518,23 +524,33 @@ async fn read_events_s3<'a>(
     Ok(Some((table_config, events)))
 }
 
-pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
+pub(crate) async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
     event.payload.records.first().iter().for_each(|r| {
         info!("Request: {}", serde_json::to_string(&json!({ "message_id": r.message_id, "body": r.body, "message_attributes": r.message_attributes })).unwrap_or_default());
     });
 
-    let s3_download_items = event
+    let mut errors = vec![];
+
+    let data_batcher_records = event
         .payload
         .records
         .iter()
         .filter_map(|record| {
-            let body = record.body.as_ref().expect("SQS message body is required");
+            let body = record
+                .body
+                .as_ref()
+                .context("SQS message body is required")
+                .ok()?;
             serde_json::from_str::<Vec<DataBatcherOutputRecord>>(&body).ok()
         })
         .flatten()
+        .collect::<Vec<DataBatcherOutputRecord>>();
+
+    let s3_download_items = data_batcher_records
+        .iter()
         .filter(|d| d.size > 0)
         .filter_map(|d| {
-            let managed_bucket = var("MATANO_SOURCES_BUCKET").unwrap();
+            let managed_bucket = var("MATANO_SOURCES_BUCKET").ok()?;
             let log_source =
                 get_log_source_from_bucket_and_key(&d.bucket, &d.key, managed_bucket.as_str());
             if log_source.is_none() {
@@ -555,16 +571,20 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
 
     println!("current_num_threads() = {}", rayon::current_num_threads());
 
+    let s3_download_items_copy = s3_download_items.clone();
+
     let transformed_lines_streams = s3_download_items
         .into_iter()
         .map(|(item, log_source)| {
             let s3 = &s3;
 
+            let item_copy = item.clone();
+
             async move {
-                let events = read_events_s3(s3, &item, &log_source).await.unwrap();
+                let events = read_events_s3(s3, &item, &log_source).await?;
                 if events.is_none() {
-                    debug!("Skipped S3 object: {:?}", item.key);
-                    return None;
+                    info!("Skipped S3 object: {:?} due to user abort instruction", item.key);
+                    return Ok(None);
                 }
 
                 let (default_table_config, raw_lines): (
@@ -578,8 +598,7 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
                     let log_sources_config = c.borrow();
 
                     (*log_sources_config)
-                        .get(&log_source)
-                        .unwrap()
+                        .get(&log_source)?
                         .base
                         .get_string("ingest.select_table_from_payload")
                         .ok()
@@ -632,8 +651,7 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
                                                 let log_sources_config = c.borrow();
 
                                                 let transform = (*log_sources_config)
-                                                .get(&log_source)
-                                                .unwrap()
+                                                .get(&log_source)?
                                                 .tables.get(&table_name)?.get_string("transform");
 
                                                 transform.ok()
@@ -663,7 +681,7 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
 
                                             let avro_schema = AVRO_SCHEMAS
                                                 .get(&resolved_table_name)
-                                                .expect("Failed to find avro schema");
+                                                .context("Failed to find avro schema")?;
 
                                             let v_clone = log_enabled!(log::Level::Debug).then(|| v.clone());
 
@@ -707,14 +725,17 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
                     }
                 });
 
-                Some(stream)
-            }
+                anyhow::Ok(Some(stream))
+            }.map_err(move |e|
+                SQSLambdaError::new(e.to_string(), item_copy.sequencer)
+            )
         })
         .collect::<Vec<_>>();
 
     let result = join_all(transformed_lines_streams)
         .await
         .into_iter()
+        .filter_map(|r| r.map_err(|e| errors.push(e)).ok())
         .flatten()
         .collect::<Vec<_>>();
 
@@ -763,19 +784,24 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
     let futures = writers_by_table
         .into_iter()
         .map(|(resolved_table_name, (writer, rows))| {
+            let record = s3_download_items_copy
+                .iter()
+                .find(|(_, log_source)| resolved_table_name.contains(log_source))
+                .unwrap()
+                .0;
+
             async move {
-                let bytes = writer.into_inner().unwrap();
+                let bytes = writer.into_inner()?;
                 if bytes.len() == 0 || rows == 0 {
-                    return;
+                    return Ok(());
                 }
-                println!("Rows: {}", rows);
+                debug!("Writing number of Rows: {}", rows);
 
                 let uuid = Uuid::new_v4();
-                let bucket = var("MATANO_REALTIME_BUCKET_NAME").unwrap().to_string();
+                let bucket = var("MATANO_REALTIME_BUCKET_NAME")?;
                 let key = format!("transformed/{}/{}.snappy.avro", &resolved_table_name, uuid);
                 info!("Writing Avro file to S3 path: {}/{}", bucket, key);
-                // let local_path = output_schemas_path.join(format!("{}.avro", resolved_table_name));
-                // fs::write(local_path, bytes).await.unwrap();
+
                 s3.put_object()
                     .bucket(&bucket)
                     .key(&key)
@@ -784,14 +810,10 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
                     // .content_encoding("application/zstd".to_string())
                     .send()
                     .await
-                    .map_err(|e| {
-                        error!("Error putting {} to S3: {}", key, e);
-                        e
-                    })
-                    .unwrap();
+                    .map_err(|e| anyhow!(e).context(format!("Error putting {} to S3", key)))?;
 
                 sns.publish()
-                    .topic_arn(var("MATANO_REALTIME_TOPIC_ARN").unwrap().to_string())
+                    .topic_arn(var("MATANO_REALTIME_TOPIC_ARN")?)
                     .message(
                         json!({
                             "bucket": &bucket,
@@ -810,13 +832,85 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
                     .send()
                     .await
                     .map_err(|e| {
-                        error!("Error publishing to SNS: {}", e);
-                        e
-                    })
-                    .unwrap();
+                        anyhow!(e).context(format!(
+                            "Error publishing SNS notification for S3 key: {}",
+                            key
+                        ))
+                    })?;
+                anyhow::Ok(())
             }
+            .map_err(move |e| SQSLambdaError::new(e.to_string(), record.sequencer.clone()))
         });
 
-    join_all(futures).await;
+    join_all(futures).await.into_iter().for_each(|r| {
+        r.map_err(|e| errors.push(e)).ok();
+    });
+
+    // Error handling strategy:
+    // If all records failed, we return an error and the lambda will retry
+    // If some records failed, we retry the failed records up to 3 times by sending back to the queue with a retry_depth attribute
+    // If some records failed and we've retried them 3 times, we send them to the DLQ
+    if !errors.is_empty() {
+        errors.iter().for_each(|e| error!("{}", e));
+        if errors.len() == data_batcher_records.len() {
+            return Err(anyhow!("All records failed!"));
+        } else {
+            let failures = errors.iter().map(|e| {
+                data_batcher_records
+                    .iter()
+                    .find(|r| r.sequencer == e.id)
+                    .unwrap()
+                    .clone()
+            });
+            let (retryable, un_retryable): (Vec<_>, Vec<_>) =
+                failures.partition(|r| r.retry_depth.unwrap_or(0) < 3);
+
+            handle_all_partial_failures(retryable, un_retryable).await?;
+        }
+    }
+
+    Ok(())
+}
+
+async fn handle_all_partial_failures(
+    mut retryable: Vec<DataBatcherOutputRecord>,
+    un_retryable: Vec<DataBatcherOutputRecord>,
+) -> Result<()> {
+    let output_queue_url = std::env::var("MATANO_BATCHER_QUEUE_URL")?;
+    let dlq_url = std::env::var("MATANO_BATCHER_DLQ_URL")?;
+
+    retryable
+        .iter_mut()
+        .for_each(|item| item.increment_retry_depth());
+
+    let retryable_fut = handle_partial_failure(retryable, output_queue_url);
+    let un_retryable_fut = handle_partial_failure(un_retryable, dlq_url);
+
+    try_join!(retryable_fut, un_retryable_fut)?;
+
+    Ok(())
+}
+
+async fn handle_partial_failure(
+    failures: Vec<DataBatcherOutputRecord>,
+    queue_url: String,
+) -> Result<()> {
+    if failures.is_empty() {
+        return Ok(());
+    }
+    let sqs = SQS_CLIENT.get().await.clone();
+    let body = serde_json::to_string(&failures)?;
+
+    error!(
+        "Encountered partial failure, sending messages: {} to queue: {}.",
+        &body, &queue_url
+    );
+
+    sqs.send_message()
+        .message_body(body)
+        .queue_url(queue_url)
+        .send()
+        .await?;
+
     Ok(())
 }
