@@ -1,0 +1,118 @@
+ingest:
+  select_table_from_payload_metadata: |
+    if !contains(.__metadata.s3.key, ".csv") {
+      abort
+    }
+  csv_headers: ["Bucket", "Key"]
+
+schema:
+  ecs_field_names:
+    - event.kind
+    - event.category
+    - event.type
+    - cloud.provider
+    - cloud.service.name
+    - file.size
+    - file.path
+    - file.mtime
+    - file.hash.md5
+    - related.hash
+
+  fields:
+    - name: aws
+      type:
+        type: struct
+        fields:
+          - name: s3inventory
+            type:
+              type: struct
+              fields:
+                - name: bucket
+                  type: string
+                - name: key
+                  type: string
+                - name: version_id
+                  type: string
+                - name: version_id
+                  type: string
+                - name: is_latest
+                  type: boolean
+                - name: is_delete_marker
+                  type: boolean
+                - name: size
+                  type: long
+                - name: last_modified
+                  type: timestamp
+                - name: e_tag
+                  type: string
+                - name: storage_class
+                  type: string
+                - name: is_multipart_uploaded
+                  type: boolean
+                - name: replication_status
+                  type: string
+                - name: encryption_status
+                  type: string
+                - name: intelligent_tiering_access_tier
+                  type: string
+                - name: bucket_key_status
+                  type: string
+                - name: checksum_algorithm
+                  type: string
+                - name: object_lock
+                  type:
+                    type: struct
+                    fields:
+                      - name: retain_until
+                        type: timestamp
+                      - name: mode
+                        type: string
+                      - name: legal_hold_status
+                        type: string
+
+transform: |
+  .event.kind = "event"
+  .event.category = ["file"]
+  .event.type = ["info"]
+
+  .cloud.provider = "aws"
+  .cloud.service.name = "s3"
+
+  .aws.s3inventory.bucket = .json.Bucket
+  .aws.s3inventory.key = .json.Key
+
+  .aws.s3inventory.version_id = .json.VersionId
+  if .json.IsLatest != null {
+    .aws.s3inventory.is_latest = to_bool(.json.IsLatest) ?? null
+  }
+  if .json.IsDeleteMarker != null {
+    .aws.s3inventory.is_delete_marker = to_bool(.json.IsDeleteMarker) ?? null
+  }
+  .aws.s3inventory.size = to_int(.json.Size) ?? null
+  .aws.s3inventory.last_modified = to_timestamp(.json.LastModifiedDate) ?? null
+
+  .aws.s3inventory.e_tag = .json.ETag
+  .aws.s3inventory.storage_class = .json.StorageClass
+  if .json.IsMultipartUploaded != null {
+    .aws.s3inventory.is_multipart_uploaded = to_bool(.json.IsMultipartUploaded) ?? null
+  }
+  .aws.s3inventory.replication_status = .json.ReplicationStatus
+  .aws.s3inventory.encryption_status = .json.EncryptionStatus
+  .aws.s3inventory.intelligent_tiering_access_tier = .json.IntelligentTieringAccessTier
+
+  .aws.s3inventory.object_lock = {}
+  .aws.s3inventory.object_lock.retain_until = to_timestamp(del(.json.ObjectLockRetainUntilDate)) ?? null
+  .aws.s3inventory.object_lock.mode = del(.json.ObjectLockMode)
+  .aws.s3inventory.object_lock.legal_hold_status = del(.json.ObjectLockLegalHoldStatus)
+
+  .aws.s3inventory.bucket_key_status = .json.BucketKeyStatus
+  .aws.s3inventory.checksum_algorithm = .json.ChecksumAlgorithm
+
+  .file.path = join!(["s3://", .aws.s3inventory.bucket, "/", .aws.s3inventory.key])
+  .file.mtime = .aws.s3inventory.last_modified
+  .file.hash.md5 = .aws.s3inventory.e_tag
+  .file.size = .aws.s3inventory.size
+
+  if .file.hash.md5 != null {
+    .related.hash = [.file.hash.md5]
+  }

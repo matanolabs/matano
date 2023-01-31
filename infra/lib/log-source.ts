@@ -19,6 +19,11 @@ type ConfigurationInfo = { type: "shared" | "managed" | "user"; relativePath: st
 function mergeManagedConfig(userConfig: any, managedConfig: any, managedLogSourceType: string) {
   const merged = mergeDeep(userConfig, managedConfig);
 
+  if (userConfig?.ingest?.csv_headers != null) {
+    if (!merged.ingest) merged.ingest = {};
+    merged.ingest.csv_headers = userConfig.ingest.csv_headers;
+  }
+
   if (managedConfig.transform != null && userConfig.transform != null) {
     const headerLength = managedConfig.transform.split("\n", 1).shift().length;
     managedConfig.transform += `${"#".repeat(headerLength)}\n`;
@@ -65,6 +70,7 @@ export interface LogSourceConfig {
     select_table_from_payload?: string;
     expand_records_from_payload?: string;
     compression: string;
+    csv_headers: string[];
     s3_source?: {
       bucket_name?: string;
       key_prefix?: string;
@@ -97,6 +103,7 @@ const MANAGED_LOG_SOURCE_PREFIX_MAP: Record<string, string> = {
   aws_cloudtrail: "aws",
   aws_route53_resolver_logs: "aws",
   aws_s3access: "aws",
+  aws_s3inventory: "aws",
   aws_elb: "aws",
   aws_inspector: "aws",
   aws_config_history: "aws",
@@ -336,6 +343,7 @@ export class MatanoLogSource extends Construct {
         sqs_source: this.logSourceConfig?.ingest?.sqs_source,
         select_table_from_payload_metadata: this.logSourceConfig.ingest?.select_table_from_payload_metadata,
         select_table_from_payload: this.logSourceConfig.ingest?.select_table_from_payload,
+        csv_headers: this.logSourceConfig.ingest?.csv_headers,
       },
       managed: this.logSourceConfig.managed,
     };
