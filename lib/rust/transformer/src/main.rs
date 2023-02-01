@@ -427,24 +427,16 @@ async fn read_events_s3<'a>(
             })
         }
         None => {
-            if dec_key.as_str().ends_with("csv") {
-                let rdr = AsyncReaderBuilder::new()
-                    .has_headers(true)
-                    .create_deserializer(reader);
-
-                let records = rdr.into_deserialize::<HashMap<String, serde_json::Value>>();
-
-                records
-                    .map(|r| match r {
-                        Ok(r) => {
-                            let json_val: serde_json::Value = serde_json::Value::Object(
-                                serde_json::Map::from_iter(r.into_iter()),
-                            );
-                            Ok(Value::from(json_val))
-                        }
-                        Err(e) => Err(anyhow!(e)),
-                    })
-                    .boxed()
+            if dec_key.as_str().contains(".csv") {
+                let headers = table_config
+                    .get_array("ingest.csv_headers")
+                    .ok()
+                    .and_then(|arr| {
+                        arr.into_iter()
+                            .map(|x| x.into_string().ok())
+                            .collect::<Option<Vec<_>>>()
+                    });
+                read_csv(headers, reader)
             } else {
                 FramedRead::new(reader, LinesCodec::new())
                     .map(|v| match v {
@@ -920,4 +912,34 @@ async fn handle_partial_failure(
         .await?;
 
     Ok(())
+}
+
+fn read_csv(
+    headers: Option<Vec<String>>,
+    reader: Box<dyn tokio::io::AsyncRead + Send + Unpin>,
+) -> Pin<Box<dyn Stream<Item = Result<Value, anyhow::Error>> + std::marker::Send>> {
+    let headers = headers.map(|h| csv_async::StringRecord::from(h));
+
+    let csv_rdr = AsyncReaderBuilder::new()
+        .has_headers(headers.is_none())
+        .flexible(true)
+        .trim(csv_async::Trim::All)
+        .create_reader(reader);
+
+    csv_rdr
+        .into_records()
+        .map(move |r| {
+            let r = r?;
+            let out: HashMap<String, serde_json::Value> = r.deserialize(headers.as_ref())?;
+            anyhow::Ok(out)
+        })
+        .map(|r| match r {
+            Ok(r) => {
+                let json_val: serde_json::Value =
+                    serde_json::Value::Object(serde_json::Map::from_iter(r.into_iter()));
+                Ok(Value::from(json_val))
+            }
+            Err(e) => Err(anyhow!(e)),
+        })
+        .boxed()
 }
