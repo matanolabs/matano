@@ -794,7 +794,7 @@ pub(crate) async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
                 if bytes.len() == 0 || rows == 0 {
                     return Ok(());
                 }
-                debug!("Writing number of Rows: {}", rows);
+                info!("Writing number of Rows: {}", rows);
 
                 let uuid = Uuid::new_v4();
                 let bucket = var("MATANO_REALTIME_BUCKET_NAME")?;

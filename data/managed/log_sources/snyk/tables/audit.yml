@@ -1,0 +1,79 @@
+name: audit
+
+schema:
+  ecs_field_names:
+    - ecs.version
+    - event.action
+    - event.created
+    - event.dataset
+    - event.module
+    - event.original
+    - host.architecture
+    - host.domain
+    - host.hostname
+    - host.id
+    - host.ip
+    - host.mac
+    - host.name
+    - host.os.family
+    - host.os.kernel
+    - host.os.name
+    - host.os.platform
+    - host.os.version
+    - host.type
+    - log.file.path
+    - message
+    - tags
+    - user.group.id
+    - user.id
+  fields:
+    - name: snyk
+      type:
+        type: struct
+        fields:
+          - name: projects
+            type: string
+          - name: related
+            type:
+              type: struct
+              fields:
+                - name: projects
+                  type: string
+          - name: audit
+            type:
+              type: struct
+              fields:
+                - name: content
+                  type: string
+                - name: org_id
+                  type: string
+                - name: project_id
+                  type: string
+
+transform: |
+  .event.original = encode_json(.json)
+                        
+  .snyk.audit = del(.json)
+
+  .user.group.id = del(.snyk.audit.groupId)
+
+  .snyk.audit.org_id = del(.snyk.audit.orgId)
+
+  .snyk.audit.project_id = del(.snyk.audit.projectId)
+
+  .user.id = del(.snyk.audit.userId)
+
+  .event.action = del(.snyk.audit.event)
+
+  if .snyk.audit.created != null {                                               
+    .ts = to_timestamp!(.snyk.audit.created, "seconds") 
+  }
+
+  .snyk.audit.content = if .snyk.audit.content != null {
+    encode_json(.snyk.audit.content)
+  } else {
+    null
+  }
+
+  del(.snyk.audit.created)
+  del(.json)

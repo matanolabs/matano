@@ -1,22 +1,14 @@
-use std::{pin::Pin, sync::Arc};
+use std::sync::Arc;
 use tokio::sync::Mutex;
 
 use anyhow::{anyhow, Context as AnyhowContext, Error, Result};
-use async_stream::{stream, try_stream};
 use async_trait::async_trait;
 use chrono::{DateTime, FixedOffset, Local, NaiveDateTime, Utc};
-use futures::{future::join_all, FutureExt, Stream};
-use futures_util::pin_mut;
-use futures_util::stream::StreamExt;
 use lazy_static::lazy_static;
 use log::{debug, error, info};
 use regex::Regex;
-use std::collections::HashMap;
-use std::time::Duration;
 
-use reqwest::{header, Method, RequestBuilder, StatusCode};
-use ring::hmac;
-use serde::{de::DeserializeOwned, Deserialize, Deserializer};
+use reqwest::header;
 
 use super::{PullLogs, PullLogsContext};
 use shared::JsonValueExt;
@@ -116,7 +108,7 @@ impl PullLogs for OktaPuller {
             .get_secret_field("api_token")
             .await?
             .context("Missing okta api token")?;
-        
+
         // skip early if api_token is equal <placeholder>
         if api_token == "<placeholder>" {
             return Ok(vec![]);

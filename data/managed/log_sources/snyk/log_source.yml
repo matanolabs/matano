@@ -1,0 +1,3 @@
+ingest:
+  select_table_from_payload: |
+    string!(del(.json._table))

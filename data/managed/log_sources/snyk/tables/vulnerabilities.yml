@@ -1,0 +1,252 @@
+name: vulnerabilities
+
+schema:
+  ecs_field_names:
+    - ecs.version
+    - event.created
+    - event.dataset
+    - event.module
+    - event.original
+    - host.architecture
+    - host.domain
+    - host.hostname
+    - host.id
+    - host.ip
+    - host.mac
+    - host.name
+    - host.os.family
+    - host.os.kernel
+    - host.os.name
+    - host.os.platform
+    - host.os.version
+    - host.type
+    - log.file.path
+    - message
+    - tags
+    - user.group.id
+    - user.id
+    - vulnerability.category
+    - vulnerability.classification
+    - vulnerability.enumeration
+    - vulnerability.id
+    - vulnerability.reference
+    - vulnerability.scanner.vendor
+    - vulnerability.score.base
+    - vulnerability.score.version
+    - vulnerability.severity
+  fields:
+    - name: snyk
+      type:
+        type: struct
+        fields:
+          - name: projects
+            type:
+              type: list
+              element:
+                type: struct
+                fields:
+                  - name: id
+                    type: string
+                  - name: name
+                    type: string
+                  - name: package_manager
+                    type: string
+                  - name: source
+                    type: string
+                  - name: target_file
+                    type: string
+                  - name: url
+                    type: string
+          - name: related
+            type:
+              type: struct
+              fields:
+                - name: projects
+                  type:
+                    type: list
+                    element: string
+          - name: vulnerabilities
+            type:
+              type: struct
+              fields:
+                - name: credit
+                  type:
+                    type: list
+                    element: string
+                - name: cvss3
+                  type: string
+                - name: disclosure_time
+                  type: timestamp
+                - name: exploit_maturity
+                  type: string
+                - name: id
+                  type: string
+                - name: identifiers
+                  type:
+                    type: struct
+                    fields:
+                      - name: alternative
+                        type:
+                          type: list
+                          element: string
+                      - name: cwe
+                        type:
+                          type: list
+                          element: string
+                - name: introduced_date
+                  type: timestamp
+                - name: is_fixed
+                  type: boolean
+                - name: is_ignored
+                  type: boolean
+                - name: is_patchable
+                  type: boolean
+                - name: is_patched
+                  type: boolean
+                - name: is_pinnable
+                  type: boolean
+                - name: is_upgradable
+                  type: boolean
+                - name: jira_issue_url
+                  type: string
+                - name: language
+                  type: string
+                - name: original_severity
+                  type: long
+                - name: package
+                  type: string
+                - name: package_manager
+                  type: string
+                - name: patches
+                  type:
+                    type: list
+                    element:
+                      type: struct
+                      fields:
+                        - name: id
+                          type: string
+                        - name: modification_time
+                          type: timestamp
+                        - name: urls
+                          type:
+                            type: list
+                            element: string
+                        - name: version
+                          type: string
+                - name: priority_score
+                  type: long
+                - name: publication_time
+                  type: timestamp
+                - name: reachability
+                  type: string
+                - name: semver
+                  type: string
+                - name: title
+                  type: string
+                - name: type
+                  type: string
+                - name: unique_severities_list
+                  type:
+                    type: list
+                    element: string
+                - name: version
+                  type: string
+
+transform: |
+  .event.original = encode_json(.json)                        
+
+  .vulnerability.classification = "CVSS"
+
+  .vulnerability.category = ["Github"]
+
+  .vulnerability.scanner.vendor = "Snyk"
+
+  .snyk = del(.json)
+
+  .snyk.vulnerabilities = del(.snyk.issue)
+
+  .vulnerability.score.version = "3.0"
+
+  if .snyk.vulnerabilities.identifiers.CVE != null { 
+      .vulnerability.enumeration = "CVE"
+  }
+      
+  if .snyk.vulnerabilities.identifiers.CVE == null && .snyk.vulnerabilities.identifiers.ALTERNATIVE != null { 
+      .vulnerability.enumeration = "SNYK"
+  }
+
+  .vulnerability.description = del(.snyk.vulnerabilities.description)
+
+  if .snyk.vulnerabilities.identifiers.CVE != null || .snyk.vulnerabilities.identifiers.ALTERNATIVE != null { 
+      .vulnerability.id = del(.snyk.vulnerabilities.identifiers.CVE) || del(.snyk.vulnerabilities.identifiers.ALTERNATIVE)
+      # TODO(shaeq): can there be more than one id?
+      .vulnerability.id = .vulnerability.id[0]
+  }
+
+  if .snyk.vulnerabilities.cvssScore != null {                       
+      .vulnerability.score.base = to_float!(.snyk.vulnerabilities.cvssScore) 
+  }
+
+  if .snyk.vulnerabilties.semver != null { 
+      .snyk.vulnerabilties.semver = encode_json(.snyk.vulnerabilties.semver)
+  }                                        
+
+  .vulnerability.severity = del(.snyk.vulnerabilities.severity)
+
+  .snyk.vulnerabilities.cvss3 = del(.snyk.vulnerabilities.CVSSv3)
+
+  .snyk.vulnerabilities.disclosure_time = del(.snyk.vulnerabilities.disclosureTime)
+
+  .snyk.vulnerabilities.exploit_maturity = del(.snyk.vulnerabilities.exploitMaturity)
+
+  .snyk.vulnerabilities.identifiers.alternative = del(.snyk.vulnerabilities.identifiers.ALTERNATIVE)
+
+  .snyk.vulnerabilities.identifiers.cwe = del(.snyk.vulnerabilities.identifiers.CWE)
+
+  .snyk.vulnerabilities.is_ignored = del(.snyk.vulnerabilities.isIgnored)
+
+  .snyk.vulnerabilities.is_patchable = del(.snyk.vulnerabilities.isPatchable)
+
+  .snyk.vulnerabilities.is_patched = del(.snyk.vulnerabilities.isPatched)
+
+  .snyk.vulnerabilities.is_pinnable = del(.snyk.vulnerabilities.isPinnable)
+
+  .snyk.vulnerabilities.is_upgradable = del(.snyk.vulnerabilities.isUpgradable)
+
+  .snyk.vulnerabilities.priority_score = del(.snyk.vulnerabilities.priorityScore)
+
+  .snyk.vulnerabilities.publication_time = del(.snyk.vulnerabilities.publicationTime)
+
+  .snyk.vulnerabilities.unique_severities_list = del(.snyk.vulnerabilities.uniqueSeveritiesList)
+
+  .snyk.vulnerabilities.package_manager = del(.snyk.vulnerabilities.packageManager)
+
+  .snyk.vulnerabilities.jira_issue_url = del(.snyk.vulnerabilities.jiraIssueUrl)
+
+  .snyk.vulnerabilities.original_severity = del(.snyk.vulnerabilities.originalSeverity)
+
+  .snyk.vulnerabilities.is_fixed = del(.snyk.isFixed)
+
+  .snyk.vulnerabilities.introduced_date = del(.snyk.introducedDate)
+
+  .vulnerability.reference = del(.snyk.vulnerabilities.url)
+
+  if .snyk.vulnerabilities.patches != null { 
+    .snyk.vulnerabilities.patches = map_values(array!(.snyk.vulnerabilities.patches)) -> |p| { 
+      p.modification_time = del(p.modificationTime)
+      p
+    }                    
+  }
+
+  if .snyk.projects != null {  
+    .snyk.projects = map_values(array!(.snyk.projects)) -> |p| { 
+      p.package_manager = del(p.packageManager)
+      p.target_file = del(p.targetFile)
+      p
+    }
+    .snyk.related.projects = map_values(.snyk.projects) -> |p| { 
+      p.name
+    }                      
+  }
+
+  del(.snyk.vulnerabilities.cvssScore)
