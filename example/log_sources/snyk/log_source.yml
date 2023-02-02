@@ -1,0 +1,7 @@
+name: snyk
+
+managed:
+  type: SNYK
+  properties:
+    group_id: group-c1c-1c1c-1c1c-1c1c-1c1c1c1c1c1c
+    org_id: org-c1c-1c1c-1c1c-1c1c-1c1c1c1c1c1c

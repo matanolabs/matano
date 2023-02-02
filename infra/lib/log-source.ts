@@ -114,6 +114,7 @@ const MANAGED_LOG_SOURCE_PREFIX_MAP: Record<string, string> = {
   o365: "o365",
   github_audit: "github",
   okta: "okta",
+  snyk: "snyk",
   suricata: "suricata",
   zeek: "zeek",
   matano_alerts: "matano_alerts", // doesn't really make sense but OK

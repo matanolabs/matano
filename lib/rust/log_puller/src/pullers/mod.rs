@@ -18,6 +18,7 @@ mod duo;
 mod o365;
 mod okta;
 mod otx;
+mod snyk;
 
 #[derive(Clone)]
 pub struct PullerCache {
@@ -179,6 +180,7 @@ pub enum LogSource {
     DuoPuller(duo::DuoPuller),
     OktaPuller(okta::OktaPuller),
     Otx(otx::OtxPuller),
+    Snyk(snyk::SnykPuller),
     AbuseChUrlhausPuller(abusech::AbuseChUrlhausPuller),
     AbuseChMalwareBazaarPuller(abusech::AbuseChMalwareBazaarPuller),
     AbuseChThreatfoxPuller(abusech::AbuseChThreatfoxPuller),
@@ -194,6 +196,7 @@ impl LogSource {
             "duo" => Some(LogSource::DuoPuller(duo::DuoPuller {})),
             "okta" => Some(LogSource::OktaPuller(okta::OktaPuller {})),
             "otx" => Some(LogSource::Otx(otx::OtxPuller {})),
+            "snyk" => Some(LogSource::Snyk(snyk::SnykPuller {})),
             "abusech_urlhaus" => Some(LogSource::AbuseChUrlhausPuller(
                 abusech::AbuseChUrlhausPuller {},
             )),
@@ -213,6 +216,7 @@ impl LogSource {
             LogSource::OktaPuller(_) => "okta",
             LogSource::O365Puller(_) => "o365",
             LogSource::Otx(_) => "otx",
+            LogSource::Snyk(_) => "snyk",
             LogSource::AbuseChUrlhausPuller(_) => "abusech_urlhaus",
             LogSource::AbuseChMalwareBazaarPuller(_) => "abusech_malwarebazaar",
             LogSource::AbuseChThreatfoxPuller(_) => "abusech_threatfox",
