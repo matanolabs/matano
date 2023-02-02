@@ -57,7 +57,7 @@ schema:
                   type: timestamp
                 - name: dedupe
                   type: string
-                - name: breached
+                - name: activated
                   type: boolean
                 - name: title
                   type: string

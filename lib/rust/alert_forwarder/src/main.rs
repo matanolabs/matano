@@ -195,7 +195,7 @@ async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
                 # del(v.matano.alert.rule.destinations)
                 # del(v.matano.alert.rule.deduplication_window)
                 # del(v.matano.alert.dedupe)
-                # del(v.matano.alert.breached)
+                # del(v.matano.alert.activated)
                 # del(matano.alert.first_matched_at)
                 matano_alert_info = del(v.matano.alert)
                 del(v.ts)

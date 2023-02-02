@@ -86,6 +86,7 @@ We are on a mission to build the first open platform for threat hunting, detecti
 - [**GitHub**](https://www.matano.dev/docs/log-sources/managed-log-sources/github)
 - [**Office 365**](https://www.matano.dev/docs/log-sources/managed-log-sources/office365)
 - [**Okta**](https://www.matano.dev/docs/log-sources/managed-log-sources/okta)
+- [**Snyk**](https://www.matano.dev/docs/log-sources/managed-log-sources/snyk)
 - [**Suricata**](https://www.matano.dev/docs/log-sources/managed-log-sources/suricata)
 - [**Zeek**](https://www.matano.dev/docs/log-sources/managed-log-sources/zeek)
 - [**Custom 🔧**](#-log-transformation--data-normalization)
@@ -327,7 +328,7 @@ All alerts are automatically stored in a Matano table named `matano_alerts`. The
 
 **Example Queries**
 
-Summarize alerts in the last week that have breached threshold
+Summarize alerts in the last week that are activated (exceeded the threshold)
 
 ```sql
 select
@@ -345,7 +346,7 @@ from
   matano_alerts
 where
   matano.alert.first_matched_at > (current_timestamp - interval '7' day)
-  and matano.alert.breached = true
+  and matano.alert.activated = true
 group by
   matano.alert.rule.name,
   matano.alert.id

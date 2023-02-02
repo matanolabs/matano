@@ -115,8 +115,8 @@ lazy_static! {
 /// 4. Aggregate the new data by (rule_name, dedupe).
 /// 4. Aggregate the existing data by (rule_name, dedupe) and calculate active alerts and their counts + window start times.
 /// 5. Determine the alert ids for new values to add (create if necessary).
-/// 6. Mutate the new avro values and add in fields like matano.alert.id,breached,created, etc.
-/// 7. Track if an existing alert was just breached, and if so, mutate the corresponding values to set matano.alert,breached = true.
+/// 6. Mutate the new avro values and add in fields like matano.alert.id,activated,created, etc.
+/// 7. Track if an existing alert was just activated, and if so, mutate the corresponding values to set matano.alert,activated = true.
 /// 8. Encode modified/created partition values as parquet and write to S3.
 /// 9. Call iceberg helper lambda to do Iceberg commit with overwrites/appends as necessary.
 /// FIN!
@@ -180,7 +180,7 @@ pub async fn process_alerts(s3: aws_sdk_s3::Client, data: Vec<Vec<u8>>) -> Resul
         let default = NewAlertData {
             rule_match_ids: vec![],
             alert_id: None,
-            breached: None,
+            activated: None,
             created_micros: None,
             first_matched_at_micros: None,
             deduplication_window_micros,
@@ -217,8 +217,8 @@ pub async fn process_alerts(s3: aws_sdk_s3::Client, data: Vec<Vec<u8>>) -> Resul
                 .get_nested("matano.alert.created")
                 .and_then(|v| v.as_ts());
 
-            let matano_alert_breached = value
-                .get_nested("matano.alert.breached")
+            let matano_alert_activated = value
+                .get_nested("matano.alert.activated")
                 .and_then(|v| v.as_bool())
                 .unwrap_or(false);
 
@@ -241,8 +241,8 @@ pub async fn process_alerts(s3: aws_sdk_s3::Client, data: Vec<Vec<u8>>) -> Resul
                         rule_match_ids: vec![],
                         first_matched_at,
                         created: matano_alert_created,
-                        breached: matano_alert_breached,
-                        breached_changed: false,
+                        activated: matano_alert_activated,
+                        activated_changed: false,
                     };
                     let key = (matano_alert_rule_name, matano_alert_dedupe);
                     let entry = existing_aggregation_map.entry(key).or_insert(data);
@@ -252,8 +252,8 @@ pub async fn process_alerts(s3: aws_sdk_s3::Client, data: Vec<Vec<u8>>) -> Resul
         }
     }
 
-    // Compute alert ids and breached status for new values.
-    // Also, if an alert was just breached, mark it so we can update the existing values
+    // Compute alert ids and activated status for new values.
+    // Also, if an alert was just activated, mark it so we can update the existing values
     info!("Computing alert ids...");
     for ((rule_name, dedupe), new_alert_data) in new_value_agg.iter_mut() {
         let key = (rule_name.clone(), dedupe.clone());
@@ -266,26 +266,26 @@ pub async fn process_alerts(s3: aws_sdk_s3::Client, data: Vec<Vec<u8>>) -> Resul
             let alert_id = entry.alert_id.clone();
             let existing_count = entry.rule_match_ids.len();
             let first_matched_at = entry.first_matched_at;
-            let did_breach = (existing_count + new_match_count) >= threshold;
-            let breached_changed = !entry.breached && did_breach;
+            let did_activate = (existing_count + new_match_count) >= threshold;
+            let activated_changed = !entry.activated && did_activate;
 
-            let created_ts = match (entry.created, breached_changed) {
+            let created_ts = match (entry.created, activated_changed) {
                 (Some(ts), _) => Some(ts),
                 (None, true) => Some(current_micros),
                 (None, false) => None,
             };
 
-            entry.breached_changed = breached_changed;
+            entry.activated_changed = activated_changed;
             new_alert_data.alert_id = Some(alert_id);
-            new_alert_data.breached = Some(did_breach);
+            new_alert_data.activated = Some(did_activate);
             new_alert_data.created_micros = created_ts;
             new_alert_data.first_matched_at_micros = Some(first_matched_at);
         } else {
             let new_alert_id = uuid::Uuid::new_v4().to_string();
-            let did_breach = new_match_count >= threshold;
+            let did_activate = new_match_count >= threshold;
             new_alert_data.alert_id = Some(new_alert_id);
-            new_alert_data.breached = Some(did_breach);
-            if did_breach {
+            new_alert_data.activated = Some(did_activate);
+            if did_activate {
                 new_alert_data.created_micros = Some(current_micros);
             }
             new_alert_data.first_matched_at_micros = Some(current_micros);
@@ -307,9 +307,9 @@ pub async fn process_alerts(s3: aws_sdk_s3::Client, data: Vec<Vec<u8>>) -> Resul
         let key = (matano_alert_rule_name, matano_alert_dedupe);
         let new_alert_data = new_value_agg.get(&key).unwrap();
 
-        let is_breached = existing_aggregation_map
+        let is_activated = existing_aggregation_map
             .get(&key)
-            .map_or(new_alert_data.breached.unwrap_or(false), |e| e.breached);
+            .map_or(new_alert_data.activated.unwrap_or(false), |e| e.activated);
         let new_value_mut = new_value.as_mut();
 
         new_value_mut.insert_record_nested(
@@ -319,8 +319,8 @@ pub async fn process_alerts(s3: aws_sdk_s3::Client, data: Vec<Vec<u8>>) -> Resul
         )?;
 
         new_value_mut.insert_record_nested(
-            "matano.alert.breached",
-            apache_avro::types::Value::Boolean(*new_alert_data.breached.as_ref().unwrap())
+            "matano.alert.activated",
+            apache_avro::types::Value::Boolean(*new_alert_data.activated.as_ref().unwrap())
                 .into_union(),
         )?;
 
@@ -338,7 +338,7 @@ pub async fn process_alerts(s3: aws_sdk_s3::Client, data: Vec<Vec<u8>>) -> Resul
         }.into_union();
         new_value_mut.insert_record_nested("matano.alert.created", created_av)?;
 
-        if is_breached {
+        if is_activated {
             let rule_match = new_value_mut.clone();
             let rule_match_json =
                 apache_avro::from_value::<serde_json::Value>(&rule_match).unwrap();
@@ -361,7 +361,7 @@ pub async fn process_alerts(s3: aws_sdk_s3::Client, data: Vec<Vec<u8>>) -> Resul
         }
     }
 
-    // Update the existing values if an alert was breached just now
+    // Update the existing values if an alert was activated just now
     info!("Updating existing values...");
     let mut modified_partitions = HashSet::with_capacity(existing_values_vecs.len());
     for ((_, partition), existing_values) in existing_values_vecs.iter() {
@@ -376,11 +376,11 @@ pub async fn process_alerts(s3: aws_sdk_s3::Client, data: Vec<Vec<u8>>) -> Resul
 
             let key = (matano_alert_rule_name, matano_alert_dedupe);
             if let Some(existing_data) = existing_aggregation_map.get(&key) {
-                if existing_data.breached_changed
+                if existing_data.activated_changed
                     && matano_alert_id.map_or(false, |id| id == existing_data.alert_id)
                 {
                     value.as_mut().insert_record_nested(
-                        "matano.alert.breached",
+                        "matano.alert.activated",
                         apache_avro::types::Value::Boolean(true).into_union(),
                     )?;
                     modified_partitions.insert(partition.clone());
@@ -837,15 +837,15 @@ struct ExistingAlertsData {
     rule_match_ids: Vec<String>,
     first_matched_at: i64,
     created: Option<i64>,
-    breached: bool,
-    breached_changed: bool,
+    activated: bool,
+    activated_changed: bool,
 }
 
 #[derive(Debug, Clone)]
 struct NewAlertData {
     rule_match_ids: Vec<String>,
     alert_id: Option<String>,
-    breached: Option<bool>,
+    activated: Option<bool>,
     first_matched_at_micros: Option<i64>,
     created_micros: Option<i64>,
     deduplication_window_micros: i64,
