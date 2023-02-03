@@ -1,0 +1,313 @@
+name: aad_signinlogs
+
+schema:
+  ecs_field_names:
+  - client.ip
+  - cloud.provider
+  - ecs.version
+  - event.action
+  - event.category
+  - event.created
+  - event.duration
+  - event.id
+  - event.ingested
+  - event.kind
+  - event.outcome
+  - event.risk_score_norm
+  - event.type
+  - geo.city_name
+  - geo.continent_name
+  - geo.country_iso_code
+  - geo.country_name
+  - geo.location
+  - geo.region_name
+  - log.level
+  - message
+  - related.ip
+  - related.user
+  - source.address
+  - source.ip
+  - source.port
+  - tags
+  - user.domain
+  - user.full_name
+  - user.id
+  - user.name
+  - user_agent.original
+  fields:
+  - name: azure
+    type:
+      type: struct
+      fields:
+      - name: correlation_id
+        type: string
+      - name: tenant_id
+        type: string
+      - name: aad_signinlogs
+        type:
+          type: struct
+          fields:
+          - name: category
+            type: string
+          - name: identity
+            type: string
+          - name: operation_name
+            type: string
+          - name: operation_version
+            type: string
+          - name: app_display_name
+            type: string
+          - name: app_id
+            type: string
+          - name: applied_conditional_access_policies
+            type:
+              type: list
+              element: string
+          - name: authentication_details
+            type:
+              type: list
+              element: string
+          - name: authentication_processing_details
+            type: string
+          - name: authentication_protocol
+            type: string
+          - name: authentication_requirement
+            type: string
+          - name: authentication_requirement_policies
+            type:
+              type: list
+              element: string
+          - name: autonomous_system_number
+            type: long
+          - name: client_app_used
+            type: string
+          - name: conditional_access_status
+            type: string
+          - name: correlation_id
+            type: string
+          - name: cross_tenant_access_type
+            type: string
+          - name: device_detail
+            type:
+              type: struct
+              fields:
+              - name: browser
+                type: string
+              - name: device_id
+                type: string
+              - name: display_name
+                type: string
+              - name: is_compliant
+                type: boolean
+              - name: is_managed
+                type: boolean
+              - name: operating_system
+                type: string
+              - name: trust_type
+                type: string
+          - name: flagged_for_review
+            type: boolean
+          - name: home_tenant_id
+            type: string
+          - name: id
+            type: string
+          - name: incoming_token_type
+            type: string
+          - name: is_interactive
+            type: boolean
+          - name: is_tenant_restricted
+            type: boolean
+          - name: network_location_details
+            type:
+              type: list
+              element: string
+          - name: original_request_id
+            type: string
+          - name: processing_time_ms
+            type: float
+          - name: resource_display_name
+            type: string
+          - name: resource_id
+            type: string
+          - name: resource_tenant_id
+            type: string
+          - name: risk_detail
+            type: string
+          - name: risk_event_types
+            type: string
+          - name: risk_event_types_v2
+            type: string
+          - name: risk_level_aggregated
+            type: string
+          - name: risk_level_during_signin
+            type: string
+          - name: risk_state
+            type: string
+          - name: service_principal_credential_key_id
+            type: string
+          - name: service_principal_id
+            type: string
+          - name: service_principal_name
+            type: string
+          - name: sso_extension_version
+            type: string
+          - name: status
+            type:
+              type: struct
+              fields:
+              - name: error_code
+                type: long
+          - name: token_issuer_name
+            type: string
+          - name: token_issuer_type
+            type: string
+          - name: unique_token_identifier
+            type: string
+          - name: user_display_name
+            type: string
+          - name: user_id
+            type: string
+          - name: user_principal_name
+            type: string
+          - name: user_type
+            type: string
+          - name: result_description
+            type: string
+          - name: result_signature
+            type: string
+          - name: result_type
+            type: string
+          - name: tenant_id
+            type: string
+transform: |2-
+
+  .cloud.provider = "azure"
+  # PascalCase -> snake_case
+  .azure.aad_signinlogs = map_keys(object!(.json), recursive: true) -> |key| {
+      ret = parse_regex_all!(key, r'(?P<one>[a-z])(?P<two>[A-Z]+)')
+      for_each(ret) -> |_, r| {
+          key = replace(key,
+              join!([r.one, r.two]), join!([r.one, r.two], "_")
+          )
+      }
+      downcase(key)
+  }
+
+  # just for tests
+  if is_object(.azure.aad_signinlogs.properties) {
+      props = del(.azure.aad_signinlogs.properties)
+      .azure.aad_signinlogs |= object!(props)
+  }
+
+  .source.address = del(.azure.aad_signinlogs.ip_address) || del(.azure.aad_signinlogs.caller_ip_address)
+  if .source.address != null {
+      .source.ip = to_string!(.source.address)
+      .related.ip = push(.related.ip, .source.ip)
+  }
+
+  .client.ip = .source.ip
+  del(.azure.aad_signinlogs.properties.ip_address)
+  del(.azure.aad_signinlogs.caller_ip_address)
+
+  if .azure.aad_signinlogs.level != null {
+      .log.level = to_string!(del(.azure.aad_signinlogs.level))
+  }
+
+  .event.duration, err = to_int(del(.azure.aad_signinlogs.duration_ms))
+  if .event.duration != null {
+  	.event.duration = .event.duration * 1000000
+  }
+
+  if .azure.aad_signinlogs.operation_name != null {
+    .event.action = to_string!(.azure.aad_signinlogs.operation_name)
+  }
+
+  .azure.tenant_id = del(.azure.aad_signinlogs.tenant_id)
+  .azure.correlation_id = .azure.aad_signinlogs.correlation_id
+  .azure.aad_signinlogs.processing_time_ms = del(.azure.aad_signinlogs.processing_time_in_milliseconds)
+  .azure.aad_signinlogs.risk_level_during_signin = del(.azure.aad_signinlogs.risk_level_during_sign_in)
+
+  .ts = to_timestamp!(del(.azure.aad_signinlogs.created_date_time))
+
+  reason = del(.azure.aad_signinlogs.status.failure_reason)
+  details = del(.azure.aad_signinlogs.status.additional_details)
+  .message = if (reason != null && details != null) {
+    join!([reason, " (", details, ")"])
+  } else  {
+    reason || details
+  }
+
+  .geo.country_iso_code = .azure.aad_signinlogs.location.country_or_region
+  .geo.region_name = .azure.aad_signinlogs.location.state
+  .geo.city_name = .azure.aad_signinlogs.location.city
+  .geo.location.lat = .azure.aad_signinlogs.location.geo_coordinates.latitude
+  .geo.location.lon = .azure.aad_signinlogs.location.geo_coordinates.longitude
+  del(.azure.aad_signinlogs.location)
+
+  proc_details = .azure.aad_signinlogs.authentication_processing_details
+  if is_array(proc_details) {
+    res = {}
+    for_each(array!(proc_details)) -> |i, v| {
+      res = set!(res, [v.key], v.value)
+    }
+    .azure.aad_signinlogs.authentication_processing_details = encode_json(res)
+  }
+
+  access_policies = .azure.aad_signinlogs.applied_conditional_access_policies
+  if is_array(access_policies) {
+    .azure.aad_signinlogs.applied_conditional_access_policies = map_values(array!(access_policies)) -> |v| {
+      encode_json(v)
+    }
+  }
+
+  network_location_details = .azure.aad_signinlogs.network_location_details
+  if is_array(network_location_details) {
+    .azure.aad_signinlogs.network_location_details = map_values(array!(network_location_details)) -> |v| {
+      encode_json(v)
+    }
+  }
+
+  authentication_details = .azure.aad_signinlogs.authentication_details
+  if is_array(authentication_details) {
+    .azure.aad_signinlogs.authentication_details = map_values(array!(authentication_details)) -> |v| {
+      encode_json(v)
+    }
+  }
+  authentication_requirement_policies = .azure.aad_signinlogs.authentication_requirement_policies
+  if is_array(authentication_requirement_policies) {
+    .azure.aad_signinlogs.authentication_requirement_policies = map_values(array!(authentication_requirement_policies)) -> |v| {
+      encode_json(v)
+    }
+  }
+
+  .event.kind = "event"
+  .event.category = ["authentication"]
+  .event.type = ["info"]
+  .event.id = .azure.aad_signinlogs.id
+
+  if .azure.aad_signinlogs.status.error_code == null || .azure.aad_signinlogs.status.error_code == 0 {
+      .event.outcome = "success"
+  } else if (to_int(.azure.aad_signinlogs.status.error_code) ?? 0) > 0 {
+      .event.outcome = "failure"
+  }
+
+  .user, err = parse_groks(.azure.aad_signinlogs.user_principal_name, ["%{USERNAME:name}@%{HOSTNAME:domain}", "%{GREEDYDATA:name}"])
+  .user.full_name = .azure.aad_signinlogs.user_display_name
+  .user.id = .azure.aad_signinlogs.user_id
+
+  .related.user = unique(compact([.user.id, .user.name, .user.full_name]))
+
+  .user_agent.original = del(.azure.aad_signinlogs.user_agent)
+
+  # TODO can also normalize .risk fields for 'riskState' when stable
+  riskmap = {
+    "none": 0.000,
+    "low": 33.333,
+    "medium": 66.666,
+    "high": 100.000
+  }
+  .event.risk_score_norm = if is_string(.azure.aad_signinlogs.risk_level_aggregated) {
+    get(riskmap, [.azure.aad_signinlogs.risk_level_aggregated]) ?? null
+  } else if is_string(.azure.aad_signinlogs.risk_level_during_signin) {
+    get(riskmap, [.azure.aad_signinlogs.risk_level_during_signin]) ?? null
+  }
