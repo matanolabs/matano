@@ -1,3 +1,4 @@
+use serde_json::json;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
@@ -120,9 +121,12 @@ impl PullLogs for OktaPuller {
             end_dt.format("%Y-%m-%dT%H:%M:%S")
         );
 
-        let mut checkpoint_url = CHECKPOINT_URL.lock().await;
+        let mut checkpoint_json = ctx.checkpoint_json.lock().await;
+        let mut checkpoint_url = checkpoint_json
+            .clone()
+            .and_then(|v| v["checkpoint_url"].as_str().map(|s| s.to_string()));
 
-        let request_url = match *checkpoint_url {
+        let request_url = match checkpoint_url {
             Some(ref url) => {
                 println!("Using cached checkpoint url: {}", url);
                 url.clone()
@@ -181,12 +185,12 @@ impl PullLogs for OktaPuller {
             } else if response_json.len() == 0 {
                 // if this request returned 0 results there is no next link contained
                 // use the same as the checkpointUrl for the next iteration
-                *checkpoint_url = Some(url);
+                checkpoint_url = Some(url);
                 url = "".to_string();
             } else {
                 // if this request returned fewer results than requested
                 // use the next link contained in the response for the next iteration
-                *checkpoint_url = Some(next_link.unwrap().to_string());
+                checkpoint_url = Some(next_link.unwrap().to_string());
                 url = "".to_string();
             }
         }
@@ -195,6 +199,11 @@ impl PullLogs for OktaPuller {
         if ret.last() == Some(&b'\n') {
             ret.pop();
         }
+
+        // Update checkpoint
+        *checkpoint_json = Some(json!({
+            "checkpoint_url": checkpoint_url,
+        }));
 
         Ok(ret)
     }

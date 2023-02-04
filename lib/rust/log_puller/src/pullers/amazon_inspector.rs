@@ -56,7 +56,10 @@ impl PullLogs for AmazonInspectorPuller {
         let sdk_conf = AWS_CONFIG.get().await;
         let client_conf = aws_sdk_inspector2::config::Config::new(sdk_conf);
 
-        let start_dt = if ctx.is_initial_run() {
+        let checkpoint_json = ctx.checkpoint_json.lock().await;
+        let is_initial_run = checkpoint_json.is_none();
+
+        let start_dt = if is_initial_run {
             info!("Initial run for Amazon Inspector.");
             end_dt - chrono::Duration::days(1)
         } else {

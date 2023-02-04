@@ -46,7 +46,9 @@ impl PullLogs for SnykPuller {
         let config = ctx.config();
         let tables_config = ctx.tables_config();
         let cache = ctx.cache();
-        let is_initial_run = ctx.is_initial_run();
+
+        let checkpoint_json = ctx.checkpoint_json.lock().await;
+        let is_initial_run = checkpoint_json.is_none();
 
         let lookback_days_start = if is_initial_run { 30 } else { 2 };
 

@@ -16,6 +16,7 @@ use lambda_runtime::{run, service_fn, Error as LambdaError, LambdaEvent};
 use lazy_static::lazy_static;
 use log::{debug, error, info};
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use shared::sqs_util::*;
 use shared::{setup_logging, LOG_SOURCES_CONFIG};
 use walkdir::WalkDir;
@@ -131,6 +132,7 @@ async fn build_contexts() -> HashMap<String, PullLogsContext> {
                 .unwrap();
 
             let ctx = PullLogsContext::new(
+                ls_name.to_owned(),
                 secret_arn.to_owned(),
                 log_source,
                 props,
@@ -241,11 +243,35 @@ fn process_record(
     let client = client.clone();
 
     let fut = async move {
-        ctx.load_is_initial_run().await?;
+        ctx.load_checkpoint().await?;
         let data = puller.pull_logs(client, ctx, start_dt, end_dt).await?;
         let did_upload = upload_data(data, &record.log_source_name).await?;
         if did_upload {
-            ctx.mark_initial_run_complete().await?;
+            let checkpoint_json = ctx.checkpoint_json.lock().await.clone();
+            let is_initial_run = checkpoint_json.is_none();
+            if is_initial_run {
+                ctx.upload_checkpoint(&json!({
+                    "initial_run": "complete"
+                }))
+                .await?;
+                info!(
+                    "Marked initial run complete for log_source: {}",
+                    ctx.log_source_name
+                );
+            } else {
+                let checkpoint_json = checkpoint_json.unwrap();
+                if checkpoint_json
+                    != json!({
+                        "initial_run": "complete"
+                    })
+                {
+                    ctx.upload_checkpoint(&checkpoint_json).await?;
+                    info!(
+                        "Uploaded new checkpoint for log_source: {}, checkpoint state: {:?}",
+                        ctx.log_source_name, checkpoint_json
+                    );
+                }
+            }
         }
         anyhow::Ok(())
     }

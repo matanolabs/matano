@@ -6,7 +6,7 @@ use aws_sdk_s3::types::ByteStream;
 use chrono::{DateTime, FixedOffset};
 use enum_dispatch::enum_dispatch;
 use log::{debug, error, info};
-
+use serde_json::Value;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
@@ -17,6 +17,7 @@ mod amazon_inspector;
 mod duo;
 mod o365;
 mod okta;
+mod onepassword;
 mod otx;
 mod snyk;
 
@@ -45,6 +46,7 @@ impl PullerCache {
 }
 
 pub struct PullLogsContext {
+    pub log_source_name: String,
     secret_cache: Arc<Mutex<Option<HashMap<String, String>>>>,
     secret_arn: String,
     pub log_source_type: LogSource,
@@ -52,11 +54,12 @@ pub struct PullLogsContext {
     tables_config: HashMap<String, config::Config>,
     cache: Arc<Mutex<PullerCache>>,
     s3: aws_sdk_s3::Client,
-    is_initial_run: AtomicBool,
+    pub checkpoint_json: Arc<Mutex<Option<Value>>>,
 }
 
 impl PullLogsContext {
     pub fn new(
+        log_source_name: String,
         secret_arn: String,
         log_source_type: LogSource,
         config: HashMap<String, String>,
@@ -64,6 +67,7 @@ impl PullLogsContext {
         s3: aws_sdk_s3::Client,
     ) -> PullLogsContext {
         PullLogsContext {
+            log_source_name,
             secret_cache: Arc::new(Mutex::new(None)),
             secret_arn,
             log_source_type,
@@ -71,7 +75,7 @@ impl PullLogsContext {
             tables_config,
             cache: Arc::new(Mutex::new(PullerCache::new())),
             s3,
-            is_initial_run: AtomicBool::new(false),
+            checkpoint_json: Arc::new(Mutex::new(None)),
         }
     }
 
@@ -90,61 +94,67 @@ impl PullLogsContext {
         Ok(secrets_val.get(key).map(|s| s.to_owned()))
     }
 
-    /// Returns true if this is the first time the puller has run. Useful for e.g. pulling more logs on first run.
-    pub async fn load_is_initial_run(&self) -> Result<bool> {
+    /// Returns true if a checkpoint was loaded, false if this is the initial run. Useful for e.g. pulling more logs on first run.
+    pub async fn load_checkpoint(&self) -> Result<bool> {
         let bucket = std::env::var("INGESTION_BUCKET_NAME").context("need bucket!")?;
 
-        let initial_run_key = "__puller_initial_run__";
-        let s3_key = format!("{}/{}", initial_run_key, self.log_source_type.to_str());
+        let initial_run_key = "__puller_last_run_checkpoint__";
+        let s3_key = format!("{}/{}.json", initial_run_key, self.log_source_name);
 
         let res = self
             .s3
-            .head_object()
+            .get_object()
             .bucket(&bucket)
             .key(&s3_key)
             .send()
             .await;
-        let is_initial = match res {
-            Ok(_) => Ok(false),
+        let checkpoint_json = match res {
+            Ok(output) => Ok(Some(
+                serde_json::from_slice(&output.body.collect().await?.into_bytes())
+                    .context("failed to parse last checkpoint file as json")?,
+            )),
             Err(aws_sdk_s3::types::SdkError::ServiceError {
                 err:
-                    aws_sdk_s3::error::HeadObjectError {
-                        kind: aws_sdk_s3::error::HeadObjectErrorKind::NotFound(_),
+                    aws_sdk_s3::error::GetObjectError {
+                        kind: aws_sdk_s3::error::GetObjectErrorKind::NoSuchKey(_),
                         ..
                     },
                 ..
-            }) => Ok(true),
+            }) => Ok(None),
             Err(e) => Err(e),
         }?;
 
-        if is_initial {
-            self.is_initial_run
-                .swap(true, std::sync::atomic::Ordering::Relaxed);
+        if checkpoint_json.is_none() {
+            info!(
+                "No checkpoint found for {}, assuming initial run",
+                self.log_source_name
+            );
         }
 
-        Ok(is_initial)
+        *self.checkpoint_json.lock().await = checkpoint_json.clone();
+
+        Ok(checkpoint_json.is_some())
     }
 
-    pub async fn mark_initial_run_complete(&self) -> Result<()> {
+    pub async fn upload_checkpoint(&self, checkpoint_json: &Value) -> Result<()> {
         let bucket = std::env::var("INGESTION_BUCKET_NAME").context("need bucket!")?;
 
-        let initial_run_key = "__puller_initial_run__";
-        let s3_key = format!("{}/{}", initial_run_key, self.log_source_type.to_str());
+        let initial_run_key = "__puller_last_run_checkpoint__";
+        let s3_key = format!("{}/{}.json", initial_run_key, self.log_source_name);
 
+        // write checkpoint to s3
         self.s3
             .put_object()
             .bucket(&bucket)
             .key(&s3_key)
-            .body(ByteStream::from(Vec::with_capacity(0)))
+            .body(ByteStream::from(serde_json::to_vec(checkpoint_json)?))
             .send()
             .await?;
 
-        Ok(())
-    }
+        // sync local checkpoint state
+        *self.checkpoint_json.lock().await = Some(checkpoint_json.clone());
 
-    pub fn is_initial_run(&self) -> bool {
-        self.is_initial_run
-            .load(std::sync::atomic::Ordering::Relaxed)
+        Ok(())
     }
 
     pub fn config(&self) -> &HashMap<String, String> {
@@ -179,6 +189,7 @@ pub enum LogSource {
     O365Puller(o365::O365Puller),
     DuoPuller(duo::DuoPuller),
     OktaPuller(okta::OktaPuller),
+    OnePasswordPuller(onepassword::OnePasswordPuller),
     Otx(otx::OtxPuller),
     Snyk(snyk::SnykPuller),
     AbuseChUrlhausPuller(abusech::AbuseChUrlhausPuller),
@@ -195,6 +206,9 @@ impl LogSource {
             "o365" => Some(LogSource::O365Puller(o365::O365Puller {})),
             "duo" => Some(LogSource::DuoPuller(duo::DuoPuller {})),
             "okta" => Some(LogSource::OktaPuller(okta::OktaPuller {})),
+            "onepassword" => Some(LogSource::OnePasswordPuller(
+                onepassword::OnePasswordPuller {},
+            )),
             "otx" => Some(LogSource::Otx(otx::OtxPuller {})),
             "snyk" => Some(LogSource::Snyk(snyk::SnykPuller {})),
             "abusech_urlhaus" => Some(LogSource::AbuseChUrlhausPuller(
@@ -215,6 +229,7 @@ impl LogSource {
             LogSource::DuoPuller(_) => "duo",
             LogSource::OktaPuller(_) => "okta",
             LogSource::O365Puller(_) => "o365",
+            LogSource::OnePasswordPuller(_) => "onepassword",
             LogSource::Otx(_) => "otx",
             LogSource::Snyk(_) => "snyk",
             LogSource::AbuseChUrlhausPuller(_) => "abusech_urlhaus",

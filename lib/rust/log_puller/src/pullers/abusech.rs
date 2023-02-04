@@ -121,7 +121,9 @@ impl PullLogs for AbuseChThreatfoxPuller {
         end_dt: DateTime<FixedOffset>,
     ) -> Result<Vec<u8>> {
         info!("Pulling Threatfox...");
-        let is_initial_run = ctx.is_initial_run();
+
+        let checkpoint_json = ctx.checkpoint_json.lock().await;
+        let is_initial_run = checkpoint_json.is_none();
 
         // This is a simple implementation. There's also a full export available
         // that we could technically retrieve on the initial run, but keep it simple for now.
