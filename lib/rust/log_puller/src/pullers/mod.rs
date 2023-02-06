@@ -15,6 +15,7 @@ use shared::secrets::load_secret;
 mod abusech;
 mod amazon_inspector;
 mod duo;
+mod msft;
 mod o365;
 mod okta;
 mod onepassword;
@@ -187,6 +188,7 @@ pub trait PullLogs {
 pub enum LogSource {
     AmazonInspectorPuller(amazon_inspector::AmazonInspectorPuller),
     O365Puller(o365::O365Puller),
+    MicrosoftGraphPuller(msft::MicrosoftGraphPuller),
     DuoPuller(duo::DuoPuller),
     OktaPuller(okta::OktaPuller),
     OnePasswordPuller(onepassword::OnePasswordPuller),
@@ -204,6 +206,9 @@ impl LogSource {
                 amazon_inspector::AmazonInspectorPuller {},
             )),
             "o365" => Some(LogSource::O365Puller(o365::O365Puller {})),
+            "msft" => Some(LogSource::MicrosoftGraphPuller(
+                msft::MicrosoftGraphPuller {},
+            )),
             "duo" => Some(LogSource::DuoPuller(duo::DuoPuller {})),
             "okta" => Some(LogSource::OktaPuller(okta::OktaPuller {})),
             "onepassword" => Some(LogSource::OnePasswordPuller(
@@ -230,6 +235,7 @@ impl LogSource {
             LogSource::OktaPuller(_) => "okta",
             LogSource::O365Puller(_) => "o365",
             LogSource::OnePasswordPuller(_) => "onepassword",
+            LogSource::MicrosoftGraphPuller(_) => "msft",
             LogSource::Otx(_) => "otx",
             LogSource::Snyk(_) => "snyk",
             LogSource::AbuseChUrlhausPuller(_) => "abusech_urlhaus",

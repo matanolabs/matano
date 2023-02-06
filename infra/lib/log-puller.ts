@@ -19,6 +19,7 @@ interface ExternalLogPullerProps {
 // Managed log source types that support pulling.
 export const PULLER_LOG_SOURCE_TYPES: string[] = [
   "aws_inspector",
+  "msft",
   "o365",
   "duo",
   "okta",
@@ -30,6 +31,7 @@ export const PULLER_LOG_SOURCE_TYPES: string[] = [
 ];
 const LOG_SOURCE_RATES: Record<string, cdk.Duration> = {
   aws_inspector: cdk.Duration.minutes(10),
+  msft: cdk.Duration.minutes(1),
   o365: cdk.Duration.minutes(1),
   duo: cdk.Duration.minutes(1),
   okta: cdk.Duration.minutes(1),

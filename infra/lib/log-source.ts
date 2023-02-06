@@ -111,6 +111,7 @@ const MANAGED_LOG_SOURCE_PREFIX_MAP: Record<string, string> = {
   crowdstrike: "crowdstrike",
   crowdstrike_falcon: "crowdstrike",
   duo: "duo",
+  msft: "msft",
   o365: "o365",
   github_audit: "github",
   okta: "okta",

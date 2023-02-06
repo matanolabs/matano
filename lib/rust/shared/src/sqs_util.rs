@@ -60,7 +60,7 @@ pub fn sqs_errors_to_response(errors: Vec<SQSLambdaError>) -> Result<Option<SQSB
         let ids = errors
             .into_iter()
             .map(|e| {
-                error!("Encountered error: {}", e.msg);
+                error!("Encountered error: {}", e);
                 e.id
             })
             .collect::<Vec<_>>();
