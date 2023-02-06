@@ -140,7 +140,7 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<Option<SQ
                 let reader = TokioAsyncReadCompatExt::compat(stream.into_async_read());
                 anyhow::Ok((msg_id, reader))
             }
-            .map_err(|e| SQSLambdaError::new(e.to_string(), msg_id_copy));
+            .map_err(|e| SQSLambdaError::new(format!("{:#}", e), msg_id_copy));
             ret
         })
         .collect::<Vec<_>>();
@@ -192,7 +192,7 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<Option<SQ
                                         anyhow::Ok(decompressed_block)
                                     })
                                     .map_err(|e| {
-                                        SQSLambdaError::new(e.to_string(), msg_id.clone())
+                                        SQSLambdaError::new(format!("{:#}", e), msg_id.clone())
                                     });
 
                                 let mut blocks = blocks_ref.lock().unwrap();
@@ -209,7 +209,7 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<Option<SQ
             };
             ret
         }
-        .map_err(move |e| SQSLambdaError::new(e.to_string(), msg_id_copy))
+        .map_err(move |e| SQSLambdaError::new(format!("{:#}", e), msg_id_copy))
     });
 
     let results = join_all(work_futures)

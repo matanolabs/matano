@@ -726,7 +726,7 @@ pub(crate) async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
 
                 anyhow::Ok(Some(stream))
             }.map_err(move |e|
-                SQSLambdaError::new(e.to_string(), item_copy.sequencer)
+                SQSLambdaError::new(format!("{:#}", e), item_copy.sequencer)
             )
         })
         .collect::<Vec<_>>();
@@ -838,7 +838,7 @@ pub(crate) async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
                     })?;
                 anyhow::Ok(())
             }
-            .map_err(move |e| SQSLambdaError::new(e.to_string(), record.sequencer.clone()))
+            .map_err(move |e| SQSLambdaError::new(format!("{:#}", e), record.sequencer.clone()))
         });
 
     join_all(futures).await.into_iter().for_each(|r| {
