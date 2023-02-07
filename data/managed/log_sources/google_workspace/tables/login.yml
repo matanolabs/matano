@@ -1,0 +1,227 @@
+name: login
+
+schema:
+  ecs_field_names:
+    - ecs.version
+    - event.action
+    - event.category
+    - event.created
+    - event.id
+    - event.kind
+    - event.outcome
+    - event.provider
+    - event.start
+    - event.type
+    - group.domain
+    - group.id
+    - group.name
+    - message
+    - organization.id
+    - related.hash
+    - related.hosts
+    - related.ip
+    - related.user
+    - source.address
+    - source.as.number
+    - source.as.organization.name
+    - source.ip
+    - source.user.domain
+    - source.user.email
+    - source.user.id
+    - source.user.name
+    - tags
+    - user.domain
+    - user.email
+    - user.id
+    - user.name
+    - user.target.domain
+    - user.target.email
+    - user.target.group.domain
+    - user.target.group.id
+    - user.target.group.name
+    - user.target.id
+    - user.target.name
+  fields:
+    - name: google_workspace
+      type:
+        type: struct
+        fields:
+          - name: actor
+            type:
+              type: struct
+              fields:
+                - name: key
+                  type: string
+                - name: type
+                  type: string
+          - name: event
+            type:
+              type: struct
+              fields:
+                - name: type
+                  type: string
+          - name: kind
+            type: string
+          - name: organization
+            type:
+              type: struct
+              fields:
+                - name: domain
+                  type: string
+          - name: login
+            type:
+              type: struct
+              fields:
+                - name: affected_email_address
+                  type: string
+                - name: challenge_method
+                  type:
+                    type: list
+                    element: string
+                - name: challenge_status
+                  type: string
+                - name: failure_type
+                  type: string
+                - name: is_second_factor
+                  type: boolean
+                - name: is_suspicious
+                  type: boolean
+                - name: timestamp
+                  type: long
+                - name: type
+                  type: string
+
+transform: |-
+  .event.category = ["authentication"]
+  .event.type = []
+  .event.kind = "event"
+
+  if is_array(.json.events) {
+    .json.events = array!(.json.events)[0]
+  }
+
+  .event.action = del(.json.events.name)
+  .event.provider = del(.json.id.applicationName)
+  if .json.id.uniqueQualifier != null {
+      .event.id = to_string!(.json.id.uniqueQualifier)
+  }
+
+  if .json.id.time != null {
+    .ts = to_timestamp!(.json.id.time, "seconds")
+  }
+
+  .source.user.email = del(.json.actor.email)
+
+  .user.email = .source.user.email
+
+  if .json.actor.profileId != null {
+      .source.user.id = to_string!(.json.actor.profileId)
+  }
+
+  if .json.ipAddress != null {
+      .source.ip = to_string!(.json.ipAddress)
+  }
+
+  .google_workspace.kind = del(.json.kind)
+
+  if .json.id.customerId != null {
+      .organization.id = to_string!(.json.id.customerId)
+  }
+
+  .google_workspace.actor.type = del(.json.actor.callerType)
+  .google_workspace.actor.key = del(.json.actor.key)
+  .google_workspace.organization.domain = del(.json.ownerDomain)
+  .google_workspace.event.type = del(.json.events.type)
+
+  if contains(.source.user.email, "@") ?? false {
+    splitmail = split(.source.user.email, "@", limit: 2) ?? []
+  	if (length(splitmail) == 2) {
+      .user.name = splitmail[0]
+      .source.user.name = splitmail[0]
+      .user.domain = splitmail[1]
+      .source.user.domain = splitmail[1]
+    }
+  }
+
+  .user.id = .source.user.id
+
+  if .source.ip != null {
+      .related.ip = push(.related.ip, .source.ip)
+  }
+  if .source.user.name != null {
+      .related.user = push(.related.user, .source.user.name)
+  }
+
+  if includes(["login_failure", "login_success", "logout"], .event.action) {
+      .event.category = push(.event.category, "session")
+  }
+  if includes(["login_failure", "login_success"], .event.action) {
+      .event.type = push(.event.type, "start")
+  }
+  if .event.action == "logout" {
+      .event.type = push(.event.type, "end")
+  }
+  if includes(["account_disabled_generic", "account_disabled_spamming_through_relay", "account_disabled_spamming", "account_disabled_hijacked", "account_disabled_password_leak"], .event.action) {
+      .event.type = push(.event.type, "user")
+  }
+  if includes(["account_disabled_generic", "account_disabled_spamming_through_relay", "account_disabled_spamming", "account_disabled_hijacked", "account_disabled_password_leak"], .event.action) {
+      .event.type = push(.event.type, "change")
+  }
+  if includes(["gov_attack_warning", "login_challenge", "login_verification", "suspicious_login", "suspicious_login_less_secure_app", "suspicious_programmatic_login"], .event.action) {
+      .event.type = push(.event.type, "info")
+  }
+
+
+  if is_array(.json.events.parameters) {
+    params = array!(.json.events.parameters)
+    for_each(params) -> |i, v| {
+      if starts_with(v.name, "login_") ?? false {
+        v.name = slice!(v.name, 6)
+      }
+      if v.value != null {
+        .google_workspace.login = set!(.google_workspace.login, [v.name], v.value)
+      }
+      if v.intValue != null {
+        .google_workspace.login = set!(.google_workspace.login, [v.name], to_int!(v.intValue))
+      }
+      if v.multiValue != null {
+        .google_workspace.login = set!(.google_workspace.login, [v.name], v.multiValue)
+      }
+    }
+  }
+
+  if .google_workspace.login.timestamp != null {
+    .event.start = to_timestamp!(int!(.google_workspace.login.timestamp) * 1000, "nanoseconds")
+  }
+
+
+  if .google_workspace.login.challenge_status != null && .event.outcome == null && .google_workspace.login.challenge_status == "Challenge Passed" {
+    .event.outcome = "success"
+  } else if .google_workspace.login.challenge_status != null && .event.outcome == null {
+    .event.outcome = "failure"
+  }
+
+  if .event.action == "login_failure" {
+    .event.outcome = "failure"
+  } else if .event.action == "login_success" {
+    .event.outcome = "success"
+  }
+
+  if contains(.google_workspace.login.affected_email_address, "@") ?? false {
+    splitmail = split(.google_workspace.login.affected_email_address, "@", limit: 2) ?? []
+  	if (length(splitmail) == 2) {
+      if (.related.user == null) {
+        .related.user = []
+      }
+
+      .user.target.name = splitmail[0]
+  	  .user.target.domain = splitmail[1]
+  	  .related.user = push(.related.user, .user.target.name)
+  	}
+
+  }
+
+  .source.as.number = del(.source.as.asn)
+  .source.as.organization.name = del(.source.as.organization_name)
+
+  .related.user = compact(.related.user)

@@ -90,8 +90,8 @@ impl PullLogs for OktaPuller {
 
         let config = ctx.config();
         let tables_config = ctx.tables_config();
-        let cache = ctx.cache();
-        let mut cache = cache.lock().await;
+        // let cache = ctx.cache();
+        // let mut cache = cache.lock().await;
 
         let limit = 1000;
 

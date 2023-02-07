@@ -1,0 +1,5 @@
+name: google_workspace
+
+ingest:
+  select_table_from_payload: |
+    string(del(.json._table)) ?? { abort }

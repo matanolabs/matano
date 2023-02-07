@@ -22,6 +22,7 @@ export const PULLER_LOG_SOURCE_TYPES: string[] = [
   "aws_inspector",
   "msft",
   "o365",
+  "google_workspace",
   "duo",
   "okta",
   "snyk",
@@ -31,10 +32,11 @@ export const PULLER_LOG_SOURCE_TYPES: string[] = [
   "enrich_otx",
 ];
 const LOG_SOURCE_RATES: Record<string, cdk.Duration> = {
-  "onepassword": cdk.Duration.minutes(1),
+  onepassword: cdk.Duration.minutes(1),
   aws_inspector: cdk.Duration.minutes(10),
   msft: cdk.Duration.minutes(1),
   o365: cdk.Duration.minutes(1),
+  google_workspace: cdk.Duration.minutes(1),
   duo: cdk.Duration.minutes(1),
   okta: cdk.Duration.minutes(1),
   snyk: cdk.Duration.hours(24),
@@ -89,6 +91,10 @@ export class ExternalLogPuller extends Construct {
       } else if (logSourceName.startsWith("onepassword")) {
         placeholder = {
           api_token: placeholder_val,
+        };
+      } else if (logSourceName.startsWith("google_workspace")) {
+        placeholder = {
+          private_key: placeholder_val,
         };
       } else {
         placeholder = {

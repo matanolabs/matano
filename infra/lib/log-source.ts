@@ -100,7 +100,7 @@ interface MatanoLogSourceProps {
 }
 
 const MANAGED_LOG_SOURCE_PREFIX_MAP: Record<string, string> = {
-  "onepassword": "onepassword",
+  onepassword: "onepassword",
   aws_cloudtrail: "aws",
   aws_route53_resolver_logs: "aws",
   aws_s3access: "aws",
@@ -114,6 +114,7 @@ const MANAGED_LOG_SOURCE_PREFIX_MAP: Record<string, string> = {
   duo: "duo",
   msft: "msft",
   o365: "o365",
+  google_workspace: "google_workspace",
   github_audit: "github",
   okta: "okta",
   snyk: "snyk",

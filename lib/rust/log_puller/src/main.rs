@@ -204,7 +204,7 @@ async fn handler(event: LambdaEvent<SqsEvent>) -> Result<Option<SQSBatchResponse
         })
         .map(|(msg_id, record)| {
             process_record(msg_id.clone(), record, client.clone(), contexts)
-                .map_err(|e| SQSLambdaError::new(e.to_string(), msg_id))
+                .map_err(|e| SQSLambdaError::new(format!("{:#}", e), msg_id))
         })
         .filter_map(|r| r.map_err(|e| errors.push(e)).ok())
         .collect::<Vec<_>>();
@@ -277,7 +277,7 @@ fn process_record(
     }
     .map_err(move |e| {
         let e = e.context(format!("Error for log_source: {}", log_source_name));
-        SQSLambdaError::new(e.to_string(), msg_id)
+        SQSLambdaError::new(format!("{:#}", e), msg_id)
     });
     Ok(fut)
 }

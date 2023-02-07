@@ -4,13 +4,13 @@ use tokio::sync::Mutex;
 use anyhow::{anyhow, Context as AnyhowContext, Error, Result};
 use async_stream::{stream, try_stream};
 use async_trait::async_trait;
+use chrono::{DateTime, FixedOffset};
 use futures::{future::join_all, Stream};
 use futures_util::pin_mut;
 use futures_util::stream::StreamExt;
 use lazy_static::lazy_static;
 use log::{debug, error, info};
 use regex::Regex;
-use chrono::{DateTime, FixedOffset};
 
 use super::{PullLogs, PullLogsContext};
 use shared::{convert_json_array_str_to_ndjson, JsonValueExt};
@@ -20,12 +20,17 @@ pub struct O365Puller;
 
 #[async_trait]
 impl PullLogs for O365Puller {
-    async fn pull_logs(self, client: reqwest::Client, ctx: &PullLogsContext, start_dt: DateTime<FixedOffset>, end_dt: DateTime<FixedOffset>) -> Result<Vec<u8>> {
+    async fn pull_logs(
+        self,
+        client: reqwest::Client,
+        ctx: &PullLogsContext,
+        start_dt: DateTime<FixedOffset>,
+        end_dt: DateTime<FixedOffset>,
+    ) -> Result<Vec<u8>> {
         info!("Pulling o365 logs....");
 
         let config = ctx.config();
         let cache = ctx.cache();
-        let mut cache = cache.lock().await;
 
         let tenant_id = config.get("tenant_id").context("Missing tenant_id")?;
         let client_id = config.get("client_id").context("Missing client_id")?;
@@ -40,12 +45,16 @@ impl PullLogs for O365Puller {
             return Ok(vec![]);
         }
 
-        let access_token = match cache.get("access_token") {
-            Some(token) => token.to_owned(),
-            None => {
-                let token = get_access_token(&client, tenant_id, client_id, &client_secret).await?;
-                cache.set("access_token", token.clone(), None);
-                token
+        let access_token = {
+            let mut cache = cache.lock().await;
+            match cache.get("access_token") {
+                Some(token) => token.to_owned(),
+                None => {
+                    let token =
+                        get_access_token(&client, tenant_id, client_id, &client_secret).await?;
+                    cache.set("access_token", token.clone(), None);
+                    token
+                }
             }
         };
 

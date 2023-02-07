@@ -56,7 +56,6 @@ impl PullLogs for MicrosoftGraphPuller {
 
         let config = ctx.config();
         let cache = ctx.cache();
-        let mut cache = cache.lock().await;
 
         let tenant_id = config.get("tenant_id").context("Missing tenant_id")?;
         let client_id = config.get("client_id").context("Missing client_id")?;
@@ -70,12 +69,16 @@ impl PullLogs for MicrosoftGraphPuller {
             return Ok(vec![]);
         }
 
-        let access_token = match cache.get("access_token") {
-            Some(token) => token.to_owned(),
-            None => {
-                let token = get_access_token(&client, tenant_id, client_id, &client_secret).await?;
-                cache.set("access_token", token.clone(), None);
-                token
+        let access_token = {
+            let mut cache = cache.lock().await;
+            match cache.get("access_token") {
+                Some(token) => token.to_owned(),
+                None => {
+                    let token =
+                        get_access_token(&client, tenant_id, client_id, &client_secret).await?;
+                    cache.set("access_token", token.clone(), None);
+                    token
+                }
             }
         };
 
