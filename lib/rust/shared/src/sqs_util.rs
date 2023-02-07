@@ -18,7 +18,7 @@ impl std::error::Error for SQSLambdaError {}
 
 impl std::fmt::Display for SQSLambdaError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "Failure for SQS message ID:{} - {} ", self.id, self.msg)
+        write!(f, "Failure for message ID:{} - {} ", self.id, self.msg)
     }
 }
 

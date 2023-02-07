@@ -37,8 +37,8 @@ impl PullLogs for DuoPuller {
 
         let config = ctx.config();
         let tables_config = ctx.tables_config();
-        let cache = ctx.cache();
-        let mut cache = cache.lock().await;
+        // let cache = ctx.cache();
+        // let mut cache = cache.lock().await;
 
         let api_hostname = config.get("api_hostname").context("Missing api_hostname")?;
         let integration_key = config
