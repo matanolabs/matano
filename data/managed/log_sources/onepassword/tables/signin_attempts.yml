@@ -1,0 +1,121 @@
+name: signin_attempts
+
+schema:
+  ecs_field_names:
+  - ecs.version
+  - event.action
+  - event.category
+  - event.created
+  - event.dataset
+  - event.kind
+  - event.module
+  - event.outcome
+  - event.type
+  - os.name
+  - os.version
+  - related.ip
+  - related.user
+  - source.as.number
+  - source.as.organization.name
+  - source.geo.city_name
+  - source.geo.continent_name
+  - source.geo.country_iso_code
+  - source.geo.country_name
+  - source.geo.location
+  - source.geo.region_iso_code
+  - source.geo.region_name
+  - source.ip
+  - tags
+  - user.email
+  - user.full_name
+  - user.id
+  fields:
+  - name: onepassword
+    type:
+      type: struct
+      fields:
+      - name: client
+        type:
+          type: struct
+          fields:
+          - name: app_name
+            type: string
+          - name: app_version
+            type: string
+          - name: platform_name
+            type: string
+          - name: platform_version
+            type: string
+      - name: country
+        type: string
+      - name: details
+        type: string
+      - name: session_uuid
+        type: string
+      - name: type
+        type: string
+      - name: uuid
+        type: string
+
+transform: |
+  .event.kind = "event"
+  .event.category = ["authentication"]
+  .event.type = ["info"]
+
+  .event.original = encode_json(.json)
+
+  .onepassword = del(.json)                       
+
+  if .onepassword.timestamp == null { 
+      abort
+  }
+
+  .event.created = .ts
+
+  .event.action = del(.onepassword.category)
+
+  if includes(["success", "firewall_reported_success"], .event.action) { 
+      .event.outcome = "success"
+  } else { 
+      .event.outcome = "failure"
+  }
+
+  if .onepassword.target_user.uuid != null { 
+      .related.user = push(.related.user, .onepassword.target_user.uuid) 
+  }
+      
+  if .onepassword.target_user.email != null { 
+      .related.user = push(.related.user, .onepassword.target_user.email) 
+  }
+      
+  if .onepassword.target_user.name != null { 
+      .related.user = push(.related.user, .onepassword.target_user.name) 
+  }
+      
+  if .onepassword.client.ip_address != null { 
+      .related.ip = push(.related.ip, .onepassword.client.ip_address) 
+  }
+      
+  .user.id = del(.onepassword.target_user.uuid)
+
+  .user.full_name = del(.onepassword.target_user.name)
+
+  .user.email = del(.onepassword.target_user.email)
+
+  .os.name = del(.onepassword.client.os_name)
+
+  .os.version = del(.onepassword.client.os_version)
+
+  .source.ip = del(.onepassword.client.ip_address)
+
+  .source.as.number = del(.source.as.asn)
+
+  .source.as.organization.name = del(.source.as.organization_name)
+
+  if .onepassword.timestamp != null {                                               
+    .ts = to_timestamp!(.onepassword.timestamp, "seconds") 
+  }
+
+  del(.onepassword.timestamp)
+  del(.onepassword.target_user)
+  del(.onepassword.location)
