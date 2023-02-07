@@ -53,6 +53,7 @@ impl PullLogs for DuoPuller {
 
         // skip early if secret_key is equal <placeholder>
         if secret_key == "<placeholder>" {
+            info!("Skipping duo because secret is still <placeholder>");
             return Ok(ret);
         }
 

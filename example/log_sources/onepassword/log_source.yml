@@ -1,0 +1,6 @@
+name: onepassword
+
+managed:
+  type: ONEPASSWORD
+  properties:
+    events_api_url: https://events.1password.com

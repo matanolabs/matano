@@ -36,6 +36,7 @@ impl PullLogs for O365Puller {
 
         // skip early if client_secret is equal <placeholder>
         if client_secret == "<placeholder>" {
+            info!("Skipping o365 because secret is still <placeholder>");
             return Ok(vec![]);
         }
 

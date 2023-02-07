@@ -18,6 +18,7 @@ interface ExternalLogPullerProps {
 
 // Managed log source types that support pulling.
 export const PULLER_LOG_SOURCE_TYPES: string[] = [
+  "onepassword",
   "aws_inspector",
   "msft",
   "o365",
@@ -30,6 +31,7 @@ export const PULLER_LOG_SOURCE_TYPES: string[] = [
   "enrich_otx",
 ];
 const LOG_SOURCE_RATES: Record<string, cdk.Duration> = {
+  "onepassword": cdk.Duration.minutes(1),
   aws_inspector: cdk.Duration.minutes(10),
   msft: cdk.Duration.minutes(1),
   o365: cdk.Duration.minutes(1),
@@ -77,6 +79,14 @@ export class ExternalLogPuller extends Construct {
           secret_key: placeholder_val,
         };
       } else if (logSourceName.startsWith("okta")) {
+        placeholder = {
+          api_token: placeholder_val,
+        };
+      } else if (logSourceName.startsWith("snyk")) {
+        placeholder = {
+          api_token: placeholder_val,
+        };
+      } else if (logSourceName.startsWith("onepassword")) {
         placeholder = {
           api_token: placeholder_val,
         };

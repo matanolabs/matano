@@ -112,6 +112,7 @@ impl PullLogs for OktaPuller {
 
         // skip early if api_token is equal <placeholder>
         if api_token == "<placeholder>" {
+            info!("Skipping okta because secret is still <placeholder>");
             return Ok(vec![]);
         }
 
