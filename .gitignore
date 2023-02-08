@@ -21,7 +21,7 @@ cdk.out
 oclif.manifest.json
 test
 __pycache__
-*build*
+build
 !pr-build.yml
 local-assets/**
 !scripts/**/*.js
