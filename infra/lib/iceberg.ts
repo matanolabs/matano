@@ -89,6 +89,7 @@ interface MatanoIcebergTableProps {
   partitions?: any[];
   glueDatabaseName?: string;
   lakeStorageBucket: s3.IBucket;
+  athenaResultsBucket?: s3.IBucket;
 }
 
 export class MatanoIcebergTable extends Construct {
@@ -102,10 +103,14 @@ export class MatanoIcebergTable extends Construct {
       "write.metadata.delete-after-commit.enabled": "true",
       write_compression: "zstd",
       "glue.skip-archive": "true",
+      force_update_0208: "update",
     };
 
     const resource = new CustomResource(this, "Default", {
-      serviceToken: IcebergTableProvider.getOrCreate(this, { lakeStorageBucket: props.lakeStorageBucket }),
+      serviceToken: IcebergTableProvider.getOrCreate(this, {
+        lakeStorageBucket: props.lakeStorageBucket,
+        athenaResultsBucket: props.athenaResultsBucket,
+      }),
       resourceType: "Custom::MatanoIcebergTable",
       properties: {
         logSourceName: props.tableName,
@@ -121,6 +126,7 @@ export class MatanoIcebergTable extends Construct {
 
 interface IcebergTableProviderProps {
   lakeStorageBucket: s3.IBucket;
+  athenaResultsBucket?: s3.IBucket;
 }
 
 export class IcebergTableProvider extends Construct {
@@ -163,9 +169,17 @@ export class IcebergTableProvider extends Construct {
           ],
           resources: getStandardGlueResourceArns(this),
         }),
+        new iam.PolicyStatement({
+          actions: ["athena:StartQueryExecution", "athena:GetQueryExecution", "athena:GetQueryResults"],
+          resources: [
+            `arn:${cdk.Stack.of(this).partition}:athena:*:${cdk.Stack.of(this).account}:workgroup/matano_system`,
+            `arn:${cdk.Stack.of(this).partition}:athena:*:${cdk.Stack.of(this).account}:workgroup/matano_system_v3`,
+          ],
+        }),
       ],
     });
     props.lakeStorageBucket.grantReadWrite(providerFunc);
+    props.athenaResultsBucket?.grantReadWrite(providerFunc);
     makeLambdaSnapstart(providerFunc);
 
     this.provider = new cr.Provider(this, "Default", {

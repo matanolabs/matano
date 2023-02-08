@@ -97,6 +97,7 @@ interface MatanoLogSourceProps {
   noDefaultTs?: boolean;
   eventSourceProps?: SqsEventSourceProps;
   lakeStorageBucket: s3.IBucket;
+  athenaResultsBucket?: s3.IBucket;
 }
 
 const MANAGED_LOG_SOURCE_PREFIX_MAP: Record<string, string> = {
@@ -137,6 +138,7 @@ export interface MatanoTableProps {
   eventSourceProps?: SqsEventSourceProps;
   partitions?: any[];
   lakeStorageBucket: s3.IBucket;
+  athenaResultsBucket?: s3.IBucket;
 }
 export class MatanoTable extends Construct {
   icebergTable: MatanoIcebergTable;
@@ -150,6 +152,7 @@ export class MatanoTable extends Construct {
       schema: props.schema,
       partitions: props.partitions,
       lakeStorageBucket: props.lakeStorageBucket,
+      athenaResultsBucket: props.athenaResultsBucket,
     });
 
     const lakeWriterDlq = new sqs.Queue(this, `LakeWriterDLQ`, {
@@ -432,6 +435,7 @@ export class MatanoLogSource extends Construct {
           lakeWriterLambda: props.lakeWriterLambda,
           partitions: props.partitions,
           lakeStorageBucket: props.lakeStorageBucket,
+          athenaResultsBucket: props.athenaResultsBucket,
         })
       );
     }

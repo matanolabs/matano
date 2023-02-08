@@ -98,6 +98,7 @@ export class DPMainStack extends MatanoStack {
           realtimeTopic: props.realtimeBucketTopic,
           lakeWriterLambda: lakeWriter.lakeWriterLambda,
           lakeStorageBucket: props.lakeStorageBucket.bucket,
+          athenaResultsBucket: props.matanoAthenaResultsBucket,
         }
       );
       const formattedName = matanoResourceToCdkName(logSource.logSourceLevelConfig.name!);
@@ -118,6 +119,7 @@ export class DPMainStack extends MatanoStack {
       realtimeTopic: props.realtimeBucketTopic,
       lakeWriterLambda: lakeWriter.alertsLakeWriterLambda,
       lakeStorageBucket: props.lakeStorageBucket.bucket,
+      athenaResultsBucket: props.matanoAthenaResultsBucket,
     });
     logSources.push(matanoAlertsSource);
 

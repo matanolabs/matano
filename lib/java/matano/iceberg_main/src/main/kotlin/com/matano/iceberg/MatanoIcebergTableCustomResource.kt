@@ -14,6 +14,7 @@ import com.fasterxml.jackson.databind.node.IntNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.module.kotlin.convertValue
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import kotlinx.coroutines.runBlocking
 import org.apache.iceberg.PartitionSpec
 import org.apache.iceberg.Schema
 import org.apache.iceberg.SchemaParser
@@ -123,6 +124,8 @@ interface CFNCustomResource {
 class MatanoIcebergTableCustomResource : CFNCustomResource {
     private val logger = LoggerFactory.getLogger(this::class.java)
 
+    val athenaQueryRunner: AthenaQueryRunner by lazy { AthenaQueryRunner("matano_system_v3") }
+
     val icebergCatalog: Catalog by lazy { createIcebergCatalog() }
     val mapper = CFNCustomResource.mapper
 
@@ -189,6 +192,7 @@ class MatanoIcebergTableCustomResource : CFNCustomResource {
             tableProperties,
         )
         logger.info("Successfully created table.")
+        syncView("$namespace.${requestProps.tableName}", requestProps.schema)
         return CfnResponse(PhysicalResourceId = requestProps.tableName)
     }
 
@@ -274,6 +278,8 @@ class MatanoIcebergTableCustomResource : CFNCustomResource {
 
         tx.commitTransaction()
 
+        syncView("$namespace.${newProps.tableName}", newProps.schema)
+
         return null
     }
 
@@ -290,6 +296,41 @@ class MatanoIcebergTableCustomResource : CFNCustomResource {
             logger.info("Glue table not found while deleting table, skipping...")
         }
         return null
+    }
+
+    fun syncHelper(parents: List<NestedField>, fields: List<NestedField>, ret: MutableList<String>) {
+        for (field in fields) {
+            if (field.type() is Types.StructType) {
+                syncHelper(parents + field, (field.type() as Types.StructType).fields(), ret)
+            } else {
+                val escape = { s: String -> "\"$s\"" }
+                val parts = parents + field
+                var selCol = parts.joinToString(".") { escape(it.name()) }
+                val asCol = escape(parts.joinToString("_") { it.name() })
+
+                if (field.type() is Types.TimestampType) {
+                    selCol = "CAST($selCol AS timestamp)"
+                }
+                val col = "$selCol AS $asCol"
+                ret.add(col)
+            }
+        }
+    }
+
+    /** Create flattened view of a table. */
+    fun syncView(tableName: String, schema: Schema) {
+        if (!tableName.startsWith("matano.") || tableName.contains("enrich")) {
+            return
+        }
+
+        val fields = schema.columns()
+        val castColumns = mutableListOf<String>()
+        syncHelper(listOf(), fields, castColumns)
+        val query = "SELECT ${castColumns.joinToString(", ")} FROM $tableName"
+        val viewQuery = "CREATE OR REPLACE VIEW ${tableName}_view AS $query"
+
+        logger.info("Syncing view for: $tableName")
+        runBlocking { athenaQueryRunner.runAthenaQuery(viewQuery) }
     }
 
     companion object {
