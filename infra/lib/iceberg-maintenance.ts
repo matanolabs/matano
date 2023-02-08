@@ -181,7 +181,7 @@ class IcebergExpireSnapshots extends Construct {
       memorySize: 650,
       timeout: cdk.Duration.minutes(14),
       handler: "com.matano.iceberg.ExpireSnapshotsHandler::handleRequest",
-      code: getLocalAsset("iceberg_metadata"),
+      code: getLocalAsset("iceberg_main"),
       initialPolicy: [
         new iam.PolicyStatement({
           actions: [
@@ -249,7 +249,7 @@ class IcebergRewriteManifests extends Construct {
       memorySize: 1024,
       timeout: cdk.Duration.minutes(14),
       handler: "com.matano.iceberg.RewriteManifestsHandler::handleRequest",
-      code: getLocalAsset("iceberg_metadata"),
+      code: getLocalAsset("iceberg_main"),
       initialPolicy: [
         new iam.PolicyStatement({
           actions: [

@@ -64,7 +64,7 @@ export class SchemasProvider extends Construct {
       environment: {
         ASSETS_BUCKET_NAME: getMatanoStack(this).cdkAssetsBucketName,
       },
-      code: getLocalAsset("iceberg_table_cfn"),
+      code: getLocalAsset("iceberg_main"),
       initialPolicy: [
         // only need to load tables to get schema
         new iam.PolicyStatement({
@@ -146,7 +146,7 @@ export class IcebergTableProvider extends Construct {
       environment: {
         MATANO_ICEBERG_BUCKET: props.lakeStorageBucket.bucketName,
       },
-      code: getLocalAsset("iceberg_table_cfn"),
+      code: getLocalAsset("iceberg_main"),
       initialPolicy: [
         new iam.PolicyStatement({
           actions: [
@@ -200,7 +200,7 @@ export class IcebergMetadata extends Construct {
         DUPLICATES_DDB_TABLE_NAME: duplicatesTable.tableName,
         MATANO_ICEBERG_BUCKET: props.lakeStorageBucket.bucket.bucketName,
       },
-      code: getLocalAsset("iceberg_metadata"),
+      code: getLocalAsset("iceberg_main"),
       initialPolicy: [
         new iam.PolicyStatement({
           actions: [
@@ -245,7 +245,7 @@ export class IcebergMetadata extends Construct {
         DUPLICATES_DDB_TABLE_NAME: duplicatesTable.tableName,
         MATANO_ICEBERG_BUCKET: props.lakeStorageBucket.bucket.bucketName,
       },
-      code: getLocalAsset("iceberg_metadata"),
+      code: getLocalAsset("iceberg_main"),
       initialPolicy: [
         new iam.PolicyStatement({
           actions: [

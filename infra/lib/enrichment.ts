@@ -185,7 +185,7 @@ export class Enrichment extends Construct {
           ],
         }),
       ],
-      code: getLocalAsset("iceberg_metadata"),
+      code: getLocalAsset("iceberg_main"),
     });
     makeLambdaSnapstart(this.enrichmentSyncerFunc);
 

@@ -27,6 +27,8 @@ import org.apache.iceberg.expressions.UnboundTerm
 import org.apache.iceberg.mapping.MappingUtil
 import org.apache.iceberg.mapping.NameMappingParser
 import org.apache.iceberg.types.TypeUtil
+import org.apache.iceberg.types.Types
+import org.apache.iceberg.types.Types.NestedField
 import org.slf4j.LoggerFactory
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.regex.Pattern

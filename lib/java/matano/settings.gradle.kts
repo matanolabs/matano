@@ -8,4 +8,4 @@
  */
 
 rootProject.name = "matano"
-include("iceberg_metadata", "iceberg_table_cfn", "scripts")
+include("iceberg_main")
