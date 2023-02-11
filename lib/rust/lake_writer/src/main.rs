@@ -6,14 +6,17 @@ use futures::AsyncReadExt;
 use futures::TryFutureExt;
 use futures::TryStreamExt;
 use log::warn;
+use rayon::prelude::IntoParallelIterator;
+use rayon::prelude::ParallelIterator;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use shared::sqs_util::*;
 use shared::*;
 
+use std::borrow::BorrowMut;
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::sync::Mutex;
 use std::{time::Instant, vec};
 
 use aws_lambda_events::event::sqs::SqsEvent;
@@ -29,6 +32,7 @@ use futures::StreamExt;
 use arrow2::io::avro::avro_schema::file::Block;
 use arrow2::io::avro::avro_schema::read_async::{block_stream, decompress_block, read_metadata};
 use arrow2::io::avro::read::deserialize;
+use std::sync::Mutex;
 use tokio_util::compat::TokioAsyncReadCompatExt;
 
 mod common;
@@ -114,19 +118,25 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<Option<SQ
 
     let pool = ThreadPool::new(4);
     let pool_ref = Arc::new(pool);
-    let blocks = vec![];
-    let blocks_ref = Arc::new(Mutex::new(blocks));
 
-    let alert_blocks = vec![];
-    let alert_blocks_ref = Arc::new(Mutex::new(alert_blocks));
+    let partition_hour_to_blocks_ref: Arc<
+        Mutex<HashMap<String, Vec<Result<Block, SQSLambdaError>>>>,
+    > = Arc::new(Mutex::new(HashMap::new()));
+    let partition_hour_to_alert_blocks_ref: Arc<tokio::sync::Mutex<HashMap<String, Vec<Vec<u8>>>>> =
+        Arc::new(tokio::sync::Mutex::new(HashMap::new()));
 
     let mut errors = vec![];
+    let ts_hour_to_msg_ids: Arc<tokio::sync::Mutex<HashMap<String, Vec<String>>>> =
+        Arc::new(tokio::sync::Mutex::new(HashMap::new()));
 
     let tasks = downloads
         .into_iter()
         .map(|(msg_id, r)| {
             let s3 = &s3;
             let msg_id_copy = msg_id.clone();
+            let ts_hour = r.ts_hour;
+            let ts_hour_to_msg_ids = ts_hour_to_msg_ids.clone();
+
             let ret = async move {
                 let obj = s3
                     .get_object()
@@ -138,9 +148,17 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<Option<SQ
 
                 let stream = obj.body;
                 let reader = TokioAsyncReadCompatExt::compat(stream.into_async_read());
-                anyhow::Ok((msg_id, reader))
+
+                let mut ts_hour_to_msg_ids = ts_hour_to_msg_ids.lock().await;
+
+                ts_hour_to_msg_ids
+                    .entry(ts_hour.clone())
+                    .or_insert_with(|| vec![])
+                    .push(msg_id.clone());
+
+                anyhow::Ok((msg_id, ts_hour, reader))
             }
-            .map_err(|e| SQSLambdaError::new(format!("{:#}", e), msg_id_copy));
+            .map_err(|e| SQSLambdaError::new(format!("{:#}", e), vec![msg_id_copy]));
             ret
         })
         .collect::<Vec<_>>();
@@ -150,21 +168,25 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<Option<SQ
         .into_iter()
         .filter_map(|r| r.map_err(|e| errors.push(e)).ok());
 
-    let work_futures = result.map(|(msg_id, mut reader)| {
-        let blocks_ref = blocks_ref.clone();
-        let alert_blocks_ref = alert_blocks_ref.clone();
+    let work_futures = result.map(|(msg_id, ts_hour, mut reader)| {
         let pool_ref = pool_ref.clone();
         let resolved_table_name = resolved_table_name.clone();
         let msg_id_copy = msg_id.clone();
+        let partition_hour_to_blocks_ref = partition_hour_to_blocks_ref.clone();
+        let partition_hour_to_alert_blocks_ref = partition_hour_to_alert_blocks_ref.clone();
 
         async move {
             let ret = if resolved_table_name == ALERTS_TABLE_NAME {
                 let mut buf = vec![];
                 reader.read_to_end(&mut buf).await?;
-                let mut alert_blocks = alert_blocks_ref
-                    .lock()
-                    .map_err(|e| anyhow!(e.to_string()))?;
-                alert_blocks.push(buf);
+
+                let mut partition_hour_to_alert_blocks_ref =
+                    partition_hour_to_alert_blocks_ref.lock().await;
+                let alert_blocks_ref = partition_hour_to_alert_blocks_ref
+                    .entry(ts_hour.clone())
+                    .or_insert_with(|| vec![]);
+
+                alert_blocks_ref.push(buf);
 
                 anyhow::Ok(None)
             } else {
@@ -176,8 +198,10 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<Option<SQ
                     1000000,
                     move |mut block| {
                         let pool = pool_ref.clone();
-                        let blocks_ref = blocks_ref.clone();
                         let msg_id = msg_id.clone();
+                        let ts_hour = ts_hour.clone();
+                        let partition_hour_to_blocks_ref = partition_hour_to_blocks_ref.clone();
+
                         async move {
                             // the content here is CPU-bounded. It should run on a dedicated thread pool
                             pool.execute(move || {
@@ -192,11 +216,18 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<Option<SQ
                                         anyhow::Ok(decompressed_block)
                                     })
                                     .map_err(|e| {
-                                        SQSLambdaError::new(format!("{:#}", e), msg_id.clone())
+                                        SQSLambdaError::new(
+                                            format!("{:#}", e),
+                                            vec![msg_id.clone()],
+                                        )
                                     });
 
-                                let mut blocks = blocks_ref.lock().unwrap();
-                                blocks.push(decompressed);
+                                let mut partition_hour_to_blocks_ref =
+                                    partition_hour_to_blocks_ref.lock().unwrap();
+                                let blocks_ref = partition_hour_to_blocks_ref
+                                    .entry(ts_hour.clone())
+                                    .or_insert_with(|| vec![]);
+                                blocks_ref.push(decompressed);
                                 ()
                             });
                             anyhow::Ok(())
@@ -209,7 +240,7 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<Option<SQ
             };
             ret
         }
-        .map_err(move |e| SQSLambdaError::new(format!("{:#}", e), msg_id_copy))
+        .map_err(move |e| SQSLambdaError::new(format!("{:#}", e), vec![msg_id_copy]))
     });
 
     let results = join_all(work_futures)
@@ -221,47 +252,89 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<Option<SQ
     let pool = pool_ref.clone();
     pool.join();
 
-    if resolved_table_name == ALERTS_TABLE_NAME {
+    let errors = Arc::new(Mutex::new(errors));
+
+    if &resolved_table_name == ALERTS_TABLE_NAME {
         info!("Processing alerts...");
-        let alert_blocks_ref =
-            Arc::try_unwrap(alert_blocks_ref).map_err(|_| anyhow!("fail get rowgroups"))?;
-        let alert_blocks = Mutex::into_inner(alert_blocks_ref)?;
-        matano_alerts::process_alerts(s3, alert_blocks).await?;
+        let partition_hour_to_alert_blocks_ref =
+            Arc::try_unwrap(partition_hour_to_alert_blocks_ref)
+                .map_err(|_| anyhow!("fail get alert blocks"))?;
+        let partition_hour_to_alert_blocks_ref = partition_hour_to_alert_blocks_ref.into_inner();
+        for (partition_hour, alert_blocks) in partition_hour_to_alert_blocks_ref.into_iter() {
+            info!("Processing alerts for partition {}", partition_hour);
+            matano_alerts::process_alerts(s3.clone(), alert_blocks).await?;
+        }
     } else {
-        let blocks_ref = Arc::try_unwrap(blocks_ref).map_err(|_| anyhow!("fail get rowgroups"))?;
-        let blocks = Mutex::into_inner(blocks_ref)?;
+        let partition_hour_to_blocks_ref = Arc::try_unwrap(partition_hour_to_blocks_ref)
+            .map_err(|_| anyhow!("fail get blocks"))?;
+        let partition_hour_to_blocks_ref = Mutex::into_inner(partition_hour_to_blocks_ref)?;
+        let ts_hour_to_msg_ids = Arc::try_unwrap(ts_hour_to_msg_ids)
+            .map_err(|_| anyhow!("fail get msg ids"))?
+            .into_inner();
+        let futures = partition_hour_to_blocks_ref
+            .into_par_iter()
+            .map(|(partition_hour, blocks)| {
+                let msg_ids = ts_hour_to_msg_ids
+                    .get(&partition_hour)
+                    .ok_or_else(|| anyhow!("no msg ids for partition {}", partition_hour))?;
 
-        let blocks = blocks
-            .into_iter()
-            .filter_map(|r| r.map_err(|e| errors.push(e)).ok())
-            .collect::<Vec<_>>();
-        if !blocks.is_empty() {
-            let metadata = results
-                .first()
-                .unwrap()
-                .as_ref()
-                .context("Need metadata!")?;
-            let block = concat_blocks(blocks);
-            let projection = table_schema.fields.iter().map(|_| true).collect::<Vec<_>>();
+                let blocks = blocks
+                    .into_iter()
+                    .filter_map(|r| r.map_err(|e| errors.lock().unwrap().push(e)).ok())
+                    .collect::<Vec<_>>();
+                if !blocks.is_empty() {
+                    // see TODO below
+                    let metadata = results
+                        .first()
+                        .unwrap()
+                        .as_ref()
+                        .context("Need metadata!")?;
+                    let block = concat_blocks(blocks);
+                    let projection = table_schema.fields.iter().map(|_| true).collect::<Vec<_>>();
 
-            // There's an edge case bug here when schema is updated. Using static schema
-            // on old data before schema will throw since field length unequal.
-            // TODO: Group block's by schema and then deserialize.
-            let chunk = deserialize(
-                &block,
-                &table_schema.fields,
-                &metadata.record.fields,
-                &projection,
-            )?;
-            let chunks = vec![chunk];
+                    // There's an edge case bug here when schema is updated. Using static schema
+                    // on old data before schema will throw since field length unequal.
+                    // TODO: Group block's by schema and then deserialize.
+                    let chunk = deserialize(
+                        &block,
+                        &table_schema.fields,
+                        &metadata.record.fields,
+                        &projection,
+                    )?;
+                    let chunks = vec![chunk];
 
-            let (field, arrays) = struct_wrap_arrow2_for_ffi(&table_schema, chunks);
-            // TODO: fix to use correct partition (@shaeq)
-            let partition_hour = chrono::offset::Utc::now().format("%Y-%m-%d-%H").to_string();
-            write_arrow_to_s3_parquet(s3, resolved_table_name, partition_hour, field, arrays)
-                .await?;
+                    let (field, arrays) = struct_wrap_arrow2_for_ffi(&table_schema, chunks);
+
+                    let result = write_arrow_to_s3_parquet(
+                        s3.clone(),
+                        resolved_table_name.clone(),
+                        partition_hour,
+                        field,
+                        arrays,
+                    )
+                    .map_err(|e| SQSLambdaError::new(format!("{:#}", e), msg_ids.clone()));
+
+                    Ok(Some(result))
+                } else {
+                    Ok(None)
+                }
+            })
+            .collect::<Result<Vec<_>>>()?;
+
+        let futures = futures.into_iter().filter_map(|r| r).collect::<Vec<_>>();
+
+        let results = join_all(futures).await;
+
+        // handle errors
+        for result in results {
+            if let Err(e) = result {
+                errors.lock().unwrap().push(e);
+            }
         }
     }
+
+    let errors = Arc::try_unwrap(errors).map_err(|_| anyhow!("fail get errors"))?;
+    let errors = Mutex::into_inner(errors)?;
 
     sqs_errors_to_response(errors)
 }
@@ -271,6 +344,7 @@ pub(crate) struct S3SQSMessage {
     pub resolved_table_name: String,
     pub bucket: String,
     pub key: String,
+    pub ts_hour: String,
 }
 
 fn concat_blocks(mut blocks: Vec<Block>) -> Block {

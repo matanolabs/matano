@@ -12,6 +12,7 @@ use shared::vrl_util::vrl_opt;
 use std::borrow::Cow;
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::env::var;
 use std::fs::read_to_string;
 use std::path::Path;
@@ -684,6 +685,8 @@ pub(crate) async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
 
                                             let v_clone = log_enabled!(log::Level::Debug).then(|| v.clone());
 
+                                            let ts_hour = v.get("ts").ok_or(anyhow!("Failed to find matano timestamp"))?.as_timestamp().ok_or(anyhow!("Failed to parse matano timestamp"))?.format("%Y-%m-%d-%H").to_string();
+
                                             let v_avro = TryIntoAvro::try_into(v)?;
                                             let v_avro = v_avro.resolve(avro_schema)
                                             .map_err(|e| {
@@ -699,7 +702,7 @@ pub(crate) async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
                                                 }
                                             })?;
 
-                                            Ok(Some((resolved_table_name, v_avro)))
+                                            Ok(Some(((resolved_table_name, ts_hour), v_avro)))
                                         }
                                         Err(e) => Err(anyhow!("Malformed line: {}", e)),
                                     })
@@ -726,7 +729,7 @@ pub(crate) async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
 
                 anyhow::Ok(Some(stream))
             }.map_err(move |e|
-                SQSLambdaError::new(format!("{:#}", e), item_copy.sequencer)
+                SQSLambdaError::new(format!("{:#}", e), vec![item_copy.sequencer])
             )
         })
         .collect::<Vec<_>>();
@@ -738,12 +741,13 @@ pub(crate) async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
         .flatten()
         .collect::<Vec<_>>();
 
-    let mut writers_by_table: RefCell<HashMap<String, (Writer<Vec<u8>>, usize)>> =
-        RefCell::new(HashMap::new());
+    let mut writers_by_table_utc_hour_pair: RefCell<
+        HashMap<(String, String), (Writer<Vec<u8>>, usize)>,
+    > = RefCell::new(HashMap::new());
 
     let mut merged: StreamMap<
         String,
-        Pin<Box<dyn Stream<Item = (std::string::String, apache_avro::types::Value)> + Send>>,
+        Pin<Box<dyn Stream<Item = ((String, String), apache_avro::types::Value)> + Send>>,
     > = StreamMap::new();
     for (i, stream) in result.into_iter().enumerate() {
         merged.insert(
@@ -753,12 +757,12 @@ pub(crate) async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
     }
 
     merged
-        .for_each(|(_, (resolved_table_name, v))| {
-            let mut writers_by_table = writers_by_table.borrow_mut();
+        .for_each(|(_, ((resolved_table_name, ts_hour), v))| {
+            let mut writers_by_table_utc_hour_pair = writers_by_table_utc_hour_pair.borrow_mut();
 
             async move {
-                let (writer, rows) = writers_by_table
-                    .entry(resolved_table_name.clone())
+                let (writer, rows) = writers_by_table_utc_hour_pair
+                    .entry((resolved_table_name.clone(), ts_hour.clone()))
                     .or_insert_with(|| {
                         let avro_schema = AVRO_SCHEMAS
                             .get(&resolved_table_name)
@@ -779,67 +783,75 @@ pub(crate) async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
         })
         .await;
 
-    let writers_by_table = writers_by_table.into_inner();
-    let futures = writers_by_table
-        .into_iter()
-        .map(|(resolved_table_name, (writer, rows))| {
-            let record = s3_download_items_copy
-                .iter()
-                .find(|(_, log_source)| resolved_table_name.contains(log_source))
-                .unwrap()
-                .0;
+    let writers_by_table = writers_by_table_utc_hour_pair.into_inner();
+    let futures =
+        writers_by_table
+            .into_iter()
+            .map(|((resolved_table_name, ts_hour), (writer, rows))| {
+                let matching_record_seqs = s3_download_items_copy
+                    .iter()
+                    .filter_map(|(record, log_source)| {
+                        resolved_table_name
+                            .contains(log_source)
+                            .then_some(record.sequencer.clone())
+                    })
+                    .collect::<Vec<_>>();
 
-            async move {
-                let bytes = writer.into_inner()?;
-                if bytes.len() == 0 || rows == 0 {
-                    return Ok(());
+                async move {
+                    let bytes = writer.into_inner()?;
+                    if bytes.len() == 0 || rows == 0 {
+                        return Ok(());
+                    }
+                    info!("Writing number of Rows: {}", rows);
+
+                    let uuid = Uuid::new_v4();
+                    let bucket = var("MATANO_REALTIME_BUCKET_NAME")?;
+                    let key = format!(
+                        "transformed/{}/ts_hour={}/{}.snappy.avro",
+                        &resolved_table_name, &ts_hour, uuid
+                    );
+                    info!("Writing Avro file to S3 path: {}/{}", bucket, key);
+
+                    s3.put_object()
+                        .bucket(&bucket)
+                        .key(&key)
+                        .body(ByteStream::from(bytes))
+                        .content_type("application/avro-binary".to_string())
+                        // .content_encoding("application/zstd".to_string())
+                        .send()
+                        .await
+                        .map_err(|e| anyhow!(e).context(format!("Error putting {} to S3", key)))?;
+
+                    sns.publish()
+                        .topic_arn(var("MATANO_REALTIME_TOPIC_ARN")?)
+                        .message(
+                            json!({
+                                "bucket": &bucket,
+                                "key": &key,
+                                "resolved_table_name": resolved_table_name,
+                                "ts_hour": ts_hour,
+                            })
+                            .to_string(),
+                        )
+                        .message_attributes(
+                            "resolved_table_name",
+                            MessageAttributeValue::builder()
+                                .data_type("String".to_string())
+                                .string_value(resolved_table_name)
+                                .build(),
+                        )
+                        .send()
+                        .await
+                        .map_err(|e| {
+                            anyhow!(e).context(format!(
+                                "Error publishing SNS notification for S3 key: {}",
+                                key
+                            ))
+                        })?;
+                    anyhow::Ok(())
                 }
-                info!("Writing number of Rows: {}", rows);
-
-                let uuid = Uuid::new_v4();
-                let bucket = var("MATANO_REALTIME_BUCKET_NAME")?;
-                let key = format!("transformed/{}/{}.snappy.avro", &resolved_table_name, uuid);
-                info!("Writing Avro file to S3 path: {}/{}", bucket, key);
-
-                s3.put_object()
-                    .bucket(&bucket)
-                    .key(&key)
-                    .body(ByteStream::from(bytes))
-                    .content_type("application/avro-binary".to_string())
-                    // .content_encoding("application/zstd".to_string())
-                    .send()
-                    .await
-                    .map_err(|e| anyhow!(e).context(format!("Error putting {} to S3", key)))?;
-
-                sns.publish()
-                    .topic_arn(var("MATANO_REALTIME_TOPIC_ARN")?)
-                    .message(
-                        json!({
-                            "bucket": &bucket,
-                            "key": &key,
-                            "resolved_table_name": resolved_table_name
-                        })
-                        .to_string(),
-                    )
-                    .message_attributes(
-                        "resolved_table_name",
-                        MessageAttributeValue::builder()
-                            .data_type("String".to_string())
-                            .string_value(resolved_table_name)
-                            .build(),
-                    )
-                    .send()
-                    .await
-                    .map_err(|e| {
-                        anyhow!(e).context(format!(
-                            "Error publishing SNS notification for S3 key: {}",
-                            key
-                        ))
-                    })?;
-                anyhow::Ok(())
-            }
-            .map_err(move |e| SQSLambdaError::new(format!("{:#}", e), record.sequencer.clone()))
-        });
+                .map_err(move |e| SQSLambdaError::new(format!("{:#}", e), matching_record_seqs))
+            });
 
     join_all(futures).await.into_iter().for_each(|r| {
         r.map_err(|e| errors.push(e)).ok();
@@ -854,10 +866,14 @@ pub(crate) async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
         if errors.len() == data_batcher_records.len() {
             return Err(anyhow!("All records failed!"));
         } else {
-            let failures = errors.iter().map(|e| {
+            let error_ids = errors
+                .into_iter()
+                .flat_map(|e| e.ids)
+                .collect::<HashSet<_>>();
+            let failures = error_ids.iter().map(|error_id| {
                 data_batcher_records
                     .iter()
-                    .find(|r| r.sequencer == e.id)
+                    .find(|r| &r.sequencer == error_id)
                     .unwrap()
                     .clone()
             });
