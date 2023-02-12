@@ -12,7 +12,6 @@ import org.slf4j.LoggerFactory
 import java.io.InputStream
 import java.io.OutputStream
 import java.time.OffsetDateTime
-import java.util.concurrent.Executors
 
 data class ExpireSnapshotsRequest(val time: String, val table_name: String)
 
@@ -34,8 +33,8 @@ class ExpireSnapshots {
         val glueCatalog = GlueCatalog().apply { initialize("glue_catalog", IcebergMetadataWriter.icebergProperties) }
         return CachingCatalog.wrap(glueCatalog)
     }
-    val planExecutorService = Executors.newFixedThreadPool(100)
-    val expireExecutorService = Executors.newFixedThreadPool(100)
+    val planExecutorService = cachedBoundedThreadPool(100)
+    val expireExecutorService = cachedBoundedThreadPool(100)
     val namespace = Namespace.of(IcebergMetadataWriter.MATANO_NAMESPACE)
 
     fun handle(event: ExpireSnapshotsRequest) {

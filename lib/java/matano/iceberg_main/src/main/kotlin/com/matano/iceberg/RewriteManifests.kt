@@ -11,7 +11,6 @@ import org.apache.iceberg.catalog.TableIdentifier
 import org.slf4j.LoggerFactory
 import java.io.InputStream
 import java.io.OutputStream
-import java.util.concurrent.Executors
 
 data class RewriteManifestsRequest(val table_name: String)
 
@@ -32,7 +31,7 @@ class RewriteManifests {
         val glueCatalog = GlueCatalog().apply { initialize("glue_catalog", IcebergMetadataWriter.icebergProperties) }
         return CachingCatalog.wrap(glueCatalog)
     }
-    val planExecutorService = Executors.newFixedThreadPool(30)
+    val planExecutorService = cachedBoundedThreadPool(30)
     val namespace = Namespace.of(IcebergMetadataWriter.MATANO_NAMESPACE)
 
     fun handle(event: RewriteManifestsRequest) {

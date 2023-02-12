@@ -207,7 +207,7 @@ export class IcebergMetadata extends Construct {
     this.metadataWriterFunction = new lambda.Function(this, "WriterFunction", {
       description: "[Matano] This function ingests written input files into an Iceberg table.",
       runtime: lambda.Runtime.JAVA_11,
-      memorySize: 1024,
+      memorySize: 3000,
       handler: "com.matano.iceberg.IcebergMetadataHandler::handleRequest",
       timeout: cdk.Duration.minutes(3),
       environment: {

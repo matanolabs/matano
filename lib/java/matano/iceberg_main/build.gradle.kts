@@ -41,29 +41,32 @@ dependencies {
     implementation("com.amazonaws:aws-java-sdk-sts:1.11.1026")
     implementation("com.amazonaws:aws-java-sdk-dynamodb:1.11.1026")
     implementation("com.amazonaws:aws-lambda-java-core:1.2.1")
+    implementation("com.amazonaws:aws-lambda-java-events:3.11.0")
 
     implementation("org.apache.hadoop:hadoop-mapreduce-client-core:3.3.3")
     implementation("org.apache.parquet:parquet-hadoop-bundle:1.12.3")
     implementation("org.apache.parquet:parquet-avro:1.12.3")
-    implementation("software.amazon.awssdk:glue:2.17.131") {
+    implementation("software.amazon.awssdk:glue:2.20.1") {
         exclude("software.amazon.awssdk", "apache-client")
         exclude("software.amazon.awssdk", "netty-nio-client")
     }
     implementation("software.amazon.awssdk:athena:2.17.131")
-    implementation("software.amazon.awssdk:s3:2.17.131") {
+    implementation("software.amazon.awssdk:s3:2.20.1") {
         exclude("software.amazon.awssdk", "apache-client")
-//        exclude("software.amazon.awssdk", "netty-nio-client")
     }
-    implementation("software.amazon.awssdk:sts:2.17.131") {
+    implementation("software.amazon.awssdk:dynamodb:2.20.1") {
+        exclude("software.amazon.awssdk", "apache-client")
+    }
+    implementation("software.amazon.awssdk:sts:2.20.1") {
         exclude("software.amazon.awssdk", "apache-client")
         exclude("software.amazon.awssdk", "netty-nio-client")
     }
-    implementation("software.amazon.awssdk:url-connection-client:2.17.131")
-    implementation("com.amazonaws:aws-java-sdk-s3:1.11.213")
-    implementation("com.amazonaws:aws-lambda-java-events:3.11.0")
+    implementation("software.amazon.awssdk:netty-nio-client:2.20.1")
+    implementation("software.amazon.awssdk:url-connection-client:2.20.1")
 
     implementation("com.github.luben:zstd-jni:1.5.+")
     implementation("net.lingala.zip4j:zip4j:2.11.1")
+    testImplementation("com.amazonaws:aws-lambda-java-serialization:1.0.1")
 }
 
 application {
