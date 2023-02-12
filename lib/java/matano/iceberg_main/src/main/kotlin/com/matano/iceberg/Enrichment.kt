@@ -46,7 +46,6 @@ import java.io.File
 import java.time.OffsetDateTime
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.Executors
 import java.util.stream.Stream
 import kotlin.coroutines.coroutineContext
 
@@ -55,7 +54,7 @@ data class EnrichmentConfig(
     val enrichment_type: String,
     val write_mode: String = "overwrite",
     val lookup_keys: List<String>? = null,
-    val schema: JsonNode
+    val schema: JsonNode,
 )
 
 fun loadEnrichmentConfiguration(): Map<String, EnrichmentConfig> {
@@ -71,7 +70,7 @@ fun loadEnrichmentConfiguration(): Map<String, EnrichmentConfig> {
 
 data class EnrichmentSyncRequest(
     val time: String,
-    val table_name: String
+    val table_name: String,
 )
 
 class EnrichmentSyncerHandler : RequestHandler<SQSEvent, Void?> {
@@ -93,7 +92,7 @@ class EnrichmentIcebergSyncer {
     }
     val enrichmentTablesBucket = System.getenv("ENRICHMENT_TABLES_BUCKET") ?: throw RuntimeException("Need enrichment bucket.")
     val mapper = jacksonObjectMapper()
-    val planExecutorService = Executors.newFixedThreadPool(20)
+    val planExecutorService = cachedBoundedThreadPool(20)
     val athenaQueryRunner = AthenaQueryRunner()
 
     fun handle(event: SQSEvent, configs: Map<String, EnrichmentConfig>) {
@@ -269,7 +268,7 @@ class EnrichmentIcebergSyncer {
             schema,
             ParquetFileWriter.Mode.CREATE,
             rowGroupSize,
-            0
+            0,
         )
         writer.start()
         for (inputFile in inputFiles) {
@@ -284,12 +283,12 @@ const val MATANO_SYSTEM_DB = "matano_system"
 
 /** Write Iceberg metadata for enrichment tables */
 class EnrichmentMetadataWriter(
-    val configs: Map<String, EnrichmentConfig>
+    val configs: Map<String, EnrichmentConfig>,
 ) {
     private val logger = LoggerFactory.getLogger(this::class.java)
     val athenaQueryRunner = AthenaQueryRunner("matano_system_v3")
 
-    suspend fun doMerge(table: Table, pkCol: String, tempTableAthenaId: String) {
+    fun doMerge(table: Table, pkCol: String, tempTableAthenaId: String): CompletableFuture<Unit> {
         val (_, db, name) = table.name().split(".", limit = 3)
         val mainTableAthenaId = "$db.$name"
 
@@ -307,24 +306,28 @@ class EnrichmentMetadataWriter(
                 THEN INSERT ($colsPart) VALUES($insertColPart)
         """.trimIndent()
 
-        athenaQueryRunner.runAthenaQuery(stmt)
+        return athenaQueryRunner.runAthenaQuery(stmt)
     }
 
-    suspend fun doMetadataWrite(
+    fun doMetadataWrite(
         icebergCatalog: Catalog,
         icebergTable: Table,
         dataFile: DataFile,
         appendFiles: () -> AppendFiles,
-        overwriteFiles: () -> OverwriteFiles
-    ) {
+        overwriteFiles: () -> OverwriteFiles,
+    ): CompletableFuture<Unit> {
         val icebergTableName = icebergTable.name().split(".").last() // remove catalog, db
         val enrichTableName = icebergTableName.removePrefix("enrich_")
         val conf = configs[enrichTableName] ?: throw RuntimeException("Invalid table name: $enrichTableName")
         if (conf.enrichment_type == "static" || conf.write_mode == "overwrite") {
             logger.info("Doing overwrite for enrichment table: $icebergTableName")
-            overwriteFiles().apply {
-                icebergTable.newScan().planFiles().map { it.file() }.forEach { deleteFile(it) }
-            }.addFile(dataFile)
+            return CompletableFuture.supplyAsync({
+                icebergTable.newScan().planFiles().map { it.file() }
+            }, executor).thenApplyAsync { files ->
+                overwriteFiles()
+                    .apply { files.forEach { deleteFile(it) } }
+                    .addFile(dataFile)
+            }
         } else if (conf.write_mode == "append") {
             logger.info("Doing append for enrichment table: $icebergTableName")
             appendFiles().appendFile(dataFile)
@@ -335,13 +338,21 @@ class EnrichmentMetadataWriter(
             val tempTable = icebergCatalog.loadTable(tempTableId)
 
             // Overwrite the temp table.
-            tempTable.newOverwrite().apply {
-                tempTable.newScan().planFiles().map { it.file() }.forEach { deleteFile(it) }
-            }.addFile(dataFile).commit()
-
-            // And merge the temp table into the main table.
-            val pkCol = conf.schema.get("primary_key")?.textValue() ?: throw RuntimeException("Need Primary key!")
-            doMerge(icebergTable, pkCol, "$MATANO_SYSTEM_DB.$tempTableName")
+            return CompletableFuture.supplyAsync({
+                tempTable.newScan().planFiles().map { it.file() }
+            }, executor).thenApplyAsync { files ->
+                tempTable.newOverwrite()
+                    .apply { files.forEach { deleteFile(it) } }
+                    .addFile(dataFile).commit()
+            }.thenComposeAsync { _ ->
+                // And merge the temp table into the main table.
+                val pkCol = conf.schema.get("primary_key")?.textValue() ?: throw RuntimeException("Need Primary key!")
+                doMerge(icebergTable, pkCol, "$MATANO_SYSTEM_DB.$tempTableName")
+            }
         }
+        return CompletableFuture.completedFuture(Unit)
+    }
+    companion object {
+        val executor = cachedBoundedThreadPool(15)
     }
 }

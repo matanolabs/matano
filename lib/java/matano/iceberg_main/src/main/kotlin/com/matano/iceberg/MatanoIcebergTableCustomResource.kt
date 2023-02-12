@@ -14,7 +14,6 @@ import com.fasterxml.jackson.databind.node.IntNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.module.kotlin.convertValue
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import kotlinx.coroutines.runBlocking
 import org.apache.iceberg.PartitionSpec
 import org.apache.iceberg.Schema
 import org.apache.iceberg.SchemaParser
@@ -31,6 +30,7 @@ import org.apache.iceberg.types.TypeUtil
 import org.apache.iceberg.types.Types
 import org.apache.iceberg.types.Types.NestedField
 import org.slf4j.LoggerFactory
+import java.lang.IllegalArgumentException
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.regex.Pattern
 
@@ -285,9 +285,11 @@ class MatanoIcebergTableCustomResource : CFNCustomResource {
 
     override fun delete(event: CloudFormationCustomResourceEvent, context: Context): CfnResponse? {
         logger.info("Received event: ${mapper.writeValueAsString(event)}")
+        val newProps = mapper.convertValue<MatanoTableRequest>(event.resourceProperties)
 
         val tableName = event.resourceProperties["tableName"] as String
-        val tableId = TableIdentifier.of(Namespace.of(MATANO_NAMESPACE), tableName)
+        val namespace = newProps.glueDatabaseName ?: MATANO_NAMESPACE
+        val tableId = TableIdentifier.of(Namespace.of(namespace), tableName)
         val dropped = try {
             icebergCatalog.dropTable(tableId, false)
         } catch (e: software.amazon.awssdk.services.s3.model.NoSuchKeyException) {
@@ -295,6 +297,13 @@ class MatanoIcebergTableCustomResource : CFNCustomResource {
         } catch (e: software.amazon.awssdk.services.glue.model.EntityNotFoundException) {
             logger.info("Glue table not found while deleting table, skipping...")
         }
+
+        try {
+            syncView(tableName, null, drop = true)
+        } catch (e: Exception) {
+            logger.error("Failed to drop view for: $tableName, skipping", e)
+        }
+
         return null
     }
 
@@ -318,19 +327,26 @@ class MatanoIcebergTableCustomResource : CFNCustomResource {
     }
 
     /** Create flattened view of a table. */
-    fun syncView(tableName: String, schema: Schema) {
+    fun syncView(tableName: String, schema: Schema?, drop: Boolean = false) {
         if (!tableName.startsWith("matano.") || tableName.contains("enrich")) {
             return
         }
 
-        val fields = schema.columns()
-        val castColumns = mutableListOf<String>()
-        syncHelper(listOf(), fields, castColumns)
-        val query = "SELECT ${castColumns.joinToString(", ")} FROM $tableName"
-        val viewQuery = "CREATE OR REPLACE VIEW ${tableName}_view AS $query"
+        val viewName = "${tableName}_view"
+        if (drop) {
+            logger.info("Dropping view for: $tableName")
+            athenaQueryRunner.runAthenaQuery("DROP VIEW IF EXISTS $viewName").join()
+        } else {
+            val schema = schema ?: throw IllegalArgumentException("Schema cannot be null to sync view")
+            val fields = schema.columns()
+            val castColumns = mutableListOf<String>()
+            syncHelper(listOf(), fields, castColumns)
 
-        logger.info("Syncing view for: $tableName")
-        runBlocking { athenaQueryRunner.runAthenaQuery(viewQuery) }
+            logger.info("Syncing view for: $tableName")
+            val query = "SELECT ${castColumns.joinToString(", ")} FROM $tableName"
+            val viewQuery = "CREATE OR REPLACE VIEW $viewName AS $query"
+            athenaQueryRunner.runAthenaQuery(viewQuery).join()
+        }
     }
 
     companion object {
