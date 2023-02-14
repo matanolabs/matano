@@ -9,10 +9,9 @@ schema:
   - ecs.version
   - error.message
   - event.category
-  - event.dataset
+  - event.duration
   - event.end
   - event.kind
-  - event.module
   - event.outcome
   - event.start
   - http.request.body.bytes
@@ -22,8 +21,7 @@ schema:
   - http.response.status_code
   - http.version
   - source.address
-  - source.as.number
-  - source.as.organization.name
+  - source.bytes
   - source.ip
   - source.port
   - tags
@@ -34,10 +32,7 @@ schema:
   - url.port
   - url.query
   - url.scheme
-  - user_agent.device.name
-  - user_agent.name
   - user_agent.original
-  - user_agent.version
   fields:
   - name: aws
     type:
@@ -176,9 +171,18 @@ transform: |2
       . |= _grokked
   }
 
+  .ts = to_timestamp!(.ts)
+  .event.start = to_timestamp(.event.start) ?? null
+
   .event.kind = "event"
   .event.end = .ts
   .cloud.provider = "aws"
+
+  if .event.start != null && .event.end != null {
+    end_epoch_ns = to_unix_timestamp(.event.end, unit: "nanoseconds")
+    start_epoch_ns = to_unix_timestamp!(.event.start, unit: "nanoseconds")
+    .event.duration = end_epoch_ns - start_epoch_ns
+  }
 
   if ._tmp.actions_executed != null {
     .aws.elb.action_executed = split!(._tmp.actions_executed, ",")
@@ -191,7 +195,15 @@ transform: |2
   .trace.id = .aws.elb.trace_id
 
   .source.ip = to_string!(.source.address)
-  .source.port = to_int(.source.port) ?? null
+  if .source.port != null {
+    .source.port = to_int!(.source.port)
+  }
+  if .aws.elb.connection_time.ms != null {
+    .aws.elb.connection_time.ms = to_int!(.aws.elb.connection_time.ms)
+  }
+  if .aws.elb.tls_handshake_time.ms != null {
+    .aws.elb.tls_handshake_time.ms = to_int!(.aws.elb.tls_handshake_time.ms)
+  }
 
   if .aws.elb.backend.http.response.status_code != null {
     .aws.elb.backend.http.response.status_code = to_int!(.aws.elb.backend.http.response.status_code)
@@ -207,9 +219,21 @@ transform: |2
     .aws.elb.backend_processing_time.sec = to_float!(.aws.elb.backend_processing_time.sec)
   }
 
-  .http.request.body.bytes = to_int(.http.request.body.bytes) ?? null
-  .http.response.body.bytes = to_int(.http.response.body.bytes) ?? null
-  .http.response.status_code = to_int(.http.response.status_code) ?? null
+  if .http.request.body.bytes != null {
+    .http.request.body.bytes = to_int!(.http.request.body.bytes)
+  }
+  if .http.response.body.bytes != null {
+    .http.response.body.bytes = to_int!(.http.response.body.bytes)
+  }
+  if .http.response.status_code != null {
+    .http.response.status_code = to_int!(.http.response.status_code)
+  }
+  if .source.bytes != null {
+    .source.bytes = to_int!(.source.bytes)
+  }
+  if .destination.bytes != null {
+    .destination.bytes = to_int!(.destination.bytes)
+  }
 
   if is_string(._tmp.uri_orig) {
     .url = parse_url!(._tmp.uri_orig, default_known_ports:true)
@@ -240,17 +264,17 @@ transform: |2
   }
 
   .event.outcome = if is_integer(.http.response.status_code) {
-    if to_int(.http.response.status_code) >= 400 {
+    if to_int!(.http.response.status_code) >= 400 {
       "failure"
-    } else if to_int(.http.response.status_code) < 400 {
+    } else if to_int!(.http.response.status_code) < 400 {
       "success"
     }
   }
 
   if .http != null {
-      .event.category = "web"
+      .event.category = ["web"]
   } else {
-      .event.category = "network"
+      .event.category = ["network"]
   }
 
   if .http != null {
