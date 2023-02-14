@@ -647,6 +647,10 @@ pub(crate) async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
                                                 None => default_table_name.to_owned(),
                                             };
 
+                                            // Treated differently than a regular table, e.g. no required ts. Currently just enrichment tables.
+                                            let is_passthrough = log_source.starts_with("enrich_");
+
+                                            // Use empty transform if no transform is defined
                                             let transform_expr = LOG_SOURCES_CONFIG.with(|c| {
                                                 let log_sources_config = c.borrow();
 
@@ -655,7 +659,7 @@ pub(crate) async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
                                                 .tables.get(&table_name)?.get_string("transform");
 
                                                 transform.ok()
-                                            }).ok_or(anyhow!("Configuration / transform expr doesn't exist for table name: {}", &table_name))?;
+                                            }).unwrap_or("".to_string());
 
                                             // TODO(shaeq): does this have performance implications?
                                             let wrapped_transform_expr = format_transform_expr(&transform_expr, log_source.starts_with("enrich_"));
@@ -685,7 +689,11 @@ pub(crate) async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
 
                                             let v_clone = log_enabled!(log::Level::Debug).then(|| v.clone());
 
-                                            let ts_hour = v.get("ts").ok_or(anyhow!("Failed to find matano timestamp"))?.as_timestamp().ok_or(anyhow!("Failed to parse matano timestamp"))?.format("%Y-%m-%d-%H").to_string();
+                                            let ts_hour = if is_passthrough {
+                                                chrono::Utc::now().format("%Y-%m-%d-%H").to_string()
+                                            } else {
+                                                v.get("ts").context("Failed to find matano timestamp")?.as_timestamp().context("Failed to parse matano timestamp")?.format("%Y-%m-%d-%H").to_string()
+                                            };
 
                                             let v_avro = TryIntoAvro::try_into(v)?;
                                             let v_avro = v_avro.resolve(avro_schema)
