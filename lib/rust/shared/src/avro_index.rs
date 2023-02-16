@@ -1,7 +1,7 @@
 use apache_avro::from_avro_datum;
 use memmap2::{Mmap, MmapOptions};
 use once_cell::sync::OnceCell;
-use shared::avro::AvroValueExt;
+use crate::avro::AvroValueExt;
 use std::io::{BufRead, Read};
 use std::io::{BufReader, Seek};
 use std::vec;

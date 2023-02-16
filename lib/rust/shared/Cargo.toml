@@ -16,11 +16,12 @@ lazy_static = "1.4.0"
 async_once = "0.2.6"
 log = "^0.4"
 anyhow = "1.0.53"
-lru = "0.8.0"
-cached = "0.40.0"
+lru = "0.9.0"
+cached = "0.42.0"
 
-aws-config = "0.51.0"
-aws-sdk-secretsmanager = "0.21.0"
+aws-sdk-s3 = "0.24.0"
+aws-config = "0.54.1"
+aws-sdk-secretsmanager = "0.24.0"
 
 tokio = { version = "1.17.0", features = ["macros", "sync"] }
 rayon = "1.5.3"
@@ -42,6 +43,21 @@ apache-avro = { git = "https://github.com/apache/avro.git", rev = "05099c3", fea
   "zstandard",
   "snappy",
 ], optional = true }
+
+# detection_lib / enrichment related
+zstd = "0.12.1"
+
+futures = "0.3"
+futures-util = "0.3.23"
+once_cell = "1.17.0"
+memmap2 = "0.5.8"
+async-compression = { version = "0.3.14", default-features = false, features = [
+  "tokio",
+  "zstd",
+] }
+pythonize = "0.18.0"
+pyo3 = { version = "0.18.0", features = ["extension-module", "anyhow"] }
+
 
 [features]
 default = []

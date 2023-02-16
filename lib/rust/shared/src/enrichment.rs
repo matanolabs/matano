@@ -17,7 +17,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::runtime::Runtime;
 
 use crate::avro_index::AvroIndex;
-use shared::utils::load_enrichment_config;
+use crate::utils::load_enrichment_config;
 
 lazy_static! {
     static ref RT: Runtime = Runtime::new().unwrap();
@@ -33,7 +33,7 @@ lazy_static! {
 #[pyclass]
 pub struct EnrichmentTable {
     #[pyo3(get)]
-    name: String,
+    pub name: String,
     lookup_keys: Vec<String>,
     avro_index: OnceCell<AvroIndex>,
 }
@@ -52,7 +52,7 @@ impl EnrichmentTable {
             .get_or_try_init(|| RT.block_on(load_avro_index(&self.name, &self.lookup_keys)))
     }
 
-    fn get_by_key_internal(
+    pub fn get_by_key_internal(
         &self,
         key: &str,
         index_key: Option<&str>,

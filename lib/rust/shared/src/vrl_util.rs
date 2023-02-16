@@ -7,6 +7,8 @@ use vrl::{Terminate, TimeZone};
 use anyhow::{anyhow, Context, Result};
 use log::{debug, error, info, warn};
 
+use crate::functions::custom_vrl_functions;
+
 thread_local! {
     pub static RUNTIME: RefCell<Runtime> = RefCell::new(Runtime::new(state::Runtime::default()));
 }
@@ -33,36 +35,41 @@ pub fn vrl_opt<'a>(
                     return Err(anyhow!(e.clone()));
                 }
             },
-            None => match vrl::compile(&program, &vrl_stdlib::all()) {
-                Ok(result) => {
-                    debug!(
-                        "Compiled a vrl program ({}), took {:?}",
-                        program
-                            .lines()
-                            .into_iter()
-                            .skip(1)
-                            .next()
-                            .unwrap_or("expansion"),
-                        start.elapsed()
-                    );
-                    (*cache_ref).put(program.to_string(), Ok(result.program));
-                    if result.warnings.len() > 0 {
-                        warn!("{:?}", result.warnings);
+            None => {
+                let mut functions = vrl_stdlib::all();
+                functions.append(&mut custom_vrl_functions());
+            
+                match vrl::compile(&program, &functions) {
+                    Ok(result) => {
+                        debug!(
+                            "Compiled a vrl program ({}), took {:?}",
+                            program
+                                .lines()
+                                .into_iter()
+                                .skip(1)
+                                .next()
+                                .unwrap_or("expansion"),
+                            start.elapsed()
+                        );
+                        (*cache_ref).put(program.to_string(), Ok(result.program));
+                        if result.warnings.len() > 0 {
+                            warn!("{:?}", result.warnings);
+                        }
+                        match (*cache_ref).get(program) {
+                            Some(compiled) => match compiled {
+                                Ok(compiled) => Ok(compiled),
+                                Err(e) => {
+                                    return Err(anyhow!(e.clone()));
+                                }
+                            },
+                            None => unreachable!(),
+                        }
                     }
-                    match (*cache_ref).get(program) {
-                        Some(compiled) => match compiled {
-                            Ok(compiled) => Ok(compiled),
-                            Err(e) => {
-                                return Err(anyhow!(e.clone()));
-                            }
-                        },
-                        None => unreachable!(),
+                    Err(diagnostics) => {
+                        let msg = Formatter::new(&program, diagnostics).to_string();
+                        (*cache_ref).put(program.to_string(), Err(msg.clone()));
+                        Err(anyhow!(msg))
                     }
-                }
-                Err(diagnostics) => {
-                    let msg = Formatter::new(&program, diagnostics).to_string();
-                    (*cache_ref).put(program.to_string(), Err(msg.clone()));
-                    Err(anyhow!(msg))
                 }
             },
         }?;

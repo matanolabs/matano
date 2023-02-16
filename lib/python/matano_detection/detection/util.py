@@ -128,7 +128,8 @@ class DeepDict(dict):
                 o = o[key]
             except KeyError:
                 return default
-        return o
+        # TODO(shaeq): performance? also we should differentiate missing keys vs. nulls, but this info is lost in avro for now so we do this to make them feel the same:
+        return o if o is not None else default
 
     # Pretened to be a dict
 

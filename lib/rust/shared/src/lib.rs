@@ -1,4 +1,5 @@
 mod models;
+mod functions;
 pub mod utils;
 
 pub use models::*;
@@ -9,3 +10,5 @@ pub mod avro;
 pub mod secrets;
 pub mod sqs_util;
 pub mod vrl_util;
+pub mod enrichment;
+pub mod avro_index;

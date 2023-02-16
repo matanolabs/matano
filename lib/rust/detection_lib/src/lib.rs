@@ -2,9 +2,7 @@ use pyo3::prelude::*;
 
 use anyhow::{Context, Result};
 
-mod avro_index;
-mod enrichment;
-use enrichment::*;
+use shared::enrichment::*;
 
 // TODO: make this work, need to disable exec-tls maybe not use tikv jemalloc
 // #[global_allocator]

@@ -13,8 +13,6 @@ use serde_json::json;
 use shared::sqs_util::*;
 use shared::*;
 
-use std::borrow::BorrowMut;
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::{time::Instant, vec};
