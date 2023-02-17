@@ -88,7 +88,12 @@ impl PullLogsContext {
             Some(v) => v,
             None => {
                 let secrets = load_secret(self.secret_arn.clone()).await?;
-                *secret_cache_opt = Some(secrets);
+                if secrets
+                    .get(key)
+                    .map_or(false, |v| !v.contains("placeholder"))
+                {
+                    *secret_cache_opt = Some(secrets);
+                }
                 secret_cache_opt.as_ref().unwrap()
             }
         };

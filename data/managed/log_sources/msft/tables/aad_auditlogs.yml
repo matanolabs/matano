@@ -1,0 +1,266 @@
+name: aad_auditlogs
+
+schema:
+  ecs_field_names:
+    - client.ip
+    - cloud.provider
+    - destination.address
+    - destination.ip
+    - destination.port
+    - ecs.version
+    - event.action
+    - event.category
+    - event.created
+    - event.duration
+    - event.id
+    - event.ingested
+    - event.kind
+    - event.outcome
+    - event.type
+    - file.mime_type
+    - file.size
+    - geo.city_name
+    - geo.continent_name
+    - geo.country_iso_code
+    - geo.country_name
+    - geo.location
+    - host.ip
+    - log.level
+    - message
+    - network.community_id
+    - related.ip
+    - related.user
+    - source.address
+    - source.ip
+    - tags
+    - user.domain
+    - user.full_name
+    - user.id
+    - user.name
+  fields:
+    - name: azure
+      type:
+        type: struct
+        fields:
+          - name: correlation_id
+            type: string
+          - name: tenant_id
+            type: string
+          - name: aad_auditlogs
+            type:
+              type: struct
+              fields:
+                - name: category
+                  type: string
+                - name: identity
+                  type: string
+                - name: level
+                  type: float
+                - name: operation_name
+                  type: string
+                - name: operation_version
+                  type: string
+                - name: activity_datetime
+                  type: timestamp
+                - name: activity_display_name
+                  type: string
+                - name: authentication_protocol
+                  type: string
+                - name: category
+                  type: string
+                - name: correlation_id
+                  type: string
+                - name: id
+                  type: string
+                - name: initiated_by
+                  type:
+                    type: struct
+                    fields:
+                      - name: app
+                        type:
+                          type: struct
+                          fields:
+                            - name: app_id
+                              type: string
+                            - name: display_name
+                              type: string
+                            - name: service_principal_id
+                              type: string
+                            - name: service_principal_name
+                              type: string
+                      - name: user
+                        type:
+                          type: struct
+                          fields:
+                            - name: display_name
+                              type: string
+                            - name: id
+                              type: string
+                            - name: ip_address
+                              type: string
+                            - name: user_principal_name
+                              type: string
+                - name: logged_by_service
+                  type: string
+                - name: operation_type
+                  type: string
+                - name: result
+                  type: string
+                - name: result_reason
+                  type: string
+                - name: additional_details
+                  type: string
+                - name: target_resources
+                  type:
+                    type: list
+                    element:
+                      type: struct
+                      fields:
+                        - name: display_name
+                          type: string
+                        - name: id
+                          type: string
+                        - name: ip_address
+                          type: string
+                        - name: modified_properties
+                          type:
+                            type: list
+                            element:
+                              type: struct
+                              fields:
+                                - name: display_name
+                                  type: string
+                                - name: new_value
+                                  type: string
+                                - name: old_value
+                                  type: string
+                        - name: type
+                          type: string
+                        - name: user_principal_name
+                          type: string
+                - name: result_signature
+                  type: string
+transform: |2-
+
+  .cloud.provider = "azure"
+  .related.ip = []
+  .related.user = []
+
+  .azure.aad_auditlogs = del(.json)
+
+  .event.kind = "event"
+  .event.category = ["iam"]
+  .event.type = ["change"]
+  .event.id = del(.azure.aad_auditlogs.id)
+  del(.azure.aad_auditlogs.resourceId)
+
+  .azure.tenant_id = del(.azure.aad_signinlogs.tenant_id)
+
+  azure_cat = .azure.aad_auditlogs.category
+  if azure_cat == "UserManagement" {
+    .event.type = push(.event.type, "user")
+  } else if azure_cat == "GroupManagement" {
+    .event.type = push(.event.type, "group")
+  }
+
+  if is_object(.azure.aad_auditlogs.properties) {
+      props = del(.azure.aad_auditlogs.properties)
+      .azure.aad_auditlogs = object!(.azure.aad_auditlogs)
+      .azure.aad_auditlogs |= object!(props)
+  }
+
+  if .azure.aad_auditlogs.time != null {
+    .ts = to_timestamp!(del(.azure.aad_auditlogs.time))
+  } else {
+    .ts = to_timestamp!(.azure.aad_auditlogs.activityDateTime)
+  }
+
+  .event.duration, err = del(.azure.aad_auditlogs.durationMs) * 1000000
+
+  aad_result = downcase(del(.azure.aad_auditlogs.result)) ?? null
+  .event.outcome = if aad_result == "success" {
+    "success"
+  } else if aad_result == "failure" || aad_result == "timeout" {
+    "failure"
+  }
+
+  .log.level = del(.azure.aad_auditlogs.level)
+
+  .event.action = if .azure.aad_auditlogs.operationName != null {
+    to_string!(.azure.aad_auditlogs.operationName)
+  } else {
+    to_string!(.azure.aad_auditlogs.activityDisplayName)
+  }
+
+  .azure.aad_auditlogs.operation_name = del(.azure.aad_auditlogs.operationName)
+  .azure.aad_auditlogs.result_signature = del(.azure.aad_auditlogs.resultSignature)
+  .azure.aad_auditlogs.operation_version = del(.azure.aad_auditlogs.operationVersion)
+  .azure.tenant_id = del(.azure.aad_auditlogs.tenantId)
+  .azure.correlation_id = .azure.aad_auditlogs.correlationId
+  .azure.aad_auditlogs.activity_display_name = del(.azure.aad_auditlogs.activityDisplayName)
+  .azure.aad_auditlogs.activity_datetime = to_timestamp!(del(.azure.aad_auditlogs.activityDateTime))
+
+  if .azure.aad_auditlogs.additionalDetails != null {
+    .azure.aad_auditlogs.additional_details = encode_json(del(.azure.aad_auditlogs.additionalDetails))
+  }
+
+  if .azure.aad_auditlogs.callerIpAddress != null {
+    .source.ip = to_string!(del(.azure.aad_auditlogs.callerIpAddress))
+    .client.ip = .source.ip
+    .related.ip = push(.related.ip, .source.ip)
+  }
+
+  .azure.aad_auditlogs.result_reason = del(.azure.aad_auditlogs.resultReason)
+  .azure.aad_auditlogs.correlation_id = del(.azure.aad_auditlogs.correlationId)
+  .azure.aad_auditlogs.logged_by_service = del(.azure.aad_auditlogs.loggedByService)
+  .azure.aad_auditlogs.operation_type = del(.azure.aad_auditlogs.operationType)
+  .azure.aad_auditlogs.level = del(.azure.aad_auditlogs.Level)
+
+  op_type = .azure.aad_auditlogs.operation_type
+  if op_type == "Delete" {
+    .event.type = push(.event.type, "deletion")
+  } else if op_type == "Add" {
+    .event.type = push(.event.type, "creation")
+  }
+
+  if is_array(.azure.aad_auditlogs.targetResources) {
+    targetResources = array!(del(.azure.aad_auditlogs.targetResources))
+    .azure.aad_auditlogs.target_resources = map_values(targetResources) -> |v| {
+      v.display_name = del(v.displayName)
+      v.ip_address = del(v.ipAddress)
+      v.user_principal_name = del(v.userPrincipalName)
+
+      mod_props = array!(del(v.modifiedProperties))
+      v.modified_properties = map_values(mod_props) -> |p| {
+        p.display_name = del(p.displayName)
+        p.new_value = del(p.newValue)
+        p.old_value = del(p.oldValue)
+        p
+      }
+      v
+    }
+  }
+
+  .azure.aad_auditlogs.initiated_by.app.app_id = del(.azure.aad_auditlogs.initiatedBy.app.appId)
+  .azure.aad_auditlogs.initiated_by.app.display_name = del(.azure.aad_auditlogs.initiatedBy.app.displayName)
+  .azure.aad_auditlogs.initiated_by.app.service_principal_id = del(.azure.aad_auditlogs.initiatedBy.app.servicePrincipalId)
+  .azure.aad_auditlogs.initiated_by.app.service_principal_name = del(.azure.aad_auditlogs.initiatedBy.app.servicePrincipalName)
+  .azure.aad_auditlogs.initiated_by.user.display_name = del(.azure.aad_auditlogs.initiatedBy.user.displayName)
+  .azure.aad_auditlogs.initiated_by.user.id = del(.azure.aad_auditlogs.initiatedBy.user.id)
+  .azure.aad_auditlogs.initiated_by.user.ip_address = del(.azure.aad_auditlogs.initiatedBy.user.ipAddress)
+  .azure.aad_auditlogs.initiated_by.user.user_principal_name = del(.azure.aad_auditlogs.initiatedBy.user.userPrincipalName)
+
+  if .azure.aad_auditlogs.initiated_by.user != null {
+    user_id = .azure.aad_auditlogs.initiated_by.user.id
+    user_name = .azure.aad_auditlogs.initiated_by.user.displayName
+    user_principal_name = .azure.aad_auditlogs.initiated_by.user.userPrincipalName
+    for_each([user_id, user_name, user_principal_name]) -> |_i, s| {
+      if s != null {
+        .related.user = push(.related.user, s)
+      }
+    }
+  }
+
+
+  .related.ip = unique(.related.ip)
+  .related.user = unique(.related.user)
