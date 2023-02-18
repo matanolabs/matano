@@ -20,6 +20,7 @@ use shared::{convert_json_array_str_to_ndjson, JsonValueExt};
 pub struct MicrosoftGraphPuller;
 
 const GRAPH_ENDPOINT: &str = "https://graph.microsoft.com/v1.0";
+const INITIAL_INTERVAL_DAYS: i64 = 14;
 
 struct GraphResourceProps {
     resource: String,
@@ -27,13 +28,22 @@ struct GraphResourceProps {
 }
 
 fn table_resource_map() -> HashMap<String, GraphResourceProps> {
-    [(
-        "aad_signinlogs",
-        GraphResourceProps {
-            resource: "auditLogs/signIns".to_string(),
-            filter_key: "createdDateTime".to_string(),
-        },
-    )]
+    [
+        (
+            "aad_signinlogs",
+            GraphResourceProps {
+                resource: "auditLogs/signIns".to_string(),
+                filter_key: "createdDateTime".to_string(),
+            },
+        ),
+        (
+            "aad_auditlogs",
+            GraphResourceProps {
+                resource: "auditLogs/directoryAudits".to_string(),
+                filter_key: "activityDateTime".to_string(),
+            },
+        ),
+    ]
     .into_iter()
     .map(|(k, v)| (k.to_string(), v))
     .collect::<HashMap<_, _>>()
@@ -80,6 +90,15 @@ impl PullLogs for MicrosoftGraphPuller {
                     token
                 }
             }
+        };
+
+        let checkpoint_json = ctx.checkpoint_json.lock().await;
+        let is_initial_run = checkpoint_json.is_none();
+
+        let start_dt = if is_initial_run {
+            start_dt - chrono::Duration::days(INITIAL_INTERVAL_DAYS)
+        } else {
+            start_dt
         };
 
         let start_time = start_dt.format("%Y-%m-%dT%H:%M:%SZ").to_string();
