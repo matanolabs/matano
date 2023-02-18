@@ -112,45 +112,6 @@ impl Compression {
     }
 }
 
-fn get_log_source_from_bucket_and_key(
-    bucket: &str,
-    key: &str,
-    managed_bucket: &str,
-) -> Option<String> {
-    LOG_SOURCES_CONFIG.with(|c| {
-        let log_sources_config = c.borrow();
-
-        // Try get from BYOB or else assume managed and get from path
-        let ret = (*log_sources_config)
-            .iter()
-            .find(|(_, v)| {
-                let ls_bucket = v.base.get_string("ingest.s3_source.bucket_name").ok();
-                let ls_prefix = v
-                    .base
-                    .get_string("ingest.s3_source.key_prefix")
-                    .ok()
-                    .unwrap_or("".to_string());
-
-                let bucket_matches = ls_bucket.map_or(false, |b| b.as_str() == bucket);
-                let key_matches = key.starts_with(ls_prefix.as_str());
-
-                bucket_matches && key_matches
-            })
-            .map(|r| r.0.to_owned())
-            .or_else(|| {
-                if managed_bucket == bucket {
-                    key.split(std::path::MAIN_SEPARATOR)
-                        .next()
-                        .and_then(|ls| log_sources_config.contains_key(ls).then_some(ls.to_owned()))
-                } else {
-                    None
-                }
-            });
-        debug!("Got log source: {:?} from key: {}", ret, key);
-        ret
-    })
-}
-
 #[tokio::main]
 async fn main() -> Result<(), LambdaError> {
     setup_logging();
@@ -389,7 +350,7 @@ async fn read_events_s3<'a>(
 
     // TODO: might want to differentiate between a valid or invalid table.
     if table_config.is_none() {
-        info!("Skipping key: {} as configuration doesn't exist for table name: {} returned from select_table_from_payload_metadata expression", r.key, &table_name);
+        info!("Skipping key: {} as configuration doesn't exist for log source: {} table name: {} returned from select_table_from_payload_metadata expression", r.key, &log_source, &table_name);
         return Ok(None);
     }
     let table_config = table_config.unwrap();
@@ -549,15 +510,7 @@ pub(crate) async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
     let s3_download_items = data_batcher_records
         .iter()
         .filter(|d| d.size > 0)
-        .filter_map(|d| {
-            let managed_bucket = var("MATANO_SOURCES_BUCKET").ok()?;
-            let log_source =
-                get_log_source_from_bucket_and_key(&d.bucket, &d.key, managed_bucket.as_str());
-            if log_source.is_none() {
-                info!("Skipping irrelevant S3 object: {:?}", d);
-            }
-            log_source.map(|ls| (d, ls))
-        })
+        .map(|d| (d, d.log_source.clone()))
         .collect::<Vec<_>>();
 
     info!(

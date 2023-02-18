@@ -9,7 +9,6 @@ pub struct DataBatcherOutputRecord {
     pub key: String,
     pub size: i64,
     pub sequencer: String,
-    #[serde(skip)]
     pub log_source: String,
     #[serde(default)]
     pub retry_depth: Option<i64>,

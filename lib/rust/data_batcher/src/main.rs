@@ -19,7 +19,7 @@ lazy_static! {
         AsyncOnce::new(async { aws_config::load_from_env().await });
     static ref SQS_CLIENT: AsyncOnce<aws_sdk_sqs::Client> =
         AsyncOnce::new(async { aws_sdk_sqs::Client::new(AWS_CONFIG.get().await) });
-    static ref LOG_SOURCE_KEY_PREFIX_MAP: HashMap<String, (Option<String>, Option<String>)> =
+    static ref LOG_SOURCE_KEY_PREFIX_MAP: HashMap<String, (Option<String>, Option<String>, Option<String>)> =
         build_log_source_key_prefix_map();
 }
 
@@ -33,7 +33,8 @@ async fn main() -> Result<(), LambdaError> {
     Ok(())
 }
 
-fn build_log_source_key_prefix_map() -> HashMap<String, (Option<String>, Option<String>)> {
+fn build_log_source_key_prefix_map(
+) -> HashMap<String, (Option<String>, Option<String>, Option<String>)> {
     let mut ret = HashMap::new();
     for entry in WalkDir::new("/opt/config/log_sources")
         .min_depth(1)
@@ -73,32 +74,57 @@ fn build_log_source_key_prefix_map() -> HashMap<String, (Option<String>, Option<
                 .and_then(|v| v.get("key_prefix"))
                 .and_then(|v| v.as_str())
                 .map(|s| s.to_string());
-            ret.insert(log_source_name.to_string(), (bucket_name, key_prefix));
+            let key_pattern = s3_source
+                .and_then(|v| v.get("key_pattern"))
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+            ret.insert(
+                log_source_name.to_string(),
+                (bucket_name, key_prefix, key_pattern),
+            );
         }
     }
     ret
 }
 
 fn get_log_source_from_object(bucket: &str, key: &str) -> Option<String> {
+    let managed_bucket = std::env::var("MATANO_SOURCES_BUCKET").ok()?;
     LOG_SOURCE_KEY_PREFIX_MAP
         .iter()
-        .find(|(_, (ls_bucket, ls_key_prefix))| {
-            let bucket_matches = ls_bucket.as_ref().map_or(false, |b| b == bucket);
+        .find(|(_, (ls_bucket, ls_key_prefix, ls_key_pattern))| {
+            // if all are None, skip key prefix/pattern based matching
+            if ls_bucket.is_none() && ls_key_prefix.is_none() && ls_key_pattern.is_none() {
+                return false;
+            }
+            let bucket_matches = ls_bucket
+                .as_ref()
+                .map_or(managed_bucket == bucket, |b| b == bucket);
             let ls_key_prefix = ls_key_prefix
                 .as_ref()
                 .map(|s| s.to_string())
                 .unwrap_or("".to_string());
-            let key_matches = key.starts_with(&ls_key_prefix);
+            let key_matches = key.starts_with(&ls_key_prefix)
+                && match ls_key_pattern {
+                    Some(pattern) => {
+                        let re = regex::Regex::new(pattern).unwrap();
+                        re.is_match(key)
+                    }
+                    None => true,
+                };
             bucket_matches && key_matches
         })
         .map(|(ls, _)| ls.to_owned())
         .or_else(|| {
             // try managed
-            key.split(std::path::MAIN_SEPARATOR).next().and_then(|ls| {
-                LOG_SOURCE_KEY_PREFIX_MAP
-                    .contains_key(ls)
-                    .then_some(ls.to_string())
-            })
+            if managed_bucket == bucket {
+                key.split(std::path::MAIN_SEPARATOR).next().and_then(|ls| {
+                    LOG_SOURCE_KEY_PREFIX_MAP
+                        .contains_key(ls)
+                        .then_some(ls.to_string())
+                })
+            } else {
+                None
+            }
         })
 }
 

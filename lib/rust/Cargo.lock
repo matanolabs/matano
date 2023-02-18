@@ -2139,6 +2139,7 @@ dependencies = [
  "lambda_runtime",
  "lazy_static 1.4.0",
  "log",
+ "regex",
  "serde",
  "serde_json",
  "serde_yaml 0.9.10",
@@ -2824,9 +2825,9 @@ checksum = "adab1eaa3408fb7f0c777a73e7465fd5656136fc93b670eb6df3c88c2c1344e3"
 
 [[package]]
 name = "infer"
-version = "0.11.0"
+version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0a6c16b11a665b26aeeb9b1d7f954cdeb034be38dd00adab4f2ae921a8fee804"
+checksum = "a898e4b7951673fce96614ce5751d13c40fc5674bc2d759288e46c3ab62598b3"
 dependencies = [
  "cfb",
 ]
@@ -3261,15 +3262,6 @@ dependencies = [
  "snafu",
  "vector_config",
  "vector_config_macros",
-]
-
-[[package]]
-name = "lru"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "936d98d2ddd79c18641c6709e7bb09981449694e402d1a0f0f657ea8d61f4a51"
-dependencies = [
- "hashbrown 0.12.3",
 ]
 
 [[package]]
@@ -4674,7 +4666,7 @@ dependencies = [
  "futures-util",
  "lazy_static 1.4.0",
  "log",
- "lru 0.9.0",
+ "lru",
  "memmap2",
  "once_cell",
  "pest",
@@ -5309,11 +5301,12 @@ dependencies = [
  "lambda_runtime",
  "lazy_static 1.4.0",
  "log",
- "lru 0.8.0",
+ "lru",
  "once_cell",
  "pest",
  "pest_derive",
  "rayon",
+ "regex",
  "serde",
  "serde_json",
  "serde_yaml 0.9.10",
