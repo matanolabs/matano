@@ -74,6 +74,7 @@ export interface LogSourceConfig {
     s3_source?: {
       bucket_name?: string;
       key_prefix?: string;
+      key_pattern?: string;
     };
     sqs_source?: {
       enabled?: boolean;

@@ -35,6 +35,7 @@ export class DataBatcher extends Construct {
       timeout: cdk.Duration.seconds(10),
       environment: {
         RUST_LOG: "warn,data_batcher=info",
+        MATANO_SOURCES_BUCKET: props.s3Bucket.bucket.bucketName,
         OUTPUT_QUEUE_URL: this.outputQueue.queueUrl,
       },
     });
