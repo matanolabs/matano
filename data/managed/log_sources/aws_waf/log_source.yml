@@ -1,0 +1,419 @@
+schema:
+  ecs_field_names:
+  - cloud.account.id
+  - cloud.account.name
+  - cloud.availability_zone
+  - cloud.project.id
+  - cloud.provider
+  - cloud.region
+  - cloud.service.name
+  - ecs.version
+  - error.message
+  - event.action
+  - event.category
+  - event.dataset
+  - event.id
+  - event.kind
+  - event.module
+  - event.outcome
+  - event.type
+  - http.request.id
+  - http.request.method
+  - http.version
+  - network.protocol
+  - network.transport
+  - related.ip
+  - rule.id
+  - rule.ruleset
+  - source.address
+  - source.as.number
+  - source.as.organization.name
+  - source.geo.city_name
+  - source.geo.continent_name
+  - source.geo.country_iso_code
+  - source.geo.country_name
+  - source.geo.location.lat
+  - source.geo.location.lon
+  - source.geo.region_iso_code
+  - source.geo.region_name
+  - source.ip
+  - tags
+  - url.path
+  - url.query
+  fields:
+  - name: aws
+    type:
+      type: struct
+      fields:
+      - name: waf
+        type:
+          type: struct
+          fields:
+          - name: arn
+            type: string
+          - name: id
+            type: string
+          - name: request
+            type:
+              type: struct
+              fields:
+              - name: headers
+                type:
+                  type: list
+                  element:
+                    type: struct
+                    fields:
+                    - name: name
+                      type: string
+                    - name: value
+                      type: string
+          - name: rule_group_list
+            type:
+              type: list
+              element:
+                type: struct
+                fields:
+                - name: rule_group_id
+                  type: string
+                - name: terminating_rule
+                  type:
+                    type: struct
+                    fields:
+                    - name: rule_id
+                      type: string
+                    - name: action
+                      type: string
+                    - name: rule_match_details
+                      type:
+                        type: list
+                        element:
+                          type: struct
+                          fields:
+                          - name: condition_type
+                            type: string
+                          - name: sensitivity_level
+                            type: string
+                          - name: location
+                            type: string
+                          - name: matched_data
+                            type:
+                              type: list
+                              element: string
+                - name: non_terminating_matching_rules
+                  type:
+                    type: list
+                    element:
+                      type: struct
+                      fields:
+                      - name: rule_id
+                        type: string
+                      - name: action
+                        type: string
+                      - name: rule_match_details
+                        type:
+                          type: list
+                          element:
+                            type: struct
+                            fields:
+                            - name: condition_type
+                              type: string
+                            - name: sensitivity_level
+                              type: string
+                            - name: location
+                              type: string
+                            - name: matched_data
+                              type:
+                                type: list
+                                element: string
+          - name: rate_based_rule_list
+            type:
+              type: list
+              element:
+                type: struct
+                fields:
+                - name: rate_based_rule_id
+                  type: string
+                - name: limit_key
+                  type: string
+                - name: max_rate_allowed
+                  type: int
+                - name: non_terminating_matching_rules
+                  type:
+                    type: list
+                    element:
+                      type: struct
+                      fields:
+                      - name: rule_id
+                        type: string
+                      - name: action
+                        type: string
+                      - name: rule_match_details
+                        type:
+                          type: list
+                          element:
+                            type: struct
+                            fields:
+                            - name: condition_type
+                              type: string
+                            - name: sensitivity_level
+                              type: string
+                            - name: location
+                              type: string
+                            - name: matched_data
+                              type:
+                                type: list
+                                element: string
+                      - name: captcha_response
+                        type:
+                          type: struct
+                          fields:
+                          - name: response_code
+                            type: int
+                          - name: solve_timestamp
+                            type: timestamp
+          - name: non_terminating_matching_rules
+            type:
+              type: list
+              element:
+                type: struct
+                fields:
+                - name: rule_id
+                  type: string
+                - name: action
+                  type: string
+                - name: rule_match_details
+                  type:
+                    type: list
+                    element:
+                      type: struct
+                      fields:
+                      - name: condition_type
+                        type: string
+                      - name: sensitivity_level
+                        type: string
+                      - name: location
+                        type: string
+                      - name: matched_data
+                        type:
+                          type: list
+                          element: string
+                - name: captcha_response
+                  type:
+                    type: struct
+                    fields:
+                    - name: response_code
+                      type: int
+                    - name: solve_timestamp
+                      type: timestamp
+          - name: request_headers_inserted
+            type:
+              type: list
+              element:
+                type: struct
+                fields:
+                - name: name
+                  type: string
+                - name: value
+                  type: string
+          - name: response_code_sent
+            type: int
+          - name: source
+            type:
+              type: struct
+              fields:
+              - name: id
+                type: string
+              - name: name
+                type: string
+          - name: terminating_rule_match_details
+            type:
+              type: list
+              element:
+                type: struct
+                fields:
+                - name: condition_type
+                  type: string
+                - name: sensitivity_level
+                  type: string
+                - name: location
+                  type: string
+                - name: matched_data
+                  type:
+                    type: list
+                    element: string
+          - name: labels
+            type:
+              type: list
+              element: string
+          - name: captcha_response
+            type:
+              type: struct
+              fields:
+              - name: response_code
+                type: int
+              - name: solve_timestamp
+                type: timestamp
+              - name: failure_reason
+                type: string
+transform: |-
+  .event.kind = "event"
+  .event.type = ["access"]
+  .event.original = .json
+  .event.category = ["web"]
+  .event.action = del(.json.action)
+
+  if .event.action == "ALLOW" {
+    .event.type = push(.event.type, "allowed")
+  } else if .event.action == "BLOCK" {
+    .event.type = push(.event.type, "denied")
+  }
+
+  .ts = to_timestamp!(del(.json.timestamp), "milliseconds")
+
+  _parsedArn = parse_regex!(value: .json.webaclId, pattern: r'arn:(?P<partition>[^:]*):(?P<service>[^:]*):(?P<region>[^:]*):(?P<account_id>[^:]*):(?P<waf_id>.*)')
+  _httpInfo = parse_grok!(.json.httpRequest.httpVersion,  "%{WORD:protocol}/%{NUMBER:version}")
+
+  .aws.waf.id = _parsedArn.waf_id
+  .aws.waf.request.headers = .json.httpRequest.headers
+  .aws.waf.arn = del(.json.webaclId)
+
+  .aws.waf.source.id =  if .json.httpSourceId != "-" { del(.json.httpSourceId) } else { null }
+  .aws.waf.source.name = if .json.httpSourceName != "-" { del(.json.httpSourceName) } else { null }
+
+  .cloud.provider = "aws"
+  .cloud.account.id = _parsedArn.account_id
+  .cloud.region = _parsedArn.region
+  .cloud.service.name = _parsedArn.service
+
+  .http.version = _httpInfo.version
+  .http.request.method = del(.json.httpRequest.httpMethod)
+  .http.request.id = del(.json.httpRequest.requestId)
+
+  .network.protocol = downcase!(_httpInfo.protocol)
+
+  if .network.protocol != null && .network.protocol == "http" {
+    .network.transport = "tcp"
+  }
+
+  .related.ip = [.json.httpRequest.clientIp]
+
+  if .json.source.ip != null {
+    .related.ip = unique(push(.related.ip, .source.ip))
+  }
+
+  .rule.id = del(.json.terminatingRuleId)
+  .rule.ruleset = del(.json.terminatingRuleType)
+
+  .source.geo.country_iso_code = del(.json.httpRequest.country)
+  .source.ip = del(.json.httpRequest.clientIp)
+
+  .url.query = del(.json.httpRequest.args)
+  .url.path = del(.json.httpRequest.uri)
+
+  if is_array(.json.labels) {
+    .aws.waf.labels = map_values(array!(.json.labels)) -> |v| { v.name }
+  }
+  .tags = .aws.waf.labels
+
+  if is_array(.json.terminatingRuleMatchDetails) {
+    .aws.waf.terminating_rule_match_details = map_values(array!(.json.terminatingRuleMatchDetails)) -> |v| {
+      v.condition_type = del(v.conditionType)
+      v.sensitivity_level = del(v.sensitivityLevel)
+      v.location = del(v.location)
+      v.matched_data = del(v.matchedData)
+      v
+    }
+  }
+
+  if is_array(.json.nonTerminatingMatchingRules) {
+    .aws.waf.non_terminating_matching_rules = map_values(array!(.json.nonTerminatingMatchingRules)) -> |rule| {
+      ret = {}
+      ret.rule_id = rule.ruleId
+      ret.action = rule.action
+      if is_array(rule.ruleMatchDetails) {
+        ret.rule_match_details = map_values(array!(rule.ruleMatchDetails)) -> |rmd| {
+          rmd.condition_type = del(rmd.conditionType)
+          rmd.sensitivity_level = del(rmd.sensitivityLevel)
+          rmd.location = del(rmd.location)
+          rmd.matched_data = del(rmd.matchedData)
+          rmd
+        }
+      }
+      ret.captcha_response = {}
+      ret.captcha_response.response_code = del(rule.captchaResponse.responseCode)
+      ret.captcha_response.solve_timestamp = to_timestamp(del(rule.captchaResponse.solveTimestamp), "seconds") ?? null
+
+      ret
+    }
+  }
+
+  if is_array(.json.ruleGroupList) {
+    .aws.waf.rule_group_list = map_values(array!(.json.ruleGroupList)) -> |rg| {
+      ret = {}
+      ret.rule_group_id = rg.ruleGroupId
+      ret.terminating_rule = {}
+      ret.terminating_rule.rule_id = rg.terminatingRule.ruleId
+      ret.terminating_rule.action = rg.terminatingRule.action
+      ret.terminating_rule.rule_match_details = rg.terminatingRule.ruleMatchDetails
+
+      if is_array(rg.nonTerminatingMatchingRules) {
+        ret.non_terminating_matching_rules = map_values(array!(rg.nonTerminatingMatchingRules)) -> |rule| {
+          ntr = {}
+          ntr.rule_id = rule.ruleId
+          ntr.action = rule.action
+          if is_array(rule.ruleMatchDetails) {
+            ntr.rule_match_details = map_values(array!(rule.ruleMatchDetails)) -> |rmd| {
+              rmd.condition_type = del(rmd.conditionType)
+              rmd.sensitivity_level = del(rmd.sensitivityLevel)
+              rmd.location = del(rmd.location)
+              rmd.matched_data = del(rmd.matchedData)
+              rmd
+            }
+          }
+          ntr
+        }
+      }
+      ret
+    }
+  }
+
+  if is_array(.json.rateBasedRuleList) {
+    .aws.waf.rate_based_rule_list = map_values(array!(.json.rateBasedRuleList)) -> |rule| {
+      ret.rate_based_rule_id = del(rule.rateBasedRuleId)
+      ret.limit_key = del(rule.limitKey)
+      if rule.maxRateAllowed != null {
+        ret.max_rate_allowed = to_int!(del(rule.maxRateAllowed))
+      }
+      if is_array(rule.nonTerminatingMatchingRules) {
+        ret.non_terminating_matching_rules = map_values(array!(rule.nonTerminatingMatchingRules)) -> |rule| {
+          ntr = {}
+          ntr.rule_id = rule.ruleId
+          ntr.action = rule.action
+          if is_array(rule.ruleMatchDetails) {
+            ntr.rule_match_details = map_values(array!(rule.ruleMatchDetails)) -> |rmd| {
+              rmd.condition_type = del(rmd.conditionType)
+              rmd.sensitivity_level = del(rmd.sensitivityLevel)
+              rmd.location = del(rmd.location)
+              rmd.matched_data = del(rmd.matchedData)
+              rmd
+            }
+          }
+        }
+        ntr.captcha_response = {}
+        ntr.captcha_response.response_code = del(rule.captchaResponse.responseCode)
+        ntr.captcha_response.solve_timestamp = to_timestamp(del(rule.captchaResponse.solveTimestamp), "seconds") ?? null
+        ntr
+      }
+
+      rule
+    }
+  }
+
+  .aws.waf.response_code_sent = del(.json.responseCodeSent)
+
+  .aws.waf.captcha_response.response_code = del(.json.captchaResponse.responseCode)
+  .aws.waf.captcha_response.solve_timestamp = to_timestamp(del(.json.captchaResponse.solveTimestamp), "seconds") ?? null
+  .aws.waf.captcha_response.response_message = del(.json.captchaResponse.responseMessage)
+
+  del(.json)
+name: aws_waf

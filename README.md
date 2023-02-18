@@ -81,6 +81,7 @@ We are on a mission to build the first open platform for threat hunting, detecti
 - [**Amazon S3 Server Access**](https://www.matano.dev/docs/log-sources/managed-log-sources/aws/amazon-s3-server-access-logs)
 - [**Amazon S3 Inventory Reports**](https://www.matano.dev/docs/log-sources/managed-log-sources/aws/s3-inventory-report)
 - [**Amazon Inspector**](https://www.matano.dev/docs/log-sources/managed-log-sources/aws/amazon-inspector)
+- [**Amazon WAF**](https://www.matano.dev/docs/log-sources/managed-log-sources/aws/amazon-waf)
 - [**Crowdstrike**](https://www.matano.dev/docs/log-sources/managed-log-sources/crowdstrike)
 - [**Duo**](https://www.matano.dev/docs/log-sources/managed-log-sources/duo)
 - [**GitHub**](https://www.matano.dev/docs/log-sources/managed-log-sources/github)

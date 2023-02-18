@@ -110,6 +110,7 @@ const MANAGED_LOG_SOURCE_PREFIX_MAP: Record<string, string> = {
   aws_inspector: "aws",
   aws_config_history: "aws",
   aws_vpcflow: "aws",
+  aws_waf: "aws",
   crowdstrike: "crowdstrike",
   crowdstrike_falcon: "crowdstrike",
   duo: "duo",
