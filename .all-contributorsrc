@@ -145,6 +145,16 @@
       "contributions": [
         "bug"
       ]
+    },
+    {
+      "login": "grue",
+      "name": "Joshua Sorenson",
+      "avatar_url": "https://avatars.githubusercontent.com/u/555914?v=4",
+      "profile": "http://grue.io",
+      "contributions": [
+        "code",
+        "doc"
+      ]
     }
   ],
   "contributorsPerLine": 7

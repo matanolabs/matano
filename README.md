@@ -409,6 +409,9 @@ Thanks go to these wonderful people ([emoji key](https://allcontributors.org/doc
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/timoguin"><img src="https://avatars.githubusercontent.com/u/671968?v=4?s=100" width="100px;" alt="Tim O'Guin"/><br /><sub><b>Tim O'Guin</b></sub></a><br /><a href="#ideas-timoguin" title="Ideas, Planning, & Feedback">🤔</a> <a href="https://github.com/matanolabs/matano/issues?q=author%3Atimoguin" title="Bug reports">🐛</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/francescor"><img src="https://avatars.githubusercontent.com/u/424577?v=4?s=100" width="100px;" alt="Francesco R."/><br /><sub><b>Francesco R.</b></sub></a><br /><a href="https://github.com/matanolabs/matano/issues?q=author%3Afrancescor" title="Bug reports">🐛</a></td>
     </tr>
+    <tr>
+      <td align="center" valign="top" width="14.28%"><a href="http://grue.io"><img src="https://avatars.githubusercontent.com/u/555914?v=4?s=100" width="100px;" alt="Joshua Sorenson"/><br /><sub><b>Joshua Sorenson</b></sub></a><br /><a href="https://github.com/matanolabs/matano/commits?author=grue" title="Code">💻</a> <a href="https://github.com/matanolabs/matano/commits?author=grue" title="Documentation">📖</a></td>
+    </tr>
   </tbody>
 </table>
 
