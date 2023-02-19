@@ -309,6 +309,18 @@ class MatanoIcebergTableCustomResource : CFNCustomResource {
 
     fun syncHelper(parents: List<NestedField>, fields: List<NestedField>, ret: MutableList<String>) {
         for (field in fields) {
+            // There is bug in Athena timestamp precision where we need to cast timestamps.
+            // Casting an array of structs is difficult so we currently skip column of type array of struct that has a timestamp field.
+            // TODO: fix this with workaround OR remove when Athena supports timestamps correctly.
+            if (field.type().isListType) {
+                val element = field.type().asListType().elementType()
+                if (element.isStructType) {
+                    if (structContainsTimestamp(element.asStructType())) {
+                        continue
+                    }
+                }
+            }
+
             if (field.type() is Types.StructType) {
                 syncHelper(parents + field, (field.type() as Types.StructType).fields(), ret)
             } else {
@@ -363,5 +375,12 @@ class MatanoIcebergTableCustomResource : CFNCustomResource {
             "io-impl" to "org.apache.iceberg.aws.s3.S3FileIO",
             "glue.skip-archive" to "true",
         )
+    }
+}
+
+// check if a struct contains any (direct or nested) timestamp field
+fun structContainsTimestamp(field: Types.StructType): Boolean {
+    return field.fields().any { f ->
+        f.type() is Types.TimestampType || (f.type().isStructType && structContainsTimestamp(f.type().asStructType()))
     }
 }

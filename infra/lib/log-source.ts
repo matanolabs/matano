@@ -329,7 +329,11 @@ export class MatanoLogSource extends Construct {
             if (config.name in this.tablesConfig) {
               fail(`Table name ${config.name} is already defined`);
             }
-            this.tablesConfig[config.name] = config;
+            if (!!managedConfig.name) {
+              this.tablesConfig[config.name] = config;
+            } else {
+              throw new Error(`Invalid table: ${config.name} for log source: ${logSourceName}`);
+            }
           } else {
             // log source config
             this.logSourceConfig = config;
