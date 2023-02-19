@@ -83,6 +83,14 @@ class IcebergCompaction extends Construct {
         resources: [...getStandardGlueResourceArns(this), "*"],
       })
     );
+    stateMachine.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ["athena:StopQueryExecution"],
+        resources: [
+          `arn:${cdk.Stack.of(this).partition}:athena:*:${cdk.Stack.of(this).account}:workgroup/matano_system_v3`,
+        ],
+      })
+    );
     props.lakeStorageBucket.grantReadWrite(stateMachine.role!);
 
     const smScheduleRule = new events.Rule(this, "Rule", {
@@ -142,6 +150,14 @@ class IcebergAthenaExpireSnapshots extends Construct {
       new iam.PolicyStatement({
         actions: ["glue:Get*", "glue:UpdateDatabase", "glue:UpdateTable"],
         resources: [...getStandardGlueResourceArns(this), "*"],
+      })
+    );
+    stateMachine.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ["athena:StopQueryExecution"],
+        resources: [
+          `arn:${cdk.Stack.of(this).partition}:athena:*:${cdk.Stack.of(this).account}:workgroup/matano_system_v3`,
+        ],
       })
     );
     props.lakeStorageBucket.grantDelete(stateMachine.role!);
