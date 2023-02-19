@@ -1,3 +1,4 @@
+import * as path from "path";
 import * as cdk from "aws-cdk-lib";
 import { Construct } from "constructs";
 import * as s3 from "aws-cdk-lib/aws-s3";
@@ -64,17 +65,25 @@ export class MatanoS3Sources extends Construct {
   }
 
   grantRead(construct: iam.IGrantable) {
+    const finalBucketAndPrefixes = [];
     for (const finalSource of this.finalCustomSources) {
-      const importedBucket = s3.Bucket.fromBucketName(
-        this,
-        `ImportedSourcesBucketForGrant-${finalSource!!.bucket_name!!}`,
-        finalSource!!.bucket_name!!
-      );
       for (const rawPrefix of finalSource.key_prefixes) {
-        const keyPrefix = rawPrefix.endsWith("/") ? rawPrefix.slice(0, -1) : rawPrefix;
-        const prefix = keyPrefix === "" ? undefined : `${keyPrefix}/*`;
-        importedBucket.grantRead(construct, prefix);
+        // Remove leading and trailing slashes and add wildcard
+        const prefix = path.join(rawPrefix.replace(/^\/|\/$/g, ""), "*");
+        finalBucketAndPrefixes.push({ bucketName: finalSource.bucket_name, prefix: prefix });
       }
     }
+    const resourceArns = finalBucketAndPrefixes.flatMap((bucketAndPrefix) => {
+      return [
+        `arn:aws:s3:::${bucketAndPrefix.bucketName}`,
+        `arn:aws:s3:::${bucketAndPrefix.bucketName}/${bucketAndPrefix.prefix}`,
+      ];
+    });
+    construct.grantPrincipal.addToPrincipalPolicy(
+      new iam.PolicyStatement({
+        actions: ["s3:GetObject*", "s3:GetBucket*", "s3:List*"],
+        resources: resourceArns,
+      })
+    );
   }
 }
