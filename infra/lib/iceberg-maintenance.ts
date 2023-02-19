@@ -27,6 +27,7 @@ def handler(event, context):
 
 interface IcebergCompactionProps {
   tableNames: string[];
+  lakeStorageBucket: s3.IBucket;
 }
 
 class IcebergCompaction extends Construct {
@@ -82,6 +83,7 @@ class IcebergCompaction extends Construct {
         resources: [...getStandardGlueResourceArns(this), "*"],
       })
     );
+    props.lakeStorageBucket.grantReadWrite(stateMachine.role!);
 
     const smScheduleRule = new events.Rule(this, "Rule", {
       description: "[Matano] Schedules the Iceberg compaction workflow.",
@@ -100,6 +102,7 @@ class IcebergCompaction extends Construct {
 
 interface IcebergAthenaExpireSnapshotsProps {
   tableNames: string[];
+  lakeStorageBucket: s3.IBucket;
 }
 
 class IcebergAthenaExpireSnapshots extends Construct {
@@ -141,6 +144,8 @@ class IcebergAthenaExpireSnapshots extends Construct {
         resources: [...getStandardGlueResourceArns(this), "*"],
       })
     );
+    props.lakeStorageBucket.grantDelete(stateMachine.role!);
+    props.lakeStorageBucket.grantReadWrite(stateMachine.role!);
 
     const smScheduleRule = new events.Rule(this, "Rule", {
       description: "[Matano] Schedules the Iceberg expire snapshots workflow.",
@@ -306,10 +311,12 @@ export class IcebergMaintenance extends Construct {
 
     new IcebergCompaction(this, "Compaction", {
       tableNames: nonTempTableNames.filter((n) => !n.startsWith("enrich_")),
+      lakeStorageBucket: props.lakeStorageBucket,
     });
 
     new IcebergAthenaExpireSnapshots(this, "ExpireSnapshotsAthena", {
       tableNames,
+      lakeStorageBucket: props.lakeStorageBucket,
     });
 
     new IcebergRewriteManifests(this, "RewriteManifests", {
