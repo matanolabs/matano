@@ -84,16 +84,20 @@ impl PullLogsContext {
     pub async fn get_secret_field(&self, key: &str) -> Result<Option<String>> {
         let secret_cache_ref = self.secret_cache.clone();
         let mut secret_cache_opt = secret_cache_ref.lock().await;
-        if secret_cache_opt.as_ref().is_none() {
+        let secrets_val = if secret_cache_opt.as_ref().is_none() {
             let secrets = load_secret(self.secret_arn.clone()).await?;
             if secrets
                 .get(key)
                 .map_or(false, |v| !v.contains("placeholder"))
             {
                 *secret_cache_opt = Some(secrets);
-            };
+                secret_cache_opt.as_ref()
+            } else {
+                return Ok(Some("<placeholder>".to_string()));
+            }
+        } else {
+            secret_cache_opt.as_ref()
         };
-        let secrets_val = secret_cache_opt.as_ref();
 
         Ok(secrets_val.and_then(|v| v.get(key).map(|s| s.to_owned())))
     }
