@@ -132,6 +132,10 @@ class EnrichmentIcebergSyncer {
             launch { doAvroWrite(tableName, enrichTableName, conf) }
             async { doParquetWrite(tableName, enrichTableName, icebergTable) }
         }.await()
+        if (dataFile == null) {
+            logger.info("No data found for table: $tableName")
+            return
+        }
 
         val currentFiles = icebergTable.newScan().planWith(planExecutorService).planFiles().map { it.file() }
         icebergTable.newRewrite()
@@ -160,6 +164,9 @@ class EnrichmentIcebergSyncer {
             s3AsyncClient
                 .getObject({ it.bucket(tempSyncBucket).key(res.key()) }, AsyncResponseTransformer.toBytes())
                 .thenApply { it.asInputStream() }
+        }
+        if (futs.isEmpty()) {
+            return
         }
 
         CompletableFuture.allOf(*futs.toTypedArray()).await()
@@ -231,6 +238,9 @@ class EnrichmentIcebergSyncer {
         }
         CompletableFuture.allOf(*futs.toTypedArray()).await()
         val inputFiles = futs.map { it.get() }
+        if (inputFiles.isEmpty()) {
+            return null
+        }
 
         val outFile = InMemoryIcebergOutputFile()
         val footer = concatIcebergParquetFiles(inputFiles, outFile)
