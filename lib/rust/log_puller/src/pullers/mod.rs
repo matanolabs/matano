@@ -50,7 +50,7 @@ impl PullerCache {
 pub struct PullLogsContext {
     pub log_source_name: String,
     secret_cache: Arc<Mutex<Option<HashMap<String, String>>>>,
-    secret_arn: String,
+    secret_arn: Option<String>,
     pub log_source_type: LogSource,
     config: HashMap<String, String>,
     tables_config: HashMap<String, config::Config>,
@@ -62,7 +62,7 @@ pub struct PullLogsContext {
 impl PullLogsContext {
     pub fn new(
         log_source_name: String,
-        secret_arn: String,
+        secret_arn: Option<String>,
         log_source_type: LogSource,
         config: HashMap<String, String>,
         tables_config: HashMap<String, config::Config>,
@@ -82,24 +82,29 @@ impl PullLogsContext {
     }
 
     pub async fn get_secret_field(&self, key: &str) -> Result<Option<String>> {
+        if self.secret_arn.is_none() {
+            return Ok(None);
+        }
+        let secret_arn = self.secret_arn.as_ref().unwrap();
+
         let secret_cache_ref = self.secret_cache.clone();
         let mut secret_cache_opt = secret_cache_ref.lock().await;
         let secrets_val = if secret_cache_opt.as_ref().is_none() {
-            let secrets = load_secret(self.secret_arn.clone()).await?;
-            if secrets
-                .get(key)
-                .map_or(false, |v| !v.contains("placeholder"))
-            {
-                *secret_cache_opt = Some(secrets);
-                secret_cache_opt.as_ref()
-            } else {
-                return Ok(Some("<placeholder>".to_string()));
+            let secrets = load_secret(secret_arn.clone()).await?;
+            let sec_val = secrets.get(key).cloned();
+            if let Some(v) = sec_val.as_ref() {
+                if !v.contains("placeholder") {
+                    *secret_cache_opt = Some(secrets);
+                }
             }
+            sec_val
         } else {
-            secret_cache_opt.as_ref()
+            secret_cache_opt
+                .as_ref()
+                .and_then(|v| v.get(key).map(|v| v.clone()))
         };
 
-        Ok(secrets_val.and_then(|v| v.get(key).map(|s| s.to_owned())))
+        Ok(secrets_val)
     }
 
     /// Returns true if a checkpoint was loaded, false if this is the initial run. Useful for e.g. pulling more logs on first run.

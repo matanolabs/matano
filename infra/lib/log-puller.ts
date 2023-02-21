@@ -31,6 +31,14 @@ export const PULLER_LOG_SOURCE_TYPES: string[] = [
   "enrich_abusech_threatfox",
   "enrich_otx",
 ];
+/** Some puller log sources don't need secrets. */
+const NO_SECRET_LOG_SOURCES: string[] = [
+  "aws_inspector",
+  "enrich_abusech_urlhaus",
+  "enrich_abusech_malwarebazaar",
+  "enrich_abusech_threatfox",
+];
+
 const LOG_SOURCE_RATES: Record<string, cdk.Duration> = {
   onepassword: cdk.Duration.minutes(1),
   aws_inspector: cdk.Duration.minutes(10),
@@ -44,6 +52,17 @@ const LOG_SOURCE_RATES: Record<string, cdk.Duration> = {
   enrich_abusech_malwarebazaar: cdk.Duration.hours(1),
   enrich_abusech_threatfox: cdk.Duration.hours(1),
   enrich_otx: cdk.Duration.minutes(5),
+};
+
+const LOG_SOURCE_PLACEHOLDER_MAP: Record<string, string> = {
+  duo: "secret_key",
+  okta: "api_token",
+  snyk: "api_token",
+  onepassword: "api_token",
+  google_workspace: "private_key",
+  msft: "client_secret",
+  o365: "client_secret",
+  enrich_otx: "api_key",
 };
 
 export class ExternalLogPuller extends Construct {
@@ -70,31 +89,16 @@ export class ExternalLogPuller extends Construct {
     this.function = func;
 
     for (const logSourceName of props.logSources) {
+      if (NO_SECRET_LOG_SOURCES.includes(logSourceName)) {
+        continue;
+      }
+
       let placeholder = {};
       let placeholder_val = cdk.SecretValue.unsafePlainText("<placeholder>");
-      if (logSourceName.startsWith("o365")) {
+      const maybePlaceholderKey = LOG_SOURCE_PLACEHOLDER_MAP[logSourceName];
+      if (!!maybePlaceholderKey) {
         placeholder = {
-          client_secret: placeholder_val,
-        };
-      } else if (logSourceName.startsWith("duo")) {
-        placeholder = {
-          secret_key: placeholder_val,
-        };
-      } else if (logSourceName.startsWith("okta")) {
-        placeholder = {
-          api_token: placeholder_val,
-        };
-      } else if (logSourceName.startsWith("snyk")) {
-        placeholder = {
-          api_token: placeholder_val,
-        };
-      } else if (logSourceName.startsWith("onepassword")) {
-        placeholder = {
-          api_token: placeholder_val,
-        };
-      } else if (logSourceName.startsWith("google_workspace")) {
-        placeholder = {
-          private_key: placeholder_val,
+          [maybePlaceholderKey]: placeholder_val,
         };
       } else {
         placeholder = {

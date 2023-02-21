@@ -33,6 +33,10 @@ impl PullLogs for OtxPuller {
             .await?
             .context("Missing OTX API Key")?;
 
+        if api_key == "<placeholder>" {
+            return Ok(vec![]);
+        }
+
         let mut handles = vec![];
         let mut next_url: Option<String> = None;
         let mut is_first = true;
