@@ -65,7 +65,7 @@ pub fn sqs_errors_to_response(errors: Vec<SQSLambdaError>) -> Result<Option<SQSB
         let ids = errors
             .into_iter()
             .flat_map(|e| {
-                error!("Encountered error: {}", e);
+                error!("Encountered error: {:#}", e);
                 e.ids
             })
             .collect::<std::collections::HashSet<_>>()

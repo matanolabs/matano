@@ -126,14 +126,11 @@ async fn build_contexts() -> HashMap<String, PullLogsContext> {
                     .to_owned()
             });
 
-            let secret_arn = log_source_to_secret_arn_map
-                .get(&ls_name)
-                .context("Need secret arn.")
-                .unwrap();
+            let secret_arn = log_source_to_secret_arn_map.get(&ls_name);
 
             let ctx = PullLogsContext::new(
                 ls_name.to_owned(),
-                secret_arn.to_owned(),
+                secret_arn.cloned(),
                 log_source,
                 props,
                 tables_config,
