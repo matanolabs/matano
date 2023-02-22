@@ -23,13 +23,22 @@ struct GoogResourceProps {
 }
 
 fn table_resource_map() -> HashMap<String, GoogResourceProps> {
-    [(
-        "login",
-        GoogResourceProps {
-            resource: "login".to_string(),
-            lag: chrono::Duration::hours(2),
-        },
-    )]
+    [
+        (
+            "login",
+            GoogResourceProps {
+                resource: "login".to_string(),
+                lag: chrono::Duration::hours(2),
+            },
+        ),
+        (
+            "admin",
+            GoogResourceProps {
+                resource: "admin".to_string(),
+                lag: chrono::Duration::minutes(7),
+            },
+        ),
+    ]
     .into_iter()
     .map(|(k, v)| (k.to_string(), v))
     .collect::<HashMap<_, _>>()
@@ -179,6 +188,7 @@ async fn list_resource(
         "https://admin.googleapis.com/admin/reports/v1/activity/users/all/applications/{}",
         resource
     );
+    info!("Listing resources at: {}", &url);
     let mut first = true;
     let mut next_token: Option<String> = None;
 
@@ -217,10 +227,26 @@ async fn list_resource(
             .filter_map(|v| v.into_object())
             .peekable();
 
-        for mut item in items {
-            item.insert("_table".to_string(), table.into());
-            ret.extend(serde_json::to_vec(&item)?);
-            ret.push(b'\n');
+        // Google workspace can nest multiple events in a single item. Unnest them.
+        for item in items {
+            let events = item.get("events").and_then(|v| v.as_array());
+            if let Some(events) = events {
+                // We're taking the .events array in each item and turning it into a separate item with .events now as an object (each array item).
+                let unnested_items =
+                    events
+                        .into_iter()
+                        .filter_map(|v| v.as_object())
+                        .map(|event| {
+                            let mut item_copy = item.clone();
+                            item_copy["events"] = serde_json::Value::Object(event.clone());
+                            item_copy
+                        });
+                unnested_items.for_each(|mut item| {
+                    item.insert("_table".to_string(), table.into());
+                    ret.extend(serde_json::to_vec(&item).unwrap());
+                    ret.push(b'\n');
+                });
+            }
         }
 
         next_token = body
