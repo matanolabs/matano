@@ -150,6 +150,12 @@ export class Enrichment extends Construct {
 
     this.enrichmentTablesBucket = new s3.Bucket(this, "EnrichmentTables", {
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      lifecycleRules: [
+        {
+          prefix: "temp-enrich-sync",
+          expiration: cdk.Duration.days(1),
+        }
+      ]
     });
 
     this.enrichmentSyncerFunc = new lambda.Function(this, "Syncer", {

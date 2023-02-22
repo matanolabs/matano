@@ -66,6 +66,7 @@ export class DPCommonStack extends MatanoStack {
 
     this.realtimeBucket = new Bucket(this, "MatanoRealtimeBucket", {
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
+      lifecycleRules: [{ expiration: cdk.Duration.days(7) }],
     });
     this.realtimeBucketTopic = new Topic(this, "MatanoRealtimeBucketNotifications", {
       displayName: "MatanoRealtimeBucketNotifications",
@@ -91,6 +92,7 @@ export class DPCommonStack extends MatanoStack {
 
     this.matanoAthenaResultsBucket = new s3.Bucket(this, "MatanoAthenaResults", {
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
+      lifecycleRules: [{ expiration: cdk.Duration.days(60) }],
     });
     const matanoDefaultAthenaWorkgroup = new athena.CfnWorkGroup(this, "MatanoDefault", {
       name: "matano_default",
