@@ -1,0 +1,862 @@
+name: admin
+schema:
+  ecs_field_names:
+    - event.action
+    - event.category
+    - event.created
+    - event.duration
+    - event.end
+    - event.id
+    - event.ingested
+    - event.kind
+    - event.original
+    - event.outcome
+    - event.provider
+    - event.start
+    - event.type
+    - group.domain
+    - group.id
+    - group.name
+    - message
+    - network.name
+    - organization.id
+    - related.hash
+    - related.hosts
+    - related.ip
+    - related.user
+    - source.address
+    - source.as.number
+    - source.as.organization.name
+    - source.ip
+    - source.user.domain
+    - source.user.email
+    - source.user.id
+    - source.user.name
+    - tags
+    - url.domain
+    - url.extension
+    - url.fragment
+    - url.full
+    - url.original
+    - url.password
+    - url.path
+    - url.port
+    - url.query
+    - url.registered_domain
+    - url.scheme
+    - url.subdomain
+    - url.top_level_domain
+    - url.username
+    - user.domain
+    - user.email
+    - user.id
+    - user.name
+    - user.target.domain
+    - user.target.email
+    - user.target.group.domain
+    - user.target.group.id
+    - user.target.group.name
+    - user.target.id
+    - user.target.name
+  fields:
+    - name: google_workspace
+      type:
+        type: struct
+        fields:
+          - name: actor
+            type:
+              type: struct
+              fields:
+                - name: key
+                  type: string
+                - name: type
+                  type: string
+          - name: event
+            type:
+              type: struct
+              fields:
+                - name: type
+                  type: string
+          - name: kind
+            type: string
+          - name: organization
+            type:
+              type: struct
+              fields:
+                - name: domain
+                  type: string
+          - name: admin
+            type:
+              type: struct
+              fields:
+                - name: alert
+                  type:
+                    type: struct
+                    fields:
+                      - name: name
+                        type: string
+                - name: api
+                  type:
+                    type: struct
+                    fields:
+                      - name: client
+                        type:
+                          type: struct
+                          fields:
+                            - name: name
+                              type: string
+                      - name: scopes
+                        type:
+                          type: list
+                          element: string
+                - name: application
+                  type:
+                    type: struct
+                    fields:
+                      - name: asp_id
+                        type: string
+                      - name: edition
+                        type: string
+                      - name: enabled
+                        type: string
+                      - name: id
+                        type: string
+                      - name: licences_order_number
+                        type: string
+                      - name: licences_purchased
+                        type: long
+                      - name: name
+                        type: string
+                      - name: package_id
+                        type: string
+                - name: bulk_upload
+                  type:
+                    type: struct
+                    fields:
+                      - name: failed
+                        type: long
+                      - name: total
+                        type: long
+                - name: chrome_licenses
+                  type:
+                    type: struct
+                    fields:
+                      - name: allowed
+                        type: string
+                      - name: enabled
+                        type: string
+                - name: chrome_os
+                  type:
+                    type: struct
+                    fields:
+                      - name: session_type
+                        type: string
+                - name: device
+                  type:
+                    type: struct
+                    fields:
+                      - name: command_details
+                        type:
+                          type: list
+                          element: string
+                      - name: id
+                        type: string
+                      - name: serial_number
+                        type: string
+                      - name: type
+                        type: string
+                - name: distribution
+                  type:
+                    type: struct
+                    fields:
+                      - name: entity
+                        type:
+                          type: struct
+                          fields:
+                            - name: name
+                              type: string
+                            - name: type
+                              type: string
+                - name: domain
+                  type:
+                    type: struct
+                    fields:
+                      - name: alias
+                        type: string
+                      - name: name
+                        type: string
+                      - name: secondary_name
+                        type: string
+                - name: email
+                  type:
+                    type: struct
+                    fields:
+                      - name: log_search_filter
+                        type:
+                          type: struct
+                          fields:
+                            - name: end_date
+                              type: timestamp
+                            - name: message_id
+                              type: string
+                            - name: recipient
+                              type:
+                                type: struct
+                                fields:
+                                  - name: ip
+                                    type: string
+                                  - name: value
+                                    type: string
+                            - name: sender
+                              type:
+                                type: struct
+                                fields:
+                                  - name: ip
+                                    type: string
+                                  - name: value
+                                    type: string
+                            - name: start_date
+                              type: timestamp
+                      - name: quarantine_name
+                        type: string
+                - name: email_dump
+                  type:
+                    type: struct
+                    fields:
+                      - name: include_deleted
+                        type: boolean
+                      - name: package_content
+                        type: string
+                      - name: query
+                        type: string
+                - name: email_monitor
+                  type:
+                    type: struct
+                    fields:
+                      - name: dest_email
+                        type: string
+                      - name: level
+                        type:
+                          type: struct
+                          fields:
+                            - name: chat
+                              type: string
+                            - name: draft
+                              type: string
+                            - name: incoming
+                              type: string
+                            - name: outgoing
+                              type: string
+                - name: field
+                  type: string
+                - name: gateway
+                  type:
+                    type: struct
+                    fields:
+                      - name: name
+                        type: string
+                - name: group
+                  type:
+                    type: struct
+                    fields:
+                      - name: allowed_list
+                        type:
+                          type: list
+                          element: string
+                      - name: email
+                        type: string
+                      - name: priorities
+                        type:
+                          type: list
+                          element: string
+                - name: info_type
+                  type: string
+                - name: managed_configuration
+                  type: string
+                - name: mdm
+                  type:
+                    type: struct
+                    fields:
+                      - name: token
+                        type: string
+                      - name: vendor
+                        type: string
+                - name: mobile
+                  type:
+                    type: struct
+                    fields:
+                      - name: action
+                        type:
+                          type: struct
+                          fields:
+                            - name: id
+                              type: string
+                            - name: type
+                              type: string
+                      - name: certificate
+                        type:
+                          type: struct
+                          fields:
+                            - name: name
+                              type: string
+                      - name: company_owned_devices
+                        type: long
+                - name: new_value
+                  type: string
+                - name: non_featured_services_selection
+                  type: string
+                - name: oauth2
+                  type:
+                    type: struct
+                    fields:
+                      - name: application
+                        type:
+                          type: struct
+                          fields:
+                            - name: id
+                              type: string
+                            - name: name
+                              type: string
+                            - name: type
+                              type: string
+                      - name: service
+                        type:
+                          type: struct
+                          fields:
+                            - name: name
+                              type: string
+                - name: old_value
+                  type: string
+                - name: org_unit
+                  type:
+                    type: struct
+                    fields:
+                      - name: full
+                        type: string
+                      - name: name
+                        type: string
+                - name: print_server
+                  type:
+                    type: struct
+                    fields:
+                      - name: name
+                        type: string
+                - name: printer
+                  type:
+                    type: struct
+                    fields:
+                      - name: name
+                        type: string
+                - name: privilege
+                  type:
+                    type: struct
+                    fields:
+                      - name: name
+                        type: string
+                - name: product
+                  type:
+                    type: struct
+                    fields:
+                      - name: name
+                        type: string
+                      - name: sku
+                        type: string
+                - name: request
+                  type:
+                    type: struct
+                    fields:
+                      - name: id
+                        type: string
+                - name: resource
+                  type:
+                    type: struct
+                    fields:
+                      - name: id
+                        type: string
+                - name: role
+                  type:
+                    type: struct
+                    fields:
+                      - name: id
+                        type: string
+                      - name: name
+                        type: string
+                - name: rule
+                  type:
+                    type: struct
+                    fields:
+                      - name: name
+                        type: string
+                - name: service
+                  type:
+                    type: struct
+                    fields:
+                      - name: name
+                        type: string
+                - name: setting
+                  type:
+                    type: struct
+                    fields:
+                      - name: description
+                        type: string
+                      - name: name
+                        type: string
+                - name: url
+                  type:
+                    type: struct
+                    fields:
+                      - name: name
+                        type: string
+                - name: user
+                  type:
+                    type: struct
+                    fields:
+                      - name: birthdate
+                        type: timestamp
+                      - name: email
+                        type: string
+                      - name: nickname
+                        type: string
+                - name: user_defined_setting
+                  type:
+                    type: struct
+                    fields:
+                      - name: name
+                        type: string
+                - name: verification_method
+                  type: string
+transform: |-
+  .event.category = ["iam"]
+  .event.type = []
+  .event.kind = "event"
+  if .json.id.time != null {
+    .ts = to_timestamp!(.json.id.time)
+  }
+
+  # shouldn't happen as we unnest.
+  if is_array(.json.events) {
+    .json.events = array!(.json.events)[0]
+  }
+
+  .event.action = del(.json.events.name)
+  .event.provider = del(.json.id.applicationName)
+  .event.id = del(.json.id.uniqueQualifier)
+
+  .source.user.email = del(.json.actor.email)
+  .user.email = .source.user.email
+  .source.user.id = del(.json.actor.profileId)
+  if .json.ipAddress != null {
+      .source.ip = to_string!(.json.ipAddress)
+  }
+
+  .google_workspace.kind = del(.json.kind)
+
+  .organization.id = del(.json.id.customerId)
+  .google_workspace.actor.type = del(.json.actor.callerType)
+  .google_workspace.actor.key = del(.json.actor.key)
+  .google_workspace.organization.domain = del(.json.ownerDomain)
+  .google_workspace.event.type = del(.json.events.type)
+  .user.id = .source.user.id
+
+  if includes(["CHANGE_APPLICATION_SETTING","UPDATE_MANAGED_CONFIGURATION","CHANGE_CALENDAR_SETTING","CHANGE_CHAT_SETTING","CHANGE_CHROME_OS_ANDROID_APPLICATION_SETTING","GPLUS_PREMIUM_FEATURES","UPDATE_CALENDAR_RESOURCE_FEATURE","FLASHLIGHT_EDU_NON_FEATURED_SERVICES_SELECTED","MEET_INTEROP_MODIFY_GATEWAY","CHANGE_CHROME_OS_APPLICATION_SETTING","CHANGE_CHROME_OS_DEVICE_SETTING","CHANGE_CHROME_OS_PUBLIC_SESSION_SETTING","CHANGE_CHROME_OS_SETTING","CHANGE_CHROME_OS_USER_SETTING","CHANGE_CONTACTS_SETTING","CHANGE_DOCS_SETTING","CHANGE_SITES_SETTING","CHANGE_EMAIL_SETTING","CHANGE_GMAIL_SETTING","ALLOW_STRONG_AUTHENTICATION","ALLOW_SERVICE_FOR_OAUTH2_ACCESS","DISALLOW_SERVICE_FOR_OAUTH2_ACCESS","CHANGE_APP_ACCESS_SETTINGS_COLLECTION_ID","CHANGE_TWO_STEP_VERIFICATION_ENROLLMENT_PERIOD_DURATION","CHANGE_TWO_STEP_VERIFICATION_FREQUENCY","CHANGE_TWO_STEP_VERIFICATION_GRACE_PERIOD_DURATION","CHANGE_TWO_STEP_VERIFICATION_START_DATE","CHANGE_ALLOWED_TWO_STEP_VERIFICATION_METHODS","CHANGE_SITES_WEB_ADDRESS_MAPPING_UPDATES","ENABLE_NON_ADMIN_USER_PASSWORD_RECOVERY","ENFORCE_STRONG_AUTHENTICATION","UPDATE_ERROR_MSG_FOR_RESTRICTED_OAUTH2_APPS","WEAK_PROGRAMMATIC_LOGIN_SETTINGS_CHANGED","SESSION_CONTROL_SETTINGS_CHANGE","CHANGE_SESSION_LENGTH","TOGGLE_OAUTH_ACCESS_TO_ALL_APIS","TOGGLE_ALLOW_ADMIN_PASSWORD_RESET","ENABLE_API_ACCESS","CHANGE_WHITELIST_SETTING","COMMUNICATION_PREFERENCES_SETTING_CHANGE","ENABLE_FEEDBACK_SOLICITATION","TOGGLE_CONTACT_SHARING","TOGGLE_USE_CUSTOM_LOGO","CHANGE_DATA_LOCALIZATION_SETTING","TOGGLE_ENABLE_OAUTH_CONSUMER_KEY","TOGGLE_SSO_ENABLED","TOGGLE_SSL","TOGGLE_NEW_APP_FEATURES","TOGGLE_USE_NEXT_GEN_CONTROL_PANEL","TOGGLE_OPEN_ID_ENABLED","TOGGLE_OUTBOUND_RELAY","CHANGE_SSO_SETTINGS","ENABLE_SERVICE_OR_FEATURE_NOTIFICATIONS","CHANGE_MOBILE_APPLICATION_SETTINGS","CHANGE_MOBILE_SETTING","DELETE_APPLICATION_SETTING","DELETE_GMAIL_SETTING"], .event.action) {
+      .event.category = push(.event.category, "configuration")
+  }
+
+
+  if includes(["CHANGE_APPLICATION_SETTING","UPDATE_MANAGED_CONFIGURATION","CHANGE_CALENDAR_SETTING","CHANGE_CHAT_SETTING","CHANGE_CHROME_OS_ANDROID_APPLICATION_SETTING","GPLUS_PREMIUM_FEATURES","UPDATE_CALENDAR_RESOURCE_FEATURE","FLASHLIGHT_EDU_NON_FEATURED_SERVICES_SELECTED","MEET_INTEROP_MODIFY_GATEWAY","CHANGE_CHROME_OS_APPLICATION_SETTING","CHANGE_CHROME_OS_DEVICE_SETTING","CHANGE_CHROME_OS_PUBLIC_SESSION_SETTING","CHANGE_CHROME_OS_SETTING","CHANGE_CHROME_OS_USER_SETTING","CHANGE_CONTACTS_SETTING","CHANGE_DOCS_SETTING","CHANGE_SITES_SETTING","CHANGE_EMAIL_SETTING","CHANGE_GMAIL_SETTING","ALLOW_STRONG_AUTHENTICATION","ALLOW_SERVICE_FOR_OAUTH2_ACCESS","DISALLOW_SERVICE_FOR_OAUTH2_ACCESS","CHANGE_APP_ACCESS_SETTINGS_COLLECTION_ID","CHANGE_TWO_STEP_VERIFICATION_ENROLLMENT_PERIOD_DURATION","CHANGE_TWO_STEP_VERIFICATION_FREQUENCY","CHANGE_TWO_STEP_VERIFICATION_GRACE_PERIOD_DURATION","CHANGE_TWO_STEP_VERIFICATION_START_DATE","CHANGE_ALLOWED_TWO_STEP_VERIFICATION_METHODS","CHANGE_SITES_WEB_ADDRESS_MAPPING_UPDATES","ENABLE_NON_ADMIN_USER_PASSWORD_RECOVERY","ENFORCE_STRONG_AUTHENTICATION","UPDATE_ERROR_MSG_FOR_RESTRICTED_OAUTH2_APPS","WEAK_PROGRAMMATIC_LOGIN_SETTINGS_CHANGED","SESSION_CONTROL_SETTINGS_CHANGE","CHANGE_SESSION_LENGTH","TOGGLE_OAUTH_ACCESS_TO_ALL_APIS","TOGGLE_ALLOW_ADMIN_PASSWORD_RESET","ENABLE_API_ACCESS","CHANGE_WHITELIST_SETTING","COMMUNICATION_PREFERENCES_SETTING_CHANGE","ENABLE_FEEDBACK_SOLICITATION","TOGGLE_CONTACT_SHARING","TOGGLE_USE_CUSTOM_LOGO","CHANGE_DATA_LOCALIZATION_SETTING","TOGGLE_ENABLE_OAUTH_CONSUMER_KEY","TOGGLE_SSO_ENABLED","TOGGLE_SSL","TOGGLE_NEW_APP_FEATURES","TOGGLE_USE_NEXT_GEN_CONTROL_PANEL","TOGGLE_OPEN_ID_ENABLED","TOGGLE_OUTBOUND_RELAY","CHANGE_SSO_SETTINGS","ENABLE_SERVICE_OR_FEATURE_NOTIFICATIONS","CHANGE_MOBILE_APPLICATION_SETTINGS","CHANGE_MOBILE_SETTING","UPDATE_BUILDING","RENAME_CALENDAR_RESOURCE","UPDATE_CALENDAR_RESOURCE","CANCEL_CALENDAR_EVENTS","RELEASE_CALENDAR_RESOURCES","CHANGE_DEVICE_STATE","CHANGE_CHROME_OS_DEVICE_ANNOTATION","CHANGE_CHROME_OS_DEVICE_STATE","UPDATE_CHROME_OS_PRINT_SERVER","UPDATE_CHROME_OS_PRINTER","MOVE_DEVICE_TO_ORG_UNIT_DETAILED","UPDATE_DEVICE","SEND_CHROME_OS_DEVICE_COMMAND","ASSIGN_ROLE","ADD_PRIVILEGE","REMOVE_PRIVILEGE","RENAME_ROLE","UPDATE_ROLE","UNASSIGN_ROLE","TRANSFER_DOCUMENT_OWNERSHIP","ORG_USERS_LICENSE_ASSIGNMENT","ORG_ALL_USERS_LICENSE_ASSIGNMENT","USER_LICENSE_ASSIGNMENT","CHANGE_LICENSE_AUTO_ASSIGN","USER_LICENSE_REASSIGNMENT","ORG_LICENSE_REVOKE","USER_LICENSE_REVOKE","UPDATE_DYNAMIC_LICENSE","DROP_FROM_QUARANTINE","REJECT_FROM_QUARANTINE","RELEASE_FROM_QUARANTINE","CHROME_LICENSES_ENABLED","CHROME_APPLICATION_LICENSE_RESERVATION_UPDATED","ASSIGN_CUSTOM_LOGO","UNASSIGN_CUSTOM_LOGO","REVOKE_ENROLLMENT_TOKEN","CHROME_LICENSES_ALLOWED","EDIT_ORG_UNIT_DESCRIPTION","MOVE_ORG_UNIT","EDIT_ORG_UNIT_NAME","REVOKE_DEVICE_ENROLLMENT_TOKEN","TOGGLE_SERVICE_ENABLED","ADD_TO_TRUSTED_OAUTH2_APPS","REMOVE_FROM_TRUSTED_OAUTH2_APPS","BLOCK_ON_DEVICE_ACCESS","TOGGLE_CAA_ENABLEMENT","CHANGE_CAA_ERROR_MESSAGE","CHANGE_CAA_APP_ASSIGNMENTS","UNTRUST_DOMAIN_OWNED_OAUTH2_APPS","TRUST_DOMAIN_OWNED_OAUTH2_APPS","UNBLOCK_ON_DEVICE_ACCESS","CHANGE_ACCOUNT_AUTO_RENEWAL","ADD_APPLICATION","ADD_APPLICATION_TO_WHITELIST","CHANGE_ADVERTISEMENT_OPTION","CHANGE_ALERT_CRITERIA","ALERT_RECEIVERS_CHANGED","RENAME_ALERT","ALERT_STATUS_CHANGED","ADD_DOMAIN_ALIAS","REMOVE_DOMAIN_ALIAS","AUTHORIZE_API_CLIENT_ACCESS","REMOVE_API_CLIENT_ACCESS","CHROME_LICENSES_REDEEMED","TOGGLE_AUTO_ADD_NEW_SERVICE","CHANGE_PRIMARY_DOMAIN","CHANGE_CONFLICT_ACCOUNT_ACTION","CHANGE_CUSTOM_LOGO","CHANGE_DATA_LOCALIZATION_FOR_RUSSIA","CHANGE_DATA_PROTECTION_OFFICER_CONTACT_INFO","CHANGE_DOMAIN_DEFAULT_LOCALE","CHANGE_DOMAIN_DEFAULT_TIMEZONE","CHANGE_DOMAIN_NAME","TOGGLE_ENABLE_PRE_RELEASE_FEATURES","CHANGE_DOMAIN_SUPPORT_MESSAGE","ADD_TRUSTED_DOMAINS","REMOVE_TRUSTED_DOMAINS","CHANGE_EDU_TYPE","CHANGE_EU_REPRESENTATIVE_CONTACT_INFO","CHANGE_LOGIN_BACKGROUND_COLOR","CHANGE_LOGIN_BORDER_COLOR","CHANGE_LOGIN_ACTIVITY_TRACE","PLAY_FOR_WORK_ENROLL","PLAY_FOR_WORK_UNENROLL","UPDATE_DOMAIN_PRIMARY_ADMIN_EMAIL","CHANGE_ORGANIZATION_NAME","CHANGE_PASSWORD_MAX_LENGTH","CHANGE_PASSWORD_MIN_LENGTH","REMOVE_APPLICATION","REMOVE_APPLICATION_FROM_WHITELIST","CHANGE_RENEW_DOMAIN_REGISTRATION","CHANGE_RESELLER_ACCESS","RULE_ACTIONS_CHANGED","CHANGE_RULE_CRITERIA","RENAME_RULE","RULE_STATUS_CHANGED","ADD_SECONDARY_DOMAIN","REMOVE_SECONDARY_DOMAIN","UPDATE_DOMAIN_SECONDARY_EMAIL","UPDATE_RULE","ADD_MOBILE_CERTIFICATE","COMPANY_OWNED_DEVICE_BLOCKED","COMPANY_OWNED_DEVICE_UNBLOCKED","COMPANY_OWNED_DEVICE_WIPED","CHANGE_MOBILE_APPLICATION_PERMISSION_GRANT","CHANGE_MOBILE_APPLICATION_PRIORITY_ORDER","REMOVE_MOBILE_APPLICATION_FROM_WHITELIST","ADD_MOBILE_APPLICATION_TO_WHITELIST","CHANGE_ADMIN_RESTRICTIONS_PIN","CHANGE_MOBILE_WIRELESS_NETWORK","ADD_MOBILE_WIRELESS_NETWORK","REMOVE_MOBILE_WIRELESS_NETWORK","CHANGE_MOBILE_WIRELESS_NETWORK_PASSWORD","REMOVE_MOBILE_CERTIFICATE","CREATE_APPLICATION_SETTING","CREATE_GMAIL_SETTING","REORDER_GROUP_BASED_POLICIES_EVENT","CHANGE_GROUP_DESCRIPTION","ADD_GROUP_MEMBER","REMOVE_GROUP_MEMBER","UPDATE_GROUP_MEMBER","UPDATE_GROUP_MEMBER_DELIVERY_SETTINGS","UPDATE_GROUP_MEMBER_DELIVERY_SETTINGS_CAN_EMAIL_OVERRIDE","CHANGE_GROUP_NAME","CHANGE_GROUP_SETTING","GROUP_MEMBER_BULK_UPLOAD","WHITELISTED_GROUPS_UPDATED","REVOKE_3LO_DEVICE_TOKENS","REVOKE_3LO_TOKEN","ADD_RECOVERY_EMAIL","ADD_RECOVERY_PHONE","GRANT_ADMIN_PRIVILEGE","REVOKE_ADMIN_PRIVILEGE","REVOKE_ASP","TOGGLE_AUTOMATIC_CONTACT_SHARING","CANCEL_USER_INVITE","CHANGE_USER_CUSTOM_FIELD","CHANGE_USER_EXTERNAL_ID","CHANGE_USER_GENDER","CHANGE_USER_IM","ENABLE_USER_IP_WHITELIST","CHANGE_USER_KEYWORD","CHANGE_USER_LANGUAGE","CHANGE_USER_LOCATION","CHANGE_USER_ORGANIZATION","CHANGE_USER_PHONE_NUMBER","CHANGE_RECOVERY_EMAIL","CHANGE_RECOVERY_PHONE","CHANGE_USER_RELATION","CHANGE_USER_ADDRESS","GRANT_DELEGATED_ADMIN_PRIVILEGES","CHANGE_FIRST_NAME","GMAIL_RESET_USER","CHANGE_LAST_NAME","MAIL_ROUTING_DESTINATION_ADDED","MAIL_ROUTING_DESTINATION_REMOVED","ADD_NICKNAME","REMOVE_NICKNAME","CHANGE_PASSWORD","CHANGE_PASSWORD_ON_NEXT_LOGIN","REMOVE_RECOVERY_EMAIL","REMOVE_RECOVERY_PHONE","RESET_SIGNIN_COOKIES","SECURITY_KEY_REGISTERED_FOR_USER","REVOKE_SECURITY_KEY","TURN_OFF_2_STEP_VERIFICATION","UNBLOCK_USER_SESSION","UNENROLL_USER_FROM_TITANIUM","ARCHIVE_USER","UPDATE_BIRTHDATE","DOWNGRADE_USER_FROM_GPLUS","USER_ENROLLED_IN_TWO_STEP_VERIFICATION","MOVE_USER_TO_ORG_UNIT","USER_PUT_IN_TWO_STEP_VERIFICATION_GRACE_PERIOD","RENAME_USER","UNENROLL_USER_FROM_STRONG_AUTH","SUSPEND_USER","UNARCHIVE_USER","UNSUSPEND_USER","UPGRADE_USER_TO_GPLUS","MOBILE_DEVICE_APPROVE","MOBILE_DEVICE_BLOCK","MOBILE_DEVICE_WIPE","MOBILE_ACCOUNT_WIPE","MOBILE_DEVICE_CANCEL_WIPE_THEN_APPROVE","MOBILE_DEVICE_CANCEL_WIPE_THEN_BLOCK"], .event.action) {
+      .event.type = push(.event.type, "change")
+  }
+
+
+  if includes(["REVOKE_3LO_DEVICE_TOKENS","REVOKE_3LO_TOKEN","ADD_RECOVERY_EMAIL","ADD_RECOVERY_PHONE","GRANT_ADMIN_PRIVILEGE","REVOKE_ADMIN_PRIVILEGE","REVOKE_ASP","TOGGLE_AUTOMATIC_CONTACT_SHARING","CANCEL_USER_INVITE","CHANGE_USER_CUSTOM_FIELD","CHANGE_USER_EXTERNAL_ID","CHANGE_USER_GENDER","CHANGE_USER_IM","ENABLE_USER_IP_WHITELIST","CHANGE_USER_KEYWORD","CHANGE_USER_LANGUAGE","CHANGE_USER_LOCATION","CHANGE_USER_ORGANIZATION","CHANGE_USER_PHONE_NUMBER","CHANGE_RECOVERY_EMAIL","CHANGE_RECOVERY_PHONE","CHANGE_USER_RELATION","CHANGE_USER_ADDRESS","GRANT_DELEGATED_ADMIN_PRIVILEGES","CHANGE_FIRST_NAME","GMAIL_RESET_USER","CHANGE_LAST_NAME","MAIL_ROUTING_DESTINATION_ADDED","MAIL_ROUTING_DESTINATION_REMOVED","ADD_NICKNAME","REMOVE_NICKNAME","CHANGE_PASSWORD","CHANGE_PASSWORD_ON_NEXT_LOGIN","REMOVE_RECOVERY_EMAIL","REMOVE_RECOVERY_PHONE","RESET_SIGNIN_COOKIES","SECURITY_KEY_REGISTERED_FOR_USER","REVOKE_SECURITY_KEY","TURN_OFF_2_STEP_VERIFICATION","UNBLOCK_USER_SESSION","UNENROLL_USER_FROM_TITANIUM","ARCHIVE_USER","UPDATE_BIRTHDATE","DOWNGRADE_USER_FROM_GPLUS","USER_ENROLLED_IN_TWO_STEP_VERIFICATION","MOVE_USER_TO_ORG_UNIT","USER_PUT_IN_TWO_STEP_VERIFICATION_GRACE_PERIOD","RENAME_USER","UNENROLL_USER_FROM_STRONG_AUTH","SUSPEND_USER","UNARCHIVE_USER","UNSUSPEND_USER","UPGRADE_USER_TO_GPLUS","MOBILE_DEVICE_APPROVE","MOBILE_DEVICE_BLOCK","MOBILE_DEVICE_WIPE","MOBILE_ACCOUNT_WIPE","MOBILE_DEVICE_CANCEL_WIPE_THEN_APPROVE","MOBILE_DEVICE_CANCEL_WIPE_THEN_BLOCK","DELETE_2SV_SCRATCH_CODES","DELETE_ACCOUNT_INFO_DUMP","DELETE_EMAIL_MONITOR","DELETE_MAILBOX_DUMP","DELETE_USER","MOBILE_DEVICE_DELETE","GENERATE_2SV_SCRATCH_CODES","CREATE_EMAIL_MONITOR","CREATE_DATA_TRANSFER_REQUEST","CREATE_USER","UNDELETE_USER","REQUEST_ACCOUNT_INFO","REQUEST_MAILBOX_DUMP","RESEND_USER_INVITE","BULK_UPLOAD_NOTIFICATION_SENT","USER_INVITE","VIEW_TEMP_PASSWORD","USERS_BULK_UPLOAD_NOTIFICATION_SENT","ACTION_CANCELLED","ACTION_REQUESTED"], .event.action) {
+      .event.type = push(.event.type, "user")
+  }
+
+
+  if includes(["CREATE_APPLICATION_SETTING","CREATE_GMAIL_SETTING","CREATE_MANAGED_CONFIGURATION","CREATE_BUILDING","CREATE_CALENDAR_RESOURCE","CREATE_CALENDAR_RESOURCE_FEATURE","MEET_INTEROP_CREATE_GATEWAY","INSERT_CHROME_OS_PRINT_SERVER","INSERT_CHROME_OS_PRINTER","CREATE_ROLE","ADD_WEB_ADDRESS","EMAIL_UNDELETE","CHROME_APPLICATION_LICENSE_RESERVATION_CREATED","CREATE_DEVICE_ENROLLMENT_TOKEN","CREATE_ENROLLMENT_TOKEN","CREATE_ORG_UNIT","CREATE_ALERT","CREATE_PLAY_FOR_WORK_TOKEN","GENERATE_TRANSFER_TOKEN","REGENERATE_OAUTH_CONSUMER_SECRET","CREATE_RULE","GENERATE_PIN","COMPANY_DEVICES_BULK_CREATION","CREATE_GROUP","GENERATE_2SV_SCRATCH_CODES","CREATE_EMAIL_MONITOR","CREATE_DATA_TRANSFER_REQUEST","CREATE_USER","UNDELETE_USER"], .event.action) {
+      .event.type = push(.event.type, "creation")
+  }
+
+
+  if includes(["DELETE_APPLICATION_SETTING","DELETE_GMAIL_SETTING","DELETE_MANAGED_CONFIGURATION","DELETE_BUILDING","DELETE_CALENDAR_RESOURCE","DELETE_CALENDAR_RESOURCE_FEATURE","MEET_INTEROP_DELETE_GATEWAY","DELETE_CHROME_OS_PRINT_SERVER","DELETE_CHROME_OS_PRINTER","REMOVE_CHROME_OS_APPLICATION_SETTINGS","DELETE_ROLE","DELETE_WEB_ADDRESS","CHROME_APPLICATION_LICENSE_RESERVATION_DELETED","REMOVE_ORG_UNIT","DELETE_ALERT","DELETE_PLAY_FOR_WORK_TOKEN","DELETE_RULE","COMPANY_DEVICE_DELETION","DELETE_GROUP","DELETE_2SV_SCRATCH_CODES","DELETE_ACCOUNT_INFO_DUMP","DELETE_EMAIL_MONITOR","DELETE_MAILBOX_DUMP","DELETE_USER","MOBILE_DEVICE_DELETE"], .event.action) {
+      .event.type = push(.event.type, "deletion")
+  }
+
+
+  if includes(["REORDER_GROUP_BASED_POLICIES_EVENT","CHANGE_GROUP_DESCRIPTION","ADD_GROUP_MEMBER","REMOVE_GROUP_MEMBER","UPDATE_GROUP_MEMBER","UPDATE_GROUP_MEMBER_DELIVERY_SETTINGS","UPDATE_GROUP_MEMBER_DELIVERY_SETTINGS_CAN_EMAIL_OVERRIDE","CHANGE_GROUP_NAME","CHANGE_GROUP_SETTING","GROUP_MEMBER_BULK_UPLOAD","WHITELISTED_GROUPS_UPDATED","GROUP_LIST_DOWNLOAD","GROUP_MEMBERS_DOWNLOAD"], .event.action) {
+      .event.type = push(.event.type, "group")
+  }
+
+
+  if includes(["ISSUE_DEVICE_COMMAND","DRIVE_DATA_RESTORE","VIEW_SITE_DETAILS","EMAIL_LOG_SEARCH","SKIP_DOMAIN_ALIAS_MX","VERIFY_DOMAIN_ALIAS_MX","VERIFY_DOMAIN_ALIAS","VIEW_DNS_LOGIN_DETAILS","MX_RECORD_VERIFICATION_CLAIM","UPLOAD_OAUTH_CERTIFICATE","SKIP_SECONDARY_DOMAIN_MX","VERIFY_SECONDARY_DOMAIN_MX","VERIFY_SECONDARY_DOMAIN","BULK_UPLOAD","DOWNLOAD_PENDING_INVITES_LIST","DOWNLOAD_USERLIST_CSV","USERS_BULK_UPLOAD","ENROLL_FOR_GOOGLE_DEVICE_MANAGEMENT","USE_GOOGLE_MOBILE_MANAGEMENT","USE_GOOGLE_MOBILE_MANAGEMENT_FOR_NON_IOS","USE_GOOGLE_MOBILE_MANAGEMENT_FOR_IOS","GROUP_LIST_DOWNLOAD","GROUP_MEMBERS_DOWNLOAD","REQUEST_ACCOUNT_INFO","REQUEST_MAILBOX_DUMP","RESEND_USER_INVITE","BULK_UPLOAD_NOTIFICATION_SENT","USER_INVITE","VIEW_TEMP_PASSWORD","USERS_BULK_UPLOAD_NOTIFICATION_SENT","ACTION_CANCELLED","ACTION_REQUESTED"], .event.action) {
+      .event.type = push(.event.type, "info")
+  }
+
+  if is_array(.json.events.parameters) {
+    params = array!(.json.events.parameters)
+    for_each(params) -> |i, v| {
+      if v.value != null {
+        .google_workspace.admin = set!(.google_workspace.admin, [v.name], v.value)
+      }
+      if v.intValue != null {
+        .google_workspace.admin = set!(.google_workspace.admin, [v.name], to_int!(v.intValue))
+      }
+      if v.multiValue != null {
+        .google_workspace.admin = set!(.google_workspace.admin, [v.name], v.multiValue)
+      }
+    }
+  }
+
+  del(.json.events.parameters)
+
+  .google_workspace.admin.application.edition = del(.google_workspace.admin.APPLICATION_EDITION)
+
+  .google_workspace.admin.application.name = del(.google_workspace.admin.APPLICATION_NAME)
+
+  .google_workspace.admin.application.enabled = del(.google_workspace.admin.APPLICATION_ENABLED)
+
+  .google_workspace.admin.application.licences_order_number = del(.google_workspace.admin.APP_LICENSES_ORDER_NUMBER)
+
+  .google_workspace.admin.application.licences_purchased = del(.google_workspace.admin.CHROME_NUM_LICENSES_PURCHASED)
+
+  .google_workspace.admin.application.name = del(.google_workspace.admin.REAUTH_APPLICATION) || .google_workspace.admin.application.name
+
+  .google_workspace.admin.group.email = del(.google_workspace.admin.GROUP_EMAIL)
+
+  .group.name = del(.google_workspace.admin.GROUP_NAME)
+
+  .google_workspace.admin.new_value = del(.google_workspace.admin.NEW_VALUE)
+
+  .google_workspace.admin.old_value = del(.google_workspace.admin.OLD_VALUE)
+
+  .google_workspace.admin.org_unit.name = del(.google_workspace.admin.ORG_UNIT_NAME)
+
+  .google_workspace.admin.setting.name = del(.google_workspace.admin.SETTING_NAME)
+
+  .google_workspace.admin.setting.description = del(.google_workspace.admin.SETTING_DESCRIPTION)
+
+  .google_workspace.admin.user_defined_setting.name = del(.google_workspace.admin.USER_DEFINED_SETTING_NAME)
+
+  .google_workspace.admin.group.priorities = del(.google_workspace.admin.GROUP_PRIORITIES)
+
+  .google_workspace.admin.domain.name = del(.google_workspace.admin.DOMAIN_NAME)
+
+  .google_workspace.admin.domain.alias = del(.google_workspace.admin.DOMAIN_ALIAS)
+
+  .google_workspace.admin.domain.secondary_name = del(.google_workspace.admin.SECONDARY_DOMAIN_NAME)
+
+  .google_workspace.admin.managed_configuration = del(.google_workspace.admin.MANAGED_CONFIGURATION_NAME)
+
+  .google_workspace.admin.application.package_id = del(.google_workspace.admin.MOBILE_APP_PACKAGE_ID)
+
+  .google_workspace.admin.non_featured_services_selection = del(.google_workspace.admin.FLASHLIGHT_EDU_NON_FEATURED_SERVICES_SELECTION)
+
+  .google_workspace.admin.field = del(.google_workspace.admin.FIELD_NAME)
+
+  .google_workspace.admin.resource.id = del(.google_workspace.admin.RESOURCE_IDENTIFIER)
+
+  .google_workspace.admin.user.email = del(.google_workspace.admin.USER_EMAIL)
+
+  .google_workspace.admin.gateway.name = del(.google_workspace.admin.GATEWAY_NAME)
+
+  .google_workspace.admin.application.id = del(.google_workspace.admin.APP_ID)
+
+  .google_workspace.admin.application.asp_id = del(.google_workspace.admin.ASP_ID)
+
+  .google_workspace.admin.chrome_os.session_type = del(.google_workspace.admin.CHROME_OS_SESSION_TYPE)
+
+  .google_workspace.admin.new_value = del(.google_workspace.admin.DEVICE_NEW_STATE) || .google_workspace.admin.new_value
+
+  .google_workspace.admin.old_value = del(.google_workspace.admin.DEVICE_PREVIOUS_STATE) || .google_workspace.admin.old_value
+
+  .google_workspace.admin.device.serial_number = del(.google_workspace.admin.DEVICE_SERIAL_NUMBER)
+
+  .google_workspace.admin.device.id = del(.google_workspace.admin.DEVICE_ID)
+
+  .google_workspace.admin.device.type = del(.google_workspace.admin.DEVICE_TYPE)
+
+  .google_workspace.admin.print_server.name = del(.google_workspace.admin.PRINT_SERVER_NAME)
+
+  .google_workspace.admin.printer.name = del(.google_workspace.admin.PRINTER_NAME)
+
+  .google_workspace.admin.device.command_details = del(.google_workspace.admin.DEVICE_COMMAND_DETAILS)
+
+  .google_workspace.admin.new_value = del(.google_workspace.admin.DEVICE_NEW_ORG_UNIT) || .google_workspace.admin.new_value
+
+  .google_workspace.admin.old_value = del(.google_workspace.admin.DEVICE_PREVIOUS_ORG_UNIT) || .google_workspace.admin.old_value
+
+  .google_workspace.admin.role.name = del(.google_workspace.admin.ROLE_NAME)
+
+  .google_workspace.admin.role.id = del(.google_workspace.admin.ROLE_ID)
+
+  .google_workspace.admin.privilege.name = del(.google_workspace.admin.PRIVILEGE_NAME)
+
+  if .google_workspace.admin.WEB_ADDRESS != null {
+  	url = parse_url!(.google_workspace.admin.WEB_ADDRESS)
+    url.original = del(.google_workspace.admin.WEB_ADDRESS)
+    url.domain = del(url.host)
+    del(url.query)
+    .url = url
+  }
+  .url.path = del(.google_workspace.admin.SITE_LOCATION)
+
+  .google_workspace.admin.url.name = del(.google_workspace.admin.SITE_NAME)
+
+  .google_workspace.admin.service.name = del(.google_workspace.admin.SERVICE_NAME)
+
+  .google_workspace.admin.product.name = del(.google_workspace.admin.PRODUCT_NAME)
+
+  .google_workspace.admin.product.sku = del(.google_workspace.admin.SKU_NAME)
+
+  .google_workspace.admin.bulk_upload.failed = del(.google_workspace.admin.GROUP_MEMBER_BULK_UPLOAD_FAILED_NUMBER)
+
+  .google_workspace.admin.bulk_upload.total = del(.google_workspace.admin.GROUP_MEMBER_BULK_UPLOAD_TOTAL_NUMBER)
+
+  .google_workspace.admin.bulk_upload.failed = del(.google_workspace.admin.BULK_UPLOAD_FAIL_USERS_NUMBER) || .google_workspace.admin.bulk_upload.failed
+
+  .google_workspace.admin.bulk_upload.total = del(.google_workspace.admin.BULK_UPLOAD_TOTAL_USERS_NUMBER) || .google_workspace.admin.bulk_upload.total
+
+  .google_workspace.admin.email.log_search_filter.message_id = del(.google_workspace.admin.EMAIL_LOG_SEARCH_MSG_ID)
+
+  .google_workspace.admin.email.log_search_filter.recipient.value = del(.google_workspace.admin.EMAIL_LOG_SEARCH_RECIPIENT)
+
+  .google_workspace.admin.email.log_search_filter.sender.value = del(.google_workspace.admin.EMAIL_LOG_SEARCH_SENDER)
+
+  if .google_workspace.admin.EMAIL_LOG_SEARCH_SMTP_RECIPIENT_IP != null {
+      .google_workspace.admin.EMAIL_LOG_SEARCH_SMTP_RECIPIENT_IP = to_string!(.google_workspace.admin.EMAIL_LOG_SEARCH_SMTP_RECIPIENT_IP)
+  }
+
+  .google_workspace.admin.email.log_search_filter.recipient.ip = del(.google_workspace.admin.EMAIL_LOG_SEARCH_SMTP_RECIPIENT_IP)
+
+  if .google_workspace.admin.EMAIL_LOG_SEARCH_SMTP_SENDER_IP != null {
+      .google_workspace.admin.EMAIL_LOG_SEARCH_SMTP_SENDER_IP = to_string!(.google_workspace.admin.EMAIL_LOG_SEARCH_SMTP_SENDER_IP)
+  }
+
+  .google_workspace.admin.email.log_search_filter.sender.ip = del(.google_workspace.admin.EMAIL_LOG_SEARCH_SMTP_SENDER_IP)
+
+  .google_workspace.admin.email.quarantine_name = del(.google_workspace.admin.QUARANTINE_NAME)
+
+  .google_workspace.admin.chrome_licenses.enabled = del(.google_workspace.admin.CHROME_LICENSES_ENABLED)
+
+  .google_workspace.admin.chrome_licenses.allowed = del(.google_workspace.admin.CHROME_LICENSES_ALLOWED)
+
+  .google_workspace.admin.org_unit.full = del(.google_workspace.admin.FULL_ORG_UNIT_PATH)
+
+  .google_workspace.admin.oauth2.service.name = del(.google_workspace.admin.OAUTH2_SERVICE_NAME)
+
+  .google_workspace.admin.oauth2.application.id = del(.google_workspace.admin.OAUTH2_APP_ID)
+
+  .google_workspace.admin.oauth2.application.name = del(.google_workspace.admin.OAUTH2_APP_NAME)
+
+  .google_workspace.admin.oauth2.application.type = del(.google_workspace.admin.OAUTH2_APP_TYPE)
+
+  .google_workspace.admin.verification_method = del(.google_workspace.admin.ALLOWED_TWO_STEP_VERIFICATION_METHOD)
+
+  .google_workspace.admin.verification_method = del(.google_workspace.admin.DOMAIN_VERIFICATION_METHOD) || .google_workspace.admin.verification_method
+
+  .google_workspace.admin.new_value = del(.google_workspace.admin.CAA_ASSIGNMENTS_NEW) || .google_workspace.admin.new_value
+  .google_workspace.admin.old_value = del(.google_workspace.admin.CAA_ASSIGNMENTS_OLD) || .google_workspace.admin.old_value
+  .google_workspace.admin.new_value = del(.google_workspace.admin.REAUTH_SETTING_NEW) || .google_workspace.admin.new_value
+  .google_workspace.admin.old_value = del(.google_workspace.admin.REAUTH_SETTING_OLD) || .google_workspace.admin.old_value
+
+  .google_workspace.admin.alert.name = del(.google_workspace.admin.ALERT_NAME)
+
+  .google_workspace.admin.api.client.name = del(.google_workspace.admin.API_CLIENT_NAME)
+
+  if is_string(.google_workspace.admin.API_SCOPES) {
+    .google_workspace.admin.api.scopes = split(del(.google_workspace.admin.API_SCOPES), ",") ?? null
+  } else if is_array(.google_workspace.admin.API_SCOPES) {
+    .google_workspace.admin.api.scopes = del(.google_workspace.admin.API_SCOPES)
+  }
+
+  .google_workspace.admin.mdm.token = del(.google_workspace.admin.PLAY_FOR_WORK_TOKEN_ID)
+
+  .google_workspace.admin.mdm.vendor = del(.google_workspace.admin.PLAY_FOR_WORK_MDM_VENDOR_NAME)
+
+  .google_workspace.admin.info_type = del(.google_workspace.admin.INFO_TYPE)
+
+  .google_workspace.admin.rule.name = del(.google_workspace.admin.RULE_NAME)
+
+  .google_workspace.admin.setting.name = del(.google_workspace.admin.USER_CUSTOM_FIELD) || .google_workspace.admin.setting.name
+
+  .google_workspace.admin.email_monitor.dest_email = del(.google_workspace.admin.EMAIL_MONITOR_DEST_EMAIL)
+
+  .google_workspace.admin.email_monitor.level.chat = del(.google_workspace.admin.EMAIL_MONITOR_LEVEL_CHAT)
+
+  .google_workspace.admin.email_monitor.level.draft = del(.google_workspace.admin.EMAIL_MONITOR_LEVEL_DRAFT_EMAIL)
+
+  .google_workspace.admin.email_monitor.level.incoming = del(.google_workspace.admin.EMAIL_MONITOR_LEVEL_INCOMING_EMAIL)
+
+  .google_workspace.admin.email_monitor.level.outgoing = del(.google_workspace.admin.EMAIL_MONITOR_LEVEL_OUTGOING_EMAIL)
+
+  if .google_workspace.admin.EMAIL_EXPORT_INCLUDE_DELETED != null {
+    .google_workspace.admin.email_dump.include_deleted = to_bool(del(.google_workspace.admin.EMAIL_EXPORT_INCLUDE_DELETED)) ?? null
+  }
+
+  .google_workspace.admin.email_dump.package_content = del(.google_workspace.admin.EMAIL_EXPORT_PACKAGE_CONTENT)
+
+  .google_workspace.admin.email_dump.query = del(.google_workspace.admin.SEARCH_QUERY_FOR_DUMP)
+
+  .google_workspace.admin.new_value = del(.google_workspace.admin.DESTINATION_USER_EMAIL) || .google_workspace.admin.new_value
+
+  .google_workspace.admin.request.id = del(.google_workspace.admin.REQUEST_ID)
+
+  .message = del(.google_workspace.admin.GMAIL_RESET_REASON)
+
+  .google_workspace.admin.user.nickname = del(.google_workspace.admin.USER_NICKNAME)
+
+  .google_workspace.admin.mobile.action.id = del(.google_workspace.admin.ACTION_ID)
+
+  .google_workspace.admin.mobile.action.type = del(.google_workspace.admin.ACTION_TYPE)
+
+  .google_workspace.admin.mobile.certificate.name = del(.google_workspace.admin.MOBILE_CERTIFICATE_COMMON_NAME)
+
+  .google_workspace.admin.mobile.company_owned_devices = del(.google_workspace.admin.NUMBER_OF_COMPANY_OWNED_DEVICES)
+
+  .google_workspace.admin.device.id = del(.google_workspace.admin.COMPANY_DEVICE_ID) || .google_workspace.admin.device.id
+
+  .google_workspace.admin.distribution.entity.name = del(.google_workspace.admin.DISTRIBUTION_ENTITY_NAME)
+
+  .google_workspace.admin.distribution.entity.type = del(.google_workspace.admin.DISTRIBUTION_ENTITY_TYPE)
+
+  .google_workspace.admin.application.package_id = del(.google_workspace.admin.MOBILE_APP_PACKAGE_ID) || .google_workspace.admin.application.package_id
+
+  .google_workspace.admin.new_value = del(.google_workspace.admin.NEW_PERMISSION_GRANT_STATE) || .google_workspace.admin.new_value
+
+  .google_workspace.admin.old_value = del(.google_workspace.admin.OLD_PERMISSION_GRANT_STATE) || .google_workspace.admin.old_value
+
+  .google_workspace.admin.setting.name = del(.google_workspace.admin.PERMISSION_GROUP_NAME) || .google_workspace.admin.setting.name
+
+  .network.name = del(.google_workspace.admin.MOBILE_WIRELESS_NETWORK_NAME)
+
+  if .google_workspace.admin.EMAIL_LOG_SEARCH_END_DATE != null {
+      .google_workspace.admin.email.log_search_filter.end_date = to_timestamp(.google_workspace.admin.EMAIL_LOG_SEARCH_END_DATE) ?? parse_timestamp!(replace!(.google_workspace.admin.EMAIL_LOG_SEARCH_END_DATE, "UTC", "+0000"), format: "%Y/%m/%d %T %z")
+  }
+
+
+  if .google_workspace.admin.EMAIL_LOG_SEARCH_START_DATE != null {
+      .google_workspace.admin.email.log_search_filter.start_date = to_timestamp(.google_workspace.admin.EMAIL_LOG_SEARCH_START_DATE) ?? parse_timestamp!(replace!(.google_workspace.admin.EMAIL_LOG_SEARCH_START_DATE, "UTC", "+0000"), format: "%Y/%m/%d %T %z")
+  }
+
+
+  if .google_workspace.admin.BIRTHDATE != null {
+      .google_workspace.admin.user.birthdate = to_timestamp(.google_workspace.admin.BIRTHDATE) ?? parse_timestamp!(replace!(.google_workspace.admin.BIRTHDATE, "UTC", "+0000"), format: "%Y/%m/%d %T %z")
+  }
+
+
+  if .google_workspace.admin.BEGIN_DATE_TIME != null {
+      .event.start = to_timestamp(.google_workspace.admin.BEGIN_DATE_TIME) ?? parse_timestamp!(replace!(.google_workspace.admin.BEGIN_DATE_TIME, "UTC", "+0000"), format: "%Y/%m/%d %T %z")
+  }
+
+
+  if .google_workspace.admin.START_DATE != null {
+    .event.start = to_timestamp(.google_workspace.admin.START_DATE) ?? parse_timestamp!(replace!(.google_workspace.admin.START_DATE, "UTC", "+0000"), format: "%Y/%m/%d %T %z")
+  }
+
+
+  if .google_workspace.admin.END_DATE != null {
+      .event.end = to_timestamp(.google_workspace.admin.END_DATE) ?? parse_timestamp!(replace!(.google_workspace.admin.END_DATE, "UTC", "+0000"), format: "%Y/%m/%d %T %z")
+  }
+
+
+  if .google_workspace.admin.END_DATE_TIME != null {
+      .event.end = to_timestamp(.google_workspace.admin.END_DATE_TIME) ?? parse_timestamp!(replace!(.google_workspace.admin.END_DATE_TIME, "UTC", "+0000"), format: "%Y/%m/%d %T %z")
+  }
+
+  if contains(.source.user.email, "@") ?? false {
+    splitmail = split(.source.user.email, "@", limit: 2) ?? []
+  	if (length(splitmail) == 2) {
+      .user.name = splitmail[0]
+      .source.user.name = splitmail[0]
+      .user.domain = splitmail[1]
+      .source.user.domain = splitmail[1]
+    }
+  }
+
+  if contains(.google_workspace.admin.group.email, "@") ?? false {
+    splitmail = split(.google_workspace.admin.group.email, "@", limit: 2) ?? []
+  	if (length(splitmail) == 2) {
+      .group.name = splitmail[0]
+      .group.domain = splitmail[1]
+      
+    }
+  }
+
+  if contains(.google_workspace.admin.user.email, "@") ?? false {
+    splitmail = split(.google_workspace.admin.user.email, "@", limit: 2) ?? []
+  	if (length(splitmail) == 2) {
+      .user.target.name = splitmail[0]
+      .user.target.domain = splitmail[1]
+      .user.target.email = .google_workspace.admin.user.email
+    }
+  }
+
+
+  .user.target.group.name = .group.name
+  .user.target.group.domain = .group.domain
+
+  if .event.start != null && .event.end != null {
+    end_epoch_ns = to_unix_timestamp!(.event.end, unit: "nanoseconds")
+    start_epoch_ns = to_unix_timestamp!(.event.start, unit: "nanoseconds")
+    .event.duration = end_epoch_ns - start_epoch_ns
+  }
+
+  if .google_workspace.admin.bulk_upload.total != null {
+      .google_workspace.admin.bulk_upload.total = to_int!(.google_workspace.admin.bulk_upload.total)
+  }
+
+  if .google_workspace.admin.bulk_upload.failed != null {
+      .google_workspace.admin.bulk_upload.failed = to_int!(.google_workspace.admin.bulk_upload.failed)
+  }
+
+  if .google_workspace.admin.group.bulk_upload.failed != null && .google_workspace.admin.group.bulk_upload.failed == 0 {
+      .event.outcome = "success"
+  }
+
+
+  if .google_workspace.admin.group.bulk_upload.failed != null && .google_workspace.admin.group.bulk_upload.failed != 0 {
+      .event.outcome = "failure"
+  }
+
+
+  if .google_workspace.admin.WHITELISTED_GROUPS != null {
+    .google_workspace.admin.group.allowed_list = split!(.google_workspace.admin.WHITELISTED_GROUPS, r',')
+  }
+
+  if .source.ip != null {
+      .related.ip = push(.related.ip, .source.ip)
+  }
+
+
+  if .source.user.name != null {
+      .related.user = push(.related.user, .source.user.name)
+  }
+
+
+  if .user.target.name != null {
+      .related.user = push(.related.user, .user.target.name)
+  }
+
+  if .event.id != null {
+      .event.id = to_string!(.event.id)
+  }
+
+  if .source.user.id != null {
+      .source.user.id = to_string!(.source.user.id)
+  }
+
+  if .user.id != null {
+      .user.id = to_string!(.user.id)
+  }
+
+  .related.ip = unique(.related.ip)
+  .related.user = unique(.related.user)
+
+  del(.google_workspace.admin.EMAIL_LOG_SEARCH_END_DATE)
+  del(.google_workspace.admin.EMAIL_LOG_SEARCH_START_DATE)
+  del(.google_workspace.admin.BIRTHDATE)
+  del(.google_workspace.admin.BEGIN_DATE_TIME)
+  del(.google_workspace.admin.START_DATE)
+  del(.google_workspace.admin.END_DATE)
+  del(.google_workspace.admin.END_DATE_TIME)
+  del(.google_workspace.admin.WHITELISTED_GROUPS)
