@@ -79,6 +79,10 @@ export class MatanoS3Sources extends Construct {
         `arn:aws:s3:::${bucketAndPrefix.bucketName}/${bucketAndPrefix.prefix}`,
       ];
     });
+    if (resourceArns.length === 0) {
+      return;
+    }
+
     construct.grantPrincipal.addToPrincipalPolicy(
       new iam.PolicyStatement({
         actions: ["s3:GetObject*", "s3:GetBucket*", "s3:List*"],
