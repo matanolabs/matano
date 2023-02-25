@@ -24,8 +24,6 @@ jobs:
           toolchain: 1.63
 
       - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: "lib/rust -> lib/rust/target"
 
       - uses: actions/setup-java@v3
         with:
