@@ -51,25 +51,4 @@ jobs:
       - name: Build
         shell: bash
         run: |
-          make -j package
-
-      - uses: actions/upload-artifact@v3
-        with:
-          name: build-assets
-          path: "matano*.sh*"
-
-  release:
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - uses: actions/download-artifact@v3
-        with:
-          name: build-assets
-
-      - name: "Update nightly release"
-        if: success()
-        uses: pyTooling/Actions/releaser@r0
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          tag: nightly
-          files: "matano*.sh*"
+          make build-rust
