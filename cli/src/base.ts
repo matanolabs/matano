@@ -1,7 +1,7 @@
 import path from "path";
 import chalk from "chalk";
 import { Command, Flags, Errors } from "@oclif/core";
-import { isMatanoDirectory, readConfig } from "./util";
+import { isMatanoDirectory, parseMatanoConfig, readConfig } from "./util";
 import { CLIError } from "@oclif/core/lib/errors";
 import { execSync } from "child_process";
 
@@ -116,9 +116,9 @@ export default abstract class BaseCommand extends Command {
     if (awsAccountId && awsRegion) {
       return { awsAccountId, awsRegion };
     }
-    const matanoConfig = readConfig(userDirectory, "matano.config.yml");
-    if (!awsAccountId) awsAccountId = matanoConfig?.["aws_account"];
-    if (!awsRegion) awsRegion = matanoConfig?.["aws_region"];
+    const matanoConfig = parseMatanoConfig(userDirectory);
+    if (!awsAccountId) awsAccountId = matanoConfig?.aws?.account;
+    if (!awsRegion) awsRegion = matanoConfig?.aws?.region;
     if (!awsAccountId || !awsRegion) {
       this.error("AWS Account ID and/or AWS region not specified.", {
         suggestions: ["Specify AWS account/region in matano.config.yml"],

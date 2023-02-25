@@ -9,7 +9,7 @@ import * as fse from "fs-extra";
 import path from "path";
 import * as YAML from "yaml";
 import { getCdkOutputDir, getCfnOutputsPath, getMatanoCdkApp, isPkg, getLocalProjRootDir } from "..";
-import { readConfig, safeLoadMatanoContext } from "../util";
+import { parseMatanoConfig, readConfig, safeLoadMatanoContext } from "../util";
 import BaseCommand from "../base";
 import { getCdkExecutable } from "..";
 
@@ -60,7 +60,7 @@ export default class Deploy extends BaseCommand {
       cdkArgs.push("--profile", awsProfile);
     }
 
-    const matanoConfig = readConfig(matanoUserDirectory, "matano.config.yml");
+    const matanoConfig = parseMatanoConfig(matanoUserDirectory);
     const matanoContext = safeLoadMatanoContext(matanoUserDirectory);
 
     const cdkContext: Record<string, any> = {

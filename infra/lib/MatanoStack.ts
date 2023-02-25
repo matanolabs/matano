@@ -29,9 +29,11 @@ export function tagResources(scope: Construct, tags: (stack: cdk.Stack) => Recor
 }
 
 export interface MatanoConfiguration {
-  aws_account: string | undefined;
-  aws_region: string | undefined;
-  aws_tags: object | undefined;
+  aws: {
+    account: string;
+    region: string;
+    tags?: Record<string, string>;
+  };
   project_label: string | undefined;
   is_production: boolean | undefined;
   integrations?: Record<string, Record<string, any> | undefined>;
@@ -95,6 +97,6 @@ export class MatanoStack extends cdk.Stack {
   // }
 
   get userAwsTags(): object | undefined {
-    return this.matanoConfig.aws_tags;
+    return this.matanoConfig?.aws?.tags ?? this.matanoConfig?.aws_tags;
   }
 }
