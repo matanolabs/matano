@@ -7,7 +7,7 @@ import { Mode } from "aws-cdk/lib/api/plugin/credential-provider-source";
 import * as cxapi from "@aws-cdk/cx-api";
 import { CloudFormation } from "aws-sdk";
 import Table from "tty-table";
-import { promiseTimeout, readConfig, stackNameWithLabel, isInteractive } from "../util";
+import { promiseTimeout, readConfig, stackNameWithLabel, isInteractive, parseMatanoConfig } from "../util";
 
 export default class Info extends BaseCommand {
   static description = "Retrieves information about your Matano deployment in structured format.";
@@ -60,7 +60,7 @@ export default class Info extends BaseCommand {
       await sdkProvider.forEnvironment(cxapi.EnvironmentUtils.make(awsAccountId, awsRegion), Mode.ForReading, {})
     ).sdk.cloudFormation();
 
-    const matanoConfig = readConfig(matanoUserDirectory, "matano.config.yml");
+    const matanoConfig = parseMatanoConfig(matanoUserDirectory);
     const projectLabel = matanoConfig.project_label;
 
     const [o1, o2] = await Promise.all([

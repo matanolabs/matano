@@ -6,6 +6,21 @@ export function readConfig(directory: string, filename: string): Record<string, 
   return YAML.parse(fs.readFileSync(path.join(directory, filename), "utf8"));
 }
 
+export function parseMatanoConfig(matanoUserDirectory: string): Record<string, any> {
+  const config = readConfig(matanoUserDirectory, "matano.config.yml");
+
+  // Support legacy AWS config
+  if (!config.aws) {
+    config.aws = {
+      account: config.aws_account,
+      region: config.aws_region,
+      tags: config.aws_tags,
+    };
+  }
+
+  return config;
+}
+
 export function isMatanoDirectory(dirpath: string) {
   return fs.existsSync(dirpath) && fs.existsSync(path.join(dirpath, "matano.config.yml"));
 }

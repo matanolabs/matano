@@ -8,12 +8,13 @@ import ora from "ora";
 const autogenerateNote = ``;
 const sampleMatanoConfigYml = (awsAccountId?: string, awsRegion?: string) => `# Use this file for Matano configuration.
 
-aws_account: "${awsAccountId ?? "123456789012"}" # Specify the AWS account to deploy to.
-aws_region: "${awsRegion ?? "us-east-1"}" # Specify the AWS region to deploy to.
+aws:
+  account: "${awsAccountId ?? "123456789012"}" # Specify the AWS account to deploy to.
+  region: "${awsRegion ?? "us-east-1"}" # Specify the AWS region to deploy to.
 
-# Optionally, specify any tags to apply to the deployed resources.
-# aws_tags:
-#  key: "my_tag"
+  # Optionally, specify any tags to apply to the deployed resources.
+  # tags:
+  #   key: "my_tag"
 
 `;
 const sampleDetectionPy = `# ${autogenerateNote}
