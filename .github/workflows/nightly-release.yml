@@ -51,4 +51,4 @@ jobs:
       - name: Build
         shell: bash
         run: |
-          cd lib/rust && cargo build --release
+          make build-rust
