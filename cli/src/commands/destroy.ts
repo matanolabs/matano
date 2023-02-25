@@ -7,7 +7,7 @@ import { Mode } from "aws-cdk/lib/api/plugin/credential-provider-source";
 import * as cxapi from "@aws-cdk/cx-api";
 import { CloudFormation } from "aws-sdk";
 import Table from "tty-table";
-import { promiseTimeout, readConfig, stackNameWithLabel } from "../util";
+import { parseMatanoConfig, promiseTimeout, readConfig, stackNameWithLabel } from "../util";
 import { waitForStackDelete } from "aws-cdk/lib/api/util/cloudformation";
 import * as AWS from "aws-sdk";
 
@@ -187,9 +187,7 @@ export default class Destroy extends BaseCommand {
         }
       } else {
         spinner.fail();
-        throw new Error(
-          `Failed deleting stack ${stackName} (current state: ${deletedStack?.stackStatus})`
-        );
+        throw new Error(`Failed deleting stack ${stackName} (current state: ${deletedStack?.stackStatus})`);
       }
     }
     spinner.succeed();
@@ -206,7 +204,7 @@ export default class Destroy extends BaseCommand {
       await sdkProvider.forEnvironment(cxapi.EnvironmentUtils.make(awsAccountId, awsRegion), Mode.ForReading, {})
     ).sdk.cloudFormation();
 
-    const matanoConfig = readConfig(matanoUserDirectory, "matano.config.yml");
+    const matanoConfig = parseMatanoConfig(matanoUserDirectory);
     const projectLabel = matanoConfig.project_label;
 
     const mainStackName = stackNameWithLabel("MatanoDPMainStack", projectLabel);
@@ -217,7 +215,7 @@ export default class Destroy extends BaseCommand {
       `Are you sure you want to delete the Matano stacks for account ${awsAccountId} and region ${awsRegion}? (y/n)`
     );
     if (!confirmed) {
-        return;
+      return;
     }
 
     await this.deleteIfExists(cfn, mainStackName);

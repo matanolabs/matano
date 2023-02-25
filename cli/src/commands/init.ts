@@ -13,7 +13,7 @@ import RefreshContext from "./refresh-context";
 import { getCdkExecutable, getCdkOutputDir, getMatanoCdkApp, isPkg, getLocalProjRootDir } from "..";
 import GenerateMatanoDir from "./generate/matano-dir";
 import Deploy from "./deploy";
-import { AWS_REGIONS, fileExists, isInteractive, readConfig } from "../util";
+import { AWS_REGIONS, fileExists, isInteractive, parseMatanoConfig, readConfig } from "../util";
 import Info from "./info";
 
 const getAwsAcctId = async (profile?: string) => {
@@ -53,8 +53,9 @@ export default class Init extends BaseCommand {
     let resolvedArgs: any = {};
     if (flags["user-directory"]) {
       const matanoUserDirectory = path.resolve(flags["user-directory"]);
-      const config = readConfig(matanoUserDirectory, "matano.config.yml");
-      const { aws_account: awsAccountId, aws_region: awsRegion } = config;
+      const config = parseMatanoConfig(matanoUserDirectory);
+      const awsAccountId = config?.aws?.account;
+      const awsRegion = config?.aws?.region;
       resolvedArgs = {
         matanoUserDirectory,
         awsRegion,
