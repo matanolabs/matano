@@ -25,7 +25,7 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: lib/rust
+          workspaces: "lib/rust -> lib/rust/target"
 
       - uses: actions/setup-java@v3
         with:
