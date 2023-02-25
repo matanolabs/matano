@@ -1,0 +1,21 @@
+name: cloudflare
+
+ingest:
+  select_table_from_payload_metadata: |
+    if match(.__metadata.s3.key, r'audit') {
+      "audit"
+    } else if match(.__metadata.s3.key, r'dns') {
+      "dns"
+    } else if match(.__metadata.s3.key, r'firewall_event') {
+      "firewall_event"
+    } else if match(.__metadata.s3.key, r'http_request') {
+      "http_request"
+    } else if match(.__metadata.s3.key, r'nel_report') {
+      "nel_report"
+    } else if match(.__metadata.s3.key, r'network_analytics') {
+      "network_analytics"
+    } else if match(.__metadata.s3.key, r'spectrum_event') {
+      "spectrum_event"
+    } else {
+      abort # unknown table
+    }

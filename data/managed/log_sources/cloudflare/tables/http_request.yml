@@ -1,0 +1,692 @@
+name: http_request
+
+schema:
+  ecs_field_names:
+  - destination.ip
+  - ecs.version
+  - event.category
+  - event.created
+  - event.dataset
+  - event.kind
+  - event.module
+  - event.original
+  - event.type
+  - http.request.method
+  - http.response.mime_type
+  - http.response.status_code
+  - http.version
+  - network.protocol
+  - related.hash
+  - related.ip
+  - source.as.number
+  - source.geo.country_iso_code
+  - source.ip
+  - tags
+  - tls.version
+  - tls.version_protocol
+  - url.domain
+  - url.original
+  - url.path
+  - url.query
+  - url.scheme
+  - user_agent.device.name
+  - user_agent.name
+  - user_agent.original
+  - user_agent.os.full
+  - user_agent.os.name
+  - user_agent.os.version
+  - user_agent.version
+  fields:
+  - name: cloudflare
+    type:
+      type: struct
+      fields:
+      - name: http_request
+        type:
+          type: struct
+          fields:
+          - name: bot
+            type:
+              type: struct
+              fields:
+              - name: score
+                type:
+                  type: struct
+                  fields:
+                  - name: src
+                    type: string
+                  - name: value
+                    type: long
+              - name: tag
+                type: string
+          - name: cache
+            type:
+              type: struct
+              fields:
+              - name: response
+                type:
+                  type: struct
+                  fields:
+                  - name: bytes
+                    type: long
+                  - name: status
+                    type: long
+              - name: status
+                type: string
+              - name: tiered_fill
+                type: boolean
+          - name: client
+            type:
+              type: struct
+              fields:
+              - name: asn
+                type: long
+              - name: country
+                type: string
+              - name: device
+                type:
+                  type: struct
+                  fields:
+                  - name: type
+                    type: string
+              - name: ip
+                type: string
+              - name: ip_class
+                type: string
+              - name: mtls
+                type:
+                  type: struct
+                  fields:
+                  - name: auth
+                    type:
+                      type: struct
+                      fields:
+                      - name: fingerprint
+                        type: string
+                      - name: status
+                        type: string
+              - name: request
+                type:
+                  type: struct
+                  fields:
+                  - name: bytes
+                    type: long
+                  - name: host
+                    type: string
+                  - name: method
+                    type: string
+                  - name: path
+                    type: string
+                  - name: protocol
+                    type: string
+                  - name: referer
+                    type: string
+                  - name: scheme
+                    type: string
+                  - name: source
+                    type: string
+                  - name: uri
+                    type: string
+                  - name: user
+                    type:
+                      type: struct
+                      fields:
+                      - name: agent
+                        type: string
+              - name: src
+                type:
+                  type: struct
+                  fields:
+                  - name: port
+                    type: long
+              - name: ssl
+                type:
+                  type: struct
+                  fields:
+                  - name: cipher
+                    type: string
+                  - name: protocol
+                    type: string
+              - name: tcp_rtt
+                type:
+                  type: struct
+                  fields:
+                  - name: ms
+                    type: long
+              - name: xrequested_with
+                type: string
+          - name: cookies
+            type: string
+          - name: edge
+            type:
+              type: struct
+              fields:
+              - name: cf_connecting_o2o
+                type: boolean
+              - name: colo
+                type:
+                  type: struct
+                  fields:
+                  - name: code
+                    type: string
+                  - name: id
+                    type: long
+              - name: end_time
+                type: timestamp
+              - name: pathing
+                type:
+                  type: struct
+                  fields:
+                  - name: op
+                    type: string
+                  - name: src
+                    type: string
+                  - name: status
+                    type: string
+              - name: request
+                type:
+                  type: struct
+                  fields:
+                  - name: host
+                    type: string
+              - name: response
+                type:
+                  type: struct
+                  fields:
+                  - name: body_bytes
+                    type: long
+                  - name: bytes
+                    type: long
+                  - name: compression_ratio
+                    type: double
+                  - name: content_type
+                    type: string
+                  - name: status
+                    type: long
+              - name: server
+                type:
+                  type: struct
+                  fields:
+                  - name: ip
+                    type: string
+              - name: start_time
+                type: timestamp
+              - name: time_to_first_byte
+                type:
+                  type: struct
+                  fields:
+                  - name: ms
+                    type: long
+          - name: ja3_hash
+            type: string
+          - name: origin
+            type:
+              type: struct
+              fields:
+              - name: dns_response_time
+                type:
+                  type: struct
+                  fields:
+                  - name: ms
+                    type: long
+              - name: ip
+                type: string
+              - name: request_header_send_duration
+                type:
+                  type: struct
+                  fields:
+                  - name: ms
+                    type: long
+              - name: response
+                type:
+                  type: struct
+                  fields:
+                  - name: bytes
+                    type: long
+                  - name: duration
+                    type:
+                      type: struct
+                      fields:
+                      - name: ms
+                        type: long
+                  - name: header_receive_duration
+                    type:
+                      type: struct
+                      fields:
+                      - name: ms
+                        type: long
+                  - name: http
+                    type:
+                      type: struct
+                      fields:
+                      - name: expires
+                        type: timestamp
+                      - name: last_modified
+                        type: timestamp
+                  - name: status
+                    type: long
+                  - name: time
+                    type: long
+              - name: ssl_protocol
+                type: string
+              - name: tcp_handshake_duration
+                type:
+                  type: struct
+                  fields:
+                  - name: ms
+                    type: long
+              - name: tls_handshake_duration
+                type:
+                  type: struct
+                  fields:
+                  - name: ms
+                    type: long
+          - name: parent_ray
+            type:
+              type: struct
+              fields:
+              - name: id
+                type: string
+          - name: ray
+            type:
+              type: struct
+              fields:
+              - name: id
+                type: string
+          - name: request
+            type:
+              type: struct
+              fields:
+              - name: headers
+                type: string
+          - name: response
+            type:
+              type: struct
+              fields:
+              - name: headers
+                type: string
+          - name: smart_route
+            type:
+              type: struct
+              fields:
+              - name: colo
+                type:
+                  type: struct
+                  fields:
+                  - name: id
+                    type: long
+          - name: upper_tier
+            type:
+              type: struct
+              fields:
+              - name: colo
+                type:
+                  type: struct
+                  fields:
+                  - name: id
+                    type: long
+          - name: security
+            type:
+              type: struct
+              fields:
+              - name: action
+                type: string
+              - name: actions
+                type:
+                  type: list
+                  element: string
+              - name: rule
+                type:
+                  type: struct
+                  fields:
+                  - name: id
+                    type: string
+                  - name: ids
+                    type:
+                      type: list
+                      element: string
+                  - name: sources
+                    type:
+                      type: list
+                      element: string
+                  - name: description
+                    type: string
+          - name: worker
+            type:
+              type: struct
+              fields:
+              - name: cpu_time
+                type: long
+              - name: status
+                type: string
+              - name: subrequest
+                type:
+                  type: struct
+                  fields:
+                  - name: count
+                    type: long
+                  - name: value
+                    type: boolean
+              - name: wall_time_us
+                type: long
+          - name: zone
+            type:
+              type: struct
+              fields:
+              - name: id
+                type: long
+              - name: name
+                type: string
+transform: |
+  .event.category = ["network"]
+  .event.kind = "event"
+  .event.type = ["info"]
+
+  # .event.original = encode_json(.json)
+
+  if !is_nullish(.json.EdgeEndTimestamp) {                                               
+    .cloudflare.http_request.edge.end_time = to_timestamp(.json.EdgeEndTimestamp) ?? {
+      edge_end_time = split(replace!(.json.EdgeEndTimestamp, "UTC", "+0000"), ", ")[1]
+      parse_timestamp!(edge_end_time, "%d %b %Y %H:%M:%S %z")
+    }
+  }
+
+  if !is_nullish(.json.EdgeStartTimestamp) {
+    .cloudflare.http_request.edge.start_time = to_timestamp(.json.EdgeStartTimestamp) ?? {
+      edge_start_time = split(replace!(.json.EdgeStartTimestamp, "UTC", "+0000"), ", ")[1]
+      parse_timestamp!(edge_start_time, "%d %b %Y %H:%M:%S %z")
+    } 
+  }
+
+  if !is_nullish(.json.OriginResponseHTTPExpires) {
+    .cloudflare.http_request.origin.response.http.expires = to_timestamp(.json.OriginResponseHTTPExpires) ?? {
+      resp_http_expires = split(replace!(.json.OriginResponseHTTPExpires, "UTC", "+0000"), ", ")[1]
+      parse_timestamp!(resp_http_expires, "%d %b %Y %H:%M:%S %z")
+    }
+  }
+      
+  if !is_nullish(.json.OriginResponseHTTPLastModified) { 
+    .cloudflare.http_request.origin.response.http.last_modified = to_timestamp(.json.OriginResponseHTTPLastModified) ?? {
+      resp_http_last_modified = split(replace!(.json.OriginResponseHTTPLastModified, "UTC", "+0000"), ", ")[1]
+      parse_timestamp!(resp_http_last_modified, "%d %b %Y %H:%M:%S %z")
+    }
+  }
+   
+  if !is_nullish(.json.OriginIP) { 
+  	.cloudflare.http_request.origin.ip = to_string!(.json.OriginIP)                                                 
+  }
+
+  .destination.ip = .cloudflare.http_request.origin.ip
+
+  .cloudflare.http_request.client.request.method = del(.json.ClientRequestMethod)
+
+  .http.request.method = .cloudflare.http_request.client.request.method
+
+  .cloudflare.http_request.edge.response.content_type = del(.json.EdgeResponseContentType)
+
+  .http.response.mime_type = .cloudflare.http_request.edge.response.content_type
+
+  if !is_nullish(.json.EdgeResponseStatus) { 
+    .cloudflare.http_request.edge.response.status = to_int!(.json.EdgeResponseStatus)  
+  }
+
+  .http.response.status_code = .cloudflare.http_request.edge.response.status
+
+  if !is_nullish(.json.ClientASN) { 
+    .cloudflare.http_request.client.asn = to_int!(.json.ClientASN)                                                  
+  }
+
+  .source.as.number = .cloudflare.http_request.client.asn
+
+  .cloudflare.http_request.client.country = del(.json.ClientCountry)
+
+  .source.geo.country_iso_code = .cloudflare.http_request.client.country
+
+  if !is_nullish(.json.ClientIP) { 
+  	.cloudflare.http_request.client.ip = to_string!(.json.ClientIP)                                                  
+  }
+
+  .source.ip = .cloudflare.http_request.client.ip
+
+  if !is_nullish(.json.BotScore) { 
+  	.cloudflare.http_request.bot.score.value = to_int!(.json.BotScore)                                               
+  }
+
+  .cloudflare.http_request.bot.score.src = del(.json.BotScoreSrc)
+
+  .cloudflare.http_request.bot.tag = del(.json.BotTags)
+
+  .cloudflare.http_request.cache.status = del(.json.CacheCacheStatus)
+
+  if !is_nullish(.json.CacheResponseBytes) { 
+  	.cloudflare.http_request.cache.response.bytes = to_int!(.json.CacheResponseBytes)                                                  
+  }
+
+  if !is_nullish(.json.CacheResponseStatus) {                   
+  	.cloudflare.http_request.cache.response.status = to_int!(.json.CacheResponseStatus)                                                  
+  }
+
+  .cloudflare.http_request.cache.tiered_fill = del(.json.CacheTieredFill)
+
+  .cloudflare.http_request.client.device.type = del(.json.ClientDeviceType)
+
+  .cloudflare.http_request.client.ip_class = del(.json.ClientIPClass)
+
+  .cloudflare.http_request.client.mtls.auth.fingerprint = del(.json.ClientMTLSAuthCertFingerprint)
+
+  .cloudflare.http_request.client.mtls.auth.status = del(.json.ClientMTLSAuthStatus)
+
+  if !is_nullish(.json.ClientRequestBytes) { 
+    .cloudflare.http_request.client.request.bytes = to_int!(.json.ClientRequestBytes)                                                 
+  }
+
+  .cloudflare.http_request.client.request.host = del(.json.ClientRequestHost)
+
+  .cloudflare.http_request.client.request.path = del(.json.ClientRequestPath)
+
+  .cloudflare.http_request.client.request.protocol = del(.json.ClientRequestProtocol)
+                                               
+  _grokked, err = parse_groks(.cloudflare.http_request.client.request.protocol, ["^%{DATA:network.protocol}/%{DATA:http.version}$"])  
+  if err == null {                                                            
+      .network.protocol = downcase(_grokked.network.protocol) ?? null
+      .http.version = _grokked.http.version                                                           
+  }                                                                        
+
+  parsed, err = parse_url(.json.ClientRequestReferer)
+  if err == null {
+      .url = parsed
+      if .url.query != null {
+        .url.query = decode_percent!(split!(.json.ClientRequestReferer, "?")[1])
+      }
+      .url.domain = del(.url.host)
+  }                                                                         
+  .url.original = .json.ClientRequestReferer
+  .url.path = .url.path || .url.original             
+
+  .cloudflare.http_request.client.request.referer = del(.json.ClientRequestReferer)
+
+  .cloudflare.http_request.client.request.scheme = del(.json.ClientRequestScheme)
+
+  .cloudflare.http_request.client.request.source = del(.json.ClientRequestSource)
+
+  .cloudflare.http_request.client.request.uri = del(.json.ClientRequestURI)
+
+  if !is_nullish(.json.ClientRequestUserAgent) { 
+      .user_agent = parse_user_agent!(.json.ClientRequestUserAgent)
+  }
+
+  .cloudflare.http_request.client.request.user.agent = del(.json.ClientRequestUserAgent)
+
+  .cloudflare.http_request.client.ssl.cipher = del(.json.ClientSSLCipher)
+
+  .cloudflare.http_request.client.ssl.protocol = del(.json.ClientSSLProtocol)
+
+  if .cloudflare.http_request.client.ssl.protocol != null && .cloudflare.http_request.client.ssl.protocol != "none" {                                                           
+  	_grokked, err = parse_groks(.cloudflare.http_request.client.ssl.protocol, ["^%{DATA:tls.version_protocol}v%{DATA:tls.version}$"])
+    if err == null {                                                            
+        .tls.version_protocol = downcase(_grokked.tls.version_protocol) ?? null
+        .tls.version = _grokked.tls.version                                                                          
+    }                                                                          
+  }                  
+
+  if !is_nullish(.json.ClientSrcPort) { 
+  	.cloudflare.http_request.client.src.port = to_int!(.json.ClientSrcPort)                                                  
+  }
+
+  if !is_nullish(.json.ClientTCPRTTMs) { 
+  	.cloudflare.http_request.client.tcp_rtt.ms = to_int!(.json.ClientTCPRTTMs)                                                  
+  }
+
+  .cloudflare.http_request.client.xrequested_with = del(.json.ClientXRequestedWith)
+
+  .cloudflare.http_request.cookies = del(.json.Cookies)
+  if .cloudflare.http_request.cookies != null {
+    .cloudflare.http_request.cookies = encode_json(.cloudflare.http_request.cookies)
+  }
+
+  .cloudflare.http_request.edge.cf_connecting_o2o = del(.json.EdgeCFConnectingO2O)
+
+  .cloudflare.http_request.edge.colo.code = del(.json.EdgeColoCode)
+
+  if !is_nullish(.json.EdgeColoID) { 
+  	.cloudflare.http_request.edge.colo.id = to_int!(.json.EdgeColoID)                                                  
+  }
+   
+  .cloudflare.http_request.edge.pathing.op = del(.json.EdgePathingOp)
+
+  .cloudflare.http_request.edge.pathing.src = del(.json.EdgePathingSrc)
+
+  .cloudflare.http_request.edge.pathing.status = del(.json.EdgePathingStatus)
+
+  .cloudflare.http_request.edge.request.host = del(.json.EdgeRequestHost)
+
+  if !is_nullish(.json.EdgeResponseBodyBytes) { 
+  	.cloudflare.http_request.edge.response.body_bytes = to_int!(.json.EdgeResponseBodyBytes)                                                  
+  }
+
+  if !is_nullish(.json.EdgeResponseBytes) { 
+  	.cloudflare.http_request.edge.response.bytes = to_int!(.json.EdgeResponseBytes)                                                  
+  }
+
+  if !is_nullish(.json.EdgeResponseCompressionRatio) { 
+  	.cloudflare.http_request.edge.response.compression_ratio = to_float!(.json.EdgeResponseCompressionRatio)                                                  
+  }
+
+  if !is_nullish(.json.EdgeServerIP) { 
+  	.cloudflare.http_request.edge.server.ip = to_string!(.json.EdgeServerIP)                                                  
+  }
+
+  if !is_nullish(.json.EdgeTimeToFirstByteMs) { 
+  	.cloudflare.http_request.edge.time_to_first_byte.ms = to_int!(.json.EdgeTimeToFirstByteMs)                                                  
+  }
+
+  .cloudflare.http_request.security.action = del(.json.SecurityAction)
+  .cloudflare.http_request.security.actions = del(.json.SecurityActions)
+
+  .cloudflare.http_request.security.rule.id = del(.json.SecurityRuleID)
+  .cloudflare.http_request.security.rule.ids = del(.json.SecurityRuleIDs)
+
+  .cloudflare.http_request.security.rule.description = del(.json.SecurityRuleDescription)
+
+  .cloudflare.http_request.security.sources = del(.json.SecuritySources)
+
+  .cloudflare.http_request.ja3_hash = del(.json.JA3Hash)
+
+  if !is_nullish(.json.OriginDNSResponseTimeMs) { 
+  	.cloudflare.http_request.origin.dns_response_time.ms = to_int!(.json.OriginDNSResponseTimeMs)                                                  
+  }
+
+  if !is_nullish(.json.OriginRequestHeaderSendDurationMs) { 
+  	.cloudflare.http_request.origin.request_header_send_duration.ms = to_int!(.json.OriginRequestHeaderSendDurationMs)                                                  
+  }
+
+  if !is_nullish(.json.OriginResponseBytes) { 
+  	.cloudflare.http_request.origin.response.bytes = to_int!(.json.OriginResponseBytes)                                                  
+  }
+
+  if !is_nullish(.json.OriginResponseDurationMs) { 
+  	.cloudflare.http_request.origin.response.duration.ms = to_int!(.json.OriginResponseDurationMs)                                                  
+  }
+
+  if !is_nullish(.json.OriginResponseHeaderReceiveDurationMs) { 
+  	.cloudflare.http_request.origin.response.header_receive_duration.ms = to_int!(.json.OriginResponseHeaderReceiveDurationMs)                                                  
+  }
+
+  if !is_nullish(.json.OriginResponseStatus) { 
+  	.cloudflare.http_request.origin.response.status = to_int!(.json.OriginResponseStatus)                                                  
+  }
+
+  if !is_nullish(.json.OriginResponseTime) { 
+  	.cloudflare.http_request.origin.response.time = to_int!(.json.OriginResponseTime)                                                  
+  }
+
+  .cloudflare.http_request.origin.ssl_protocol = del(.json.OriginSSLProtocol)
+
+  if !is_nullish(.json.OriginTCPHandshakeDurationMs) { 
+  	.cloudflare.http_request.origin.tcp_handshake_duration.ms = to_int!(.json.OriginTCPHandshakeDurationMs)                                                  
+  }
+
+  if !is_nullish(.json.OriginTLSHandshakeDurationMs) { 
+  	.cloudflare.http_request.origin.tls_handshake_duration.ms = to_int!(.json.OriginTLSHandshakeDurationMs)                                                  
+  }
+
+  .cloudflare.http_request.parent_ray.id = del(.json.ParentRayID)
+
+  .cloudflare.http_request.ray.id = del(.json.RayID)
+
+  .cloudflare.http_request.request.header = del(.json.RequestHeaders)
+
+  .cloudflare.http_request.response.header = del(.json.ResponseHeaders)
+
+  if !is_nullish(.json.SmartRouteColoID) { 
+  	.cloudflare.http_request.smart_route.colo.id = to_int!(.json.SmartRouteColoID)                                                  
+  }
+
+  if !is_nullish(.json.UpperTierColoID) { 
+  	.cloudflare.http_request.upper_tier.colo.id = to_int!(.json.UpperTierColoID)                                                  
+  }
+
+  if !is_nullish(.json.WorkerCPUTime) { 
+  	.cloudflare.http_request.worker.cpu_time = to_int!(.json.WorkerCPUTime)                                                  
+  }
+   
+  .cloudflare.http_request.worker.status = del(.json.WorkerStatus)
+
+  .cloudflare.http_request.worker.subrequest.value = del(.json.WorkerSubrequest)
+
+  if !is_nullish(.json.WorkerSubrequestCount) { 
+  	.cloudflare.http_request.worker.subrequest.count = to_int!(.json.WorkerSubrequestCount)                                                  
+  }
+
+  if !is_nullish(.json.WorkerWallTimeUs) { 
+  	.cloudflare.http_request.worker.wall_time_us = to_int!(.json.WorkerWallTimeUs)                                                  
+  }
+
+  if !is_nullish(.json.ZoneID) { 
+  	.cloudflare.http_request.zone.id = to_int!(.json.ZoneID)                                                  
+  }
+
+  .cloudflare.http_request.zone.name = del(.json.ZoneName)
+
+  if .cloudflare.http_request.ja3_hash != null { 
+    .related.hash = push(.related.hash, .cloudflare.http_request.ja3_hash) 
+  }
+   
+  if .source.ip != null { 
+      .related.ip = push(.related.ip, .source.ip) 
+  }
+  if .destination.ip != null { 
+      .related.ip = push(.related.ip, .destination.ip) 
+  }
+  .related.ip = unique(.related.ip)
+
+  # if .tags == null || !includes(array!(.tags), "preserve_duplicate_custom_fields") { 
+  #   del(.cloudflare.http_request.origin.ip)
+  # 	del(.cloudflare.http_request.client.request.method)
+  # 	del(.cloudflare.http_request.edge.response.content_type)
+  # 	del(.cloudflare.http_request.edge.response.status)
+  # 	del(.cloudflare.http_request.client.asn)
+  # 	del(.cloudflare.http_request.client.country)
+  # 	del(.cloudflare.http_request.client.ip)
+  # 	del(.cloudflare.http_request.client.request.user.agent)
+  # }

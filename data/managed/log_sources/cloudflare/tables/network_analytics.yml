@@ -1,0 +1,699 @@
+name: network_analytics
+
+schema:
+  ecs_field_names:
+  - destination.as.number
+  - destination.ip
+  - destination.port
+  - ecs.version
+  - event.category
+  - event.created
+  - event.dataset
+  - event.kind
+  - event.module
+  - event.original
+  - event.outcome
+  - event.type
+  - network.community_id
+  - network.direction
+  - network.transport
+  - related.hash
+  - related.ip
+  - rule.id
+  - source.as.number
+  - source.ip
+  - source.port
+  - tags
+  fields:
+  - name: cloudflare
+    type:
+      type: struct
+      fields:
+      - name: network_analytics
+        type:
+          type: struct
+          fields:
+          - name: attack
+            type:
+              type: struct
+              fields:
+              - name: campaign
+                type:
+                  type: struct
+                  fields:
+                  - name: id
+                    type: string
+              - name: id
+                type: string
+          - name: colo
+            type:
+              type: struct
+              fields:
+              - name: country
+                type: string
+              - name: geo_hash
+                type: string
+              - name: geo_location
+                type:
+                  type: struct
+                  fields:
+                  - name: lat
+                    type: float
+                  - name: lon
+                    type: float
+              - name: id
+                type: long
+              - name: name
+                type: string
+          - name: destination
+            type:
+              type: struct
+              fields:
+              - name: as
+                type:
+                  type: struct
+                  fields:
+                  - name: number
+                    type:
+                      type: struct
+                      fields:
+                      - name: description
+                        type: string
+              - name: asn
+                type: long
+              - name: country
+                type: string
+              - name: geo_hash
+                type: string
+              - name: geo_location
+                type:
+                  type: struct
+                  fields:
+                  - name: lat
+                    type: float
+                  - name: lon
+                    type: float
+              - name: ip
+                type: string
+              - name: port
+                type: long
+          - name: direction
+            type: string
+          - name: gre
+            type:
+              type: struct
+              fields:
+              - name: checksum
+                type: long
+              - name: ether
+                type:
+                  type: struct
+                  fields:
+                  - name: type
+                    type: long
+              - name: header
+                type:
+                  type: struct
+                  fields:
+                  - name: length
+                    type: long
+              - name: key
+                type: long
+              - name: sequence
+                type:
+                  type: struct
+                  fields:
+                  - name: number
+                    type: long
+              - name: version
+                type: long
+          - name: icmp
+            type:
+              type: struct
+              fields:
+              - name: checksum
+                type: long
+              - name: code
+                type: long
+              - name: type
+                type: long
+          - name: ip
+            type:
+              type: struct
+              fields:
+              - name: destination
+                type:
+                  type: struct
+                  fields:
+                  - name: subnet
+                    type: string
+              - name: fragment
+                type:
+                  type: struct
+                  fields:
+                  - name: offset
+                    type: long
+              - name: header
+                type:
+                  type: struct
+                  fields:
+                  - name: length
+                    type: long
+              - name: more
+                type:
+                  type: struct
+                  fields:
+                  - name: fragments
+                    type: long
+              - name: protocol
+                type:
+                  type: struct
+                  fields:
+                  - name: name
+                    type: string
+                  - name: value
+                    type: long
+              - name: source
+                type:
+                  type: struct
+                  fields:
+                  - name: subnet
+                    type: string
+              - name: total
+                type:
+                  type: struct
+                  fields:
+                  - name: length
+                    type:
+                      type: struct
+                      fields:
+                      - name: buckets
+                        type: long
+                      - name: value
+                        type: long
+              - name: ttl
+                type:
+                  type: struct
+                  fields:
+                  - name: buckets
+                    type: long
+                  - name: value
+                    type: long
+          - name: ipv4
+            type:
+              type: struct
+              fields:
+              - name: checksum
+                type: long
+              - name: dont_fragment
+                type: long
+              - name: dscp
+                type: long
+              - name: ecn
+                type: long
+              - name: identification
+                type: long
+              - name: options
+                type: long
+          - name: ipv6
+            type:
+              type: struct
+              fields:
+              - name: dscp
+                type: long
+              - name: ecn
+                type: long
+              - name: extension_headers
+                type: string
+              - name: flow_label
+                type: long
+              - name: identification
+                type: long
+          - name: mitigation
+            type:
+              type: struct
+              fields:
+              - name: reason
+                type: string
+              - name: scope
+                type: string
+              - name: system
+                type: string
+          - name: outcome
+            type: string
+          - name: protocol_state
+            type: string
+          - name: rule
+            type:
+              type: struct
+              fields:
+              - name: id
+                type: string
+              - name: set
+                type:
+                  type: struct
+                  fields:
+                  - name: id
+                    type: string
+                  - name: override
+                    type:
+                      type: struct
+                      fields:
+                      - name: id
+                        type: string
+          - name: sample_interval
+            type: long
+          - name: source
+            type:
+              type: struct
+              fields:
+              - name: as
+                type:
+                  type: struct
+                  fields:
+                  - name: number
+                    type:
+                      type: struct
+                      fields:
+                      - name: description
+                        type: string
+              - name: asn
+                type: long
+              - name: country
+                type: string
+              - name: geo_hash
+                type: string
+              - name: geo_location
+                type:
+                  type: struct
+                  fields:
+                  - name: lat
+                    type: float
+                  - name: lon
+                    type: float
+              - name: ip
+                type: string
+              - name: port
+                type: long
+          - name: tcp
+            type:
+              type: struct
+              fields:
+              - name: acknowledgement_number
+                type: long
+              - name: checksum
+                type: long
+              - name: dataoffset
+                type: long
+              - name: flags
+                type:
+                  type: struct
+                  fields:
+                  - name: string
+                    type: string
+                  - name: value
+                    type: long
+              - name: mss
+                type: long
+              - name: options
+                type: string
+              - name: sack
+                type:
+                  type: struct
+                  fields:
+                  - name: blocks
+                    type: long
+                  - name: permitted
+                    type: long
+              - name: sequence_number
+                type: long
+              - name: timestamp
+                type:
+                  type: struct
+                  fields:
+                  - name: ecr
+                    type: long
+                  - name: value
+                    type: long
+              - name: urgent_pointer
+                type: long
+              - name: window
+                type:
+                  type: struct
+                  fields:
+                  - name: scale
+                    type: long
+                  - name: size
+                    type: long
+          - name: timestamp
+            type: timestamp
+          - name: udp
+            type:
+              type: struct
+              fields:
+              - name: checksum
+                type: long
+              - name: payload_length
+                type: long
+          - name: verdict
+            type: string
+transform: |
+  .event.category = ["network"]
+  .event.kind = "event"
+  .event.type = ["info"]
+
+  # .event.original = encode_json(.json)
+
+  if !is_nullish(.json.Datetime) { 
+  	.ts = to_timestamp!(.json.Datetime, "seconds")
+  }
+
+  .cloudflare.network_analytics.timestamp = .ts
+
+  if .json.Outcome == "pass" { 
+    .cloudflare.network_analytics.outcome = "success"
+  } else if .json.Outcome == "drop" { 
+    .cloudflare.network_analytics.outcome = "failure"
+  }
+
+  .event.outcome = .cloudflare.network_analytics.outcome
+
+  if !is_nullish(.json.DestinationASN) { 
+  	.cloudflare.network_analytics.destination.asn = to_int!(.json.DestinationASN)
+  }
+   
+  .destination.as.number = .cloudflare.network_analytics.destination.asn
+
+  if !is_nullish(.json.IPDestinationAddress) { 
+  	.cloudflare.network_analytics.destination.ip = to_string!(.json.IPDestinationAddress)
+  }
+
+  .destination.ip = .cloudflare.network_analytics.destination.ip
+
+  if !is_nullish(.json.DestinationPort) { 
+  	.cloudflare.network_analytics.destination.port = to_int!(.json.DestinationPort)
+  }
+
+  .destination.port = .cloudflare.network_analytics.destination.port
+
+  .cloudflare.network_analytics.direction = del(.json.Direction)
+
+  .network.direction = .cloudflare.network_analytics.direction
+
+  .cloudflare.network_analytics.ip.protocol.name = del(.json.IPProtocolName)
+
+  .network.transport = downcase(.cloudflare.network_analytics.ip.protocol.name) ?? null
+
+  if !is_nullish(.json.IPSourceAddress) { 
+  	.cloudflare.network_analytics.source.ip = to_string!(.json.IPSourceAddress)
+  }
+
+  .source.ip = .cloudflare.network_analytics.source.ip
+
+  if !is_nullish(.json.SourceASN) { 
+  	.cloudflare.network_analytics.source.asn = to_int!(.json.SourceASN)
+  }
+
+  .source.as.number = .cloudflare.network_analytics.source.asn
+
+  if !is_nullish(.json.SourcePort) { 
+  	.cloudflare.network_analytics.source.port = to_int!(.json.SourcePort)
+  }
+
+  .source.port = .cloudflare.network_analytics.source.port
+
+  .cloudflare.network_analytics.rule.id = del(.json.RuleID)
+
+  .rule.id = .cloudflare.network_analytics.rule.id
+
+  .cloudflare.network_analytics.attack.campaign.id = del(.json.AttackCampaignID)
+
+  .cloudflare.network_analytics.attack.id = del(.json.AttackID)
+
+  .cloudflare.network_analytics.colo.country = del(.json.ColoCountry)
+
+  .cloudflare.network_analytics.colo.geo_hash = del(.json.ColoGeoHash)
+
+  # TODO(shaeq): decode_geohash to get lat/long
+  # .cloudflare.network_analytics.colo.geo_location = .cloudflare.network_analytics.colo.geo_hash
+
+  if !is_nullish(.json.ColoID) { 
+  	.cloudflare.network_analytics.colo.id = to_int!(.json.ColoID)
+  }
+
+  .cloudflare.network_analytics.colo.name = del(.json.ColoName)
+
+  .cloudflare.network_analytics.destination.as.number.description = del(.json.DestinationASNDescription)
+
+  .cloudflare.network_analytics.destination.country = del(.json.DestinationCountry)
+
+  .cloudflare.network_analytics.destination.geo_hash = del(.json.DestinationGeoHash)
+
+  # TODO(shaeq): decode_geohash to get lat/long
+  # .cloudflare.network_analytics.destination.geo_location = .cloudflare.network_analytics.destination.geo_hash
+
+  if !is_nullish(.json.GREChecksum) { 
+  	.cloudflare.network_analytics.gre.checksum = to_int!(.json.GREChecksum)
+  }
+
+  if !is_nullish(.json.GREEthertype) { 
+  	.cloudflare.network_analytics.gre.ether.type = to_int!(.json.GREEthertype)
+  }
+
+  if !is_nullish(.json.GREHeaderLength) { 
+  	.cloudflare.network_analytics.gre.header.length = to_int!(.json.GREHeaderLength)
+  }
+
+  if !is_nullish(.json.GREKey) { 
+  	.cloudflare.network_analytics.gre.key = to_int!(.json.GREKey)
+  }
+
+  if !is_nullish(.json.GRESequenceNumber) { 
+  	.cloudflare.network_analytics.gre.sequence.number = to_int!(.json.GRESequenceNumber)
+  }
+
+  if !is_nullish(.json.GREVersion) { 
+  	.cloudflare.network_analytics.gre.version = to_int!(.json.GREVersion)
+  }
+
+  if !is_nullish(.json.ICMPChecksum) { 
+  	.cloudflare.network_analytics.icmp.checksum = to_int!(.json.ICMPChecksum)
+  }
+
+  if !is_nullish(.json.ICMPCode) { 
+  	.cloudflare.network_analytics.icmp.code = to_int!(.json.ICMPCode)
+  }
+
+  if !is_nullish(.json.ICMPType) { 
+  	.cloudflare.network_analytics.icmp.type = to_int!(.json.ICMPType)
+  }
+
+  .cloudflare.network_analytics.ip.destination.subnet = del(.json.IPDestinationSubnet)
+
+  if !is_nullish(.json.IPFragmentOffset) { 
+  	.cloudflare.network_analytics.ip.fragment.offset = to_int!(.json.IPFragmentOffset)
+  }
+
+  if !is_nullish(.json.IPHeaderLength) { 
+  	.cloudflare.network_analytics.ip.header.length = to_int!(.json.IPHeaderLength)
+  }
+
+  if !is_nullish(.json.IPMoreFragments) { 
+  	.cloudflare.network_analytics.ip.more.fragments = to_int!(.json.IPMoreFragments)
+  }
+
+  if !is_nullish(.json.IPProtocol) { 
+  	.cloudflare.network_analytics.ip.protocol.value = to_int!(.json.IPProtocol)
+  }
+
+  .cloudflare.network_analytics.ip.source.subnet = del(.json.IPSourceSubnet)
+
+  if !is_nullish(.json.IPTotalLength) { 
+  	.cloudflare.network_analytics.ip.total.length.value = to_int!(.json.IPTotalLength)
+  }
+
+  if !is_nullish(.json.IPTotalLengthBuckets) { 
+  	.cloudflare.network_analytics.ip.total.length.buckets = to_int!(.json.IPTotalLengthBuckets)
+  }
+
+  if !is_nullish(.json.IPTtl) { 
+  	.cloudflare.network_analytics.ip.ttl.value = to_int!(.json.IPTtl)
+  }
+
+  if !is_nullish(.json.IPTtlBuckets) { 
+  	.cloudflare.network_analytics.ip.ttl.buckets = to_int!(.json.IPTtlBuckets)
+  }
+
+  if !is_nullish(.json.IPv4Checksum) { 
+  	.cloudflare.network_analytics.ipv4.checksum = to_int!(.json.IPv4Checksum)
+  }
+
+  if !is_nullish(.json.IPv4DontFragment) { 
+  	.cloudflare.network_analytics.ipv4.dont_fragment = to_int!(.json.IPv4DontFragment)
+  }
+
+  if !is_nullish(.json.IPv4Dscp) { 
+  	.cloudflare.network_analytics.ipv4.dscp = to_int!(.json.IPv4Dscp)
+  }
+
+  if !is_nullish(.json.IPv4Ecn) { 
+  	.cloudflare.network_analytics.ipv4.ecn = to_int!(.json.IPv4Ecn)
+  }
+
+  if !is_nullish(.json.IPv4Identification) { 
+  	.cloudflare.network_analytics.ipv4.identification = to_int!(.json.IPv4Identification)
+  }
+
+  if !is_nullish(.json.IPv4Options) { 
+  	.cloudflare.network_analytics.ipv4.options = to_int!(.json.IPv4Options)
+  }
+
+  if !is_nullish(.json.IPv6Dscp) { 
+  	.cloudflare.network_analytics.ipv6.dscp = to_int!(.json.IPv6Dscp)
+  }
+
+  if !is_nullish(.json.IPv6Ecn) { 
+  	.cloudflare.network_analytics.ipv6.ecn = to_int!(.json.IPv6Ecn)
+  }
+
+  .cloudflare.network_analytics.ipv6.extension_headers = del(.json.IPv6ExtensionHeaders)
+
+  if !is_nullish(.json.IPv6FlowLabel) { 
+  	.cloudflare.network_analytics.ipv6.flow_label = to_int!(.json.IPv6FlowLabel)
+  }
+
+  if !is_nullish(.json.IPv6Identification) { 
+  	.cloudflare.network_analytics.ipv6.identification = to_int!(.json.IPv6Identification)
+  }
+     
+  .cloudflare.network_analytics.mitigation.reason = del(.json.MitigationReason)
+
+  .cloudflare.network_analytics.mitigation.scope = del(.json.MitigationScope)
+
+  .cloudflare.network_analytics.mitigation.system = del(.json.MitigationSystem)
+
+  .cloudflare.network_analytics.protocol_state = del(.json.ProtocolState)
+
+  .cloudflare.network_analytics.rule.set.id = del(.json.RulesetID)
+
+  .cloudflare.network_analytics.rule.set.override.id = del(.json.RulesetOverrideID)
+
+  if !is_nullish(.json.SampleInterval) { 
+  	.cloudflare.network_analytics.sample_interval = to_int!(.json.SampleInterval)
+  }
+
+  .cloudflare.network_analytics.source.as.number.description = del(.json.SourceASNDescription)
+
+  .cloudflare.network_analytics.source.country = del(.json.SourceCountry)
+
+  .cloudflare.network_analytics.source.geo_hash = del(.json.SourceGeoHash)
+
+  # TODO(shaeq): decode_geohash to get lat/long
+  # .cloudflare.network_analytics.source.geo_location = .cloudflare.network_analytics.source.geo_hash
+
+  if !is_nullish(.json.TCPAcknowledgementNumber) { 
+  	.cloudflare.network_analytics.tcp.acknowledgement_number = to_int!(.json.TCPAcknowledgementNumber)
+  }
+
+  if !is_nullish(.json.TCPChecksum) { 
+  	.cloudflare.network_analytics.tcp.checksum = to_int!(.json.TCPChecksum)
+  }
+
+  if !is_nullish(.json.TCPDataOffset) { 
+  	.cloudflare.network_analytics.tcp.dataoffset = to_int!(.json.TCPDataOffset)
+  }
+
+  if !is_nullish(.json.TCPFlags) { 
+  	.cloudflare.network_analytics.tcp.flags.value = to_int!(.json.TCPFlags)
+  }
+
+  .cloudflare.network_analytics.tcp.flags.string = del(.json.TCPFlagsString)
+
+  if !is_nullish(.json.TCPMss) { 
+  	.cloudflare.network_analytics.tcp.mss = to_int!(.json.TCPMss)
+  }
+
+  .cloudflare.network_analytics.tcp.options = del(.json.TCPOptions)
+
+  if !is_nullish(.json.TCPSackBlocks) { 
+  	.cloudflare.network_analytics.tcp.sack.blocks = to_int!(.json.TCPSackBlocks)
+  }
+
+  if !is_nullish(.json.TCPSacksPermitted) { 
+  	.cloudflare.network_analytics.tcp.sack.permitted = to_int!(.json.TCPSacksPermitted)
+  }
+
+  if !is_nullish(.json.TCPSequenceNumber) { 
+  	.cloudflare.network_analytics.tcp.sequence_number = to_int!(.json.TCPSequenceNumber)
+  }
+
+  if !is_nullish(.json.TCPTimestampEcr) { 
+  	.cloudflare.network_analytics.tcp.timestamp.ecr = to_int!(.json.TCPTimestampEcr)
+  }
+
+  if !is_nullish(.json.TCPTimestampValue) { 
+  	.cloudflare.network_analytics.tcp.timestamp.value = to_int!(.json.TCPTimestampValue)
+  }
+
+  if !is_nullish(.json.TCPUrgentPointer) { 
+  	.cloudflare.network_analytics.tcp.urgent_pointer = to_int!(.json.TCPUrgentPointer)
+  }
+
+  if !is_nullish(.json.TCPWindowScale) { 
+  	.cloudflare.network_analytics.tcp.window.scale = to_int!(.json.TCPWindowScale)
+  }
+
+  if !is_nullish(.json.TCPWindowSize) { 
+  	.cloudflare.network_analytics.tcp.window.size = to_int!(.json.TCPWindowSize)
+  }
+
+  if !is_nullish(.json.UDPChecksum) { 
+  	.cloudflare.network_analytics.udp.checksum = to_int!(.json.UDPChecksum)
+  }
+
+  if !is_nullish(.json.UDPPayloadLength) { 
+  	.cloudflare.network_analytics.udp.payload_length = to_int!(.json.UDPPayloadLength)
+  }
+
+  .cloudflare.network_analytics.verdict = del(.json.Verdict)
+
+  if .cloudflare.network_analytics.source.geo_hash != null { 
+      .related.hash = push(.related.hash, .cloudflare.network_analytics.source.geo_hash) 
+  }
+
+  if .cloudflare.network_analytics.destination.geo_hash != null { 
+      .related.hash = push(.related.hash, .cloudflare.network_analytics.destination.geo_hash) 
+  }
+
+  if .cloudflare.network_analytics.colo.geo_hash != null { 
+      .related.hash = push(.related.hash, .cloudflare.network_analytics.colo.geo_hash) 
+  }
+
+  if .source.ip != null { 
+      .related.ip = push(.related.ip, .source.ip) 
+  }
+
+  if .destination.ip != null { 
+      .related.ip = push(.related.ip, .destination.ip) 
+  }
+
+  .related.hash = unique(.related.hash)
+  .related.ip = unique(.related.ip)
+
+  # TODO(): add community network id
+
+  del(.json)
+
+  # if .tags == null || !includes(array!(.tags), "preserve_duplicate_custom_fields") { 
+  #   del(.cloudflare.network_analytics.timestamp)
+  # 	del(.cloudflare.network_analytics.outcome)
+  # 	del(.cloudflare.network_analytics.destination.asn)
+  # 	del(.cloudflare.network_analytics.destination.ip)
+  # 	del(.cloudflare.network_analytics.destination.port)
+  # 	del(.cloudflare.network_analytics.direction)
+  # 	del(.cloudflare.network_analytics.ip.protocol.name)
+  # 	del(.cloudflare.network_analytics.source.ip)
+  # 	del(.cloudflare.network_analytics.source.asn)
+  # 	del(.cloudflare.network_analytics.source.port)
+  # 	del(.cloudflare.network_analytics.rule.id)
+  # }

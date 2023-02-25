@@ -1,0 +1,301 @@
+name: spectrum_event
+
+schema:
+  ecs_field_names:
+  - destination.bytes
+  - destination.ip
+  - destination.port
+  - ecs.version
+  - event.action
+  - event.category
+  - event.created
+  - event.dataset
+  - event.end
+  - event.id
+  - event.kind
+  - event.module
+  - event.original
+  - event.start
+  - event.type
+  - http.response.status_code
+  - network.community_id
+  - network.transport
+  - related.ip
+  - source.as.number
+  - source.bytes
+  - source.geo.country_iso_code
+  - source.ip
+  - source.port
+  - tags
+  - tls.version
+  - tls.version_protocol
+  fields:
+  - name: cloudflare
+    type:
+      type: struct
+      fields:
+      - name: spectrum_event
+        type:
+          type: struct
+          fields:
+          - name: action
+            type: string
+          - name: application
+            type: string
+          - name: client
+            type:
+              type: struct
+              fields:
+              - name: asn
+                type: long
+              - name: bytes
+                type: long
+              - name: country
+                type: string
+              - name: ip
+                type: string
+              - name: matched_ip_firewall
+                type: string
+              - name: port
+                type: long
+              - name: protocol
+                type: string
+              - name: tcp_rtt
+                type: long
+              - name: tls
+                type:
+                  type: struct
+                  fields:
+                  - name: cipher
+                    type: string
+                  - name: client_hello_server_name
+                    type: string
+                  - name: protocol
+                    type: string
+                  - name: status
+                    type: string
+          - name: colo
+            type:
+              type: struct
+              fields:
+              - name: code
+                type: string
+          - name: connect
+            type:
+              type: struct
+              fields:
+              - name: time
+                type: timestamp
+          - name: disconnect
+            type:
+              type: struct
+              fields:
+              - name: time
+                type: timestamp
+          - name: ip_firewall
+            type: boolean
+          - name: origin
+            type:
+              type: struct
+              fields:
+              - name: bytes
+                type: long
+              - name: ip
+                type: string
+              - name: port
+                type: long
+              - name: protocol
+                type: string
+              - name: tcp_rtt
+                type: long
+              - name: tls
+                type:
+                  type: struct
+                  fields:
+                  - name: cipher
+                    type: string
+                  - name: fingerprint
+                    type: string
+                  - name: mode
+                    type: string
+                  - name: protocol
+                    type: string
+                  - name: status
+                    type: string
+          - name: proxy
+            type:
+              type: struct
+              fields:
+              - name: protocol
+                type: string
+          - name: status
+            type: long
+          - name: timestamp
+            type: timestamp
+transform: |
+  .event.category = ["network"]
+  .event.kind = "event"
+  .event.type = ["info"]
+
+  # .event.original = encode_json(.json)
+
+  if !is_nullish(.json.Timestamp) {
+    .ts = to_timestamp!(.json.Timestamp, "seconds")
+  }
+   
+  .cloudflare.spectrum_event.timestamp = .ts
+
+  if !is_nullish(.json.ConnectTimestamp) {
+    .cloudflare.spectrum_event.connect.time = to_timestamp!(.json.ConnectTimestamp, "seconds")
+  }
+
+  .event.start = .cloudflare.spectrum_event.connect.time
+
+  if !is_nullish(.json.DisconnectTimestamp) {
+    .cloudflare.spectrum_event.disconnect.time = to_timestamp!(.json.DisconnectTimestamp, "seconds")
+  }
+
+  .event.end = .cloudflare.spectrum_event.disconnect.time
+
+  .cloudflare.spectrum_event.action = del(.json.Event)
+
+  .event.action = downcase(.cloudflare.spectrum_event.action) ?? null
+
+  if !is_nullish(.json.OriginBytes) {
+    .cloudflare.spectrum_event.origin.bytes = to_int!(.json.OriginBytes)
+  }
+
+  .destination.bytes = .cloudflare.spectrum_event.origin.bytes
+
+  if !is_nullish(.json.OriginIP) {
+    .cloudflare.spectrum_event.origin.ip = to_string!(.json.OriginIP)
+  }
+
+  .destination.ip = .cloudflare.spectrum_event.origin.ip
+
+  if !is_nullish(.json.OriginPort) {
+    .cloudflare.spectrum_event.origin.port = to_int!(.json.OriginPort)
+  }
+
+  .destination.port = .cloudflare.spectrum_event.origin.port
+
+  .cloudflare.spectrum_event.application = del(.json.Application)
+
+  .event.id = .cloudflare.spectrum_event.application
+
+  if !is_nullish(.json.Status) {
+    .cloudflare.spectrum_event.status = to_int!(.json.Status)
+  }
+
+  .http.response.status_code = .cloudflare.spectrum_event.status
+
+  if !is_nullish(.json.ClientAsn) {
+    .cloudflare.spectrum_event.client.asn = to_int!(.json.ClientAsn)
+  }
+
+  .source.as.number = .cloudflare.spectrum_event.client.asn
+
+  if !is_nullish(.json.ClientBytes) {
+    .cloudflare.spectrum_event.client.bytes = to_int!(.json.ClientBytes)
+  }
+
+  .source.bytes = .cloudflare.spectrum_event.client.bytes
+
+  .cloudflare.spectrum_event.client.country = del(.json.ClientCountry)
+
+  .source.geo.country_iso_code = .cloudflare.spectrum_event.client.country
+
+  if !is_nullish(.json.ClientIP) {
+    .cloudflare.spectrum_event.client.ip = to_string!(.json.ClientIP)
+  }
+
+  .source.ip = .cloudflare.spectrum_event.client.ip
+
+  if !is_nullish(.json.ClientPort) {
+    .cloudflare.spectrum_event.client.port = to_int!(.json.ClientPort)
+  }
+
+  .source.port = .cloudflare.spectrum_event.client.port
+
+  .cloudflare.spectrum_event.client.matched_ip_firewall = del(.json.ClientMatchedIpFirewall)
+
+  .cloudflare.spectrum_event.client.protocol = del(.json.ClientProto)
+
+  .network.transport = downcase(.cloudflare.spectrum_event.client.protocol) ?? null
+
+  if !is_nullish(.json.ClientTcpRtt) {
+    .cloudflare.spectrum_event.client.tcp_rtt = to_int!(.json.ClientTcpRtt)
+  }
+
+  .cloudflare.spectrum_event.client.tls.cipher = del(.json.ClientTlsCipher)
+
+  .cloudflare.spectrum_event.client.tls.client_hello_server_name = del(.json.ClientTlsClientHelloServerName)
+
+  .cloudflare.spectrum_event.client.tls.protocol = del(.json.ClientTlsProtocol)
+
+  if .cloudflare.spectrum_event.client.tls.protocol != null && .cloudflare.spectrum_event.client.tls.protocol != "none" && .cloudflare.spectrum_event.client.tls.protocol != "unknown" { 
+    _grokked, err = parse_groks(.cloudflare.spectrum_event.client.tls.protocol, ["^%{DATA:tls.version_protocol}v%{DATA:tls.version}$"])
+    if err == null {                                                            
+        .tls.version_protocol = downcase(_grokked.tls.version_protocol) ?? null
+        .tls.version = _grokked.tls.version                                                                          
+    }                                                                     
+  }
+
+  .cloudflare.spectrum_event.client.tls.status = del(.json.ClientTlsStatus)
+
+  .cloudflare.spectrum_event.colo.code = del(.json.ColoCode)
+
+  .cloudflare.spectrum_event.ip_firewall = del(.json.IpFirewall)
+
+  .cloudflare.spectrum_event.origin.protocol = del(.json.OriginProto)
+
+  if !is_nullish(.json.OriginTcpRtt) {
+    .cloudflare.spectrum_event.origin.tcp_rtt = to_int!(.json.OriginTcpRtt)
+  }
+
+  .cloudflare.spectrum_event.origin.tls.cipher = del(.json.OriginTlsCipher)
+
+  .cloudflare.spectrum_event.origin.tls.fingerprint = del(.json.OriginTlsFingerprint)
+
+  .cloudflare.spectrum_event.origin.tls.mode = del(.json.OriginTlsMode)
+
+  .cloudflare.spectrum_event.origin.tls.protocol = del(.json.OriginTlsProtocol)
+
+  .cloudflare.spectrum_event.origin.tls.status = del(.json.OriginTlsStatus)
+
+  .cloudflare.spectrum_event.proxy.protocol = del(.json.ProxyProtocol)
+
+  if .source.ip != null { 
+      .related.ip = push(.related.ip, .source.ip) 
+  }
+
+  if .cloudflare.spectrum_event.client.ip != null { 
+      .related.ip = push(.related.ip, .cloudflare.spectrum_event.client.ip) 
+  }
+      
+  if .destination.ip != null { 
+      .related.ip = push(.related.ip, .destination.ip) 
+  }
+
+  if .cloudflare.spectrum_event.origin.ip != null { 
+      .related.ip = push(.related.ip, .cloudflare.spectrum_event.origin.ip) 
+  }
+
+  .related.ip = unique(.related.ip)
+
+  # TODO(): add community network id
+
+  # if .tags == null || !includes(array!(.tags), "preserve_duplicate_custom_fields") { 
+  #   del(.cloudflare.spectrum_event.timestamp)
+  # 	del(.cloudflare.spectrum_event.origin.bytes)
+  # 	del(.cloudflare.spectrum_event.origin.ip)
+  # 	del(.cloudflare.spectrum_event.origin.port)
+  # 	del(.cloudflare.spectrum_event.application)
+  # 	del(.cloudflare.spectrum_event.event_action)
+  # 	del(.cloudflare.spectrum_event.status)
+  # 	del(.cloudflare.spectrum_event.client.asn)
+  # 	del(.cloudflare.spectrum_event.client.bytes)
+  # 	del(.cloudflare.spectrum_event.client.country)
+  # 	del(.cloudflare.spectrum_event.client.ip)
+  # 	del(.cloudflare.spectrum_event.client.port)
+  # }

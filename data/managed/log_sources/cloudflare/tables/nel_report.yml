@@ -1,0 +1,94 @@
+name: nel_report
+
+schema:
+  ecs_field_names:
+  - ecs.version
+  - error.type
+  - event.category
+  - event.created
+  - event.dataset
+  - event.kind
+  - event.module
+  - event.original
+  - event.type
+  - tags
+  fields:
+  - name: cloudflare
+    type:
+      type: struct
+      fields:
+      - name: nel_report
+        type:
+          type: struct
+          fields:
+          - name: client
+            type:
+              type: struct
+              fields:
+              - name: ip
+                type:
+                  type: struct
+                  fields:
+                  - name: asn
+                    type:
+                      type: struct
+                      fields:
+                      - name: description
+                        type: string
+                      - name: value
+                        type: long
+                  - name: country
+                    type: string
+          - name: error
+            type:
+              type: struct
+              fields:
+              - name: type
+                type: string
+          - name: last_known_good
+            type:
+              type: struct
+              fields:
+              - name: colo
+                type:
+                  type: struct
+                  fields:
+                  - name: code
+                    type: string
+          - name: phase
+            type: string
+          - name: timestamp
+            type: timestamp
+transform: |
+  .event.category = ["network"]
+  .event.kind = "event"
+  .event.type = ["info"]
+
+  # .event.original = encode_json(.json)
+
+  if !is_nullish(.json.Timestamp) {                                               
+  	.ts = to_timestamp!(.json.Timestamp, "seconds")
+  }
+      
+  .cloudflare.nel_report.timestamp = .ts
+
+  .cloudflare.nel_report.error.type = del(.json.Type)
+
+  .error.type = .cloudflare.nel_report.error.type
+
+  if !is_nullish(.json.ClientIPASN) { 
+    .cloudflare.nel_report.client.ip.asn.value = to_int!(.json.ClientIPASN) 
+  }
+
+  .cloudflare.nel_report.client.ip.asn.description = del(.json.ClientIPASNDescription)
+
+  .cloudflare.nel_report.client.ip.country = del(.json.ClientIPCountry)
+
+  .cloudflare.nel_report.last_known_good.colo.code = del(.json.LastKnownGoodColoCode)
+
+  .cloudflare.nel_report.phase = del(.json.Phase)
+
+  # if .tags == null || !includes(array!(.tags), "preserve_duplicate_custom_fields") { 
+  #   del(.cloudflare.nel_report.timestamp)
+  # 	del(.cloudflare.nel_report.error.type)
+  # }
