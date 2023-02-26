@@ -1,0 +1,126 @@
+name: dns
+
+schema:
+  ecs_field_names:
+  - dns.question.name
+  - ecs.version
+  - event.category
+  - event.created
+  - event.dataset
+  - event.kind
+  - event.module
+  - event.original
+  - event.type
+  - related.hosts
+  - related.ip
+  - source.ip
+  - tags
+  fields:
+  - name: cloudflare
+    type:
+      type: struct
+      fields:
+      - name: dns
+        type:
+          type: struct
+          fields:
+          - name: colo
+            type:
+              type: struct
+              fields:
+              - name: code
+                type: string
+          - name: edns
+            type:
+              type: struct
+              fields:
+              - name: subnet
+                type: string
+              - name: subnet_length
+                type: long
+          - name: query
+            type:
+              type: struct
+              fields:
+              - name: name
+                type: string
+              - name: type
+                type: long
+          - name: response
+            type:
+              type: struct
+              fields:
+              - name: cached
+                type: boolean
+              - name: code
+                type: long
+          - name: source
+            type:
+              type: struct
+              fields:
+              - name: ip
+                type: string
+          - name: timestamp
+            type: timestamp
+transform: |
+  .event.category = ["network"]
+  .event.kind = "event"
+  .event.type = ["info"]
+
+  .related.hosts = []
+
+  # .event.original = encode_json(.json)
+
+  if !is_nullish(.json.Timestamp) {                                               
+  	.ts = to_timestamp!(.json.Timestamp, "seconds")
+  }
+
+  .cloudflare.dns.timestamp = .ts
+
+  if !is_nullish(.json.SourceIP) {                       
+  	.cloudflare.dns.source.ip = to_string!(.json.SourceIP)                                               
+  }
+      
+  .source.ip = .cloudflare.dns.source.ip
+
+  .cloudflare.dns.query.name = del(.json.QueryName)
+
+  .dns.question.name = .cloudflare.dns.query.name
+
+  if !is_nullish(.json.QueryType) {                       
+  	.cloudflare.dns.query.type = to_int!(.json.QueryType)                                                
+  }
+
+  .cloudflare.dns.colo.code = del(.json.ColoCode)
+
+  if !is_nullish(.json.EDNSSubnet) {                                          
+  	.cloudflare.dns.edns.subnet = to_string!(.json.EDNSSubnet)                                        
+  }
+      
+  if !is_nullish(.json.EDNSSubnetLength) {                                          
+  	.cloudflare.dns.edns.subnet_length = to_int!(.json.EDNSSubnetLength)                                                
+  }
+
+  .cloudflare.dns.response.cached = del(.json.ResponseCached)
+
+  if !is_nullish(.json.ResponseCode) {
+  	.cloudflare.dns.response.code = to_int!(.json.ResponseCode)                                               
+  }
+
+  if .dns.query.name != null { 
+    .related.hosts = push(.related.hosts, .dns.query.name) 
+  }
+
+  if .source.ip != null { 
+      .related.ip = push(.related.ip, .source.ip) 
+  }
+
+  if .cloudflare.dns.edns.subnet != null { 
+      .related.ip = push(.related.ip, .cloudflare.dns.edns.subnet) 
+  }
+
+  # if .tags == null || !includes(array!(.tags), "preserve_duplicate_custom_fields") { 
+  #   del(.cloudflare.dns.timestamp)
+  # 	del(.cloudflare.dns.query.name)
+  # 	del(.cloudflare.dns.source.ip)
+  # }

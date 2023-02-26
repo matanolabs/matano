@@ -1,0 +1,293 @@
+name: firewall_event
+
+schema:
+  ecs_field_names:
+  - ecs.version
+  - event.action
+  - event.category
+  - event.created
+  - event.dataset
+  - event.kind
+  - event.module
+  - event.original
+  - event.type
+  - http.request.method
+  - http.response.status_code
+  - http.version
+  - network.protocol
+  - related.hosts
+  - related.ip
+  - rule.description
+  - rule.id
+  - rule.reference
+  - source.as.number
+  - source.geo.country_iso_code
+  - source.ip
+  - tags
+  - url.scheme
+  - user_agent.device.name
+  - user_agent.name
+  - user_agent.original
+  - user_agent.os.full
+  - user_agent.os.name
+  - user_agent.os.version
+  - user_agent.version
+  fields:
+  - name: cloudflare
+    type:
+      type: struct
+      fields:
+      - name: firewall_event
+        type:
+          type: struct
+          fields:
+          - name: action
+            type: string
+          - name: client
+            type:
+              type: struct
+              fields:
+              - name: asn
+                type:
+                  type: struct
+                  fields:
+                  - name: description
+                    type: string
+                  - name: value
+                    type: long
+              - name: country
+                type: string
+              - name: ip
+                type: string
+              - name: ip_class
+                type: string
+              - name: referer
+                type:
+                  type: struct
+                  fields:
+                  - name: host
+                    type: string
+                  - name: path
+                    type: string
+                  - name: query
+                    type: string
+                  - name: scheme
+                    type: string
+              - name: request
+                type:
+                  type: struct
+                  fields:
+                  - name: host
+                    type: string
+                  - name: method
+                    type: string
+                  - name: path
+                    type: string
+                  - name: protocol
+                    type: string
+                  - name: query
+                    type: string
+                  - name: scheme
+                    type: string
+                  - name: user
+                    type:
+                      type: struct
+                      fields:
+                      - name: agent
+                        type: string
+          - name: edge
+            type:
+              type: struct
+              fields:
+              - name: colo
+                type:
+                  type: struct
+                  fields:
+                  - name: code
+                    type: string
+              - name: response
+                type:
+                  type: struct
+                  fields:
+                  - name: status
+                    type: long
+          - name: kind
+            type: string
+          - name: match_index
+            type: long
+          - name: metadata
+            type: string
+          - name: origin
+            type:
+              type: struct
+              fields:
+              - name: ray
+                type:
+                  type: struct
+                  fields:
+                  - name: id
+                    type: string
+              - name: response
+                type:
+                  type: struct
+                  fields:
+                  - name: status
+                    type: long
+          - name: ray
+            type:
+              type: struct
+              fields:
+              - name: id
+                type: string
+          - name: rule
+            type:
+              type: struct
+              fields:
+              - name: id
+                type: string
+              - name: reference
+                type: string
+              - name: description
+                type: string
+          - name: source
+            type: string
+          - name: timestamp
+            type: timestamp
+transform: |
+  .event.category = ["network"]
+  .event.kind = "event"
+  .event.type = ["info"]
+
+  .related.hosts = []
+
+  # .event.original = encode_json(.json)
+
+  if !is_nullish(.json.Datetime) {                                               
+  	.ts = to_timestamp!(.json.Datetime, "seconds")
+  }
+
+  .cloudflare.firewall_event.timestamp = .ts
+
+  .cloudflare.firewall_event.action = del(.json.Action)
+
+  .event.action = downcase(.cloudflare.firewall_event.action) ?? null
+
+  .cloudflare.firewall_event.client.request.method = del(.json.ClientRequestMethod)
+
+  .http.request.method = .cloudflare.firewall_event.client.request.method
+
+  if !is_nullish(.json.EdgeResponseStatus) { 
+  	.cloudflare.firewall_event.edge.response.status = to_int!(.json.EdgeResponseStatus)                                               
+  }
+
+  .http.response.status_code = .cloudflare.firewall_event.edge.response.status
+
+  .cloudflare.firewall_event.rule.id = del(.json.RuleID)
+
+  .rule.id = .cloudflare.firewall_event.rule.id
+
+  .cloudflare.firewall_event.rule.reference = del(.json.Ref)
+
+  .rule.reference = .cloudflare.firewall_event.rule.reference
+
+  .cloudflare.firewall_event.client.rule.description = del(.json.Description)
+
+  .rule.description = .cloudflare.firewall_event.client.rule.description
+
+  if !is_nullish(.json.ClientASN) { 
+  	.cloudflare.firewall_event.client.asn.value = to_int!(.json.ClientASN)                                                  
+  }
+
+  .source.as.number = .cloudflare.firewall_event.client.asn.value
+
+  .cloudflare.firewall_event.client.country = del(.json.ClientCountry)
+
+  .source.geo.country_iso_code = .cloudflare.firewall_event.client.country
+
+  if !is_nullish(.json.ClientIP) { 
+  	.cloudflare.firewall_event.client.ip = to_string!(.json.ClientIP)                                              
+  }
+
+  .source.ip = .cloudflare.firewall_event.client.ip
+
+  .cloudflare.firewall_event.client.asn.description = del(.json.ClientASNDescription)
+
+  .cloudflare.firewall_event.client.ip_class = del(.json.ClientIPClass)
+
+  .cloudflare.firewall_event.client.referer.host = del(.json.ClientRefererHost)
+
+  .cloudflare.firewall_event.client.referer.path = del(.json.ClientRefererPath)
+
+  .cloudflare.firewall_event.client.referer.query = del(.json.ClientRefererQuery)
+
+  .cloudflare.firewall_event.client.referer.scheme = del(.json.ClientRefererScheme)
+
+  .cloudflare.firewall_event.client.request.host = del(.json.ClientRequestHost)
+
+  .cloudflare.firewall_event.client.request.path = del(.json.ClientRequestPath)
+
+  .cloudflare.firewall_event.client.request.protocol = del(.json.ClientRequestProtocol)
+                                                             
+  _grokked, err = parse_groks(.cloudflare.firewall_event.client.request.protocol, ["^%{DATA:network.protocol}/%{DATA:http.version}$"])  
+  if err == null {                                                            
+      .network.protocol = downcase(_grokked.network.protocol) ?? null
+      .http.version = _grokked.http.version                                                           
+  }                   
+
+  .cloudflare.firewall_event.client.request.query = del(.json.ClientRequestQuery)
+
+  .cloudflare.firewall_event.client.request.scheme = del(.json.ClientRequestScheme)
+
+  .url.scheme = .cloudflare.firewall_event.client.request.scheme
+
+  if !is_nullish(.json.ClientRequestUserAgent) { 
+    .user_agent = parse_user_agent!(.json.ClientRequestUserAgent)
+    .user_agent.original = .json.ClientRequestUserAgent
+  }
+
+  .cloudflare.firewall_event.client.request.user.agent = del(.json.ClientRequestUserAgent)
+
+  .cloudflare.firewall_event.edge.colo.code = del(.json.EdgeColoCode)
+
+  .cloudflare.firewall_event.kind = del(.json.Kind)
+
+  if !is_nullish(.json.MatchIndex) { 
+  	.cloudflare.firewall_event.match_index = to_int!(.json.MatchIndex)                                                  
+  }
+
+  if .json.Metadata != null { 
+    .cloudflare.firewall_event.metadata = encode_json(del(.json.Metadata))
+  }
+
+  if !is_nullish(.json.OriginResponseStatus) { 
+    .cloudflare.firewall_event.origin.response.status = to_int!(.json.OriginResponseStatus)                                                  
+  }
+
+  .cloudflare.firewall_event.origin.ray.id = del(.json.OriginatorRayID)
+
+  .cloudflare.firewall_event.ray.id = del(.json.RayID)
+
+  .cloudflare.firewall_event.source = del(.json.Source)
+
+  if .source.ip != null { 
+    .related.ip = push(.related.ip, .source.ip) 
+  }
+
+  if .cloudflare.firewall_event.client.referer.host != null { 
+    .related.hosts = push(.related.hosts, .cloudflare.firewall_event.client.referer.host) 
+  }
+  if .cloudflare.firewall_event.client.request.host != null { 
+    .related.hosts = push(.related.hosts, .cloudflare.firewall_event.client.request.host) 
+  }
+  .related.hosts = unique(.related.hosts)
+
+  # if .tags == null || !includes(array!(.tags), "preserve_duplicate_custom_fields") { 
+  #   del(.cloudflare.firewall_event.timestamp)
+  # 	del(.cloudflare.firewall_event.action)
+  # 	del(.cloudflare.firewall_event.client.request.method)
+  # 	del(.cloudflare.firewall_event.edge.response.status)
+  # 	del(.cloudflare.firewall_event.rule.id)
+  # 	del(.cloudflare.firewall_event.client.asn.value)
+  # 	del(.cloudflare.firewall_event.client.country)
+  # 	del(.cloudflare.firewall_event.client.ip)
+  # }

@@ -1,0 +1,166 @@
+name: audit
+
+schema:
+  ecs_field_names:
+  - ecs.version
+  - event.action
+  - event.category
+  - event.created
+  - event.dataset
+  - event.id
+  - event.kind
+  - event.module
+  - event.original
+  - event.outcome
+  - event.provider
+  - event.type
+  - related.ip
+  - related.user
+  - source.ip
+  - tags
+  - user.email
+  - user.id
+  fields:
+  - name: cloudflare
+    type:
+      type: struct
+      fields:
+      - name: audit
+        type:
+          type: struct
+          fields:
+          - name: action
+            type:
+              type: struct
+              fields:
+              - name: result
+                type: string
+              - name: type
+                type: string
+          - name: actor
+            type:
+              type: struct
+              fields:
+              - name: email
+                type: string
+              - name: id
+                type: string
+              - name: ip
+                type: string
+              - name: type
+                type: string
+          - name: id
+            type: string
+          - name: interface
+            type: string
+          - name: metadata
+            type: string
+          - name: new_value
+            type: string
+          - name: old_value
+            type: string
+          - name: owner
+            type:
+              type: struct
+              fields:
+              - name: id
+                type: string
+          - name: resource
+            type:
+              type: struct
+              fields:
+              - name: id
+                type: string
+              - name: type
+                type: string
+          - name: timestamp
+            type: timestamp
+transform: |
+  .event.category = ["authentication"]
+  .event.kind = "event"
+  .event.type = ["info"]
+
+  .related.hosts = []
+
+  # .event.original = encode_json(.json)
+
+  if !is_nullish(.json.When) { 
+  	.ts = to_timestamp!(.json.When, "seconds")
+  }
+   
+  .cloudflare.audit.timestamp = .ts
+
+  .cloudflare.audit.action.type = del(.json.ActionType)
+
+  .event.action = downcase(.cloudflare.audit.action.type) ?? null                
+
+  .cloudflare.audit.action.result = if .json.ActionResult == true {
+    "success"
+  } else {
+    "failure"
+  }
+
+  .event.outcome = .cloudflare.audit.action.result
+
+  .cloudflare.audit.actor.email = del(.json.ActorEmail)
+
+  .user.email = .cloudflare.audit.actor.email
+
+  .cloudflare.audit.actor.id = del(.json.ActorID)
+
+  .user.id = .cloudflare.audit.actor.id
+
+  if !is_nullish(.json.ActorIP) {                     
+  	.cloudflare.audit.actor.ip = to_string!(.json.ActorIP)                                               
+  }
+
+  .source.ip = .cloudflare.audit.actor.ip
+
+  .cloudflare.audit.actor.type = del(.json.ActorType)
+
+  .cloudflare.audit.id = del(.json.ID)
+
+  .event.id = .cloudflare.audit.id
+
+  if !is_nullish(.json.Interface) { 
+    .cloudflare.audit.interface = del(.json.Interface)
+  }
+
+  .event.provider = .cloudflare.audit.interface
+
+  if .json.Metadata != null { 
+    .cloudflare.audit.metadata = encode_json(del(.json.Metadata))
+  }
+
+  if .json.NewValue != null { 
+    .cloudflare.audit.new_value = encode_json(del(.json.NewValue))
+  }
+
+  if .json.OldValue != null { 
+    .cloudflare.audit.old_value = encode_json(del(.json.OldValue))
+  }
+
+  .cloudflare.audit.owner.id = del(.json.OwnerID)
+
+  .cloudflare.audit.resource.id = del(.json.ResourceID)
+
+  .cloudflare.audit.resource.type = del(.json.ResourceType)
+
+  if .user.id != null { 
+    .related.user = push(.related.user, .user.id) 
+  }
+
+  if .source.ip != null { 
+    .related.ip = push(.related.ip, .source.ip) 
+  }
+
+  # if .tags == null || !includes(array!(.tags), "preserve_duplicate_custom_fields") { 
+  #   del(.cloudflare.audit.timestamp)
+  # 	del(.cloudflare.audit.action.result)
+  # 	del(.cloudflare.audit.action.type)
+  # 	del(.cloudflare.audit.id)
+  # 	del(.cloudflare.audit.interface)
+  # 	del(.cloudflare.audit.actor.ip)
+  # 	del(.cloudflare.audit.actor.email)
+  # 	del(.cloudflare.audit.actor.id)
+  # }
