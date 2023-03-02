@@ -7,6 +7,7 @@ use chrono::{DateTime, FixedOffset, Local, NaiveDateTime, Utc};
 use log::{debug, error, info};
 
 use reqwest::header;
+use serde_json::json;
 
 use super::{PullLogs, PullLogsContext};
 
@@ -90,23 +91,41 @@ impl PullLogs for SnykPuller {
 
         if tables_config.get("audit").is_some() {
             // Collect Group Level Audit Logs
-            while next_page != -1 && group_id.is_some() {
+            loop {
+                if !group_id.is_some() {
+                    debug!("Snyk group_id is not set, skipping group audit logs");
+                    break;
+                }
+
                 let page = next_page;
                 let group_id = group_id.unwrap();
 
                 let url = format!(
                     "https://api.snyk.io/api/v1/group/{}/audit?from={}&to={}&page={}&sortOrder=ASC",
-                    start_day, yesterday, group_id, page
+                    group_id, start_day, yesterday, page
                 );
                 info!("requesting url: {}", &url);
 
+                // TODO: Allow configuring filters for this log source.
+                // Synk will error if we don't pass empty body in the POST
+
+                let body = json!({});
+
                 let response = client
-                    .get(url.clone())
+                    .post(url.clone())
                     .headers(headers.clone())
+                    .json(&body)
                     .send()
-                    .await?;
+                    .await
+                    .context("Failed to send request")?;
+
+                let status = response.status();
+                if !status.is_success() {
+                    error!("Failed to get logs: {}", status)
+                }
 
                 let response_json: Vec<serde_json::Value> = response.json().await?;
+
                 let length = response_json.len();
 
                 for mut value in response_json {
@@ -118,32 +137,49 @@ impl PullLogs for SnykPuller {
 
                 // determine if there are more pages to collect
                 if length == 0 {
-                    // if this request returned 0, we're done
-                    next_page = -1;
+                    break;
                 } else {
                     next_page = page + 1;
                 }
             }
 
-            // Collect Group Level Audit Logs
+            // Collect Org Level Audit Logs
             next_page = 1;
-            while next_page != -1 && org_id.is_some() {
+            loop {
+                if !org_id.is_some() {
+                    debug!("Snyk org_id is not set, skipping org audit logs");
+                    break;
+                }
+
                 let page = next_page;
                 let org_id = org_id.unwrap();
 
                 let url = format!(
                     "https://api.snyk.io/api/v1/org/{}/audit?from={}&to={}&page={}&sortOrder=ASC",
-                    start_day, yesterday, org_id, page
+                    org_id, start_day, yesterday, page
                 );
                 info!("requesting url: {}", &url);
 
+                // TODO: Allow configuring filters for this log source.
+                // Synk will error if we don't pass empty body in the POST
+
+                let body = json!({});
+
                 let response = client
-                    .get(url.clone())
+                    .post(url.clone())
                     .headers(headers.clone())
+                    .json(&body)
                     .send()
-                    .await?;
+                    .await
+                    .context("Failed to send request")?;
+
+                let status = response.status();
+                if !status.is_success() {
+                    error!("Failed to get logs: {}", status)
+                }
 
                 let response_json: Vec<serde_json::Value> = response.json().await?;
+
                 let length = response_json.len();
 
                 for mut value in response_json {
@@ -155,8 +191,7 @@ impl PullLogs for SnykPuller {
 
                 // determine if there are more pages to collect
                 if length == 0 {
-                    // if this request returned 0, we're done
-                    next_page = -1;
+                    break;
                 } else {
                     next_page = page + 1;
                 }
@@ -166,7 +201,11 @@ impl PullLogs for SnykPuller {
         if tables_config.get("vulnerabilities").is_some() {
             // Get vulnerability issues
             next_page = 1;
-            while next_page != -1 {
+            loop {
+                if !org_id.is_some() {
+                    debug!("Snyk org_id is not set, skipping issue reports");
+                    break;
+                }
                 let page = next_page;
 
                 let url = format!(
@@ -177,9 +216,24 @@ impl PullLogs for SnykPuller {
                 );
                 info!("requesting url: {}", &url);
 
+                // TODO: Filtering issues by a single org due to the current config
+                // schema. This needs to be redesigned so we can fetch issues for a
+                // list of orgs. There are also lots of other filters we may want to
+                // expose to configuration after we split the Issues API puller out
+                // from the audit logs.
+
+                let body = json!({
+                    "filters": {
+                        "org": [
+                            org_id
+                        ]
+                    }
+                });
+
                 let response = client
-                    .get(url.clone())
+                    .post(url.clone())
                     .headers(headers.clone())
+                    .json(&body)
                     .send()
                     .await?;
 
@@ -195,8 +249,7 @@ impl PullLogs for SnykPuller {
 
                 // determine if there are more pages to collect
                 if length == 0 {
-                    // if this request returned 0, we're done
-                    next_page = -1;
+                    break;
                 } else {
                     next_page = page + 1;
                 }
