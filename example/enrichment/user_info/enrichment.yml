@@ -1,0 +1,13 @@
+name: "user_info"
+
+enrichment_type: "static"
+
+# Iceberg schema (same as log sources)
+schema:
+  fields:
+    - name: name
+      type: string
+    - name: user_id
+      type: string
+lookup_keys:
+  - user_id

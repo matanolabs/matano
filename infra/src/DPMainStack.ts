@@ -199,6 +199,14 @@ export class DPMainStack extends MatanoStack {
     });
     transformer.node.addDependency(sqsSources);
 
+    if (enrichment != null) {
+      transformer.transformerLambda.addEnvironment(
+        "ENRICHMENT_TABLES_BUCKET",
+        enrichment.enrichmentTablesBucket.bucketName
+      );
+      enrichment.enrichmentTablesBucket.grantRead(transformer.transformerLambda);
+    }
+
     const rawDataBatcher = new DataBatcher(this, "DataBatcher", {
       transformerFunction: transformer.transformerLambda,
       s3Bucket: props.matanoSourcesBucket,
