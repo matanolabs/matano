@@ -1,26 +1,27 @@
+use crate::avro::AvroValueExt;
 use apache_avro::from_avro_datum;
+use log::info;
 use memmap2::{Mmap, MmapOptions};
 use once_cell::sync::OnceCell;
-use crate::avro::AvroValueExt;
 use std::io::{BufRead, Read};
 use std::io::{BufReader, Seek};
 use std::vec;
 use std::{
     collections::HashMap,
     io::Cursor,
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex, Weak},
 };
 
 use anyhow::{anyhow, Context, Result};
 
 /// We just need this because the Avro reader takes ownership but we want to be able to use the underlying reader to seek.
 struct ReaderHolder {
-    reader: Arc<Mutex<Cursor<Mmap>>>,
+    reader: Weak<Mutex<Cursor<Mmap>>>,
 }
 
 impl std::io::Read for ReaderHolder {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        self.reader.lock().unwrap().read(buf)
+        self.reader.upgrade().unwrap().lock().unwrap().read(buf)
     }
 }
 
@@ -41,12 +42,12 @@ type RecordPosMap = HashMap<String, [i64; 2]>; // [start_pos, block_length]
 pub struct AvroIndex {
     pub schema: apache_avro::Schema,
     indices: HashMap<String, (String, OnceCell<RecordPosMap>)>,
-    reader: Arc<Mutex<Cursor<Mmap>>>,
+    reader: Arc<Mmap>,
 }
 
 impl AvroIndex {
-    /// There's an offset of 3 bytes between the start positions written in Index and where raw compressed block starts.
-    const OFFSET: u64 = 3;
+    /// There's an offset of 2 bytes between the start positions written in Index and where raw compressed block starts.
+    const OFFSET: u64 = 2;
     /// The length of the sync marker at the end of each block. Remove to get actual data.
     const SYNC_LENGTH: usize = 16;
 
@@ -63,15 +64,24 @@ impl AvroIndex {
         let reader = Arc::new(Mutex::new(Cursor::new(mmap)));
 
         let reader_holder = ReaderHolder {
-            reader: reader.clone(),
+            reader: Arc::downgrade(&reader.clone()),
         };
 
         let avro_reader = apache_avro::Reader::new(reader_holder)?;
+        let schema = avro_reader.writer_schema().clone();
+
+        let mem_cursor = Arc::try_unwrap(reader)
+            .map_err(|e| anyhow!("Could not unwrap Arc: {:?}", e))?
+            .into_inner()?;
+
+        let mem = mem_cursor.into_inner();
+
+        let reader = Arc::new(mem);
 
         Ok(Self {
             indices,
             reader,
-            schema: avro_reader.writer_schema().clone(),
+            schema,
         })
     }
 
@@ -120,19 +130,17 @@ impl AvroIndex {
                 let block_len = *block_len as usize - (Self::OFFSET as usize + Self::SYNC_LENGTH);
 
                 // Read the whole block since we know the length and avoid multiple reads.
-                // Need scope to ensure mutex is dropped and released before avro reads.
                 let raw_block: Vec<u8> = {
-                    let mut reader = self.reader.lock().unwrap();
-                    reader.seek(std::io::SeekFrom::Start(start_pos))?;
-
-                    let mut buf = vec![0; block_len as usize];
-                    reader.read_exact(buf.as_mut())?;
-
+                    let reader = self.reader.clone();
+                    let start_pos = start_pos as usize;
+                    let buf = reader[start_pos..start_pos + block_len].to_vec();
                     buf
                 };
 
                 let mut block = vec![];
-                zstd::Decoder::new(raw_block.as_slice())?.read_to_end(block.as_mut())?;
+                zstd::Decoder::new(raw_block.as_slice())?
+                    .read_to_end(block.as_mut())
+                    .map_err(|e| anyhow!("Failed to decompress avro idx block").context(e))?;
 
                 let mut block_reader = block.as_slice();
                 while !block_reader.is_empty() {

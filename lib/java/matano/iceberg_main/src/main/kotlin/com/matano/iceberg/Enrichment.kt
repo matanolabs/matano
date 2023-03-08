@@ -157,7 +157,7 @@ class EnrichmentIcebergSyncer {
             TO 's3://$tempSyncBucket/$keyPrefix'
             WITH (format = 'AVRO')
         """.trimIndent()
-        athenaQueryRunner.runAthenaQuery(qs)
+        athenaQueryRunner.runAthenaQuery(qs).await()
 
         // Make downloads concurrent
         val futs = s3AsyncClient.listObjectsV2 { r -> r.bucket(tempSyncBucket).prefix(keyPrefix) }.await().contents().map { res ->
@@ -229,9 +229,10 @@ class EnrichmentIcebergSyncer {
             TO 's3://$tempSyncBucket/$keyPrefix'
             WITH (format = 'PARQUET', compression='snappy')
         """.trimIndent()
-        athenaQueryRunner.runAthenaQuery(qs)
+        athenaQueryRunner.runAthenaQuery(qs).await()
 
-        val futs = s3AsyncClient.listObjectsV2 { r -> r.bucket(tempSyncBucket).prefix(keyPrefix) }.await().contents().map { res ->
+        val ll = s3AsyncClient.listObjectsV2 { r -> r.bucket(tempSyncBucket).prefix(keyPrefix) }.await().contents().toList()
+        val futs = ll.map { res ->
             s3AsyncClient
                 .getObject({ it.bucket(tempSyncBucket).key(res.key()) }, AsyncResponseTransformer.toBytes())
                 .thenApply { InMemoryInputFile(it.asByteArray()) }
@@ -239,6 +240,7 @@ class EnrichmentIcebergSyncer {
         CompletableFuture.allOf(*futs.toTypedArray()).await()
         val inputFiles = futs.map { it.get() }
         if (inputFiles.isEmpty()) {
+            logger.info("Input files are empty.")
             return null
         }
 

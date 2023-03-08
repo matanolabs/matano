@@ -15,6 +15,7 @@ use async_compression::tokio::bufread::ZstdDecoder;
 use pyo3::prelude::*;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::runtime::Runtime;
+use tracing::log::info;
 
 use crate::avro_index::AvroIndex;
 use crate::utils::load_enrichment_config;
@@ -88,6 +89,12 @@ pub fn create_enrichment_tables(table_names: Vec<String>) -> PyResult<Vec<Enrich
     Ok(tables)
 }
 
+pub fn create_enrichment_table(table_name: &str) -> Result<EnrichmentTable> {
+    let lookup_keys = get_enrichment_table_lookup_keys(table_name)
+        .ok_or_else(|| anyhow!("No lookup key(s) for table {}", table_name))?;
+    Ok(EnrichmentTable::new(table_name.to_string(), lookup_keys))
+}
+
 fn get_enrichment_table_lookup_keys(table_name: &str) -> Option<Vec<String>> {
     lazy_static! {
         static ref ENRICHMENT_CONFIG: HashMap<String, serde_yaml::Value> =
@@ -109,6 +116,7 @@ async fn load_avro_index(table_name: &str, lookup_keys: &Vec<String>) -> Result<
     let bucket = std::env::var("ENRICHMENT_TABLES_BUCKET")?;
     let avro_key = format!("tables/{}.avro", table_name);
     let local_dir = std::env::temp_dir().join("tables");
+    tokio::fs::create_dir_all(&local_dir).await?;
     let local_avro_path = local_dir.join(format!("{}.zstd.avro", table_name));
 
     let load_avro = || async {
@@ -122,12 +130,11 @@ async fn load_avro_index(table_name: &str, lookup_keys: &Vec<String>) -> Result<
             .into_async_read();
         let mut avro_reader = tokio::io::BufReader::new(avro_reader);
 
-        tokio::fs::create_dir_all(&local_dir).await?;
-
         let file = tokio::fs::File::create(&local_avro_path).await?;
         let mut writer = tokio::io::BufWriter::new(file);
 
         tokio::io::copy(&mut avro_reader, &mut writer).await?;
+        
         anyhow::Ok(HashMap::<String, String>::with_capacity(0)) // just to align types
     };
 
@@ -153,10 +160,10 @@ async fn load_avro_index(table_name: &str, lookup_keys: &Vec<String>) -> Result<
                     let mut index_reader =
                         ZstdDecoder::new(tokio::io::BufReader::new(index_reader));
 
-                    let file = tokio::fs::File::create(&local_index_path).await?;
+                    let file = tokio::fs::File::create(&local_index_path).await.map_err(|e| anyhow!("failed to create file {}", local_index_path).context(e))?;
                     let mut writer = tokio::io::BufWriter::new(file);
 
-                    tokio::io::copy(&mut index_reader, &mut writer).await?;
+                    tokio::io::copy(&mut index_reader, &mut writer).await.map_err(|e| anyhow!("failed to copy index").context(e))?;
                     anyhow::Ok((lookup_key.to_string(), local_index_path))
                 }
             })

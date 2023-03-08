@@ -158,6 +158,7 @@ pub fn load_log_sources_configuration_map(
 
 pub fn load_enrichment_config() -> Result<HashMap<String, serde_yaml::Value>> {
     let config_path = "/opt/config/enrichment";
+
     let ret = WalkDir::new(config_path)
         .min_depth(2)
         .max_depth(2)
