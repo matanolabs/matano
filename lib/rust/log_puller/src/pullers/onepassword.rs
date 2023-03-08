@@ -111,7 +111,7 @@ impl PullLogs for OnePasswordPuller {
                 }),
                 None => json!({
                     "limit": limit,
-                })
+                }),
             };
 
             // POST
@@ -153,9 +153,11 @@ impl PullLogs for OnePasswordPuller {
             }
         }
 
-        let mut cursor_signinattempts = checkpoint_json
-            .as_ref()
-            .and_then(|json| json["cursor_signinattempts"].as_str().map(|v| v.to_string()));
+        let mut cursor_signinattempts = checkpoint_json.as_ref().and_then(|json| {
+            json["cursor_signinattempts"]
+                .as_str()
+                .map(|v| v.to_string())
+        });
         let url = format!("https://{}/api/v1/signinattempts", events_api_url);
         loop {
             let body = match cursor_signinattempts {
@@ -164,7 +166,7 @@ impl PullLogs for OnePasswordPuller {
                 }),
                 None => json!({
                     "limit": limit,
-                })
+                }),
             };
 
             // POST
@@ -216,7 +218,7 @@ impl PullLogs for OnePasswordPuller {
             "cursor_itemusages": cursor_itemusages,
             "cursor_signinattempts": cursor_signinattempts,
         }));
-        
+
         Ok(ret)
     }
 }

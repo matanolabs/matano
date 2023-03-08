@@ -5,7 +5,7 @@ use anyhow::{anyhow, Context as AnyhowContext, Error, Result};
 use async_stream::{stream, try_stream};
 use async_trait::async_trait;
 use chrono::{DateTime, FixedOffset};
-use futures::{future::join_all, Stream};
+use futures::{future::join_all, FutureExt};
 use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
 use lazy_static::lazy_static;
 use log::{debug, error, info};
@@ -101,21 +101,23 @@ impl PullLogs for GoogleWorkspacePuller {
             start_dt
         };
 
-        let end_time = end_dt.format("%Y-%m-%dT%H:%M:%SZ").to_string();
-
         let tables = ctx.tables_config.keys().collect::<Vec<_>>();
         if tables.is_empty() {
             return Ok(vec![]);
         }
 
         let table_resources = tables
-            .into_iter()
-            .filter_map(|t| Some((t, TABLE_RESOURCE_MAP.get(t)?)));
+            .iter()
+            .filter(|s| **s != "alert")
+            .filter_map(|t| Some((t, TABLE_RESOURCE_MAP.get(*t)?)));
 
-        let futs = table_resources
+        let mut futs = table_resources
             .map(|(table, resource)| {
                 let start_dt = start_dt - resource.lag;
                 let start_time = start_dt.format("%Y-%m-%dT%H:%M:%SZ").to_string();
+
+                let end_dt = end_dt - resource.lag;
+                let end_time = end_dt.format("%Y-%m-%dT%H:%M:%SZ").to_string();
 
                 list_resource(
                     client.clone(),
@@ -123,10 +125,29 @@ impl PullLogs for GoogleWorkspacePuller {
                     table,
                     &access_token,
                     start_time,
-                    &end_time,
+                    end_time,
                 )
+                .boxed()
             })
             .collect::<Vec<_>>();
+
+        if tables.iter().any(|t| *t == "alert") {
+            let alert_start_time = (start_dt - chrono::Duration::hours(1))
+                .format("%Y-%m-%dT%H:%M:%SZ")
+                .to_string();
+            let alert_end_time = (end_dt - chrono::Duration::hours(1))
+                .format("%Y-%m-%dT%H:%M:%SZ")
+                .to_string();
+            let alerts_fut = list_alerts(
+                client.clone(),
+                "alert",
+                &access_token,
+                alert_start_time,
+                alert_end_time,
+            )
+            .boxed();
+            futs.push(alerts_fut);
+        }
 
         let results = join_all(futs)
             .await
@@ -150,7 +171,7 @@ async fn get_access_token(
 
     let claims = json!({
       "iss": client_email,
-      "scope": "https://www.googleapis.com/auth/admin.reports.audit.readonly",
+      "scope": "https://www.googleapis.com/auth/admin.reports.audit.readonly https://www.googleapis.com/auth/apps.alerts",
       "aud": "https://oauth2.googleapis.com/token",
       "iat": now,
       "exp": now + 3600,
@@ -182,7 +203,7 @@ async fn list_resource(
     table: &str,
     access_token: &str,
     start_time: String,
-    end_time: &str,
+    end_time: String,
 ) -> Result<Vec<u8>> {
     let url = format!(
         "https://admin.googleapis.com/admin/reports/v1/activity/users/all/applications/{}",
@@ -199,7 +220,7 @@ async fn list_resource(
             ("maxResults", "1000"),
             ("prettyPrint", "false"),
             ("startTime", &start_time),
-            ("endTime", end_time),
+            ("endTime", &end_time),
         ];
         if let Some(token) = next_token.as_ref() {
             qs.push(("pageToken", token));
@@ -224,8 +245,7 @@ async fn list_resource(
             .and_then(|v| v.take().into_array())
             .unwrap_or_default()
             .into_iter()
-            .filter_map(|v| v.into_object())
-            .peekable();
+            .filter_map(|v| v.into_object());
 
         // Google workspace can nest multiple events in a single item. Unnest them.
         for item in items {
@@ -248,6 +268,70 @@ async fn list_resource(
                 });
             }
         }
+
+        next_token = body
+            .get_mut("nextPageToken")
+            .and_then(|v| v.take().into_str());
+        first = false;
+    }
+
+    Ok(ret)
+}
+
+const ALERT_CENTER_URL: &str = "https://alertcenter.googleapis.com/v1beta1/alerts";
+async fn list_alerts(
+    client: reqwest::Client,
+    table: &str,
+    access_token: &str,
+    start_time: String,
+    end_time: String,
+) -> Result<Vec<u8>> {
+    info!("Listing Google Workspace alerts");
+
+    let mut ret = vec![];
+    let mut first = true;
+    let mut next_token: Option<String> = None;
+
+    while first || next_token.is_some() {
+        let filter = format!(
+            "createTime >= \"{}\" AND createTime < \"{}\"",
+            start_time, end_time
+        );
+        let mut qs = vec![
+            ("pageSize", "1000"),
+            ("prettyPrint", "false"),
+            ("filter", &filter),
+        ];
+        if let Some(token) = next_token.as_ref() {
+            qs.push(("pageToken", token));
+        }
+        let res = client
+            .get(ALERT_CENTER_URL)
+            .bearer_auth(access_token)
+            .query(&qs)
+            .send()
+            .await?;
+
+        let is_failure = !res.status().is_success();
+        if is_failure {
+            let body = res.text().await?;
+            let msg = format!("Error listing Google alerts, response: {}", body);
+            return Err(anyhow!(msg));
+        }
+
+        let mut body = res.json::<serde_json::Value>().await?;
+        let items = body
+            .get_mut("alerts")
+            .and_then(|v| v.take().into_array())
+            .unwrap_or_default()
+            .into_iter()
+            .filter_map(|v| v.into_object());
+
+        items.for_each(|mut item| {
+            item.insert("_table".to_string(), table.into());
+            ret.extend(serde_json::to_vec(&item).unwrap());
+            ret.push(b'\n');
+        });
 
         next_token = body
             .get_mut("nextPageToken")
