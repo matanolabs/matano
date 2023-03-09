@@ -1,0 +1,938 @@
+name: alert
+schema:
+  ecs_field_names:
+    - ecs.version
+    - email.attachments
+    - email.delivery_timestamp
+    - email.message_id
+    - email.subject
+    - email.to.address
+    - event.action
+    - event.category
+    - event.created
+    - event.end
+    - event.id
+    - event.kind
+    - event.original
+    - event.start
+    - event.type
+    - organization.id
+    - related.hash
+    - related.ip
+    - related.user
+    - rule.description
+    - rule.name
+    - source.ip
+    - source.user.email
+    - tags
+    - user.domain
+    - user.email
+    - user.name
+  fields:
+    - name: google_workspace
+      type:
+        type: struct
+        fields:
+          - name: alert
+            type:
+              type: struct
+              fields:
+                - name: create_time
+                  type: timestamp
+                - name: customer
+                  type:
+                    type: struct
+                    fields:
+                      - name: id
+                        type: string
+                - name: data
+                  type:
+                    type: struct
+                    fields:
+                      - name: action
+                        type:
+                          type: struct
+                          fields:
+                            - name: name
+                              type:
+                                type: list
+                                element: string
+                      - name: actor
+                        type:
+                          type: struct
+                          fields:
+                            - name: email
+                              type: string
+                      - name: affected
+                        type:
+                          type: struct
+                          fields:
+                            - name: user_emails
+                              type:
+                                type: list
+                                element: string
+                      - name: alert_details
+                        type: string
+                      - name: appeal_window
+                        type: string
+                      - name: attachment
+                        type:
+                          type: struct
+                          fields:
+                            - name: data
+                              type:
+                                type: struct
+                                fields:
+                                  - name: csv
+                                    type:
+                                      type: struct
+                                      fields:
+                                        - name: data_rows
+                                          type:
+                                            type: list
+                                            element:
+                                              type: struct
+                                              fields:
+                                                - name: entries
+                                                  type:
+                                                    type: list
+                                                    element: string
+                                        - name: headers
+                                          type:
+                                            type: list
+                                            element: string
+                      - name: create_time
+                        type: timestamp
+                      - name: dashboard
+                        type:
+                          type: struct
+                          fields:
+                            - name: uri
+                              type: string
+                      - name: description
+                        type: string
+                      - name: display
+                        type:
+                          type: struct
+                          fields:
+                            - name: name
+                              type: string
+                      - name: domain
+                        type: string
+                      - name: domain_id
+                        type:
+                          type: struct
+                          fields:
+                            - name: customer_primary_domain
+                              type: string
+                      - name: email
+                        type: string
+                      - name: event_time
+                        type: timestamp
+                      - name: events
+                        type:
+                          type: list
+                          element:
+                            type: struct
+                            fields:
+                              - name: device
+                                type:
+                                  type: struct
+                                  fields:
+                                    - name: id
+                                      type: string
+                                    - name: model
+                                      type: string
+                                    - name: property
+                                      type: string
+                                    - name: type
+                                      type: string
+                              - name: device_compromised_state
+                                type: string
+                              - name: ios_vendor
+                                type:
+                                  type: struct
+                                  fields:
+                                    - name: id
+                                      type: string
+                              - name: new_value
+                                type: string
+                              - name: old_value
+                                type: string
+                              - name: resource
+                                type:
+                                  type: struct
+                                  fields:
+                                    - name: id
+                                      type: string
+                              - name: serial
+                                type:
+                                  type: struct
+                                  fields:
+                                    - name: number
+                                      type: string
+                      - name: header
+                        type: string
+                      - name: incident_tracking
+                        type:
+                          type: struct
+                          fields:
+                            - name: id
+                              type: string
+                      - name: is_internal
+                        type: boolean
+                      - name: login_details
+                        type:
+                          type: struct
+                          fields:
+                            - name: ip_address
+                              type: string
+                            - name: login_time
+                              type: timestamp
+                      - name: malicious_entity
+                        type:
+                          type: struct
+                          fields:
+                            - name: display_name
+                              type: string
+                            - name: entity
+                              type:
+                                type: struct
+                                fields:
+                                  - name: display_name
+                                    type: string
+                                  - name: email_address
+                                    type: string
+                            - name: from_header
+                              type: string
+                      - name: merge_info
+                        type:
+                          type: struct
+                          fields:
+                            - name: new_alert
+                              type:
+                                type: struct
+                                fields:
+                                  - name: id
+                                    type: string
+                            - name: new_incident_tracking
+                              type:
+                                type: struct
+                                fields:
+                                  - name: id
+                                    type: string
+                      - name: messages
+                        type:
+                          type: list
+                          element:
+                            type: struct
+                            fields:
+                              - name: attachments_sha256_hash
+                                type:
+                                  type: list
+                                  element: string
+                              - name: date
+                                type: timestamp
+                              - name: id
+                                type: string
+                              - name: md5
+                                type:
+                                  type: struct
+                                  fields:
+                                    - name: hash
+                                      type:
+                                        type: struct
+                                        fields:
+                                          - name: message_body
+                                            type: string
+                                          - name: subject
+                                            type: string
+                              - name: message_body_snippet
+                                type: string
+                              - name: recipient_email
+                                type: string
+                              - name: subject_text
+                                type: string
+                      - name: name
+                        type: string
+                      - name: next_update_time
+                        type: timestamp
+                      - name: primary
+                        type:
+                          type: struct
+                          fields:
+                            - name: admin
+                              type:
+                                type: struct
+                                fields:
+                                  - name: changed_event
+                                    type:
+                                      type: struct
+                                      fields:
+                                        - name: domain
+                                          type: string
+                                        - name: previous_admin_email
+                                          type: string
+                                        - name: updated_admin_email
+                                          type: string
+                      - name: products
+                        type:
+                          type: list
+                          element: string
+                      - name: query
+                        type: string
+                      - name: request
+                        type:
+                          type: struct
+                          fields:
+                            - name: info
+                              type:
+                                type: list
+                                element:
+                                  type: struct
+                                  fields:
+                                    - name: app
+                                      type:
+                                        type: struct
+                                        fields:
+                                          - name: developer_email
+                                            type:
+                                              type: list
+                                              element: string
+                                          - name: key
+                                            type: string
+                                    - name: number_of_requests
+                                      type: string
+                      - name: resolution_time
+                        type: timestamp
+                      - name: rule
+                        type:
+                          type: struct
+                          fields:
+                            - name: violation_info
+                              type:
+                                type: struct
+                                fields:
+                                  - name: data
+                                    type:
+                                      type: struct
+                                      fields:
+                                        - name: source
+                                          type: string
+                                  - name: match_info
+                                    type:
+                                      type: list
+                                      element:
+                                        type: struct
+                                        fields:
+                                          - name: predefined_detector
+                                            type:
+                                              type: struct
+                                              fields:
+                                                - name: name
+                                                  type: string
+                                          - name: user_defined_detector
+                                            type:
+                                              type: struct
+                                              fields:
+                                                - name: display
+                                                  type:
+                                                    type: struct
+                                                    fields:
+                                                      - name: name
+                                                        type: string
+                                                - name: resource
+                                                  type:
+                                                    type: struct
+                                                    fields:
+                                                      - name: name
+                                                        type: string
+                                  - name: recipients
+                                    type:
+                                      type: list
+                                      element: string
+                                  - name: resource_info
+                                    type:
+                                      type: struct
+                                      fields:
+                                        - name: document
+                                          type:
+                                            type: struct
+                                            fields:
+                                              - name: id
+                                                type: string
+                                        - name: resource
+                                          type:
+                                            type: struct
+                                            fields:
+                                              - name: title
+                                                type: string
+                                  - name: rule_info
+                                    type:
+                                      type: struct
+                                      fields:
+                                        - name: display
+                                          type:
+                                            type: struct
+                                            fields:
+                                              - name: name
+                                                type: string
+                                        - name: resource
+                                          type:
+                                            type: struct
+                                            fields:
+                                              - name: name
+                                                type: string
+                                  - name: suppressed
+                                    type:
+                                      type: struct
+                                      fields:
+                                        - name: action
+                                          type:
+                                            type: struct
+                                            fields:
+                                              - name: types
+                                                type:
+                                                  type: list
+                                                  element: string
+                                  - name: trigger
+                                    type:
+                                      type: struct
+                                      fields:
+                                        - name: user
+                                          type:
+                                            type: struct
+                                            fields:
+                                              - name: email
+                                                type: string
+                                        - name: value
+                                          type: string
+                                  - name: triggered
+                                    type:
+                                      type: struct
+                                      fields:
+                                        - name: action
+                                          type:
+                                            type: struct
+                                            fields:
+                                              - name: info
+                                                type:
+                                                  type: list
+                                                  element: string
+                                              - name: types
+                                                type:
+                                                  type: list
+                                                  element: string
+                      - name: rule_description
+                        type: string
+                      - name: source
+                        type:
+                          type: struct
+                          fields:
+                            - name: ip
+                              type: string
+                      - name: sso_profile
+                        type:
+                          type: struct
+                          fields:
+                            - name: created_event
+                              type:
+                                type: struct
+                                fields:
+                                  - name: inbound_sso
+                                    type:
+                                      type: struct
+                                      fields:
+                                        - name: profile_name
+                                          type: string
+                            - name: deleted_event
+                              type:
+                                type: struct
+                                fields:
+                                  - name: inbound_sso
+                                    type:
+                                      type: struct
+                                      fields:
+                                        - name: profile_name
+                                          type: string
+                            - name: updated_event
+                              type:
+                                type: struct
+                                fields:
+                                  - name: inbound_sso
+                                    type:
+                                      type: struct
+                                      fields:
+                                        - name: profile_changes
+                                          type: string
+                                        - name: profile_name
+                                          type: string
+                      - name: state
+                        type: string
+                      - name: status
+                        type: string
+                      - name: super_admin_password_reset_event
+                        type:
+                          type: struct
+                          fields:
+                            - name: user
+                              type:
+                                type: struct
+                                fields:
+                                  - name: email
+                                    type: string
+                      - name: superseded_alerts
+                        type:
+                          type: list
+                          element: string
+                      - name: superseding_alert
+                        type: string
+                      - name: suspension_details
+                        type:
+                          type: list
+                          element:
+                            type: struct
+                            fields:
+                              - name: abuse_reason
+                                type: string
+                              - name: product_name
+                                type: string
+                      - name: system_action_type
+                        type: string
+                      - name: takeout
+                        type:
+                          type: struct
+                          fields:
+                            - name: request
+                              type:
+                                type: struct
+                                fields:
+                                  - name: id
+                                    type: string
+                      - name: threshold
+                        type: string
+                      - name: title
+                        type: string
+                      - name: trigger
+                        type:
+                          type: struct
+                          fields:
+                            - name: source
+                              type: string
+                      - name: type
+                        type: string
+                      - name: update_time
+                        type: timestamp
+                      - name: window_size
+                        type: string
+                - name: deleted
+                  type: boolean
+                - name: end_time
+                  type: timestamp
+                - name: etag
+                  type: string
+                - name: id
+                  type: string
+                - name: metadata
+                  type:
+                    type: struct
+                    fields:
+                      - name: alert
+                        type:
+                          type: struct
+                          fields:
+                            - name: id
+                              type: string
+                      - name: assignee
+                        type: string
+                      - name: customer
+                        type:
+                          type: struct
+                          fields:
+                            - name: id
+                              type: string
+                      - name: etag
+                        type: string
+                      - name: severity
+                        type: string
+                      - name: status
+                        type: string
+                      - name: update_time
+                        type: timestamp
+                - name: security_investigation_tool_link
+                  type: string
+                - name: source
+                  type: string
+                - name: start_time
+                  type: timestamp
+                - name: type
+                  type: string
+                - name: update_time
+                  type: timestamp
+transform: |-
+  .event.type = ["info"]
+  .event.kind = "alert"
+  .email.message_id = []
+  .email.to.address = []
+  .email.subject = []
+  .user.email = []
+  .related.hash = []
+  .related.ip = []
+  .related.user = []
+  .email_hash_sha256 = []
+
+  .event.category = if .json.source == "Gmail phishing" {
+      ["email", "threat", "malware"]
+  } else {
+      ["threat", "malware"]
+  }
+
+  if .json.createTime != null {
+  	.ts = to_timestamp!(.json.createTime, "seconds")
+  }
+  .google_workspace.alert.create_time = .ts
+
+  if .json.endTime != null {
+  	.google_workspace.alert.end_time = to_timestamp!(.json.endTime)
+  }
+  .event.end = .google_workspace.alert.end_time
+
+  if .json.startTime != null {
+  	.google_workspace.alert.start_time = to_timestamp!(.json.startTime)
+  }
+  .event.start = .google_workspace.alert.start_time
+
+  .google_workspace.alert.source = del(.json.source)
+
+  .event.action = .google_workspace.alert.source
+
+  .google_workspace.alert.customer.id = del(.json.customerId)
+
+  .organization.id = .google_workspace.alert.customer.id
+
+  .google_workspace.alert.metadata.assignee = del(.json.metadata.assignee)
+
+  if .google_workspace.alert.metadata.assignee != null {
+      .user.email = push(.user.email, .google_workspace.alert.metadata.assignee)
+  }
+
+  .google_workspace.alert.id = del(.json.alertId)
+
+  .event.id = .google_workspace.alert.id
+
+  if .json.deleted != null {
+      .google_workspace.alert.deleted = to_bool!(.json.deleted)
+  }
+
+  .google_workspace.alert.etag = del(.json.etag)
+  .google_workspace.alert.metadata.alert.id = del(.json.metadata.alertId)
+  .google_workspace.alert.metadata.customer.id = del(.json.metadata.customerId)
+  .google_workspace.alert.data.type = del(.json.data."@type")
+  .google_workspace.alert.metadata.etag = del(.json.metadata.etag)
+  .google_workspace.alert.metadata.severity = del(.json.metadata.severity)
+  .google_workspace.alert.metadata.status = del(.json.metadata.status)
+
+  if .json.metadata.updateTime != null {
+  	.google_workspace.alert.metadata.update_time = to_timestamp!(.json.metadata.updateTime, "seconds")
+  }
+
+  .google_workspace.alert.security_investigation_tool_link = del(.json.securityInvestigationToolLink)
+  .google_workspace.alert.type = del(.json.type)
+
+  if .json.updateTime != null {
+  	.google_workspace.alert.update_time = to_timestamp!(.json.updateTime, "seconds")
+  }
+
+
+  .google_workspace.alert.data.email = del(.json.data.email)
+  if .google_workspace.alert.data.email != null {
+      .user.email = push(.user.email, .google_workspace.alert.data.email)
+  }
+
+  .google_workspace.alert.data.alert_details = del(.json.data.alertDetails)
+  .google_workspace.alert.data.takeout.request.id = del(.json.data.takeoutRequestId)
+
+  if .json.data.messages != null {
+    msgs = array!(.json.data.messages)
+    ret = []
+    for_each(msgs) -> |_i, v| {
+      v.attachments_sha256_hash = del(v.attachmentsSha256Hash)
+      .email_hash_sha256 = append!(.email_hash_sha256, v.attachments_sha256_hash)
+
+      v.date = to_timestamp(v.date) ?? null
+      .email.delivery_timestamp = .email.delivery_timestamp || v.date
+      v.md5.hash.subject = del(v.md5HashSubject)
+      .related.hash = push(.related.hash, v.md5.hash.subject)
+      v.message_body_snippet = del(v.messageBodySnippet)
+      v.md5.hash.message_body = del(v.md5HashMessageBody)
+      v.id = del(v.messageId)
+      .email.message_id = push(.email.message_id, v.id)
+      v.recipient_email = del(v.recipient)
+      .email.to.address = push(.email.to.address, v.recipient_email)
+      v.subject_text = del(v.subjectText)
+      .email.subject = push(.email.subject, v.subject_text)
+
+      ret = push(ret, v)
+    }
+    .google_workspace.alert.data.messages = ret
+  }
+
+  .google_workspace.alert.data.malicious_entity.entity.email_address = del(.json.data.maliciousEntity.entity.emailAddress)
+
+  if .google_workspace.alert.data.malicious_entity.entity.email_address != null {
+      .user.email = push(.user.email, .google_workspace.alert.data.malicious_entity.entity.email_address)
+  }
+
+  .google_workspace.alert.data.malicious_entity.entity.display_name = del(.json.data.maliciousEntity.entity.displayName)
+  .user.name = .google_workspace.alert.data.malicious_entity.entity.display_name
+  .google_workspace.alert.data.domain_id.customer_primary_domain = del(.json.data.domainId.customerPrimaryDomain)
+  .user.domain = .google_workspace.alert.data.domain_id.customer_primary_domain
+  .google_workspace.alert.data.malicious_entity.display_name = del(.json.data.maliciousEntity.displayName)
+  .google_workspace.alert.data.malicious_entity.from_header = del(.json.data.maliciousEntity.fromHeader)
+  .google_workspace.alert.data.system_action_type = del(.json.data.systemActionType)
+
+  if .json.data.isInternal != null {
+    .google_workspace.alert.data.is_internal = to_bool!(.json.data.isInternal)
+  }
+
+  if .json.data.sourceIp != null {
+    .google_workspace.alert.data.source.ip = to_string!(.json.data.sourceIp)
+    .source.ip = .google_workspace.alert.data.source.ip
+  }
+
+  if .json.data.loginDetails.ipAddress != null {
+    .google_workspace.alert.data.login_details.ip_address = to_string!(.json.data.loginDetails.ipAddress)
+  }
+
+  if .json.data.loginDetails.loginTime != null {
+  	.google_workspace.alert.data.login_details.login_time = to_timestamp!(.json.data.loginDetails.loginTime)
+  }
+
+  .google_workspace.alert.data.state = del(.json.data.state)
+  .google_workspace.alert.data.appeal_window = del(.json.data.appealWindow)
+
+  if .json.data.suspensionDetails != null {
+    data = array!(.json.data.suspensionDetails)
+    ret = []
+    for_each(data) -> |_i, v| {
+      v.abuse_reason = del(v.abuseReason)
+      v.product_name = del(v.productName)
+
+      ret = push(ret, v)
+    }
+    .google_workspace.alert.data.suspension_details = ret
+  }
+
+  .google_workspace.alert.data.affected.user_emails = del(.json.data.affectedUserEmails)
+  .user.email = append!(.user.email, .google_workspace.alert.data.affected.user_emails || [])
+
+  .google_workspace.alert.data.title = del(.json.data.title)
+
+  if .event.action == "Google Operations" {
+    .google_workspace.alert.data.description = del(.json.data.description)
+  }
+
+  .google_workspace.alert.data.attachment.data.csv.headers = del(.json.data.attachmentData.csv.headers)
+  .google_workspace.alert.data.attachment.data.csv.data_rows = del(.json.data.attachmentData.csv.dataRows)
+  .google_workspace.alert.data.header = del(.json.data.header)
+  .google_workspace.alert.data.domain = del(.json.data.domain)
+
+  .user.domain = .user.domain || .google_workspace.alert.data.domain
+
+  if .json.data.events != null {
+    data = array!(.json.data.events)
+    ret = []
+    for_each(data) -> |_i, v| {
+      v.device.id = del(v.deviceId)
+      v.serial.number = del(v.serialNumber)
+      v.device.type = del(v.deviceType)
+      v.device.model = del(v.deviceModel)
+      v.resource.id = del(v.resourceId)
+      v.ios_vendor.id = del(v.iosVendorId)
+      v.device_compromised_state = del(v.deviceCompromisedState)
+      v.device.property = del(v.deviceProperty)
+      v.old_value = del(v.oldValue)
+      v.new_value = del(v.newValue)
+
+      ret = push(ret, v)
+    }
+    .google_workspace.alert.data.events = ret
+  }
+
+  if .json.data.requestInfo != null {
+    data = array!(.json.data.requestInfo)
+    ret = []
+    for_each(data) -> |_i, v| {
+      v.app.key = del(v.appKey)
+      v.app.developer_email = del(v.appDeveloperEmail)
+      v.number_of_requests = del(v.numberOfRequests)
+
+      ret = push(ret, v)
+    }
+    .google_workspace.alert.data.request.info = ret
+  }
+
+  if .event.action == "Security Center rules" {
+    .google_workspace.alert.data.rule_description = del(.json.data.description)
+  }
+
+
+  .rule.description = .google_workspace.alert.data.rule_description
+  .google_workspace.alert.data.name = del(.json.data.name)
+  .rule.name = .google_workspace.alert.data.name
+  .google_workspace.alert.data.display.name = del(.json.data.displayName)
+  .google_workspace.alert.data.window_size = del(.json.data.windowSize)
+  .google_workspace.alert.data.threshold = del(.json.data.threshold)
+
+  if .json.data.createTime != null {
+  	.google_workspace.alert.data.create_time = to_timestamp!(.json.data.createTime)
+  }
+
+  if .json.data.updateTime != null {
+  	.google_workspace.alert.data.update_time = to_timestamp!(.json.data.updateTime)
+  }
+
+  .google_workspace.alert.data.trigger.source = del(.json.data.triggerSource)
+  .google_workspace.alert.data.superseded_alerts = del(.json.data.supersededAlerts)
+  .google_workspace.alert.data.superseding_alert = del(.json.data.supersedingAlert)
+  .google_workspace.alert.data.action.name = del(.json.data.actionNames)
+  .google_workspace.alert.data.query = del(.json.data.query)
+  .google_workspace.alert.data.rule.violation_info.rule_info.display.name = del(.json.data.ruleViolationInfo.ruleInfo.displayName)
+
+  .rule.name = .google_workspace.alert.data.rule.violation_info.rule_info.display.name
+  .google_workspace.alert.data.rule.violation_info.rule_info.resource.name = del(.json.data.ruleViolationInfo.ruleInfo.resourceName)
+  .google_workspace.alert.data.rule.violation_info.data.source = del(.json.data.ruleViolationInfo.dataSource)
+  .google_workspace.alert.data.rule.violation_info.trigger.value = del(.json.data.ruleViolationInfo.trigger)
+  .google_workspace.alert.data.rule.violation_info.trigger.user.email = del(.json.data.ruleViolationInfo.triggeringUserEmail)
+  .google_workspace.alert.data.rule.violation_info.recipients = del(.json.data.ruleViolationInfo.recipients)
+  .google_workspace.alert.data.rule.violation_info.resource_info.resource.title = del(.json.data.ruleViolationInfo.resourceInfo.resourceTitle)
+  .google_workspace.alert.data.rule.violation_info.resource_info.document.id = del(.json.data.ruleViolationInfo.resourceInfo.documentId)
+
+  if .json.data.ruleViolationInfo.matchInfo != null {
+    data = array!(.json.data.ruleViolationInfo.matchInfo)
+    ret = []
+    for_each(data) -> |_i, v| {
+      v.user_defined_detector.resource.name = del(v.userDefinedDetector.resourceName)
+      v.user_defined_detector.display.name = del(v.userDefinedDetector.displayName)
+      v.predefined_detector.name = del(v.predefinedDetector.detectorName)
+
+      ret = push(ret, v)
+    }
+    .google_workspace.alert.data.rule.violation_info.match_info = ret
+  }
+
+  .google_workspace.alert.data.rule.violation_info.triggered.action.types = del(.json.data.ruleViolationInfo.triggeredActionTypes)
+
+
+  if is_array(.json.data.ruleViolationInfo.triggeredActionInfo) {
+    info = array!(.json.data.ruleViolationInfo.triggeredActionInfo)
+    .google_workspace.alert.data.rule.violation_info.triggered.action.info = map_values(info) -> |v| {
+      encode_json(v)
+    }
+  }
+  .google_workspace.alert.data.rule.violation_info.suppressed.action.types = del(.json.data.ruleViolationInfo.suppressedActionTypes)
+  .google_workspace.alert.data.products = del(.json.data.products)
+
+  if .json.data.nextUpdateTime != null {
+  	.google_workspace.alert.data.next_update_time = to_timestamp!(.json.data.nextUpdateTime)
+  }
+
+  if .json.data.resolutionTime != null {
+  	.google_workspace.alert.data.resolution_time = to_timestamp!(.json.data.resolutionTime)
+  }
+
+  .google_workspace.alert.data.dashboard.uri = del(.json.data.dashboardUri)
+  .google_workspace.alert.data.status = del(.json.data.status)
+  .google_workspace.alert.data.incident_tracking.id = del(.json.data.incidentTrackingId)
+  .google_workspace.alert.data.merge_info.new_incident_tracking.id = del(.json.data.mergeInfo.newIncidentTrackingId)
+  .google_workspace.alert.data.merge_info.new_alert.id = del(.json.data.mergeInfo.newAlertId)
+  .google_workspace.alert.data.actor.email = del(.json.data.actorEmail)
+  .source.user.email = .google_workspace.alert.data.actor.email
+
+  if .json.data.eventTime != null {
+  	.google_workspace.alert.data.event_time = to_timestamp!(.json.data.eventTime)
+  }
+
+  .google_workspace.alert.data.primary.admin.changed_event.domain = del(.json.data.primaryAdminChangedEvent.domain)
+  .google_workspace.alert.data.primary.admin.changed_event.previous_admin_email = del(.json.data.primaryAdminChangedEvent.previousAdminEmail)
+  .google_workspace.alert.data.primary.admin.changed_event.updated_admin_email = del(.json.data.primaryAdminChangedEvent.updatedAdminEmail)
+  .google_workspace.alert.data.sso_profile.created_event.inbound_sso.profile_name = del(.json.data.ssoProfileCreatedEvent.inboundSsoProfileName)
+  .google_workspace.alert.data.sso_profile.updated_event.inbound_sso.profile_name = del(.json.data.ssoProfileUpdatedEvent.inboundSsoProfileName)
+  .google_workspace.alert.data.sso_profile.updated_event.inbound_sso.profile_changes = del(.json.data.ssoProfileUpdatedEvent.inboundSsoProfileChanges)
+  .google_workspace.alert.data.sso_profile.deleted_event.inbound_sso.profile_name = del(.json.data.ssoProfileDeletedEvent.inboundSsoProfileName)
+  .google_workspace.alert.data.super_admin_password_reset_event.user.email = del(.json.data.superAdminPasswordResetEvent.userEmail)
+
+  .related.ip = append(.related.ip, [.google_workspace.alert.data.login_details.ip_address, .source.ip])
+  .related.user = append(.related.user, [.user.name, .source.user.email])
+  .related.hash = append(.related.hash, .email_hash_sha256 || [])
+  .related.hash = append!(.related.hash, .google_workspace.alert.data.messages.md5.hash.message_body || [])
+
+  .related.hash = unique(compact(.related.hash))
+  .related.ip = unique(compact(.related.ip))
+  .related.user = unique(compact(.related.user))
+  .user.email = .user.email[-1]
+  .email_hash_sha256 = array(unique(compact(.email_hash_sha256)))
+  .email.attachments = map_values(.email_hash_sha256) -> |v| {
+    {
+      "file": {
+        "hash": {
+          "sha256": v
+        }
+      }
+    }
+  }
+  del(.email_hash_sha256)
+
+  .email.message_id = unique(compact(.email.message_id))
+  .email.to.address = unique(compact(.email.to.address))
+  .email.subject = unique(compact(.email.subject))
+
+  if is_array(.email.subject) {
+    .email.subject = join!(.email.subject, ",")
+  }
+  if is_array(.email.message_id) {
+    .email.message_id = join!(.email.message_id, ",")
+  }
+
+  # if true {
+  #   del(.google_workspace.alert.create_time)
+  # 	del(.google_workspace.alert.customer.id)
+  # 	del(.google_workspace.alert.data.actor.email)
+  # 	del(.google_workspace.alert.data.affected.user_emails)
+  # 	del(.google_workspace.alert.data.rule_description)
+  # 	del(.google_workspace.alert.data.email)
+  # 	del(.google_workspace.alert.data.malicious_entity.entity.display_name)
+  # 	del(.google_workspace.alert.data.malicious_entity.entity.email_address)
+  # 	del(.google_workspace.alert.data.name)
+  # 	del(.google_workspace.alert.data.rule.violation_info.rule_info.display.name)
+  # 	del(.google_workspace.alert.data.rule.violation_info.trigger.user.email)
+  # 	del(.google_workspace.alert.data.source.ip)
+  # 	del(.google_workspace.alert.end_time)
+  # 	del(.google_workspace.alert.id)
+  # 	del(.google_workspace.alert.metadata.assignee)
+  # 	del(.google_workspace.alert.source)
+  # 	del(.google_workspace.alert.start_time)
+  # }
+
+  ## op: foreach
+  # {
+  #   "field": "google_workspace.alert.data.messages",
+  #   "processor": {
+  #     "remove": {
+  #       "field": [
+  #         "_ingest._value.attachments_sha256_hash",
+  #         "_ingest._value.subject_text",
+  #         "_ingest._value.date",
+  #         "_ingest._value.id",
+  #         "_ingest._value.recipient_email"
+  #       ],
+  #       "if": ".tags == null || !(contains(.tags, "preserve_duplicate_custom_fields"))",
+  #       "ignore_failure": true,
+  #       "ignore_missing": true
+  #     }
+  #   },
+  #   "ignore_missing": true,
+  #   "ignore_failure": true
+  # }
+  # script
+  #
