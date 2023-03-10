@@ -486,6 +486,7 @@ async fn read_events_s3<'a>(
 }
 
 pub(crate) async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
+    let start = Instant::now();
     event.payload.records.first().iter().for_each(|r| {
         info!("Request: {}", serde_json::to_string(&json!({ "message_id": r.message_id, "body": r.body, "message_attributes": r.message_attributes })).unwrap_or_default());
     });
@@ -521,8 +522,6 @@ pub(crate) async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
 
     let s3 = S3_CLIENT.get().await;
     let sns = SNS_CLIENT.get().await;
-
-    println!("current_num_threads() = {}", rayon::current_num_threads());
 
     let s3_download_items_copy = s3_download_items.clone();
 
@@ -822,22 +821,31 @@ pub(crate) async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
     // If all records failed, we return an error and the lambda will retry
     // If some records failed, we retry the failed records up to 3 times by sending back to the queue with a retry_depth attribute
     // If some records failed and we've retried them 3 times, we send them to the DLQ
-    if !errors.is_empty() {
+    let had_error = !errors.is_empty();
+    let mut maybe_failing_log_sources = None;
+    let is_total_failure = errors.len() == data_batcher_records.len();
+    if had_error {
         errors.iter().for_each(|e| error!("{}", e));
-        if errors.len() == data_batcher_records.len() {
-            return Err(anyhow!("All records failed!"));
-        } else {
-            let error_ids = errors
-                .into_iter()
-                .flat_map(|e| e.ids)
-                .collect::<HashSet<_>>();
-            let failures = error_ids.iter().map(|error_id| {
-                data_batcher_records
-                    .iter()
-                    .find(|r| &r.sequencer == error_id)
-                    .unwrap()
-                    .clone()
-            });
+
+        let error_ids = errors
+            .into_iter()
+            .flat_map(|e| e.ids)
+            .collect::<HashSet<_>>();
+        let failures = error_ids.iter().map(|error_id| {
+            data_batcher_records
+                .iter()
+                .find(|r| &r.sequencer == error_id)
+                .unwrap()
+                .clone()
+        });
+        maybe_failing_log_sources = Some(
+            failures
+                .clone()
+                .map(|r| r.log_source)
+                .collect::<HashSet<_>>(),
+        );
+
+        if !is_total_failure {
             let (retryable, un_retryable): (Vec<_>, Vec<_>) =
                 failures.partition(|r| r.retry_depth.unwrap_or(0) < 3);
 
@@ -845,7 +853,29 @@ pub(crate) async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
         }
     }
 
-    Ok(())
+    // emit log
+    let time_ms = i64::try_from(start.elapsed().as_millis()).ok();
+    let log_sources = s3_download_items_copy
+        .iter()
+        .map(|(_, ls)| ls)
+        .collect::<HashSet<_>>();
+    let bytes_processed: i64 = s3_download_items_copy.iter().map(|(r, _)| r.size).sum();
+    let log = json!({
+        "type": "matano_service_log",
+        "service": "transformer",
+        "time": time_ms,
+        "log_sources": log_sources,
+        "bytes_processed": bytes_processed,
+        "error": had_error,
+        "failing_log_sources": maybe_failing_log_sources,
+    });
+    info!("{}", serde_json::to_string(&log).unwrap_or_default());
+
+    if is_total_failure {
+        Err(anyhow!("All records failed!"))
+    } else {
+        Ok(())
+    }
 }
 
 async fn handle_all_partial_failures(
