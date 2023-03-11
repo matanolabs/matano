@@ -760,7 +760,7 @@ pub(crate) async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
                 async move {
                     let bytes = writer.into_inner()?;
                     if bytes.len() == 0 || rows == 0 {
-                        return Ok(());
+                        return Ok(0);
                     }
                     info!("Writing number of Rows: {}", rows);
 
@@ -808,14 +808,16 @@ pub(crate) async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
                                 key
                             ))
                         })?;
-                    anyhow::Ok(())
+                    anyhow::Ok(rows)
                 }
                 .map_err(move |e| SQSLambdaError::new(format!("{:#}", e), matching_record_seqs))
             });
 
-    join_all(futures).await.into_iter().for_each(|r| {
-        r.map_err(|e| errors.push(e)).ok();
-    });
+    let total_rows_written = join_all(futures)
+        .await
+        .into_iter()
+        .flat_map(|r| r.map_err(|e| errors.push(e)).ok())
+        .sum::<usize>();
 
     // Error handling strategy:
     // If all records failed, we return an error and the lambda will retry
@@ -866,6 +868,7 @@ pub(crate) async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
         "time": time_ms,
         "log_sources": log_sources,
         "bytes_processed": bytes_processed,
+        "rows_written": total_rows_written,
         "error": had_error,
         "failing_log_sources": maybe_failing_log_sources,
     });
