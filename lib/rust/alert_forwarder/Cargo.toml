@@ -31,6 +31,7 @@ lambda_runtime = "0.7.0"
 aws-config = "0.51.0"
 aws_lambda_events = "0.7.2"
 aws-sdk-sqs = "0.21.0"
+aws-sdk-sns = "0.21.0"
 aws-sdk-dynamodb = "0.21.0"
 serde_dynamo = { version = "4", features = ["aws-sdk-dynamodb+0_21"] }
 

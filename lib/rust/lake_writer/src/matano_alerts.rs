@@ -536,7 +536,7 @@ pub async fn process_alerts(s3: aws_sdk_s3::Client, data: Vec<Vec<u8>>) -> Resul
 
     let alert_futures = alerts_to_deliver_compressed_chunks.into_iter().map(|s| {
         sns.publish()
-            .topic_arn(var("ALERTING_SNS_TOPIC_ARN").unwrap().to_string())
+            .topic_arn(var("RULE_MATCHES_SNS_TOPIC_ARN").unwrap().to_string())
             .message(s)
             .message_attributes(
                 "destination",

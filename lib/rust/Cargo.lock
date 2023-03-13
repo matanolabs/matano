@@ -81,6 +81,7 @@ dependencies = [
  "aws-config 0.51.0",
  "aws-sdk-dynamodb",
  "aws-sdk-secretsmanager 0.21.0",
+ "aws-sdk-sns",
  "aws-sdk-sqs",
  "aws_lambda_events",
  "base64 0.13.1",

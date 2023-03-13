@@ -82,7 +82,7 @@ export class DPMainStack extends MatanoStack {
 
     const lakeWriter = new LakeWriter(this, "LakeWriter", {
       realtimeBucket: props.realtimeBucket,
-      alertingSnsTopic: matanoAlerting.alertingTopic,
+      ruleMatchesSnsTopic: matanoAlerting.ruleMatchesTopic,
       outputBucket: props.lakeStorageBucket.bucket,
       outputObjectPrefix: "lake",
     });
