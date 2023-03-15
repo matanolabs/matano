@@ -17,10 +17,14 @@ interface MatanoAlertingProps {
 }
 
 export class MatanoAlerting extends Construct {
+  ruleMatchesTopic: sns.Topic;
   alertingTopic: sns.Topic;
   constructor(scope: Construct, id: string, props: MatanoAlertingProps) {
     super(scope, id);
 
+    this.ruleMatchesTopic = new sns.Topic(this, "RuleMatchesTopic", {
+      displayName: "MatanoRuleMatchesTopic",
+    });
     this.alertingTopic = new sns.Topic(this, "Topic", {
       displayName: "MatanoAlertingTopic",
     });
@@ -29,14 +33,16 @@ export class MatanoAlerting extends Construct {
       const alertForwarder = new AlertForwarder(this, "Forwarder", {
         integrationsStore: props.integrationsStore,
         alertTrackerTable: props.alertTrackerTable,
-        alertsSnsTopic: this.alertingTopic,
+        ruleMatchesSnsTopic: this.ruleMatchesTopic,
+        alertingSnsTopic: this.alertingTopic,
       });
     }
   }
 }
 
 interface AlertForwarderProps {
-  alertsSnsTopic: sns.Topic;
+  ruleMatchesSnsTopic: sns.Topic;
+  alertingSnsTopic: sns.Topic;
   integrationsStore: IntegrationsStore;
   alertTrackerTable: ddb.Table;
 }
@@ -64,6 +70,7 @@ export class AlertForwarder extends Construct {
       environment: {
         RUST_LOG: "warn,alert_forwarder=info",
         ALERT_TRACKER_TABLE_NAME: props.alertTrackerTable.tableName,
+        ALERTING_SNS_TOPIC_ARN: props.alertingSnsTopic.topicArn,
         DESTINATION_TO_CONFIGURATION_MAP: JSON.stringify(props.integrationsStore?.integrationsInfoMap ?? {}),
         DESTINATION_TO_SECRET_ARN_MAP: JSON.stringify(destinationToSecretArnMap),
       },
@@ -90,11 +97,12 @@ export class AlertForwarder extends Construct {
       visibilityTimeout: cdk.Duration.seconds(Math.max(this.function.timeout!.toSeconds(), 30)),
     });
 
-    props.alertsSnsTopic.addSubscription(
+    props.ruleMatchesSnsTopic.addSubscription(
       new SqsSubscription(this.queue, {
         rawMessageDelivery: true,
       })
     );
+    props.alertingSnsTopic.grantPublish(this.function);
 
     this.function.addEventSource(
       new SqsEventSource(this.queue, {

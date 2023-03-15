@@ -10,7 +10,7 @@ interface LakeWriterProps {
   realtimeBucket: s3.IBucket;
   outputBucket: s3.IBucket;
   outputObjectPrefix: string;
-  alertingSnsTopic: sns.Topic;
+  ruleMatchesSnsTopic: sns.Topic;
 }
 
 export class LakeWriter extends Construct {
@@ -43,7 +43,7 @@ export class LakeWriter extends Construct {
         RUST_LOG: "warn,lake_writer=info",
         OUT_BUCKET_NAME: props.outputBucket.bucketName,
         OUT_KEY_PREFIX: props.outputObjectPrefix,
-        ALERTING_SNS_TOPIC_ARN: props.alertingSnsTopic.topicArn,
+        RULE_MATCHES_SNS_TOPIC_ARN: props.ruleMatchesSnsTopic.topicArn,
       },
       timeout: cdk.Duration.seconds(120),
       // prevent concurrency
@@ -51,6 +51,6 @@ export class LakeWriter extends Construct {
     });
     props.realtimeBucket.grantRead(this.alertsLakeWriterLambda);
     props.outputBucket.grantReadWrite(this.alertsLakeWriterLambda);
-    props.alertingSnsTopic.grantPublish(this.alertsLakeWriterLambda);
+    props.ruleMatchesSnsTopic.grantPublish(this.alertsLakeWriterLambda);
   }
 }
