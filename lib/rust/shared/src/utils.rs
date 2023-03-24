@@ -228,3 +228,11 @@ pub fn convert_json_array_str_to_ndjson(s: &str) -> Result<String> {
 
     Ok(res)
 }
+
+pub fn result_to_option<T, E>(r: Result<Option<T>, E>) -> Option<Result<T, E>> {
+    match r {
+        Ok(Some(v)) => Some(Ok(v)),
+        Ok(None) => None,
+        Err(e) => Some(Err(e)),
+    }
+}

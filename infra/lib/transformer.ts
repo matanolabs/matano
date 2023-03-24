@@ -8,6 +8,7 @@ import * as lambda from "aws-cdk-lib/aws-lambda";
 import { RustFunctionLayer } from "./rust-function-layer";
 
 interface TransformerProps {
+  sidelineBucket: s3.IBucket;
   realtimeBucket: s3.IBucket;
   realtimeTopic: sns.Topic;
   matanoSourcesBucket: s3.IBucket;
@@ -39,6 +40,7 @@ export class Transformer extends Construct {
         MATANO_REALTIME_BUCKET_NAME: props.realtimeBucket.bucketName,
         MATANO_REALTIME_TOPIC_ARN: props.realtimeTopic.topicArn,
         SQS_METADATA: props.sqsMetadata,
+        MATANO_SIDELINE_BUCKET: props.sidelineBucket.bucketName,
       },
       layers: [this.rustFunctionLayer.layer],
       timeout: cdk.Duration.seconds(100),
@@ -56,6 +58,7 @@ export class Transformer extends Construct {
       ],
     });
 
+    props.sidelineBucket.grantReadWrite(this.transformerLambda);
     props.matanoSourcesBucket.grantRead(this.transformerLambda);
     props.realtimeBucket.grantWrite(this.transformerLambda);
     props.realtimeTopic.grantPublish(this.transformerLambda);

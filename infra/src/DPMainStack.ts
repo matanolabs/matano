@@ -51,6 +51,7 @@ interface DPMainStackProps extends MatanoStackProps {
   realtimeBucket: Bucket;
   realtimeBucketTopic: sns.Topic;
   matanoAthenaResultsBucket: s3.Bucket;
+  transformerSidelineBucket: s3.Bucket;
   integrationsStore: IntegrationsStore;
   alertTrackerTable: Table;
 }
@@ -194,6 +195,7 @@ export class DPMainStack extends MatanoStack {
       realtimeBucket: props.realtimeBucket,
       realtimeTopic: props.realtimeBucketTopic,
       matanoSourcesBucket: props.matanoSourcesBucket.bucket,
+      sidelineBucket: props.transformerSidelineBucket,
       logSourcesConfigurationPath: path.join(this.configTempDir, "config"), // TODO: weird fix later (@shaeq)
       sqsMetadata: sqsSources.sqsMetadata,
     });
