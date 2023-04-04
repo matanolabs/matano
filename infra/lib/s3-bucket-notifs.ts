@@ -24,7 +24,6 @@ export class S3BucketWithNotifications extends Construct {
 
     this.bucket = new s3.Bucket(this, "Bucket", {
       ...props.bucketProps,
-      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
     });
 
     const bucketName = props?.bucketProps?.bucketName;
