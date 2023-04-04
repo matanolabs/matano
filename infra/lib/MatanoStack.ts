@@ -7,6 +7,7 @@ import * as s3 from "aws-cdk-lib/aws-s3";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import { FriendlyNamingAspect } from "./aspects/naming";
 import { RetentionPolicyAspect } from "./aspects/retention";
+import { S3BlockPublicAccessAspect } from "./aspects/s3-block-public-access";
 
 // from https://github.com/capralifecycle/liflig-cdk/blob/master/src/tags.ts
 export function tagResources(scope: Construct, tags: (stack: cdk.Stack) => Record<string, string>): void {
@@ -33,6 +34,7 @@ export interface MatanoConfiguration {
     account: string;
     region: string;
     tags?: Record<string, string>;
+    set_block_public_access?: boolean;
   };
   project_label: string | undefined;
   is_production: boolean | undefined;
@@ -72,6 +74,7 @@ export class MatanoStack extends cdk.Stack {
 
     cdk.Aspects.of(this).add(new FriendlyNamingAspect());
     cdk.Aspects.of(this).add(new RetentionPolicyAspect());
+    cdk.Aspects.of(this).add(new S3BlockPublicAccessAspect());
   }
 
   humanCfnOutput(name: string, props: cdk.CfnOutputProps) {

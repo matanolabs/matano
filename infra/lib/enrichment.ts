@@ -149,7 +149,6 @@ export class Enrichment extends Construct {
     this.enrichmentConfigs = this.loadEnrichmentTables();
 
     this.enrichmentTablesBucket = new s3.Bucket(this, "EnrichmentTables", {
-      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       lifecycleRules: [
         {
           prefix: "temp-enrich-sync",

@@ -109,6 +109,10 @@ export default class Init extends BaseCommand {
     if (awsProfile) {
       cdkArgs.push("--profile", awsProfile);
     }
+    const matanoConfig = parseMatanoConfig(matanoUserDirectory);
+    if (matanoConfig?.aws?.set_block_public_access === false) {
+      cdkArgs.push("--public-access-block-configuration", "false");
+    }
 
     const cdkContext: Record<string, any> = {
       matanoUserDirectory,
