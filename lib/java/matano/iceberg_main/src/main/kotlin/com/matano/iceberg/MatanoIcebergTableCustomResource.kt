@@ -340,7 +340,7 @@ class MatanoIcebergTableCustomResource : CFNCustomResource {
 
     /** Create flattened view of a table. */
     fun syncView(tableName: String, schema: Schema?, drop: Boolean = false) {
-        if (!tableName.startsWith("matano.") || tableName.contains("enrich")) {
+        if (!tableName.startsWith("matano.")) {
             return
         }
 
