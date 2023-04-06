@@ -96,7 +96,7 @@ export class MatanoIcebergTable extends Construct {
   constructor(scope: Construct, id: string, props: MatanoIcebergTableProps) {
     super(scope, id);
 
-    const tableProperties = {
+    const tableProperties: Record<string, string> = {
       "format-version": "2",
       "write.parquet.compression-codec": "zstd",
       "write.avro.compression-codec": "zstd",
@@ -105,6 +105,9 @@ export class MatanoIcebergTable extends Construct {
       "glue.skip-archive": "true",
       force_update_0208: "update",
     };
+    if (props.tableName.includes("enrich")) {
+      tableProperties["force_update_0405"] = "update";
+    }
 
     const resource = new CustomResource(this, "Default", {
       serviceToken: IcebergTableProvider.getOrCreate(this, {
