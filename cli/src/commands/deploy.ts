@@ -55,6 +55,7 @@ export default class Deploy extends BaseCommand {
       getMatanoCdkApp(),
       "--output",
       cdkOutDir,
+      "--method=direct",
     ];
     if (awsProfile) {
       cdkArgs.push("--profile", awsProfile);
