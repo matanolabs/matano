@@ -1,0 +1,483 @@
+schema:
+  ecs_field_names:
+  - client.user.email
+  - client.user.id
+  - cloud.account.id
+  - cloud.availability_zone
+  - cloud.instance.id
+  - cloud.project.id
+  - cloud.provider
+  - cloud.region
+  - cloud.service.name
+  - ecs.version
+  - error.code
+  - error.message
+  - event.action
+  - event.category
+  - event.created
+  - event.id
+  - event.ingested
+  - event.kind
+  - event.original
+  - event.outcome
+  - event.provider
+  - event.type
+  - labels
+  - log.level
+  - log.logger
+  - message
+  - orchestrator.api_version
+  - orchestrator.cluster.name
+  - orchestrator.cluster.url
+  - orchestrator.cluster.version
+  - orchestrator.namespace
+  - orchestrator.organization
+  - orchestrator.resource.name
+  - orchestrator.resource.type
+  - orchestrator.type
+  - service.name
+  - source.address
+  - source.ip
+  - tags
+  - user.email
+  - user_agent.original
+  fields:
+  - name: gcp
+    type:
+      type: struct
+      fields:
+      - name: audit
+        type:
+          type: struct
+          fields:
+          - name: authentication_info
+            type:
+              type: struct
+              fields:
+              - name: principal_email
+                type: string
+              - name: authority_selector
+                type: string
+              - name: third_party_principal
+                type: string
+              - name: service_account_key_name
+                type: string
+              - name: service_account_delegation_info
+                type:
+                  type: list
+                  element:
+                    type: struct
+                    fields:
+                    - name: principal_subject
+                      type: string
+                    - name: first_party_principal
+                      type:
+                        type: struct
+                        fields:
+                        - name: principal_email
+                          type: string
+                        - name: service_metadata
+                          type: string
+                    - name: third_party_principal
+                      type:
+                        type: struct
+                        fields:
+                        - name: third_party_claims
+                          type: string
+              - name: principal_subject
+                type: string
+          - name: authorization_info
+            type:
+              type: list
+              element:
+                type: struct
+                fields:
+                - name: granted
+                  type: boolean
+                - name: permission
+                  type: string
+                - name: resource
+                  type: string
+                - name: resource_attributes
+                  type: string
+          - name: logentry_operation
+            type:
+              type: struct
+              fields:
+              - name: first
+                type: boolean
+              - name: id
+                type: string
+              - name: last
+                type: boolean
+              - name: producer
+                type: string
+          - name: method_name
+            type: string
+          - name: num_response_items
+            type: long
+          - name: policy_violation_info
+            type:
+              type: struct
+              fields:
+              - name: org_policy_violation_info
+                type:
+                  type: struct
+                  fields:
+                  - name: payload
+                    type: string
+                  - name: resource_type
+                    type: string
+                  - name: resource_tags
+                    type: string
+                  - name: violation_info
+                    type:
+                      type: list
+                      element:
+                        type: struct
+                        fields:
+                        - name: constraint
+                          type: string
+                        - name: error_message
+                          type: string
+                        - name: checked_value
+                          type: string
+                        - name: policy_type
+                          type: string
+          - name: request
+            type: string
+          - name: request_metadata
+            type:
+              type: struct
+              fields:
+              - name: caller_ip
+                type: string
+              - name: caller_supplied_user_agent
+                type: string
+              - name: caller_network
+                type: string
+              - name: request_attributes
+                type: string
+              - name: destination_attributes
+                type:
+                  type: struct
+                  fields:
+                  - name: ip
+                    type: string
+                  - name: port
+                    type: string
+                  - name: labels
+                    type: string
+                  - name: principal
+                    type: string
+                  - name: region_code
+                    type: string
+          - name: resource_location
+            type:
+              type: struct
+              fields:
+              - name: current_locations
+                type:
+                  type: list
+                  element: string
+              - name: original_locations
+                type:
+                  type: list
+                  element: string
+          - name: resource_original_state
+            type: string
+          - name: resource_name
+            type: string
+          - name: resource_type
+            type: string
+          - name: response
+            type: string
+          - name: metadata
+            type: string
+          - name: service_name
+            type: string
+          - name: status
+            type:
+              type: struct
+              fields:
+              - name: code
+                type: int
+              - name: message
+                type: string
+              - name: details
+                type:
+                  type: list
+                  element: string
+          - name: type
+            type: string
+          - name: metadata
+            type: string
+transform: |-
+  .event.category = []
+  .event.type = []
+  .event.kind = "event"
+  # .event.original = encode_json(.json)
+
+  .gcp.audit.type = .json.protoPayload."@type"
+  if .gcp.audit.type != "type.googleapis.com/google.cloud.audit.AuditLog" {
+      abort
+  }
+
+  .event.id = .json.insertId
+
+  .log.logger = del(.json.logName)
+  .log.level = del(.json.severity)
+  if is_string(.log.logger) {
+    .event.provider = split(.log.logger, "%2F")[1] ?? null
+  }
+
+  if .json.timestamp != null {
+    .ts = to_timestamp!(.json.timestamp)
+  }
+
+  .cloud.provider = "gcp"
+  .cloud.project.id = .json.resource.labels.project_id
+  .cloud.instance.id = .json.resource.labels.instance_id
+
+  .gcp.audit.resource_type = .json.resource.type
+  if .json.resource.type != null && (.json.resource.type == "k8s_cluster" || .json.resource.type == "gke_cluster") {
+      .orchestrator.type = "kubernetes"
+  }
+
+  if .json.resource.type == "k8s_cluster" || .json.resource.type == "gke_cluster" {
+      .orchestrator.cluster.name = .json.resource.labels.cluster_name
+  }
+
+  if .json.resource.type == "k8s_cluster" {
+    orchestrator, err = parse_groks(.json.protoPayload.resourceName,
+      [
+        "%{DATA}/%{API_VERSION:api_version}/namespaces/%{DATA:namespace}/%{RESOURCE_TYPE:resource.type}(/%{HOSTNAME:resource.name})?",
+        "%{DATA}/%{API_VERSION:api_version}/%{RESOURCE_TYPE:resource.type}",
+        "apis/%{RESOURCE_TYPE:resource.type}/%{API_VERSION:api_version}",
+        "api/%{API_VERSION:api_version}",
+        "%{RESOURCE_TYPE:resource.type}"
+      ],
+      {
+        "API_VERSION": "v\\d+([a-z]+)?(\\d+)?",
+        "RESOURCE_TYPE": "[a-z]+((\\.[a-z0-9]+)+)?"
+      }
+    )
+    if err == null {
+        if .orchestrator == null {
+          .orchestrator = {}
+        }
+        .orchestrator = object!(.orchestrator)
+        .orchestrator |= orchestrator
+    }
+  }
+
+  if .json.protoPayload.authenticationInfo != null {
+    authn_info = object!(.json.protoPayload.authenticationInfo)
+    authn_info.principal_email = del(authn_info.principalEmail)
+    authn_info.authority_selector = del(authn_info.authoritySelector)
+    if is_object(authn_info.thirdPartyPrincipal) && !is_empty(array!(authn_info.thirdPartyPrincipal)) {
+      authn_info.third_party_principal = encode_json(authn_info.thirdPartyPrincipal)
+    }
+    authn_info.service_account_key_name = del(authn_info.serviceAccountKeyName)
+    if is_array(authn_info.serviceAccountDelegationInfo) {
+      del_info = map_values(array!(authn_info.serviceAccountDelegationInfo)) -> |v| {
+        v.principal_subject = del(v.principalSubject)
+        if is_object(v.firstPartyPrincipal) {
+          v.firstPartyPrincipal.principal_email = del(v.firstPartyPrincipal.principalEmail)
+          v.firstPartyPrincipal.service_metadata = del(v.firstPartyPrincipal.serviceMetadata)
+          v.first_party_principal =del(v.firstPartyPrincipal)
+        }
+        if is_object(v.thirdPartyPrincipal) {
+          v.third_party_principal = del(v.thirdPartyPrincipal)
+          if is_object(v.third_party_principal.thirdPartyClaims) && !is_empty(array!(v.third_party_principal.thirdPartyClaims)) {
+            v.third_party_principal.third_party_claims = encode_json(del(v.third_party_principal.thirdPartyClaims))
+          }
+        }
+        v
+      }
+      authn_info.service_account_delegation_info = del_info
+    }
+    authn_info.principal_subject = del(authn_info.principalSubject)
+    .gcp.audit.authentication_info = authn_info
+  }
+  .client.user.email = .gcp.audit.authentication_info.principal_email
+  .client.user.id = .gcp.audit.authentication_info.principal_subject
+
+  .gcp.audit.authorization_info = del(.json.protoPayload.authorizationInfo)
+  if is_array(.gcp.audit.authorization_info) {
+    authz_info = array!(.gcp.audit.authorization_info)
+    .gcp.audit.authorization_info = map_values(authz_info) -> |v| {
+      if !is_empty(object(v.resourceAttributes) ?? {}) {
+        v.resource_attributes = encode_json(del(v.resourceAttributes))
+      }
+      v
+    }
+  }
+
+  if is_object(.json.labels) && !is_empty(object!(.json.labels)) {
+    .labels = encode_json(.json.labels)
+  }
+
+  caller_ip = .json.protoPayload.requestMetadata.callerIps
+  if caller_ip != "gce-internal-ip" && caller_ip != "private" {
+    .source.ip = to_string!(caller_ip)
+  }
+
+  .user_agent.original = .json.protoPayload.requestMetadata.callerSuppliedUserAgent
+
+  .gcp.audit.logentry_operation = .json.operation
+  if .json.operation != null {
+    first = to_bool(.json.operation.first) ?? false
+    last = to_bool(.json.operation.last) ?? false
+    if !(first && last) {
+      .event.category = push(.event.category, "session")
+      if first && !last {
+        .event.type = push(.event.type, "start")
+      } else if !first && last {
+        .event.type = push(.event.type, "end")
+      }
+    }
+  }
+
+  if is_object(.json.protoPayload.resourceOriginalState) && !is_empty(object!(.json.protoPayload.resourceOriginalState)) {
+    .gcp.audit.resource_original_state = encode_json(.json.protoPayload.resourceOriginalState)
+    .event.type = push(.event.type, "change")
+  }
+
+  if is_object(.json.policyViolationInfo) {
+    org_violation_info = del(.json.policyViolationInfo.orgPolicyViolationInfo)
+    org_violation_info.resource_type = del(org_violation_info.resourceType)
+    if is_object(org_violation_info.resource_tags) && !is_empty(object!(org_violation_info.resource_tags)) {
+      org_violation_info.resource_tags = encode_json(org_violation_info.resource_tags)
+    }
+    org_violation_info.violation_info = map_values(array!(del(org_violation_info.violationInfo))) -> |v| {
+      v.error_message = del(v.errorMessage)
+      v.checked_value = del(v.checkedValue)
+      v.policy_type = del(v.policyType)
+      v
+    }
+    .gcp.audit.policy_violation_info.org_policy_violation_info = org_violation_info
+  }
+
+  if .json.protoPayload.requestMetadata != null {
+    req_meta = .json.protoPayload.requestMetadata
+    req_meta.caller_ip = del(req_meta.callerIp)
+    req_meta.caller_supplied_user_agent = del(req_meta.callerSuppliedUserAgent)
+    req_meta.caller_network = del(req_meta.callerNetwork)
+    if is_object(req_meta.requestAttributes) && !is_empty(object!(req_meta.requestAttributes)) {
+      attrs = del(req_meta.requestAttributes)
+      req_meta.request_attributes = encode_json(compact!(attrs))
+    }
+    if is_object(req_meta.destinationAttributes) {
+      dest_attrs = req_meta.destinationAttributes
+      dest_attrs.region_code = del(dest_attrs.regionCode)
+      if is_object(dest_attrs.labels) && !is_empty(object!(dest_attrs.labels)) {
+        dest_attrs.labels = encode_json(dest_attrs.labels)
+      }
+      req_meta.destination_attributes = dest_attrs
+    }
+    .gcp.audit.request_metadata = req_meta
+  }
+
+  .event.action = del(.json.protoPayload.methodName)
+
+  if .json.protoPayload.numResponseItems != null {
+      .gcp.audit.num_response_items = to_int!(.json.protoPayload.numResponseItems)
+  }
+
+  .gcp.audit.request = .json.protoPayload.request
+
+  if .json.protoPayload.request.policy != null && !is_object(.json.protoPayload.request.policy) {
+      del(.gcp.audit.request.policy)
+      .gcp.audit.request.policy_value = del(.json.protoPayload.request.policy)
+  }
+
+  .gcp.audit.response = .json.protoPayload.response
+
+  if .json.protoPayload.response.status != null && !is_object(.json.protoPayload.response.status) {
+      del(.gcp.audit.response.status)
+      .gcp.audit.response.status_value = del(.json.protoPayload.response.status)
+  }
+
+  if .orchestrator.type != "kubernetes" {
+      .gcp.audit.resource_name = del(.json.protoPayload.resourceName)
+  }
+
+  .gcp.audit.resource_location.current_locations = del(.json.protoPayload.resourceLocation.currentLocations)
+  .gcp.audit.resource_location.original_locations = del(.json.protoPayload.resourceLocation.originalLocations)
+  .gcp.audit.service_name = del(.json.protoPayload.serviceName)
+  .cloud.service.name = .gcp.audit.service_name
+  .service.name = .gcp.audit.service_name
+
+  if .json.protoPayload.status.code != null {
+      .gcp.audit.status.code = to_int!(.json.protoPayload.status.code)
+  }
+  .gcp.audit.status.message = del(.json.protoPayload.status.message)
+  if is_array(.json.protoPayload.status.details) && !is_empty(array!(.json.protoPayload.status.details)) {
+    .gcp.audit.status.details = map_values(array!(.json.protoPayload.status.details)) -> |d| {
+      encode_json(d)
+    }
+  }
+  if .gcp.audit.status.message != null {
+      .error.code = to_string(.gcp.audit.status.code) ?? null
+      .error.message = .gcp.audit.status.message
+  }
+
+  authz_info = array(.gcp.audit.authorization_info) ?? []
+
+  if .gcp.audit.status.code != null && .gcp.audit.status.code == 0 {
+      .event.outcome = "success"
+  } else if .gcp.audit.status.code != null && .gcp.audit.status.code != 0 {
+      .event.outcome = "failure"
+  } else if .gcp.audit.status.code == null && length(authz_info) == 1 {
+    if to_bool(authz_info[0].granted) ?? false {
+      .event.outcome = "success"
+    } else {
+      .event.outcome = "failure"
+    }
+  } else if .event.outcome == null {
+      .event.outcome = "unknown"
+  }
+
+  if length(authz_info) == 1 {
+      .event.category = append(.event.category, ["network", "configuration"])
+  }
+
+  if length(authz_info) == 1 && authz_info[0].granted != null {
+    if to_bool(authz_info[0].granted) ?? false {
+      .event.type = append(.event.type, ["allowed"])
+    } else {
+      .event.type = append(.event.type, ["denied"])
+    }
+  }
+
+  if is_object(.gcp.audit.request) && !is_empty(object!(.gcp.audit.request)) {
+    .gcp.audit.request = encode_json(.gcp.audit.request)
+  }
+  if is_object(.gcp.audit.response) && !is_empty(object!(.gcp.audit.response)) {
+    .gcp.audit.response = encode_json(.gcp.audit.response)
+  }
+  if is_object(.gcp.audit.metadata) && !is_empty(object!(.gcp.audit.metadata)) {
+    .gcp.audit.metadata = encode_json(.gcp.audit.metadata)
+  }
+
+  # TODO: add more mappings for category/type like in CloudTrail
+  if .cloud.service.name == "iam.googleapis.com" {
+    .event.category = append(.event.category, ["iam"])
+  }
+
+  terminal_action = downcase!(array(split(.event.action, ".") ?? [""])[-1])
+  if starts_with(terminal_action, "delete") {
+    .event.type = append(.event.type, ["deletion"])
+  } else if starts_with(terminal_action, "create") {
+    .event.type = append(.event.type, ["creation"])
+  } else if starts_with(terminal_action, "update") || starts_with(terminal_action, "set") || starts_with(terminal_action, "insert") || starts_with(terminal_action, "patch")
+  {
+    .event.type = append(.event.type, ["change"])
+  } else if starts_with(terminal_action, "get") || starts_with(terminal_action, "list") {
+    .event.type = append(.event.type, ["access"])
+  }
+
+  .event.type = unique(.event.type)
+  .event.category = unique(.event.category)
+name: gcp_audit
