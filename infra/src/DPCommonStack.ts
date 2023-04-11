@@ -94,6 +94,7 @@ export class DPCommonStack extends MatanoStack {
         engineVersion: {
           selectedEngineVersion: "Athena engine version 3",
         },
+        publishCloudWatchMetricsEnabled: true,
         resultConfiguration: {
           outputLocation: `s3://${this.matanoAthenaResultsBucket.bucketName}/results/matano-default`,
         },
@@ -107,6 +108,7 @@ export class DPCommonStack extends MatanoStack {
         engineVersion: {
           selectedEngineVersion: "Athena engine version 2",
         },
+        publishCloudWatchMetricsEnabled: true,
         resultConfiguration: {
           outputLocation: `s3://${this.matanoAthenaResultsBucket.bucketName}/results/matano-system`,
         },
@@ -120,6 +122,7 @@ export class DPCommonStack extends MatanoStack {
         engineVersion: {
           selectedEngineVersion: "Athena engine version 3",
         },
+        publishCloudWatchMetricsEnabled: true,
         resultConfiguration: {
           outputLocation: `s3://${this.matanoAthenaResultsBucket.bucketName}/results/matano-system_v3`,
         },
