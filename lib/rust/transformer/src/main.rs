@@ -4,6 +4,7 @@ mod models;
 use aws_sdk_sns::model::MessageAttributeValue;
 use aws_sdk_sqs::model::SendMessageBatchRequestEntry;
 use chrono::Utc;
+use futures::future::try_join_all;
 use futures::join;
 use futures::try_join;
 use futures::TryFutureExt;
@@ -15,6 +16,7 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::env::var;
 use std::fs::read_to_string;
+use std::io::Write;
 use std::path::Path;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -202,6 +204,61 @@ del(.json)
 .ecs.version = "8.5.0"
 
 "#;
+
+#[derive(Debug, Clone)]
+enum LineErrorType {
+    /// can safely sideline erroring lines
+    Partial,
+    /// non recoverable, must fail entire log source
+    Total,
+}
+
+#[derive(Debug, Clone)]
+/// Represents error during transformation of lines for log source
+struct LineError {
+    raw_line: Option<Value>,
+    log_source: String,
+    error: String,
+    partial_error_kind: Option<String>,
+    error_type: LineErrorType,
+    record_id: Option<String>,
+}
+impl LineError {
+    fn new_total(log_source: String, error: String, record_id: String) -> Self {
+        Self {
+            raw_line: None,
+            log_source,
+            error,
+            partial_error_kind: None,
+            error_type: LineErrorType::Total,
+            record_id: Some(record_id),
+        }
+    }
+
+    fn new_partial(
+        raw_line: Value,
+        log_source: String,
+        partial_error_kind: String,
+        error: String,
+        record_id: Option<String>,
+    ) -> Self {
+        Self {
+            raw_line: Some(raw_line),
+            log_source,
+            partial_error_kind: Some(partial_error_kind),
+            error,
+            error_type: LineErrorType::Partial,
+            record_id,
+        }
+    }
+}
+
+impl std::error::Error for LineError {}
+impl std::fmt::Display for LineError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "Failure for line, error: {} ", &self.error,)
+    }
+}
 
 fn format_transform_expr(transform_expr: &str, is_passthrough: bool) -> String {
     let mut ret = String::with_capacity(1000 + transform_expr.len());
@@ -485,6 +542,57 @@ async fn read_events_s3<'a>(
     Ok(Some((table_config, events)))
 }
 
+#[derive(Debug, Clone)]
+/// Represents successful result of transformation of a line.
+struct LineResult {
+    raw_line: Value,
+    transformed_line: apache_avro::types::Value,
+    resolved_table_name: String,
+    log_source: String,
+    ts_hour: String,
+    record_id: Option<String>,
+}
+impl LineResult {
+    fn new(
+        raw_line: Value,
+        transformed_line: apache_avro::types::Value,
+        resolved_table_name: String,
+        log_source: String,
+        ts_hour: String,
+        record_id: Option<String>,
+    ) -> Self {
+        Self {
+            raw_line,
+            transformed_line,
+            resolved_table_name,
+            log_source,
+            ts_hour,
+            record_id,
+        }
+    }
+}
+
+#[derive(Debug)]
+/// Errors that can occur during transformation of a line. Include an error type that will be included in sidelined path.
+struct LineLevelError {
+    msg: String,
+    err_type: String,
+}
+impl std::error::Error for LineLevelError {}
+impl std::fmt::Display for LineLevelError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Line err: {}, msg: {}", &self.err_type, &self.msg)
+    }
+}
+impl LineLevelError {
+    fn new<T: AsRef<str>>(err_type: T, msg: T) -> Self {
+        Self {
+            err_type: err_type.as_ref().to_string(),
+            msg: msg.as_ref().to_string(),
+        }
+    }
+}
+
 pub(crate) async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
     let start = Instant::now();
     event.payload.records.first().iter().for_each(|r| {
@@ -544,7 +652,7 @@ pub(crate) async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
                     Pin<Box<dyn Stream<Item = Result<Value, anyhow::Error>> + Send>>,
                 ) = events.unwrap();
 
-                let reader = raw_lines;
+                let reader = raw_lines.map(|r| (r, item.sequencer.clone()));
 
                 let select_table_from_payload_expr = LOG_SOURCES_CONFIG.with(|c| {
                     let log_sources_config = c.borrow();
@@ -568,10 +676,12 @@ pub(crate) async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
                             let transformed_lines = async_rayon::spawn(move || {
                                 let transformed_chunk = chunk
                                     .into_par_iter()
-                                    .map(|r| match r {
+                                    .map(|(r, record_id)| match r {
                                         Ok(line) => {
                                             let mut v = line;
+                                            let raw_line_clone = v.get("message").or(v.get("json")).map(|x| x.to_owned()).context("Failed to get raw line from event");
 
+                                            let process = |raw_line: Value| {
                                             match vrl(PRE_TRANSFORM_JSON_PARSE, &mut v).map_err(|e| {
                                                 anyhow!("Failed to run pre-transform: {}", e)
                                             }) {
@@ -632,7 +742,7 @@ pub(crate) async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
                                             let resolved_table_name = if table_name == "default" {
                                                 log_source.to_owned()
                                             } else {
-                                                format!("{}_{}", log_source.to_owned(), table_name)
+                                                format!("{}_{}", &log_source, &table_name)
                                             };
 
                                             let avro_schema = AVRO_SCHEMAS
@@ -654,17 +764,32 @@ pub(crate) async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
                                                     apache_avro::Error::FindUnionVariant => {
                                                         // TODO: report errors
                                                         if log_enabled!(log::Level::Debug) {
-                                                            debug!("{}", serde_json::to_string(&v_clone.unwrap()).unwrap_or_default());
+                                                            debug!("{}", v_clone.and_then(|x| serde_json::to_string(&x).ok()).unwrap_or_default());
                                                         }
-                                                        anyhow!("USER_ERROR: Failed at FindUnionVariant, likely schema issue.")
+
+                                                        let error = LineLevelError::new("SchemaMismatchError", "Failed to resolve schema due to schema mismatch.");
+                                                        anyhow!(error)
                                                     }
                                                     e => anyhow!(e)
                                                 }
                                             })?;
 
-                                            Ok(Some(((resolved_table_name, ts_hour), v_avro)))
+                                            let ret = LineResult::new(raw_line.clone(), v_avro, resolved_table_name.clone(), log_source.clone(), ts_hour.clone(), Some(record_id.clone()));
+                                            Ok(Some(ret))
+                                            };
+                                            match raw_line_clone {
+                                                Ok(raw_line) => {
+                                                    process(raw_line.clone()).map_err(|e| {
+                                                        let err_type = e.downcast_ref::<LineLevelError>().map(|e| e.err_type.as_str()).unwrap_or("UnknownError");
+                                                        LineError::new_partial(raw_line, log_source.clone(), err_type.to_string(), format!("{:#}", e), Some(record_id.clone()))
+                                                    })
+                                                },
+                                                Err(e) => {
+                                                    Err(LineError::new_total(log_source.clone(), format!("{:#}", e), record_id.clone()))
+                                                }
+                                            }
                                         }
-                                        Err(e) => Err(anyhow!("Malformed line: {}", e)),
+                                        Err(e) => Err(LineError::new_total(log_source.clone(), format!("{:#}", e),  record_id.clone()))
                                     })
                                     .collect::<Vec<_>>();
                                 transformed_chunk
@@ -677,17 +802,7 @@ pub(crate) async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
                     })
                     .flatten();
 
-                let stream = transformed_lines_as_json.filter_map(|line| async move {
-                    match line {
-                        Ok(line) => line,
-                        Err(e) => {
-                            error!("{}", e);
-                            None
-                        }
-                    }
-                });
-
-                anyhow::Ok(Some(stream))
+                anyhow::Ok(Some(transformed_lines_as_json))
             }.map_err(move |e|
                 SQSLambdaError::new(format!("{:#}", e), vec![item_copy.sequencer])
             )
@@ -701,13 +816,13 @@ pub(crate) async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
         .flatten()
         .collect::<Vec<_>>();
 
-    let mut writers_by_table_utc_hour_pair: RefCell<
+    let writers_by_table_utc_hour_pair: RefCell<
         HashMap<(String, String), (Writer<Vec<u8>>, usize)>,
     > = RefCell::new(HashMap::new());
 
     let mut merged: StreamMap<
         String,
-        Pin<Box<dyn Stream<Item = ((String, String), apache_avro::types::Value)> + Send>>,
+        Pin<Box<dyn Stream<Item = Result<Option<LineResult>, LineError>> + Send>>,
     > = StreamMap::new();
     for (i, stream) in result.into_iter().enumerate() {
         merged.insert(
@@ -716,10 +831,16 @@ pub(crate) async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
         );
     }
 
+    let mut error_lines = vec![];
     merged
-        .for_each(|(_, ((resolved_table_name, ts_hour), v))| {
+        .map(|(_, v)| v)
+        .filter_map(|line| async { result_to_option(line) })
+        .and_then(|line| {
             let mut writers_by_table_utc_hour_pair = writers_by_table_utc_hour_pair.borrow_mut();
 
+            let v = line.transformed_line;
+            let resolved_table_name = line.resolved_table_name;
+            let ts_hour = line.ts_hour;
             async move {
                 let (writer, rows) = writers_by_table_utc_hour_pair
                     .entry((resolved_table_name.clone(), ts_hour.clone()))
@@ -738,10 +859,36 @@ pub(crate) async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
                     });
 
                 *rows += 1;
-                writer.append_value_ref(&v).unwrap(); // IO (well theoretically) TODO: since this actually does non-trivial comptuuation work too (schema validation), we need to figure out a way to prevent this from blocking our main async thread
+                // IO (well theoretically) TODO: since this actually does non-trivial comptuuation work too (schema validation), we need to figure out a way to prevent this from blocking our main async thread
+                writer.append_value_ref(&v)
             }
+            .map_err(|e| {
+                LineError::new_partial(
+                    line.raw_line,
+                    line.log_source,
+                    "AvroSerializationError".to_string(),
+                    format!("{:#}", e),
+                    line.record_id,
+                )
+            })
         })
-        .await;
+        .collect::<Vec<_>>()
+        .await
+        .into_iter()
+        .filter_map(|r| r.map_err(|e| error_lines.push(e)).ok())
+        .for_each(drop);
+
+    let mut partial_error_lines = vec![];
+    error_lines.into_iter().for_each(|e| match e.error_type {
+        LineErrorType::Total => {
+            let err = SQSLambdaError::new(e.error, vec![e.record_id.unwrap()]);
+            errors.push(err);
+        }
+        LineErrorType::Partial => {
+            error!("Line error: {}", &e.error);
+            partial_error_lines.push(e);
+        }
+    });
 
     let writers_by_table = writers_by_table_utc_hour_pair.into_inner();
     let futures =
@@ -824,7 +971,7 @@ pub(crate) async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
     // If some records failed, we retry the failed records up to 3 times by sending back to the queue with a retry_depth attribute
     // If some records failed and we've retried them 3 times, we send them to the DLQ
     let had_error = !errors.is_empty();
-    let mut maybe_failing_log_sources = None;
+    let mut failing_log_sources = HashSet::new();
     let is_total_failure = errors.len() == data_batcher_records.len();
     if had_error {
         errors.iter().for_each(|e| error!("{}", e));
@@ -840,12 +987,7 @@ pub(crate) async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
                 .unwrap()
                 .clone()
         });
-        maybe_failing_log_sources = Some(
-            failures
-                .clone()
-                .map(|r| r.log_source)
-                .collect::<HashSet<_>>(),
-        );
+        failing_log_sources.extend(failures.clone().map(|r| r.log_source));
 
         if !is_total_failure {
             let (retryable, un_retryable): (Vec<_>, Vec<_>) =
@@ -853,6 +995,24 @@ pub(crate) async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
 
             handle_all_partial_failures(retryable, un_retryable).await?;
         }
+    }
+
+    let mut sidelined_lines_count = None;
+    let mut sidelined_log_sources = HashSet::new();
+    if partial_error_lines.len() > 0 {
+        // No point in sidelining partial errors for totally failed log sources (they'll be retried)
+        let relevant_error_lines = partial_error_lines
+            .into_iter()
+            .filter(|l| !failing_log_sources.contains(&l.log_source))
+            .collect::<Vec<_>>();
+        sidelined_log_sources = relevant_error_lines
+            .iter()
+            .map(|l| l.log_source.clone())
+            .collect::<HashSet<_>>();
+        let line_count = relevant_error_lines.len();
+        info!("Sidelining {} failed lines", line_count);
+        sideline_error_lines(relevant_error_lines).await?;
+        sidelined_lines_count = Some(line_count);
     }
 
     // emit log
@@ -870,7 +1030,9 @@ pub(crate) async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
         "bytes_processed": bytes_processed,
         "rows_written": total_rows_written,
         "error": had_error,
-        "failing_log_sources": maybe_failing_log_sources,
+        "sidelined_lines_count": sidelined_lines_count,
+        "failing_log_sources": (!failing_log_sources.is_empty()).then_some(failing_log_sources),
+        "sidelined_log_sources": (!sidelined_log_sources.is_empty()).then_some(sidelined_log_sources),
     });
     info!("{}", serde_json::to_string(&log).unwrap_or_default());
 
@@ -898,6 +1060,69 @@ async fn handle_all_partial_failures(
     try_join!(retryable_fut, un_retryable_fut)?;
 
     Ok(())
+}
+
+async fn sideline_error_lines(lines: Vec<LineError>) -> Result<()> {
+    let s3 = S3_CLIENT.get().await.clone();
+    let sideline_bucket = std::env::var("MATANO_SIDELINE_BUCKET")?;
+    let mut entries = HashMap::new();
+    for line in lines {
+        let err_kind = line
+            .partial_error_kind
+            .clone()
+            .unwrap_or("UnknownError".to_string());
+        entries
+            .entry((line.log_source.clone(), err_kind))
+            .or_insert_with(Vec::new)
+            .push(line);
+    }
+    let mut futs = vec![];
+    for ((log_source, error), lines) in entries {
+        let ts_hour = chrono::Utc::now().format("%Y-%m-%d-%H");
+        let key = format!(
+            "{}/{}/{}/{}.json.zst",
+            log_source,
+            error,
+            ts_hour,
+            Uuid::new_v4()
+        );
+
+        info!(
+            "Sidelining {} lines to s3://{}/{}",
+            lines.len(),
+            &sideline_bucket,
+            &key
+        );
+
+        let mut zstd_writer = zstd::Encoder::new(vec![], 0)?;
+        for line in lines {
+            if let Some(content) = line.raw_line.as_ref().and_then(serialize_raw_line) {
+                zstd_writer.write(content.as_bytes())?;
+                zstd_writer.write(b"\n")?;
+            }
+        }
+        let ret = zstd_writer.finish()?;
+
+        let fut = s3
+            .put_object()
+            .bucket(&sideline_bucket)
+            .key(key)
+            .body(ByteStream::from(ret))
+            .send();
+        futs.push(fut);
+    }
+    try_join_all(futs).await?;
+    info!("Successfully sidelined erroring lines");
+    Ok(())
+}
+
+// either raw message string or json object
+fn serialize_raw_line(v: &Value) -> Option<String> {
+    match v {
+        Value::Bytes(b) => Some(String::from_utf8_lossy(b).to_string()),
+        Value::Object(o) => serde_json::to_string(o).ok(),
+        _ => None,
+    }
 }
 
 async fn handle_partial_failure(

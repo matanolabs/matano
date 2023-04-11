@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 shared = { path = "../shared", features = ["avro"] }
 rayon = "1.5.3"
-zstd = "0.11.2"
+zstd = "0.12.1"
 base64 = "0.13.1"
 bytes = "1.2.1"
 tokio = { version = "1.17.0", features = ["full"] }

@@ -23,6 +23,7 @@ export class DPCommonStack extends MatanoStack {
   integrationsStore: IntegrationsStore;
   alertTrackerTable: ddb.Table;
   matanoAthenaResultsBucket: s3.Bucket;
+  transformerSidelineBucket: s3.Bucket;
 
   constructor(scope: Construct, id: string, props: DPCommonStackProps) {
     super(scope, id, props);
@@ -135,6 +136,8 @@ export class DPCommonStack extends MatanoStack {
       this.integrationsStore = new IntegrationsStore(this, "MatanoIntegrationsStore", {});
     }
 
+    this.transformerSidelineBucket = new Bucket(this, "MatanoTransformerSidelineBucket");
+
     this.humanCfnOutput("MatanoIngestionS3BucketName", {
       value: this.matanoIngestionBucket.bucket.bucketName,
       description:
@@ -147,8 +150,14 @@ export class DPCommonStack extends MatanoStack {
         "The name of the S3 Bucket used for long term storage backing your data lake. See https://www.matano.dev/docs/tables/querying",
     });
 
+    this.humanCfnOutput("MatanoTransformerSidelineS3BucketName", {
+      value: this.transformerSidelineBucket.bucketName,
+      description: "The name of the S3 Bucket where erroring lines are sidelined.",
+    });
+
     // important: to prevent output deletion
     this.exportValue(this.matanoIngestionBucket.topic.topicArn);
+    this.exportValue(this.transformerSidelineBucket.bucketArn);
     this.exportValue(this.matanoIngestionBucket.bucket.bucketArn);
     this.exportValue(this.matanoAthenaResultsBucket.bucketArn);
   }

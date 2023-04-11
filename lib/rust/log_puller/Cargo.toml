@@ -40,7 +40,7 @@ async-trait = "0.1.58"
 enum_dispatch = "0.3.8"
 regex = "1"
 async-stream = "0.3.3"
-zstd = "0.11.2"
+zstd = "0.12.1"
 walkdir = "2.3.2"
 zip = "0.6.3"
 config = { version = "0.13.1", features = ["yaml"] }
