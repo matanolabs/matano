@@ -119,6 +119,7 @@ const MANAGED_LOG_SOURCE_PREFIX_MAP: Record<string, string> = {
   msft: "msft",
   o365: "o365",
   google_workspace: "google_workspace",
+  gcp_audit: "gcp_audit",
   github_audit: "github",
   okta: "okta",
   snyk: "snyk",

@@ -29,9 +29,6 @@ export class DPCommonStack extends MatanoStack {
     super(scope, id, props);
 
     this.matanoIngestionBucket = new S3BucketWithNotifications(this, "MatanoIngestionBucket", {
-      bucketProps: {
-        blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
-      },
     });
 
     // For delivering Cloudtrail, S3 access logs
@@ -56,9 +53,6 @@ export class DPCommonStack extends MatanoStack {
     });
 
     this.matanoLakeStorageBucket = new S3BucketWithNotifications(this, "MatanoLakeStorageBucket", {
-      bucketProps: {
-        blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
-      },
       queueProps: {
         visibilityTimeout: cdk.Duration.seconds(185),
       },
@@ -66,7 +60,6 @@ export class DPCommonStack extends MatanoStack {
     });
 
     this.realtimeBucket = new Bucket(this, "MatanoRealtimeBucket", {
-      blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
       lifecycleRules: [{ expiration: cdk.Duration.days(7) }],
     });
     this.realtimeBucketTopic = new Topic(this, "MatanoRealtimeBucketNotifications", {
@@ -92,7 +85,6 @@ export class DPCommonStack extends MatanoStack {
     });
 
     this.matanoAthenaResultsBucket = new s3.Bucket(this, "MatanoAthenaResults", {
-      blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
       lifecycleRules: [{ expiration: cdk.Duration.days(60) }],
     });
     const matanoDefaultAthenaWorkgroup = new athena.CfnWorkGroup(this, "MatanoDefault", {
@@ -103,6 +95,7 @@ export class DPCommonStack extends MatanoStack {
         engineVersion: {
           selectedEngineVersion: "Athena engine version 3",
         },
+        publishCloudWatchMetricsEnabled: true,
         resultConfiguration: {
           outputLocation: `s3://${this.matanoAthenaResultsBucket.bucketName}/results/matano-default`,
         },
@@ -116,6 +109,7 @@ export class DPCommonStack extends MatanoStack {
         engineVersion: {
           selectedEngineVersion: "Athena engine version 2",
         },
+        publishCloudWatchMetricsEnabled: true,
         resultConfiguration: {
           outputLocation: `s3://${this.matanoAthenaResultsBucket.bucketName}/results/matano-system`,
         },
@@ -129,6 +123,7 @@ export class DPCommonStack extends MatanoStack {
         engineVersion: {
           selectedEngineVersion: "Athena engine version 3",
         },
+        publishCloudWatchMetricsEnabled: true,
         resultConfiguration: {
           outputLocation: `s3://${this.matanoAthenaResultsBucket.bucketName}/results/matano-system_v3`,
         },
