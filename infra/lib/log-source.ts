@@ -205,9 +205,9 @@ export class MatanoLogSource extends Construct {
   constructor(scope: Construct, id: string, props: MatanoLogSourceProps) {
     super(scope, id);
 
-    const logSourceConfig = props.config
-      ? props.config
-      : (readConfig(props.configPath!, "log_source.yml") as LogSourceConfig);
+    const configPath = props.configPath!;
+
+    const logSourceConfig = props.config ? props.config : (readConfig(configPath, "log_source.yml") as LogSourceConfig);
     this.logSourceConfig = logSourceConfig;
 
     if (props.config?.name === "matano_alerts") {
@@ -224,7 +224,6 @@ export class MatanoLogSource extends Construct {
     this.name = logSourceName;
 
     if (logSourceConfig?.managed && logSourceConfig.name !== "matano_alerts") {
-      const configPath = props.configPath!;
       const managedLogSourceType = logSourceConfig?.managed?.type?.toLowerCase();
       this.managedLogSourceType = managedLogSourceType;
       if (!managedLogSourceType) {
@@ -371,6 +370,29 @@ export class MatanoLogSource extends Construct {
     );
 
     const logSourceConfigToMerge = diff(this.logSourceConfig, logSourceLevelConfig);
+
+    // if no table configs have been loaded during above managed log source traversal, load table configs now from user tables/ path
+    if (Object.keys(this.tablesConfig).length == 0) {
+      // tableConfig has path like tables/*.yml, where the * part is the table name that should be used as a fallback table name
+      const tableConfigFilePaths = walkdirSync(configPath)
+        .map((p) => path.relative(configPath, p))
+        .filter((p) => p.match(/tables\/.*.yml/));
+      for (const tableConfigFilePath of tableConfigFilePaths) {
+        const tableConfig = readConfig(configPath, tableConfigFilePath);
+        if (tableConfig.name == null) {
+          // fail
+          fail(`Please specify a table name: ${tableConfigFilePath}`);
+        }
+        // fail if table name is already defined
+        if (tableConfig.name in this.tablesConfig) {
+          fail(`Table name ${tableConfig.name} is already defined in log source: ${logSourceName}`);
+        }
+
+        this.tablesConfig[tableConfig.name] = tableConfig;
+      }
+    }
+
+    // if no still no tables/ added, assume a default table (from log_source.yml)
     if (Object.keys(this.tablesConfig).length == 0) {
       this.tablesConfig["default"] = {};
     }
