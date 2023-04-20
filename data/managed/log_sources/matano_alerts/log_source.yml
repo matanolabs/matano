@@ -109,8 +109,345 @@ transform: |
 
   .ts = to_timestamp!(.ts)
   .matano.alert.original_timestamp = to_timestamp!(.matano.alert.original_timestamp)
+  
+  if .code_signature.timestamp != null {
+    .code_signature.timestamp = to_timestamp!(.code_signature.timestamp)
+  }
+
+  if .dll.code_signature.timestamp != null {
+    .dll.code_signature.timestamp = to_timestamp!(.dll.code_signature.timestamp)
+  }
+
+  if .elf.creation_date != null {
+    .elf.creation_date = to_timestamp!(.elf.creation_date)
+  }
+
+  if .email.delivery_timestamp != null {
+    .email.delivery_timestamp = to_timestamp!(.email.delivery_timestamp)
+  }
+
+  if .email.origination_timestamp != null {
+    .email.origination_timestamp = to_timestamp!(.email.origination_timestamp)
+  }
+
   if .event.created != null {
     .event.created = to_timestamp!(.event.created)
+  }
+
+  if .event.end != null {
+    .event.end = to_timestamp!(.event.end)
+  }
+
+  if .event.ingested != null {
+    .event.ingested = to_timestamp!(.event.ingested)
+  }
+
+  if .event.start != null {
+    .event.start = to_timestamp!(.event.start)
+  }
+
+  if .file.accessed != null {
+    .file.accessed = to_timestamp!(.file.accessed)
+  }
+
+  if .file.code_signature.timestamp != null {
+    .file.code_signature.timestamp = to_timestamp!(.file.code_signature.timestamp)
+  }
+
+  if .file.created != null {
+    .file.created = to_timestamp!(.file.created)
+  }
+
+  if .file.ctime != null {
+    .file.ctime = to_timestamp!(.file.ctime)
+  }
+
+  if .file.elf.creation_date != null {
+    .file.elf.creation_date = to_timestamp!(.file.elf.creation_date)
+  }
+
+  if .file.mtime != null {
+    .file.mtime = to_timestamp!(.file.mtime)
+  }
+
+  if .file.x509.not_after != null {
+    .file.x509.not_after = to_timestamp!(.file.x509.not_after)
+  }
+
+  if .file.x509.not_before != null {
+    .file.x509.not_before = to_timestamp!(.file.x509.not_before)
+  }
+
+  if .package.installed != null {
+    .package.installed = to_timestamp!(.package.installed)
+  }
+
+  if .process.code_signature.timestamp != null {
+    .process.code_signature.timestamp = to_timestamp!(.process.code_signature.timestamp)
+  }
+
+  if .process.elf.creation_date != null {
+    .process.elf.creation_date = to_timestamp!(.process.elf.creation_date)
+  }
+
+  if .process.end != null {
+    .process.end = to_timestamp!(.process.end)
+  }
+
+  if .process.entry_leader.code_signature.timestamp != null {
+    .process.entry_leader.code_signature.timestamp = to_timestamp!(.process.entry_leader.code_signature.timestamp)
+  }
+
+  if .process.entry_leader.elf.creation_date != null {
+    .process.entry_leader.elf.creation_date = to_timestamp!(.process.entry_leader.elf.creation_date)
+  }
+
+  if .process.entry_leader.end != null {
+    .process.entry_leader.end = to_timestamp!(.process.entry_leader.end)
+  }
+
+  if .process.entry_leader.parent.code_signature.timestamp != null {
+    .process.entry_leader.parent.code_signature.timestamp = to_timestamp!(.process.entry_leader.parent.code_signature.timestamp)
+  }
+
+  if .process.entry_leader.parent.elf.creation_date != null {
+    .process.entry_leader.parent.elf.creation_date = to_timestamp!(.process.entry_leader.parent.elf.creation_date)
+  }
+
+  if .process.entry_leader.parent.end != null {
+    .process.entry_leader.parent.end = to_timestamp!(.process.entry_leader.parent.end)
+  }
+
+  if .process.entry_leader.parent.session_leader.code_signature.timestamp != null {
+    .process.entry_leader.parent.session_leader.code_signature.timestamp = to_timestamp!(.process.entry_leader.parent.session_leader.code_signature.timestamp)
+  }
+
+  if .process.entry_leader.parent.session_leader.elf.creation_date != null {
+    .process.entry_leader.parent.session_leader.elf.creation_date = to_timestamp!(.process.entry_leader.parent.session_leader.elf.creation_date)
+  }
+
+  if .process.entry_leader.parent.session_leader.end != null {
+    .process.entry_leader.parent.session_leader.end = to_timestamp!(.process.entry_leader.parent.session_leader.end)
+  }
+
+  if .process.entry_leader.parent.session_leader.start != null {
+    .process.entry_leader.parent.session_leader.start = to_timestamp!(.process.entry_leader.parent.session_leader.start)
+  }
+
+  if .process.entry_leader.parent.start != null {
+    .process.entry_leader.parent.start = to_timestamp!(.process.entry_leader.parent.start)
+  }
+
+  if .process.entry_leader.start != null {
+    .process.entry_leader.start = to_timestamp!(.process.entry_leader.start)
+  }
+
+  if .process.group_leader.code_signature.timestamp != null {
+    .process.group_leader.code_signature.timestamp = to_timestamp!(.process.group_leader.code_signature.timestamp)
+  }
+
+  if .process.group_leader.elf.creation_date != null {
+    .process.group_leader.elf.creation_date = to_timestamp!(.process.group_leader.elf.creation_date)
+  }
+
+  if .process.group_leader.end != null {
+    .process.group_leader.end = to_timestamp!(.process.group_leader.end)
+  }
+
+  if .process.group_leader.start != null {
+    .process.group_leader.start = to_timestamp!(.process.group_leader.start)
+  }
+
+  if .process.parent.code_signature.timestamp != null {
+    .process.parent.code_signature.timestamp = to_timestamp!(.process.parent.code_signature.timestamp)
+  }
+
+  if .process.parent.elf.creation_date != null {
+    .process.parent.elf.creation_date = to_timestamp!(.process.parent.elf.creation_date)
+  }
+
+  if .process.parent.end != null {
+    .process.parent.end = to_timestamp!(.process.parent.end)
+  }
+
+  if .process.parent.group_leader.code_signature.timestamp != null {
+    .process.parent.group_leader.code_signature.timestamp = to_timestamp!(.process.parent.group_leader.code_signature.timestamp)
+  }
+
+  if .process.parent.group_leader.elf.creation_date != null {
+    .process.parent.group_leader.elf.creation_date = to_timestamp!(.process.parent.group_leader.elf.creation_date)
+  }
+
+  if .process.parent.group_leader.end != null {
+    .process.parent.group_leader.end = to_timestamp!(.process.parent.group_leader.end)
+  }
+
+  if .process.parent.group_leader.start != null {
+    .process.parent.group_leader.start = to_timestamp!(.process.parent.group_leader.start)
+  }
+
+  if .process.parent.start != null {
+    .process.parent.start = to_timestamp!(.process.parent.start)
+  }
+
+  if .process.previous.code_signature.timestamp != null {
+    .process.previous.code_signature.timestamp = to_timestamp!(.process.previous.code_signature.timestamp)
+  }
+
+  if .process.previous.elf.creation_date != null {
+    .process.previous.elf.creation_date = to_timestamp!(.process.previous.elf.creation_date)
+  }
+
+  if .process.previous.end != null {
+    .process.previous.end = to_timestamp!(.process.previous.end)
+  }
+
+  if .process.previous.start != null {
+    .process.previous.start = to_timestamp!(.process.previous.start)
+  }
+
+  if .process.session_leader.code_signature.timestamp != null {
+    .process.session_leader.code_signature.timestamp = to_timestamp!(.process.session_leader.code_signature.timestamp)
+  }
+
+  if .process.session_leader.elf.creation_date != null {
+    .process.session_leader.elf.creation_date = to_timestamp!(.process.session_leader.elf.creation_date)
+  }
+
+  if .process.session_leader.end != null {
+    .process.session_leader.end = to_timestamp!(.process.session_leader.end)
+  }
+
+  if .process.session_leader.parent.code_signature.timestamp != null {
+    .process.session_leader.parent.code_signature.timestamp = to_timestamp!(.process.session_leader.parent.code_signature.timestamp)
+  }
+
+  if .process.session_leader.parent.elf.creation_date != null {
+    .process.session_leader.parent.elf.creation_date = to_timestamp!(.process.session_leader.parent.elf.creation_date)
+  }
+
+  if .process.session_leader.parent.end != null {
+    .process.session_leader.parent.end = to_timestamp!(.process.session_leader.parent.end)
+  }
+
+  if .process.session_leader.parent.session_leader.code_signature.timestamp != null {
+    .process.session_leader.parent.session_leader.code_signature.timestamp = to_timestamp!(.process.session_leader.parent.session_leader.code_signature.timestamp)
+  }
+
+  if .process.session_leader.parent.session_leader.elf.creation_date != null {
+    .process.session_leader.parent.session_leader.elf.creation_date = to_timestamp!(.process.session_leader.parent.session_leader.elf.creation_date)
+  }
+
+  if .process.session_leader.parent.session_leader.end != null {
+    .process.session_leader.parent.session_leader.end = to_timestamp!(.process.session_leader.parent.session_leader.end)
+  }
+
+  if .process.session_leader.parent.session_leader.start != null {
+    .process.session_leader.parent.session_leader.start = to_timestamp!(.process.session_leader.parent.session_leader.start)
+  }
+
+  if .process.session_leader.parent.start != null {
+    .process.session_leader.parent.start = to_timestamp!(.process.session_leader.parent.start)
+  }
+
+  if .process.session_leader.start != null {
+    .process.session_leader.start = to_timestamp!(.process.session_leader.start)
+  }
+
+  if .process.start != null {
+    .process.start = to_timestamp!(.process.start)
+  }
+
+  if .threat.indicator.file.accessed != null {
+    .threat.indicator.file.accessed = to_timestamp!(.threat.indicator.file.accessed)
+  }
+
+  if .threat.indicator.file.code_signature.timestamp != null {
+    .threat.indicator.file.code_signature.timestamp = to_timestamp!(.threat.indicator.file.code_signature.timestamp)
+  }
+
+  if .threat.indicator.file.created != null {
+    .threat.indicator.file.created = to_timestamp!(.threat.indicator.file.created)
+  }
+
+  if .threat.indicator.file.ctime != null {
+    .threat.indicator.file.ctime = to_timestamp!(.threat.indicator.file.ctime)
+  }
+
+  if .threat.indicator.file.elf.creation_date != null {
+    .threat.indicator.file.elf.creation_date = to_timestamp!(.threat.indicator.file.elf.creation_date)
+  }
+
+  if .threat.indicator.file.mtime != null {
+    .threat.indicator.file.mtime = to_timestamp!(.threat.indicator.file.mtime)
+  }
+
+  if .threat.indicator.file.x509.not_after != null {
+    .threat.indicator.file.x509.not_after = to_timestamp!(.threat.indicator.file.x509.not_after)
+  }
+
+  if .threat.indicator.file.x509.not_before != null {
+    .threat.indicator.file.x509.not_before = to_timestamp!(.threat.indicator.file.x509.not_before)
+  }
+
+  if .threat.indicator.first_seen != null {
+    .threat.indicator.first_seen = to_timestamp!(.threat.indicator.first_seen)
+  }
+
+  if .threat.indicator.last_seen != null {
+    .threat.indicator.last_seen = to_timestamp!(.threat.indicator.last_seen)
+  }
+
+  if .threat.indicator.modified_at != null {
+    .threat.indicator.modified_at = to_timestamp!(.threat.indicator.modified_at)
+  }
+
+  if .threat.indicator.x509.not_after != null {
+    .threat.indicator.x509.not_after = to_timestamp!(.threat.indicator.x509.not_after)
+  }
+
+  if .threat.indicator.x509.not_before != null {
+    .threat.indicator.x509.not_before = to_timestamp!(.threat.indicator.x509.not_before)
+  }
+
+  if .tls.client.not_after != null {
+    .tls.client.not_after = to_timestamp!(.tls.client.not_after)
+  }
+
+  if .tls.client.not_before != null {
+    .tls.client.not_before = to_timestamp!(.tls.client.not_before)
+  }
+
+  if .tls.client.x509.not_after != null {
+    .tls.client.x509.not_after = to_timestamp!(.tls.client.x509.not_after)
+  }
+
+  if .tls.client.x509.not_before != null {
+    .tls.client.x509.not_before = to_timestamp!(.tls.client.x509.not_before)
+  }
+
+  if .tls.server.not_after != null {
+    .tls.server.not_after = to_timestamp!(.tls.server.not_after)
+  }
+
+  if .tls.server.not_before != null {
+    .tls.server.not_before = to_timestamp!(.tls.server.not_before)
+  }
+
+  if .tls.server.x509.not_after != null {
+    .tls.server.x509.not_after = to_timestamp!(.tls.server.x509.not_after)
+  }
+
+  if .tls.server.x509.not_before != null {
+    .tls.server.x509.not_before = to_timestamp!(.tls.server.x509.not_before)
+  }
+
+  if .x509.not_after != null {
+    .x509.not_after = to_timestamp!(.x509.not_after)
+  }
+
+  if .x509.not_before != null {
+    .x509.not_before = to_timestamp!(.x509.not_before)
   }
 
   # parse, compact, encode original_event to make less ugly
