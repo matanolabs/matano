@@ -1,4 +1,5 @@
 import * as path from "path";
+import * as fs from "fs-extra";
 import * as crypto from "crypto";
 import * as YAML from "yaml";
 import { Construct, Node } from "constructs";
@@ -103,11 +104,16 @@ export class MatanoIcebergTable extends Construct {
       "write.metadata.delete-after-commit.enabled": "true",
       write_compression: "zstd",
       "glue.skip-archive": "true",
-      force_update_0208: "update",
+      force_update: "0422",
     };
-    if (props.tableName.includes("enrich")) {
-      tableProperties["force_update_0405"] = "update";
-    }
+
+    const tempSchemaDir = cdk.FileSystem.mkdtemp("iceberg-schema");
+    const schemaPath = path.join(tempSchemaDir, "schema.json");
+    fs.writeFileSync(schemaPath, JSON.stringify(props.schema));
+
+    const asset = new cdk.aws_s3_assets.Asset(this, "SchemaAsset", {
+      path: schemaPath,
+    });
 
     const resource = new CustomResource(this, "Default", {
       serviceToken: IcebergTableProvider.getOrCreate(this, {
@@ -118,10 +124,11 @@ export class MatanoIcebergTable extends Construct {
       properties: {
         logSourceName: props.tableName,
         tableName: props.tableName,
-        schema: props.schema,
         partitions: props.partitions,
         tableProperties,
         glueDatabaseName: props.glueDatabaseName,
+        schemaKey: asset.s3ObjectKey,
+        schemaBucket: asset.bucket.bucketName,
       },
     });
   }
@@ -181,6 +188,7 @@ export class IcebergTableProvider extends Construct {
         }),
       ],
     });
+    getMatanoStack(this).cdkAssetsBucket.grantRead(providerFunc);
     props.lakeStorageBucket.grantReadWrite(providerFunc);
     props.athenaResultsBucket?.grantReadWrite(providerFunc);
     makeLambdaSnapstart(providerFunc);

@@ -3,15 +3,8 @@ package com.matano.iceberg
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.events.CloudFormationCustomResourceEvent
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import com.fasterxml.jackson.databind.DeserializationContext
-import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.PropertyNamingStrategies
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.annotation.JsonNaming
-import com.fasterxml.jackson.databind.deser.std.StdNodeBasedDeserializer
-import com.fasterxml.jackson.databind.node.BooleanNode
-import com.fasterxml.jackson.databind.node.IntNode
-import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.module.kotlin.convertValue
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.apache.iceberg.PartitionSpec
@@ -30,6 +23,8 @@ import org.apache.iceberg.types.TypeUtil
 import org.apache.iceberg.types.Types
 import org.apache.iceberg.types.Types.NestedField
 import org.slf4j.LoggerFactory
+import software.amazon.awssdk.core.async.AsyncResponseTransformer
+import software.amazon.awssdk.services.s3.S3AsyncClient
 import java.lang.IllegalArgumentException
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.regex.Pattern
@@ -44,53 +39,29 @@ data class CfnResponse(
     val NoEcho: Boolean = false,
 )
 
-// Cloudformation stringifies all values in properties!
-private fun processCfnNode(path: String, node: JsonNode, parent: ObjectNode) {
-    if (node.isObject) {
-        val fields = node.fields()
-        fields.forEachRemaining { (k, v) -> processCfnNode(k, v, node as ObjectNode) }
-    } else if (node.isArray) {
-        val elems = node.elements()
-        while (elems.hasNext()) {
-            processCfnNode(path, elems.next(), parent)
-        }
-    } else { // value node
-        if (node.isTextual and node.asText().equals("true") || node.asText().equals("false")) {
-            parent.replace(path, BooleanNode.valueOf(node.asText().toBoolean()))
-        } else if (node.isTextual) {
-            val maybeNum = node.asText().toIntOrNull()
-            if (maybeNum != null) {
-                parent.replace(path, IntNode.valueOf(maybeNum))
-            }
-        }
-    }
-}
-
-fun convertCfnSchema(node: JsonNode) {
-    processCfnNode("", node, node as ObjectNode)
-}
-
 data class MatanoPartitionSpec(
     val column: String,
     val transform: String = "identity",
 )
 
-class RelaxedIcebergSchemaDeserializer : StdNodeBasedDeserializer<Schema>(Schema::class.java) {
-    override fun convert(root: JsonNode, ctxt: DeserializationContext): Schema {
-        convertCfnSchema(root)
-        return RelaxedIcebergSchemaParser.fromJson(root)
-    }
-}
-
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class MatanoTableRequest(
     val tableName: String,
-    @JsonDeserialize(using = RelaxedIcebergSchemaDeserializer::class)
-    val schema: Schema,
+    val schemaBucket: String? = null,
+    val schemaKey: String? = null,
     val partitions: List<MatanoPartitionSpec> = listOf(),
     val tableProperties: MutableMap<String, String> = mutableMapOf(),
     val glueDatabaseName: String? = null,
-)
+) {
+    fun loadSchema(): Schema {
+        val schemaBytes = MatanoIcebergTableCustomResource
+            .s3
+            .getObject({ r -> r.bucket(schemaBucket).key(schemaKey) }, AsyncResponseTransformer.toBytes())
+            .join()
+            .asByteArray()
+        return RelaxedIcebergSchemaParser.fromJson(String(schemaBytes))
+    }
+}
 
 sealed interface MatanoIcebergTransform {
     companion object {
@@ -174,7 +145,8 @@ class MatanoIcebergTableCustomResource : CFNCustomResource {
         logger.info("Received event: ${mapper.writeValueAsString(event)}")
 
         val requestProps = mapper.convertValue<MatanoTableRequest>(event.resourceProperties)
-        val schema = TypeUtil.assignIncreasingFreshIds(requestProps.schema)
+        val requestSchema = requestProps.loadSchema()
+        val schema = TypeUtil.assignIncreasingFreshIds(requestSchema)
         val tableProperties = requestProps.tableProperties
         val mappingJson = NameMappingParser.toJson(MappingUtil.create(schema))
         tableProperties[DEFAULT_NAME_MAPPING] = mappingJson
@@ -192,7 +164,7 @@ class MatanoIcebergTableCustomResource : CFNCustomResource {
             tableProperties,
         )
         logger.info("Successfully created table.")
-        syncView("$namespace.${requestProps.tableName}", requestProps.schema)
+        syncView("$namespace.${requestProps.tableName}", requestSchema)
         return CfnResponse(PhysicalResourceId = requestProps.tableName)
     }
 
@@ -206,8 +178,9 @@ class MatanoIcebergTableCustomResource : CFNCustomResource {
         val tableId = TableIdentifier.of(Namespace.of(namespace), newProps.tableName)
         val table = icebergCatalog.loadTable(tableId)
         val existingSchema = table.schema()
+        val newSchema = newProps.loadSchema()
 
-        val shouldUpdateSchema = oldProps.schema != newProps.schema
+        val shouldUpdateSchema = Pair(oldProps.schemaBucket, oldProps.schemaKey) != Pair(newProps.schemaBucket, newProps.schemaKey)
 
         val oldInputPartitions = oldProps.partitions
         val newInputPartitions = newProps.partitions
@@ -224,7 +197,7 @@ class MatanoIcebergTableCustomResource : CFNCustomResource {
 
             val highestExistingId = TypeUtil.indexById(existingSchema.asStruct()).keys.max()
             val newIdCounter = AtomicInteger(highestExistingId + 1)
-            val resolvedNewSchema = TypeUtil.assignFreshIds(newProps.schema, existingSchema) { newIdCounter.incrementAndGet() }
+            val resolvedNewSchema = TypeUtil.assignFreshIds(newSchema, existingSchema) { newIdCounter.incrementAndGet() }
 
             logger.info("Using resolved schema:")
             logger.info(SchemaParser.toJson(resolvedNewSchema))
@@ -278,7 +251,7 @@ class MatanoIcebergTableCustomResource : CFNCustomResource {
 
         tx.commitTransaction()
 
-        syncView("$namespace.${newProps.tableName}", newProps.schema)
+        syncView("$namespace.${newProps.tableName}", newSchema)
 
         return null
     }
@@ -366,6 +339,7 @@ class MatanoIcebergTableCustomResource : CFNCustomResource {
             return GlueCatalog().apply { initialize("glue_catalog", icebergProperties) }
         }
 
+        val s3: S3AsyncClient = S3AsyncClient.builder().build()
         const val MATANO_NAMESPACE = "matano"
         private const val TIMESTAMP_COLUMN_NAME = "ts"
         val icebergProperties = mapOf(
