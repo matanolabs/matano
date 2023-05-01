@@ -13,6 +13,7 @@ import { RustFunctionCode } from "./rust-function-layer";
 interface DataBatcherProps {
   s3Bucket: S3BucketWithNotifications;
   transformerFunction: lambda.Function;
+  duplicatesTable: dynamodb.ITable;
 }
 
 export class DataBatcher extends Construct {
@@ -37,8 +38,10 @@ export class DataBatcher extends Construct {
         RUST_LOG: "warn,data_batcher=info",
         MATANO_SOURCES_BUCKET: props.s3Bucket.bucket.bucketName,
         OUTPUT_QUEUE_URL: this.outputQueue.queueUrl,
+        DUPLICATES_TABLE_NAME: props.duplicatesTable.tableName,
       },
     });
+    props.duplicatesTable.grantReadWriteData(this.batcherFunction);
 
     const sqsEventSource = new SqsEventSource(props.s3Bucket.queue, {
       batchSize: 10000,

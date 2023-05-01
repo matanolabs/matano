@@ -10,6 +10,7 @@ import * as sqs from "aws-cdk-lib/aws-sqs";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as os from "os";
 
+import * as ddb from "aws-cdk-lib/aws-dynamodb";
 import * as sns from "aws-cdk-lib/aws-sns";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import { IcebergMetadata, MatanoIcebergTable, MatanoSchemas } from "../lib/iceberg";
@@ -68,6 +69,14 @@ export class DPMainStack extends MatanoStack {
 
     const logSourcesDirectory = path.join(this.matanoUserDirectory, "log_sources");
     const logSourceConfigPaths = getDirectories(logSourcesDirectory).map((d) => path.join(logSourcesDirectory, d));
+
+    // The iceberg writer has a separate duplicates for legacy reasons,
+    // TODO: use the main duplicates table for everything (avoid breaking changes)
+    const mainDuplicatesTable = new ddb.Table(this, "DuplicatesTable", {
+      partitionKey: { name: "pk", type: ddb.AttributeType.STRING },
+      timeToLiveAttribute: "ttl",
+      billingMode: ddb.BillingMode.PAY_PER_REQUEST,
+    });
 
     const matanoAlerting = new MatanoAlerting(this, "Alerting", {
       integrationsStore: props.integrationsStore,
@@ -210,6 +219,7 @@ export class DPMainStack extends MatanoStack {
     }
 
     const rawDataBatcher = new DataBatcher(this, "DataBatcher", {
+      duplicatesTable: mainDuplicatesTable,
       transformerFunction: transformer.transformerLambda,
       s3Bucket: props.matanoSourcesBucket,
     });

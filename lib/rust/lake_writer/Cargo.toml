@@ -20,12 +20,12 @@ tracing-subscriber = { version = "0.3.8", features = ["env-filter"] }
 tracing = { version = "0.1.30", features = ["log"] }
 # NOTE: the following crate is not part of the SDK, but it is maintained by AWS.
 lambda_runtime = "0.7.0"
-aws-config = "0.51.0"
+aws-config = "0.54.1"
 
 aws_lambda_events = "0.7.2"
-aws-sdk-s3 = "0.21.0"
-aws-sdk-lambda = "0.21.0"
-aws-sdk-sns = "0.21.0"
+aws-sdk-s3 = "0.24.0"
+aws-sdk-lambda = "0.24.0"
+aws-sdk-sns = "0.24.0"
 futures = "0.3"
 futures-util = "0.3.23"
 anyhow = "1.0.53"

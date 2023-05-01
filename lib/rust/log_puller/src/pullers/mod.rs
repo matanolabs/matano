@@ -126,15 +126,13 @@ impl PullLogsContext {
                 serde_json::from_slice(&output.body.collect().await?.into_bytes())
                     .context("failed to parse last checkpoint file as json")?,
             )),
-            Err(aws_sdk_s3::types::SdkError::ServiceError {
-                err:
-                    aws_sdk_s3::error::GetObjectError {
-                        kind: aws_sdk_s3::error::GetObjectErrorKind::NoSuchKey(_),
-                        ..
-                    },
-                ..
-            }) => Ok(None),
-            Err(e) => Err(e),
+            Err(e) => {
+                let se = e.into_service_error();
+                match se.kind {
+                    aws_sdk_s3::error::GetObjectErrorKind::NoSuchKey(_) => Ok(None),
+                    _ => Err(se),
+                }
+            }
         }?;
 
         if checkpoint_json.is_none() {

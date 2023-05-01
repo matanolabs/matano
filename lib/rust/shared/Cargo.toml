@@ -21,6 +21,7 @@ cached = "0.42.0"
 
 aws-sdk-s3 = "0.24.0"
 aws-config = "0.54.1"
+aws-sdk-dynamodb = "0.24.0"
 aws-sdk-secretsmanager = "0.24.0"
 
 tokio = { version = "1.17.0", features = ["macros", "sync"] }
