@@ -3,7 +3,6 @@ package com.matano.iceberg
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestStreamHandler
 import com.fasterxml.jackson.module.kotlin.*
-import org.apache.iceberg.CachingCatalog
 import org.apache.iceberg.aws.glue.GlueCatalog
 import org.apache.iceberg.catalog.Catalog
 import org.apache.iceberg.catalog.Namespace
@@ -12,6 +11,7 @@ import org.slf4j.LoggerFactory
 import java.io.InputStream
 import java.io.OutputStream
 import java.time.OffsetDateTime
+import java.util.concurrent.Executors
 
 data class ExpireSnapshotsRequest(val time: String, val table_name: String)
 
@@ -30,11 +30,10 @@ class ExpireSnapshots {
     val icebergCatalog: Catalog by lazy { createIcebergCatalog() }
     private fun createIcebergCatalog(): Catalog {
         System.setProperty("http-client.type", "apache")
-        val glueCatalog = GlueCatalog().apply { initialize("glue_catalog", IcebergMetadataWriter.icebergProperties) }
-        return CachingCatalog.wrap(glueCatalog)
+        return GlueCatalog().apply { initialize("glue_catalog", IcebergMetadataWriter.icebergProperties) }
     }
-    val planExecutorService = cachedBoundedThreadPool(100)
-    val expireExecutorService = cachedBoundedThreadPool(100)
+    val planExecutorService = Executors.newFixedThreadPool(100)
+    val expireExecutorService = Executors.newFixedThreadPool(100)
     val namespace = Namespace.of(IcebergMetadataWriter.MATANO_NAMESPACE)
 
     fun handle(event: ExpireSnapshotsRequest) {

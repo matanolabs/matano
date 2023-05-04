@@ -101,8 +101,10 @@ export class MatanoIcebergTable extends Construct {
       "format-version": "2",
       "write.parquet.compression-codec": "zstd",
       "write.avro.compression-codec": "zstd",
+      "write.delete.parquet.compression-codec": "zstd",
       "write.metadata.delete-after-commit.enabled": "true",
-      write_compression: "zstd",
+      "write.metadata.previous-versions-max": "1",
+      "history.expire.max-snapshot-age-ms": "300000",
       "glue.skip-archive": "true",
       force_update: "0422",
     };

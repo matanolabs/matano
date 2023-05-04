@@ -34,9 +34,8 @@ class AlertsIcebergHelper : RequestStreamHandler {
     private val mapper = jacksonObjectMapper()
 
     private fun createIcebergCatalog(): Catalog {
-        val glueCatalog = GlueCatalog()
+        return GlueCatalog()
             .apply { initialize("glue_catalog", IcebergMetadataWriter.icebergProperties) }
-        return CachingCatalog.wrap(glueCatalog)
     }
 
     override fun handleRequest(input: InputStream?, output: OutputStream?, context: Context?) {
