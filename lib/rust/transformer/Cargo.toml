@@ -53,12 +53,10 @@ tracing-subscriber = { version = "0.3.8", features = ["env-filter"] }
 tracing = { version = "0.1.30", features = ["log"] }
 # NOTE: the following crate is not part of the SDK, but it is maintained by AWS.
 lambda_runtime = "0.7.0"
-aws-config = "0.51.0"
-# We are using the Amazon Simple Storage Service (Amazon S3) crate in this example,
-# but you can use any SDK crate in your Lambda code.
-aws-sdk-s3 = "0.21.0"
-aws-sdk-sns = "0.21.0"
-aws-sdk-sqs = "0.21.0"
+aws-config = "0.54.1"
+aws-sdk-s3 = "0.24.0"
+aws-sdk-sns = "0.24.0"
+aws-sdk-sqs = "0.24.0"
 aws_lambda_events = "0.7.0"
 walkdir = "2.3.2"
 anyhow = "1.0.53"

@@ -1,6 +1,6 @@
 use aws_lambda_events::sqs::SqsEvent;
 use aws_sdk_dynamodb::model::AttributeValue;
-use serde_dynamo::aws_sdk_dynamodb_0_21::{from_item, to_item};
+use serde_dynamo::aws_sdk_dynamodb_0_24::{from_item, to_item};
 use serde_json::json;
 use std::collections::HashMap;
 use std::env::var;

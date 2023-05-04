@@ -2,16 +2,17 @@ use std::collections::HashMap;
 
 use anyhow::{anyhow, Result};
 use async_once::AsyncOnce;
-use aws_lambda_events::event::s3::{S3Event, S3EventRecord};
+use aws_lambda_events::event::s3::S3Event;
 use aws_lambda_events::event::sqs::SqsEvent;
 use aws_sdk_sqs::model::SendMessageBatchRequestEntry;
-use futures::future::join_all;
-use lambda_runtime::{run, service_fn, Context, Error as LambdaError, LambdaEvent};
+use futures::future::{join_all, try_join_all};
+use lambda_runtime::{run, service_fn, Error as LambdaError, LambdaEvent};
 use lazy_static::lazy_static;
 use log::{debug, error, info};
-use serde::{Deserialize, Serialize};
-use shared::{setup_logging, DataBatcherOutputRecord};
-use uuid::Uuid;
+use shared::{
+    duplicates_util::{check_ddb_duplicate, mark_ddb_duplicate_completed},
+    setup_logging, DataBatcherOutputRecord,
+};
 use walkdir::WalkDir;
 
 lazy_static! {
@@ -19,6 +20,8 @@ lazy_static! {
         AsyncOnce::new(async { aws_config::load_from_env().await });
     static ref SQS_CLIENT: AsyncOnce<aws_sdk_sqs::Client> =
         AsyncOnce::new(async { aws_sdk_sqs::Client::new(AWS_CONFIG.get().await) });
+    static ref DDB_CLIENT: AsyncOnce<aws_sdk_dynamodb::Client> =
+        AsyncOnce::new(async { aws_sdk_dynamodb::Client::new(AWS_CONFIG.get().await) });
     static ref LOG_SOURCE_KEY_PREFIX_MAP: HashMap<String, (Option<String>, Option<String>, Option<String>)> =
         build_log_source_key_prefix_map();
 }
@@ -133,17 +136,50 @@ fn is_compressed(key: &str) -> bool {
     key.ends_with("gz") || key.ends_with("gzip") || key.ends_with("zst") || key.ends_with("zstd")
 }
 
+trait S3EventExt {
+    fn sequencer(&self) -> String;
+}
+impl S3EventExt for S3Event {
+    fn sequencer(&self) -> String {
+        self.records[0].s3.object.sequencer.clone().unwrap()
+    }
+}
+
 async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
     debug!("{:?}", event);
-    let s3_records = event
+    let ddb = DDB_CLIENT.get().await;
+
+    let duplicates_table_name = std::env::var("DUPLICATES_TABLE_NAME")?;
+    let s3_events = event
         .payload
         .records
         .into_iter()
-        .flat_map(|record| {
-            let body = record.body.as_ref().ok_or("SQS message body is required")?;
-            let event = serde_json::from_str::<S3Event>(&body).map_err(|e| e.to_string());
-            event
-        })
+        .flat_map(|record| serde_json::from_str::<S3Event>(record.body.as_ref()?).ok())
+        .map(|event| {
+            let table_name = duplicates_table_name.clone();
+            let msg_id = event.sequencer();
+            async move {
+                let is_dup = check_ddb_duplicate(ddb.clone(), &table_name, msg_id.clone()).await?;
+                if is_dup {
+                    info!("Duplicate event id: {}, skipping...", &msg_id);
+                }
+                anyhow::Ok((!is_dup).then_some(event))
+            }
+        });
+
+    let s3_events = try_join_all(s3_events)
+        .await?
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>();
+
+    let s3_event_ids = s3_events
+        .iter()
+        .map(|event| event.sequencer())
+        .collect::<Vec<_>>();
+
+    let s3_records = s3_events
+        .into_iter()
         .flat_map(|event| event.records)
         .collect::<Vec<_>>();
 
@@ -259,6 +295,11 @@ async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
         output_length,
         average_output_size,
     );
+
+    let completed_futs = s3_event_ids
+        .into_iter()
+        .map(|id| mark_ddb_duplicate_completed(ddb.clone(), &duplicates_table_name, id));
+    try_join_all(completed_futs).await?;
 
     Ok(())
 }
