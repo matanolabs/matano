@@ -310,7 +310,7 @@ def create_alert(alert_response):
         **{k: v for k, v in record.items() if k in ALERT_ECS_FIELDS},
         "ts": time.time(),
         "event": {
-            **record.get("event", {}),
+            **(record.get("event") or {}),
             "kind": "signal",
         },
         "matano": {
