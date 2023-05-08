@@ -13,9 +13,6 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.OutputStream
-import java.util.concurrent.SynchronousQueue
-import java.util.concurrent.ThreadPoolExecutor
-import java.util.concurrent.TimeUnit
 
 class InMemoryOutputFile : OutputFile {
     private val baos = ByteArrayOutputStream()
@@ -142,8 +139,4 @@ class ParquetIcebergOutputFile(private val file: org.apache.iceberg.io.OutputFil
 
     override fun supportsBlockSize() = false
     override fun defaultBlockSize(): Long = 0
-}
-
-fun cachedBoundedThreadPool(maxThreads: Int): ThreadPoolExecutor {
-    return ThreadPoolExecutor(0, maxThreads, 60L, TimeUnit.SECONDS, SynchronousQueue())
 }

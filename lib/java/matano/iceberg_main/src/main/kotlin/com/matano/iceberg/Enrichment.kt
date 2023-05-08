@@ -46,6 +46,8 @@ import java.io.File
 import java.time.OffsetDateTime
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 import java.util.stream.Stream
 import kotlin.coroutines.coroutineContext
 
@@ -92,7 +94,7 @@ class EnrichmentIcebergSyncer {
     }
     val enrichmentTablesBucket = System.getenv("ENRICHMENT_TABLES_BUCKET") ?: throw RuntimeException("Need enrichment bucket.")
     val mapper = jacksonObjectMapper()
-    val planExecutorService = cachedBoundedThreadPool(20)
+    val planExecutorService = Executors.newFixedThreadPool(50)
     val athenaQueryRunner = AthenaQueryRunner()
 
     fun handle(event: SQSEvent, configs: Map<String, EnrichmentConfig>) {
@@ -365,6 +367,6 @@ class EnrichmentMetadataWriter(
         return CompletableFuture.completedFuture(Unit)
     }
     companion object {
-        val executor = cachedBoundedThreadPool(15)
+        val executor: ExecutorService = Executors.newFixedThreadPool(25)
     }
 }

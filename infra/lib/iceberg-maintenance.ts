@@ -125,25 +125,82 @@ class IcebergAthenaExpireSnapshots extends Construct {
     const queryMap = new sfn.Map(this, "Query Map", {
       itemsPath: sfn.JsonPath.stringAt("$.table_names"),
       parameters: {
-        table_name: sfn.JsonPath.stringAt("$$.Map.Item.Value"),
+        "query_statement.$": "States.Format('VACUUM matano.{};', $$.Map.Item.Value)",
       },
     });
 
-    const optimizeQueryString = "VACUUM matano.{};";
-    const optimizeQueryFormatStr = `States.Format('${optimizeQueryString}', $.table_name)`;
-
-    const vacuumQuery = new tasks.AthenaStartQueryExecution(this, "Expire Snapshots (Vacuum) Query", {
+    const vacuumQuery = new tasks.AthenaStartQueryExecution(this, "Vacuum Query", {
       integrationPattern: sfn.IntegrationPattern.RUN_JOB,
-      queryString: sfn.JsonPath.stringAt(optimizeQueryFormatStr),
+      queryString: sfn.JsonPath.stringAt("$.query_statement"),
       workGroup: "matano_system_v3",
     });
 
-    queryMap.iterator(vacuumQuery);
+    const parseErrorJson = new sfn.Pass(this, "Parse Error JSON", {
+      parameters: {
+        "Cause.$": "States.StringToJson($.Cause)",
+      },
+    });
 
-    const chain = inputPass.next(queryMap);
+    const postQueryError = new sfn.Pass(this, "Post Query Error", {
+      parameters: {
+        "Cause.$": "$.Cause",
+        "query_statement.$": "$.Cause.QueryExecution.Query",
+      },
+    });
+
+    const markError = new sfn.Pass(this, "Mark Error", {
+      result: sfn.Result.fromObject({
+        error: true,
+      }),
+    });
+
+    const completeRun = new sfn.Pass(this, "Complete Run", {});
+
+    const checkError = new sfn.Choice(this, "Check if error or needs more vacuums");
+    checkError.when(
+      sfn.Condition.stringMatches(
+        "$.Cause.QueryExecution.Status.StateChangeReason",
+        "ICEBERG_VACUUM_MORE_RUNS_NEEDED*"
+      ),
+      vacuumQuery
+    );
+    checkError.otherwise(markError);
+    markError.next(completeRun);
+
+    const catchChain = parseErrorJson.next(postQueryError).next(checkError);
+
+    vacuumQuery.addCatch(catchChain, {
+      errors: ["States.TaskFailed"],
+    });
+
+    queryMap.iterator(vacuumQuery.next(completeRun));
+
+    const collectErrors = new sfn.Pass(this, "Collect Errors", {
+      parameters: {
+        "errors.$": "$.[*].error",
+      },
+    });
+
+    const checkIfErrored = new sfn.Pass(this, "Check If Errored", {
+      parameters: {
+        "error.$": "States.ArrayContains($.errors, true)",
+      },
+    });
+
+    const failIfErrored = new sfn.Choice(this, "Fail if errored");
+
+    const fail = new sfn.Fail(this, "Fail", {
+      cause: "One or more queries failed.",
+    });
+    const succeed = new sfn.Succeed(this, "Succeed");
+    failIfErrored.when(sfn.Condition.booleanEquals("$.error", true), fail);
+    failIfErrored.otherwise(succeed);
+
+    const chain = inputPass.next(queryMap).next(collectErrors).next(checkIfErrored).next(failIfErrored);
 
     const stateMachine = new sfn.StateMachine(this, "Default", {
       definition: chain,
+      timeout: cdk.Duration.hours(1),
     });
 
     stateMachine.addToRolePolicy(
@@ -247,6 +304,8 @@ class IcebergExpireSnapshots extends Construct {
   }
 }
 
+
+// TODO: probably remove this, Athena OPTIMIZE actually rewrites manifests.
 class IcebergRewriteManifests extends Construct {
   constructor(scope: Construct, id: string, props: IcebergMaintenanceProps) {
     super(scope, id);
@@ -331,11 +390,6 @@ export class IcebergMaintenance extends Construct {
     });
 
     new IcebergAthenaExpireSnapshots(this, "ExpireSnapshotsAthena", {
-      tableNames,
-      lakeStorageBucket: props.lakeStorageBucket,
-    });
-
-    new IcebergRewriteManifests(this, "RewriteManifests", {
       tableNames,
       lakeStorageBucket: props.lakeStorageBucket,
     });
