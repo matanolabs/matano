@@ -81,10 +81,12 @@ dependencies = [
  "aws-config",
  "aws-sdk-dynamodb",
  "aws-sdk-secretsmanager",
+ "aws-sdk-ses",
  "aws-sdk-sns",
  "aws-sdk-sqs",
  "aws_lambda_events",
  "base64 0.13.1",
+ "build_html",
  "bytes 1.2.1",
  "chrono",
  "futures",
@@ -749,6 +751,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "aws-sdk-ses"
+version = "0.24.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ce3a19a515843839876a1496417286f3e72cccc20702d412bd61279c057db1db"
+dependencies = [
+ "aws-credential-types",
+ "aws-endpoint",
+ "aws-http",
+ "aws-sig-auth",
+ "aws-smithy-async",
+ "aws-smithy-client",
+ "aws-smithy-http",
+ "aws-smithy-http-tower",
+ "aws-smithy-json",
+ "aws-smithy-query",
+ "aws-smithy-types",
+ "aws-smithy-xml",
+ "aws-types",
+ "bytes 1.2.1",
+ "http",
+ "regex",
+ "tokio-stream",
+ "tower",
+]
+
+[[package]]
 name = "aws-sdk-sns"
 version = "0.24.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1200,6 +1228,12 @@ dependencies = [
  "regex-automata",
  "serde",
 ]
+
+[[package]]
+name = "build_html"
+version = "2.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3108fe6fe7ac796fb7625bdde8fa2b67b5a7731496251ca57c7b8cadd78a16a1"
 
 [[package]]
 name = "bumpalo"
