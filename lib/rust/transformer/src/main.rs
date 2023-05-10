@@ -20,6 +20,7 @@ use std::io::Write;
 use std::path::Path;
 use std::pin::Pin;
 use std::sync::Arc;
+use std::sync::Mutex;
 use std::time::Instant;
 use tokio::fs;
 use tokio::io::AsyncBufReadExt;
@@ -57,7 +58,12 @@ use async_once::AsyncOnce;
 use lazy_static::lazy_static;
 
 use ::value::{Secrets, Value};
-use aws_config::SdkConfig;
+use aws_config::{
+    SdkConfig
+};
+use aws_types::{region::Region};
+use aws_config::sts::{AssumeRoleProvider};
+use aws_config::environment::credentials::EnvironmentVariableCredentialsProvider;
 use aws_lambda_events::event::sqs::{SqsEvent, SqsMessage};
 use lambda_runtime::{run, service_fn, Context, Error as LambdaError, LambdaEvent};
 use log::{debug, error, info, log_enabled, warn};
@@ -86,6 +92,57 @@ lazy_static! {
         }
         m
     };
+    static ref CUSTOM_BUCKET_TO_ACCESS_ROLE_ARN_MAP: HashMap<String, String> = serde_json::from_str(&var("CUSTOM_BUCKET_TO_ACCESS_ROLE_ARN_MAP").unwrap()).unwrap();
+    static ref CUSTOM_BUCKET_TO_REGION_CACHE: Mutex<HashMap<String, Region>> =  Mutex::new(HashMap::new());
+    // cache of (role_arn, region) -> client
+    static ref CUSTOM_ROLE_REGIONAL_S3_CLIENT_CACHE: Mutex<HashMap<(String, String), aws_sdk_s3::Client>> = {
+        Mutex::new(HashMap::new())
+    };
+}
+
+async fn get_s3_client_using_access_role_cached(bucket: &str) -> aws_sdk_s3::Client {
+    if let Some(access_role_arn) = CUSTOM_BUCKET_TO_ACCESS_ROLE_ARN_MAP.get(bucket) {
+        let mut custom_bucket_to_region_cache = CUSTOM_BUCKET_TO_REGION_CACHE.lock().unwrap();
+        let bucket_region = match custom_bucket_to_region_cache.get(bucket) {
+            Some(region) => region,
+            None => {
+                let provider = AssumeRoleProvider::builder(access_role_arn)
+                    .region(aws_sdk_s3::Region::new("us-east-1"))
+                    .session_name("matano").build(Arc::new(EnvironmentVariableCredentialsProvider::new()) as Arc<_>);
+                let config = aws_sdk_s3::Config::builder()
+                    .credentials_provider(provider)
+                    .region(aws_sdk_s3::Region::new("us-east-1"))
+                    .build();
+                let s3 = aws_sdk_s3::client::Client::from_conf(config);
+                let location_constraint = s3.get_bucket_location().bucket(bucket).send().await.unwrap().location_constraint;
+                let region = match location_constraint {
+                    Some(location_constraint) => Region::new(location_constraint.as_str().to_owned()),
+                    None => Region::new("us-east-1"),
+                };
+                custom_bucket_to_region_cache.insert(bucket.to_string(), region);
+                custom_bucket_to_region_cache.get(bucket).unwrap()
+            }
+        };
+
+        let mut custom_role_regional_s3_client_cache = CUSTOM_ROLE_REGIONAL_S3_CLIENT_CACHE.lock().unwrap();
+
+        // get the client from the regional (role_arn, region) cache, or create a new one
+        let region = bucket_region.as_ref().to_owned();
+
+        let lookup = (access_role_arn.to_string(),region.clone());
+        custom_role_regional_s3_client_cache.entry(lookup.clone()).or_insert_with(|| {
+                let provider = AssumeRoleProvider::builder(access_role_arn)
+                    .region(aws_sdk_s3::Region::new(region.clone()))
+                    .session_name("matano").build(Arc::new(EnvironmentVariableCredentialsProvider::new()) as Arc<_>);
+                let config = aws_sdk_s3::Config::builder().credentials_provider(provider)
+                    .region(aws_sdk_s3::Region::new(region))
+                    .build();
+                aws_sdk_s3::Client::from_conf(config)
+        });
+        let client = custom_role_regional_s3_client_cache.get(&lookup).unwrap();
+        return client.clone();
+    }
+    S3_CLIENT.get().await.clone()
 }
 
 /// Compression schemes supported by Matano for log sources
@@ -275,7 +332,6 @@ fn format_transform_expr(transform_expr: &str, is_passthrough: bool) -> String {
 }
 
 async fn read_events_s3<'a>(
-    s3: &aws_sdk_s3::Client,
     r: &DataBatcherOutputRecord,
     log_source: &String,
 ) -> Result<
@@ -284,6 +340,8 @@ async fn read_events_s3<'a>(
         Pin<Box<dyn Stream<Item = Result<Value>> + Send>>,
     )>,
 > {
+    let s3 = get_s3_client_using_access_role_cached(&r.bucket).await;
+
     let dec_key = decode(&r.key.clone())?.into_owned();
 
     let res = s3
@@ -641,7 +699,7 @@ pub(crate) async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
             let item_copy = item.clone();
 
             async move {
-                let events = read_events_s3(s3, &item, &log_source).await?;
+                let events = read_events_s3(&item, &log_source).await?;
                 if events.is_none() {
                     info!("Skipped S3 object: {}", item.key);
                     return Ok(None);

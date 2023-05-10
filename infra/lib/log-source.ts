@@ -75,6 +75,8 @@ export interface LogSourceConfig {
       bucket_name?: string;
       key_prefix?: string;
       key_pattern?: string;
+      access_role_arn?: string;
+      update?: string;
     };
     sqs_source?: {
       enabled?: boolean;
@@ -122,6 +124,7 @@ const MANAGED_LOG_SOURCE_PREFIX_MAP: Record<string, string> = {
   gcp_audit: "gcp_audit",
   github_audit: "github",
   okta: "okta",
+  panw: "panw",
   snyk: "snyk",
   suricata: "suricata",
   zeek: "zeek",

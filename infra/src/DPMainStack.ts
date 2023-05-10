@@ -133,10 +133,27 @@ export class DPMainStack extends MatanoStack {
     });
     logSources.push(matanoAlertsSource);
 
+
+    // TODO(shaeq) - use one queue across custom bucket(s) + managed bucket but currently this causes cyclic dep as matano ingest bucket & its queue are in common stack, yet need to update queue permissions from here
+    // to allow for custom bucket's sns to send messages to our queue
+    const customSourcesDlq = new sqs.Queue(this, "CustomSourcesDlq", {
+    });
+    const customSourcesQueue = new sqs.Queue(this, "CustomSourcesQueue", {
+      visibilityTimeout: cdk.Duration.minutes(15),
+      deadLetterQueue: {
+        queue: customSourcesDlq,
+        maxReceiveCount: 3,
+      },
+    });
     const customS3Sources = new MatanoS3Sources(this, "CustomIngestionLogSources", {
       logSources: logSources.filter((ls) => ls.isDataLogSource),
+      // kept for backwards compatibility to BYO log sources setup w/o access roles using the original bucket queue
       sourcesIngestionTopic: props.matanoSourcesBucket.topic,
+      sourcesIngestionQueue: customSourcesQueue,
     });
+    const customBucketToAccessRoleArnMap = JSON.stringify(Object.fromEntries(
+      customS3Sources.finalCustomSources.map((s) => [s.bucket_name, s.access_role_arn]).filter((s) => s[1])
+    ));
 
     const icebergMetadata = new IcebergMetadata(this, "IcebergMetadata", {
       lakeStorageBucket: props.lakeStorageBucket,
@@ -207,6 +224,7 @@ export class DPMainStack extends MatanoStack {
       sidelineBucket: props.transformerSidelineBucket,
       logSourcesConfigurationPath: path.join(this.configTempDir, "config"), // TODO: weird fix later (@shaeq)
       sqsMetadata: sqsSources.sqsMetadata,
+      customBucketToAccessRoleArnMap,
     });
     transformer.node.addDependency(sqsSources);
 
@@ -222,6 +240,7 @@ export class DPMainStack extends MatanoStack {
       duplicatesTable: mainDuplicatesTable,
       transformerFunction: transformer.transformerLambda,
       s3Bucket: props.matanoSourcesBucket,
+      customBucketsQueue: customSourcesQueue,
     });
 
     for (const sqsSource of sqsSources.ingestionQueues) {
