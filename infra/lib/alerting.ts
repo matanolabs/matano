@@ -80,6 +80,10 @@ export class AlertForwarder extends Construct {
           actions: ["secretsmanager:GetSecretValue"],
           resources: Object.values(destinationToSecretArnMap),
         }),
+        new iam.PolicyStatement({
+          actions: ["ses:SendEmail", "ses:SendRawEmail"],
+          resources: ["*"],
+        }),
       ],
     });
     props.alertTrackerTable.grantReadWriteData(this.function);
