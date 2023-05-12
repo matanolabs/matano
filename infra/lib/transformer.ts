@@ -14,6 +14,7 @@ interface TransformerProps {
   matanoSourcesBucket: s3.IBucket;
   logSourcesConfigurationPath: string;
   sqsMetadata: string;
+  customBucketToAccessRoleArnMap: string;
 }
 
 export class Transformer extends Construct {
@@ -40,6 +41,7 @@ export class Transformer extends Construct {
         MATANO_REALTIME_BUCKET_NAME: props.realtimeBucket.bucketName,
         MATANO_REALTIME_TOPIC_ARN: props.realtimeTopic.topicArn,
         SQS_METADATA: props.sqsMetadata,
+        CUSTOM_BUCKET_TO_ACCESS_ROLE_ARN_MAP: props.customBucketToAccessRoleArnMap,
         MATANO_SIDELINE_BUCKET: props.sidelineBucket.bucketName,
       },
       layers: [this.rustFunctionLayer.layer],
