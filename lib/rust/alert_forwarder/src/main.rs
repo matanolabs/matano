@@ -34,6 +34,9 @@ use vrl::{state, value};
 pub mod slack;
 use slack::publish_alert_to_slack;
 
+pub mod ses;
+use ses::publish_alert_to_ses;
+
 #[global_allocator]
 static ALLOC: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
@@ -44,6 +47,8 @@ lazy_static! {
         AsyncOnce::new(async { aws_sdk_sqs::Client::new(AWS_CONFIG.get().await) });
     static ref SNS_CLIENT: AsyncOnce<aws_sdk_sns::Client> =
         AsyncOnce::new(async { aws_sdk_sns::Client::new(AWS_CONFIG.get().await) });
+    static ref SES_CLIENT: AsyncOnce<aws_sdk_ses::Client> =
+        AsyncOnce::new(async { aws_sdk_ses::Client::new(AWS_CONFIG.get().await) });
     static ref DYNAMODB_CLIENT: AsyncOnce<aws_sdk_dynamodb::Client> =
         AsyncOnce::new(async { aws_sdk_dynamodb::Client::new(AWS_CONFIG.get().await) });
     static ref DESTINATION_TO_CONFIGURATION_MAP: HashMap<String, serde_json::Value> = {
@@ -181,6 +186,25 @@ async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
                         dest_name,
                         channel,
                         client_id,
+                    )
+                    .await
+                    .unwrap();
+
+                    updated_alert
+                        .destination_to_alert_info
+                        .entry(destination.to_string())
+                        .or_insert(res);
+                }
+
+                if dest_type == "ses" {
+                    println!("sending ses email");
+                    let from = dest_config["properties"]["from"].as_str().unwrap();
+                    let to = dest_config["properties"]["to"].as_array().unwrap();
+                    let res = publish_alert_to_ses(
+                        &mut alert_cdc_payload, 
+                        SES_CLIENT.get().await, 
+                        from,
+                        to,
                     )
                     .await
                     .unwrap();
