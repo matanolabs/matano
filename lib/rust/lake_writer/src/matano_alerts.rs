@@ -27,72 +27,16 @@ use std::{
     env::var,
     io::Write,
     path::Path,
-    sync::Arc,
+    sync::{Arc, Mutex},
     time::Instant,
     vec,
 };
-use tokio::fs;
-use tokio::task::spawn_blocking;
 
+use shared::alert_util::RULE_MATCHES_GROUP_ID;
+use shared::alert_util::{encode_alerts_for_publish, ChunkExt};
 use shared::avro::AvroValueExt;
 
 use base64::encode;
-use std::mem;
-struct ByteArrayChunker<I: Iterator> {
-    iter: I,
-    chunk: Vec<I::Item>,
-    max_total_size: usize,
-    total_size: usize,
-}
-
-impl<I> Iterator for ByteArrayChunker<I>
-where
-    I: Iterator,
-    I::Item: AsRef<Vec<u8>>,
-{
-    type Item = Vec<I::Item>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        loop {
-            match self.iter.next() {
-                Some(item) => {
-                    let item_size = item.as_ref().len();
-                    let mut ret: Option<Self::Item> = None;
-                    if self.total_size + item_size > self.max_total_size {
-                        self.total_size = 0;
-                        ret = Some(mem::take(&mut self.chunk));
-                    }
-                    self.chunk.push(item);
-                    self.total_size += item_size;
-
-                    if let Some(_) = ret {
-                        return ret;
-                    }
-                }
-                None => {
-                    return if self.chunk.is_empty() {
-                        None
-                    } else {
-                        Some(mem::take(&mut self.chunk))
-                    }
-                }
-            }
-        }
-    }
-}
-
-trait ChunkExt: Iterator + Sized {
-    fn chunks_total_size(self, max_total_size: usize) -> ByteArrayChunker<Self> {
-        ByteArrayChunker {
-            iter: self,
-            chunk: Vec::new(),
-            max_total_size: max_total_size,
-            total_size: 0,
-        }
-    }
-}
-
-impl<I: Iterator + Sized> ChunkExt for I {}
 
 lazy_static! {
     static ref ALERTS_AVRO_SCHEMA: apache_avro::Schema = get_alerts_avro_schema().unwrap();
@@ -335,7 +279,8 @@ pub async fn process_alerts(s3: aws_sdk_s3::Client, data: Vec<Vec<u8>>) -> Resul
         let created_av = match new_alert_data.created_micros {
             Some(created_micros) => apache_avro::types::Value::TimestampMicros(created_micros),
             None => apache_avro::types::Value::Null,
-        }.into_union();
+        }
+        .into_union();
         new_value_mut.insert_record_nested("matano.alert.created", created_av)?;
 
         if is_activated {
@@ -460,21 +405,25 @@ pub async fn process_alerts(s3: aws_sdk_s3::Client, data: Vec<Vec<u8>>) -> Resul
                 field,
                 arrays,
             );
-
             let join_handle = tokio::spawn(fut);
             upload_join_handles.push(join_handle);
-
             old_key
         })
         .collect::<Vec<_>>();
-    debug!("Time to write Parquet: {:?}", st11.elapsed());
+    info!("Time to write Parquet: {:?}", st11.elapsed());
 
+    drop(existing_aggregation_map);
+    drop(new_value_agg);
+
+    let st = std::time::Instant::now();
+    info!("Waiting for Parquet uploads to finish...");
     let written_keys = join_all(upload_join_handles)
         .await
         .into_iter()
         .collect::<Result<Vec<_>, _>>()?
         .into_iter()
         .collect::<Result<Vec<_>, _>>()?;
+    info!("Parquet uploads finished in: {:?}", st.elapsed());
 
     let commit_req_items = final_data
         .into_iter()
@@ -492,63 +441,43 @@ pub async fn process_alerts(s3: aws_sdk_s3::Client, data: Vec<Vec<u8>>) -> Resul
     info!("Doing Iceberg commit...");
     let st11 = std::time::Instant::now();
     do_iceberg_commit(commit_req_items).await?;
-    info!("**************** Time to do commit: {:?}", st11.elapsed());
+    info!("Completed Iceberg commit in: {:?}", st11.elapsed());
+
+    debug!("Delivering alerts: {:?}", alerts_to_deliver);
 
     // TODO: reduce intermediate byte vec allocations
     let alerts_to_deliver = alerts_to_deliver
         .as_object()
-        .unwrap()
-        .values()
-        .par_bridge()
-        .into_par_iter()
-        .map(|v| {
-            let mut bytes_v = v.to_string().into_bytes();
-            bytes_v.push(b'\n');
-            bytes_v
-        })
-        .collect::<Vec<_>>();
+        .context("alerts_to_deliver is not an object")?
+        .values();
+
+    let alerts_len = alerts_to_deliver.len();
+    // TODO: could probably avoid this earlier.
+    let alerts_to_deliver = alerts_to_deliver.filter(|v| {
+        v.as_object()
+            .and_then(|o| o.get("rule_matches")?.get("new"))
+            .is_some()
+    });
+
     info!(
         "Delivering {} alerts that contained new rule matches...",
-        alerts_to_deliver.len()
+        alerts_len
     );
-    debug!("Delivering alerts: {:?}", alerts_to_deliver);
-    // TODO(shaeq): handle case if >256kb compressed new rule matches for a single alert..
-    let alerts_to_deliver_chunks = alerts_to_deliver
-        .into_iter()
-        .chunks_total_size(256 * 1024)
-        .collect::<Vec<_>>();
-    let alerts_to_deliver_compressed_chunks = alerts_to_deliver_chunks
-        .into_par_iter()
-        .map(|c| {
-            let mut encoder = zstd::Encoder::new(Vec::new(), 1).unwrap();
-            for l in c {
-                encoder.write_all(&l).unwrap();
-            }
-            encoder.finish().unwrap()
-        })
-        .collect::<Vec<_>>()
-        .into_iter()
-        .chunks_total_size(192 * 1024)
-        .map(|c| encode(c.into_iter().flatten().collect::<Vec<_>>()))
-        .collect::<Vec<_>>();
+    let alerts_to_deliver_compressed_chunks = encode_alerts_for_publish(alerts_to_deliver)?;
 
     let sns = SNS_CLIENT.get().await;
 
+    let rule_matches_sns_topic_arn =
+        var("RULE_MATCHES_SNS_TOPIC_ARN").context("missing rule matches topic")?;
     let alert_futures = alerts_to_deliver_compressed_chunks.into_iter().map(|s| {
         sns.publish()
-            .topic_arn(var("RULE_MATCHES_SNS_TOPIC_ARN").unwrap().to_string())
+            .topic_arn(rule_matches_sns_topic_arn.clone())
+            .message_group_id(RULE_MATCHES_GROUP_ID)
             .message(s)
-            .message_attributes(
-                "destination",
-                MessageAttributeValue::builder()
-                    .data_type("String".to_string())
-                    .string_value("slack")
-                    .build(),
-            )
             .send()
     });
 
-    let res = try_join_all(alert_futures).await?;
+    try_join_all(alert_futures).await?;
 
     Ok(())
 }
@@ -697,7 +626,7 @@ async fn get_existing_values(
 
     let s1 = Instant::now();
     let readers = readers.map(arrow_arrow2_parquet);
-    debug!("Arrow parquet re serialization took: {:?}", s1.elapsed());
+    info!("Arrow parquet re serialization took: {:?}", s1.elapsed());
 
     use arrow2::io::parquet::read;
 
@@ -752,7 +681,7 @@ async fn get_existing_values(
         .zip(final_values.into_iter())
         .collect::<Vec<_>>();
 
-    debug!("Time to Load existing values: {:?}", st11.elapsed());
+    info!("Time to Load existing values: {:?}", st11.elapsed());
     Ok(ret)
 }
 
@@ -801,7 +730,7 @@ async fn get_iceberg_read_files() -> Result<Vec<(String, String)>> {
 
     let func_resp = call_helper_lambda(payload).await?;
 
-    let func_resp_payload = func_resp.expect("Read files Function didn't return payload!");
+    let func_resp_payload = func_resp.context("Read files Function didn't return payload!")?;
     let read_files: Vec<String> = serde_json::from_slice(func_resp_payload.as_slice())?;
     let read_files = read_files.into_iter().map(parse_s3_uri).collect::<Vec<_>>();
 

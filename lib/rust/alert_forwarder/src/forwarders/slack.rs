@@ -6,6 +6,43 @@ use serde_json::json;
 use shared::vrl_util::vrl;
 use std::collections::HashMap;
 
+use async_trait::async_trait;
+
+use super::SendAlert;
+
+#[derive(Clone)]
+pub struct SlackForwarder {}
+
+#[async_trait]
+
+impl SendAlert for SlackForwarder {
+    async fn send_alert(
+        self,
+        alert_payload: AlertCDCPayload,
+        destination_name: String,
+        config: serde_json::Value,
+        dest_info: Option<serde_json::Value>,
+    ) -> Result<serde_json::Value> {
+        let mut alert_payload = alert_payload.clone();
+        let channel = config["properties"]["channel"]
+            .as_str()
+            .context("channel not found")?;
+        let client_id = config["properties"]["client_id"]
+            .as_str()
+            .context("client_id not found")?;
+
+        let res = publish_alert_to_slack(
+            &mut alert_payload,
+            &destination_name,
+            dest_info,
+            channel,
+            client_id,
+        )
+        .await?;
+        Ok(res)
+    }
+}
+
 // Slack formatting helpers
 const CONTEXT_TO_STR_FMT: &str = r#"
 key_to_label = {
@@ -68,7 +105,6 @@ async fn post(api_token: &str, body: HashMap<&str, &str>, uri: &str) -> Result<s
         .await?;
     let text = client.text().await?;
     let v: serde_json::Value = text.parse()?;
-    println!("{}", serde_json::to_string_pretty(&v)?);
     Ok(v)
 }
 
@@ -130,13 +166,14 @@ pub async fn add_reaction(
 pub async fn publish_alert_to_slack(
     alert_payload: &mut AlertCDCPayload,
     dest_name: &str,
+    existing_dest_info: Option<serde_json::Value>,
     channel: &str,
     client_id: &str,
 ) -> Result<serde_json::Value> {
+    info!("Publishing alert to slack...");
     let api_token = &get_secret_for_destination(dest_name).await?["bot_user_oauth_token"];
 
     let mut res = json!(null);
-
     let alert = &alert_payload.updated_alert;
 
     let alert_title = &alert.title;
@@ -149,10 +186,10 @@ pub async fn publish_alert_to_slack(
     };
 
     if alert.update_count > 0 {
-        println!("existing alert");
+        info!("Slack: processing existing alert");
 
-        let existing_dest_info = alert.destination_to_alert_info.get(dest_name).unwrap();
-        let thread_ts = existing_dest_info["ts"].as_str().unwrap();
+        let existing_dest_info = existing_dest_info.context("no existing_dest_info")?;
+        let thread_ts = existing_dest_info["ts"].as_str().context("no thread_ts")?;
 
         let mut context_diff_fmt = vrl(CONTEXT_TO_STR_FMT, &mut alert_payload.context_diff)?.0;
 
@@ -160,8 +197,9 @@ pub async fn publish_alert_to_slack(
         let new_context_strs = match new_context_strs {
             Value::Object(context_strs) => context_strs
                 .into_values()
-                .map(|v| v.as_str().unwrap().to_string())
-                .collect::<Vec<String>>(),
+                .map(|v| v.as_str().map(|s| s.to_string()))
+                .collect::<Option<Vec<_>>>()
+                .context("new_context_strs")?,
             _ => vec![],
         };
         // let new_context_values = vrl(".values || {}", &mut new_context)?.0;
@@ -181,8 +219,10 @@ pub async fn publish_alert_to_slack(
             }
         ]);
 
+        let blocks_mut = blocks.as_array_mut().context("blocks")?;
+
         if new_context_strs.len() > 0 {
-            blocks.as_array_mut().unwrap().insert(
+            blocks_mut.insert(
                 2,
                 json!({
                     "type": "section",
@@ -192,7 +232,7 @@ pub async fn publish_alert_to_slack(
                     },
                 }),
             );
-            blocks.as_array_mut().unwrap().insert(
+            blocks_mut.insert(
                 3,
                 json!({
                     "type": "context",
@@ -205,7 +245,7 @@ pub async fn publish_alert_to_slack(
                 }),
             );
         } else {
-            blocks.as_array_mut().unwrap().insert(
+            blocks_mut.insert(
                 2,
                 json!({
                     "type": "context",
@@ -219,23 +259,21 @@ pub async fn publish_alert_to_slack(
             );
         }
 
-        let blocks_str = serde_json::to_string(&blocks).unwrap();
-
-        println!("{}", blocks.to_string());
+        let blocks_str = serde_json::to_string(&blocks).context("blocks_str")?;
 
         res = post_message_to_thread(api_token, channel, thread_ts, &blocks_str).await?;
 
-        if !res["ok"].as_bool().unwrap() {
+        if !res["ok"].as_bool().context("no ok")? {
             return Err(anyhow!(
                 "Failed to publish alert context to Slack: {}",
-                res["error"].as_str().unwrap()
+                res["error"].as_str().unwrap_or_default()
             ));
         }
     } else {
         let alert_creation_time_str = format!(
             "<!date^{}^{{date_long_pretty}} {{time}} (local time)|{}> ",
-            alert.creation_time.timestamp(),
-            alert.creation_time.to_rfc2822()
+            alert.activated_creation_time().timestamp(),
+            alert.activated_creation_time().to_rfc2822()
         );
 
         let mut context_fmt = vrl(
@@ -248,8 +286,9 @@ pub async fn publish_alert_to_slack(
         let related_strs = match related_strs {
             Value::Object(related_strs) => related_strs
                 .into_values()
-                .map(|v| v.as_str().unwrap().to_string())
-                .collect::<Vec<String>>(),
+                .map(|v| v.as_str().map(|s| s.to_string()))
+                .collect::<Option<Vec<_>>>()
+                .context("related_strs")?,
             _ => vec![],
         };
         let context_values = vrl(".values", &mut context_fmt)?.0;
@@ -258,8 +297,9 @@ pub async fn publish_alert_to_slack(
         let context_strs = match context_strs {
             Value::Object(context_strs) => context_strs
                 .into_values()
-                .map(|v| v.as_str().unwrap().to_string())
-                .collect::<Vec<String>>(),
+                .map(|v| v.as_str().map(|s| s.to_string()))
+                .collect::<Option<Vec<_>>>()
+                .context("context_strs")?,
             _ => vec![],
         };
 
@@ -335,18 +375,17 @@ pub async fn publish_alert_to_slack(
                 },
         ]);
 
+        let blocks_mut = blocks.as_array_mut().context("blocks")?;
         if related_strs.len() > 0 {
-            blocks.as_array_mut().unwrap().push(
-                json!({
-                    "type": "context",
-                    "elements": [
-                        {
-                            "type": "mrkdwn",
-                            "text": related_strs.join("\n\n")
-                        }
-                    ]
-                }),
-            );
+            blocks_mut.push(json!({
+                "type": "context",
+                "elements": [
+                    {
+                        "type": "mrkdwn",
+                        "text": related_strs.join("\n\n")
+                    }
+                ]
+            }));
         }
 
         let mut alert_false_positives_value: Value = alert.false_positives.clone().into();
@@ -367,7 +406,7 @@ pub async fn publish_alert_to_slack(
         .to_string();
 
         if alert_false_positives_str != "" {
-            blocks.as_array_mut().unwrap().insert(
+            blocks_mut.insert(
                 5,
                 json!({
                     "type": "context",
@@ -381,21 +420,25 @@ pub async fn publish_alert_to_slack(
             );
         }
 
-        let blocks_str = serde_json::to_string(&blocks).unwrap();
-
-        println!("{}", blocks.to_string());
+        let blocks_str = serde_json::to_string(&blocks).context("blocks_str")?;
 
         res = post_message(api_token, channel, &blocks_str).await?;
 
-        if !res["ok"].as_bool().unwrap() {
+        if !res["ok"].as_bool().context("ok")? {
             return Err(anyhow!(
                 "Failed to publish alert to Slack: {}",
-                res["error"].as_str().unwrap()
+                res["error"].as_str().unwrap_or_default()
             ));
         }
 
-        let context_values_json: serde_json::Value = alert.context.to_owned().try_into().unwrap();
-        let context_values_json_str = serde_json::to_string_pretty(&context_values_json).unwrap();
+        let context_values_json: serde_json::Value = alert
+            .context
+            .to_owned()
+            .try_into()
+            .map_err(|_| anyhow!("alert_context"))
+            .context("")?;
+        let context_values_json_str = serde_json::to_string_pretty(&context_values_json)
+            .context("context_values_json_str")?;
 
         let blocks = json!([
                 {
@@ -420,18 +463,20 @@ pub async fn publish_alert_to_slack(
                 }
         ]);
 
-        let blocks_str = serde_json::to_string(&blocks).unwrap();
+        let blocks_str = serde_json::to_string(&blocks).context("blocks_str")?;
 
-        println!("{}", blocks.to_string());
+        let res2 = post_message_to_thread(
+            api_token,
+            channel,
+            res["ts"].as_str().context("ts")?,
+            &blocks_str,
+        )
+        .await?;
 
-        let res2 =
-            post_message_to_thread(api_token, channel, res["ts"].as_str().unwrap(), &blocks_str)
-                .await?;
-
-        if !res2["ok"].as_bool().unwrap() {
+        if !res2["ok"].as_bool().context("ok")? {
             return Err(anyhow!(
                 "Failed to publish alert context to Slack: {}",
-                res2["error"].as_str().unwrap()
+                res2["error"].as_str().unwrap_or_default()
             ));
         }
     }

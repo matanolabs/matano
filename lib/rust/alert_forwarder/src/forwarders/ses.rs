@@ -1,12 +1,43 @@
-use crate::{AlertCDCPayload, Alert};
-use aws_sdk_ses::{Client, model::{Destination, Content, Message, Body}};
-use build_html::HtmlContainer;
+use crate::{Alert, AlertCDCPayload, SES_CLIENT};
 use ::value::Value;
-use anyhow::{Error, Ok, Result};
+use anyhow::{Context, Error, Ok, Result};
+use async_trait::async_trait;
+use aws_sdk_ses::{
+    types::{Body, Content, Destination, Message},
+    Client,
+};
+use build_html::HtmlContainer;
+use build_html::*;
 use log::{debug, error, info};
 use serde_json::json;
 use shared::vrl_util::vrl;
-use build_html::*;
+
+use super::SendAlert;
+
+#[derive(Clone)]
+pub struct SesEmailForwarder {}
+
+#[async_trait]
+impl SendAlert for SesEmailForwarder {
+    async fn send_alert(
+        self,
+        alert_payload: AlertCDCPayload,
+        destination_name: String,
+        config: serde_json::Value,
+        dest_info: Option<serde_json::Value>,
+    ) -> Result<serde_json::Value> {
+        let from = config["properties"]["from"]
+            .as_str()
+            .context("from field missing")?;
+        let to = config["properties"]["to"]
+            .as_array()
+            .context("to field missing")?;
+
+        let ses = SES_CLIENT.get().await.clone();
+        let res = publish_alert_to_ses(alert_payload, ses, from, to).await?;
+        Ok(res)
+    }
+}
 
 const CONTEXT_TO_STR_FMT: &str = r#"
 key_to_label = {
@@ -60,7 +91,7 @@ ret
 "#;
 
 async fn send_message(
-    client: &Client,
+    client: Client,
     from: &str,
     to: Option<Vec<String>>,
     subject: &String,
@@ -68,7 +99,10 @@ async fn send_message(
 ) -> Result<serde_json::Value, Error> {
     let dest = Destination::builder().set_to_addresses(to).build();
     let subject_content = Content::builder().data(subject).charset("UTF-8").build();
-    let body_content = Content::builder().data(html_message).charset("UTF-8").build();
+    let body_content = Content::builder()
+        .data(html_message)
+        .charset("UTF-8")
+        .build();
     let body: Body = Body::builder().set_html(Some(body_content)).build();
 
     let msg = Message::builder()
@@ -91,30 +125,27 @@ async fn send_message(
 
 // Main SES alert publishing function
 pub async fn publish_alert_to_ses(
-    alert_payload: &mut AlertCDCPayload,
-    client: &Client,
+    alert_payload: AlertCDCPayload,
+    client: Client,
     from: &str,
     to: &Vec<serde_json::Value>,
 ) -> Result<serde_json::Value> {
-
     let mut res = json!(null);
+    let mut alert_payload = alert_payload.clone();
 
     let alert = &alert_payload.updated_alert;
 
     // Only send an alert if one has not already been sent to minimize email noise
     if alert.update_count == 0 {
-
         let alert_title = &alert.title;
         let alert_runbook = &alert.runbook;
-        let alert_creation_time_str = format!(
-            "{}",
-            alert.creation_time.to_rfc3339()
-        );
+        let alert_creation_time_str = format!("{}", alert.activated_creation_time().to_rfc3339());
 
-        let recipients: Vec<String> = to.iter()
-        .filter_map(|c| c.as_str())
-        .map(|s| s.to_owned())
-        .collect();
+        let recipients: Vec<String> = to
+            .iter()
+            .filter_map(|c| c.as_str())
+            .map(|s| s.to_owned())
+            .collect();
 
         let mut context_fmt = vrl(
             CONTEXT_TO_STR_FMT,
@@ -144,14 +175,7 @@ pub async fn publish_alert_to_ses(
         .with_paragraph(related_strs.join(" <br />"))
         .to_html_string();
 
-        res = send_message(
-            client, 
-            from, 
-            Some(recipients), 
-            &alert.title, 
-            html_message
-        ).await?;
-
+        res = send_message(client, from, Some(recipients), &alert.title, html_message).await?;
     }
 
     Ok(res)

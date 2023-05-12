@@ -114,7 +114,8 @@ export class FriendlyNamingAspect implements cdk.IAspect {
         nodeRef[fieldName] != null && isWritable(nodeRef, fieldName) && isTarget(nodeRef[fieldName]);
       const targetField = [nameField, privateNameField, defaultNameField].find(isMatch);
       if (targetField == null) {
-        throw new Error(`Couldn't find writable name field for ${node.node.path} (${resourceTypeFullName})`);
+        return;
+        // throw new Error(`Couldn't find writable name field for ${node.node.path} (${resourceTypeFullName})`);
       }
       nodeRef[targetField] = rename(node, nodeRef[targetField], resourceTypeFullName);
     }

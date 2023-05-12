@@ -5,6 +5,7 @@ members = [
   "data_batcher",
   "shared",
   "log_puller",
+  "alert_writer",
   "alert_forwarder",
   "detection_lib",
 ]

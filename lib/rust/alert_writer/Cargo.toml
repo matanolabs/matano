@@ -1,9 +1,10 @@
 [package]
-name = "alert_forwarder"
+name = "alert_writer"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+rand = "0.8.4"
 shared = { path = "../shared" }
 anyhow = "1.0.53"
 tokio = { version = "1.17.0", features = ["full"] }
@@ -31,7 +32,7 @@ lambda_runtime = "0.7.0"
 aws-config = "0.55"
 aws_lambda_events = "0.7.2"
 aws-sdk-sqs = "0.25.0"
-aws-sdk-ses = "0.25.0"
+aws-sdk-sns = "0.25.0"
 aws-sdk-dynamodb = "0.25.0"
 serde_dynamo = { version = "4.2.1", features = ["aws-sdk-dynamodb+0_25"] }
 
@@ -43,7 +44,6 @@ enum_dispatch = "0.3.8"
 uuid = { version = "1.1.2", features = ["v4"] }
 walkdir = "2.3.2"
 tikv-jemallocator = { version = "0.5.0" }
-build_html = "2.4.0"
 
 async-compression = { version = "0.3.14", default-features = false, features = [
   "tokio",

@@ -1,4 +1,5 @@
 use crate::avro::AvroValueExt;
+use crate::ArcMutexExt;
 use apache_avro::from_avro_datum;
 use log::info;
 use memmap2::{Mmap, MmapOptions};
@@ -70,9 +71,7 @@ impl AvroIndex {
         let avro_reader = apache_avro::Reader::new(reader_holder)?;
         let schema = avro_reader.writer_schema().clone();
 
-        let mem_cursor = Arc::try_unwrap(reader)
-            .map_err(|e| anyhow!("Could not unwrap Arc: {:?}", e))?
-            .into_inner()?;
+        let mem_cursor = reader.try_unwrap_arc_mutex()?;
 
         let mem = mem_cursor.into_inner();
 

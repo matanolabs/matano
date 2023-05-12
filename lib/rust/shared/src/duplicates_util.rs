@@ -1,11 +1,7 @@
 use std::time::SystemTime;
 
 use anyhow::Result;
-use aws_sdk_dynamodb::{
-    error::{UpdateItemError, UpdateItemErrorKind},
-    model::AttributeValue,
-    Client,
-};
+use aws_sdk_dynamodb::{operation::update_item::UpdateItemError, types::AttributeValue, Client};
 
 const DDB_DUPLICATES_ITEM_EXPIRE_SECONDS: u64 = 1 * 24 * 60 * 60;
 
@@ -36,8 +32,8 @@ pub async fn check_ddb_duplicate(
         Ok(_) => Ok(false),
         Err(e) => {
             let se = e.into_service_error();
-            match se.kind {
-                UpdateItemErrorKind::ConditionalCheckFailedException(_) => Ok(true),
+            match se {
+                UpdateItemError::ConditionalCheckFailedException(_) => Ok(true),
                 _ => Err(se),
             }
         }

@@ -263,12 +263,8 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<Option<SQ
             matano_alerts::process_alerts(s3.clone(), alert_blocks).await?;
         }
     } else {
-        let partition_hour_to_blocks_ref = Arc::try_unwrap(partition_hour_to_blocks_ref)
-            .map_err(|_| anyhow!("fail get blocks"))?;
-        let partition_hour_to_blocks_ref = Mutex::into_inner(partition_hour_to_blocks_ref)?;
-        let ts_hour_to_msg_ids = Arc::try_unwrap(ts_hour_to_msg_ids)
-            .map_err(|_| anyhow!("fail get msg ids"))?
-            .into_inner();
+        let partition_hour_to_blocks_ref = partition_hour_to_blocks_ref.try_unwrap_arc_mutex()?;
+        let ts_hour_to_msg_ids = ts_hour_to_msg_ids.try_unwrap_arc_mutex()?;
         let futures = partition_hour_to_blocks_ref
             .into_par_iter()
             .map(|(partition_hour, blocks)| {
@@ -331,8 +327,7 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<Option<SQ
         }
     }
 
-    let errors = Arc::try_unwrap(errors).map_err(|_| anyhow!("fail get errors"))?;
-    let errors = Mutex::into_inner(errors)?;
+    let errors = errors.try_unwrap_arc_mutex()?;
 
     sqs_errors_to_response(errors)
 }
