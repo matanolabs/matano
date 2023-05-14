@@ -18,10 +18,10 @@ regex = "1.5.4"
 tracing-subscriber = { version = "0.3.8", features = ["env-filter"] }
 tracing = { version = "0.1.30", features = ["log"] }
 lambda_runtime = "0.7.1"
-aws-config = "0.54.1"
+aws-config = "0.55"
 aws_lambda_events = "0.7.2"
-aws-sdk-sqs = "0.24.0"
-aws-sdk-dynamodb = "0.24.0"
+aws-sdk-sqs = "0.25.0"
+aws-sdk-dynamodb = "0.25.0"
 lazy_static = "1.4.0"
 async_once = "0.2.6"
 uuid = { version = "1.1.2", features = ["v4"] }

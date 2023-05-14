@@ -4,7 +4,7 @@ use anyhow::{anyhow, Result};
 use async_once::AsyncOnce;
 use aws_lambda_events::event::s3::S3Event;
 use aws_lambda_events::event::sqs::SqsEvent;
-use aws_sdk_sqs::model::SendMessageBatchRequestEntry;
+use aws_sdk_sqs::types::SendMessageBatchRequestEntry;
 use futures::future::{join_all, try_join_all};
 use lambda_runtime::{run, service_fn, Error as LambdaError, LambdaEvent};
 use lazy_static::lazy_static;

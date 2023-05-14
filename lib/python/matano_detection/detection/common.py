@@ -184,7 +184,7 @@ def handler(event, context):
         # TODO: send errors
         logger.warn(f"Resulted in {len(errors)} errors from user detections")
         for error in errors:
-            logger.error(error)
+            logger.warn(error)
 
     debug_metrics(record_data.record_idx + 1, detection_run_count, len(alert_responses))
 

@@ -81,6 +81,7 @@ export class DPMainStack extends MatanoStack {
     const matanoAlerting = new MatanoAlerting(this, "Alerting", {
       integrationsStore: props.integrationsStore,
       alertTrackerTable: props.alertTrackerTable,
+      duplicatesTable: mainDuplicatesTable,
     });
 
     const detections = new MatanoDetections(this, "Detections", {
@@ -133,11 +134,9 @@ export class DPMainStack extends MatanoStack {
     });
     logSources.push(matanoAlertsSource);
 
-
     // TODO(shaeq) - use one queue across custom bucket(s) + managed bucket but currently this causes cyclic dep as matano ingest bucket & its queue are in common stack, yet need to update queue permissions from here
     // to allow for custom bucket's sns to send messages to our queue
-    const customSourcesDlq = new sqs.Queue(this, "CustomSourcesDlq", {
-    });
+    const customSourcesDlq = new sqs.Queue(this, "CustomSourcesDlq", {});
     const customSourcesQueue = new sqs.Queue(this, "CustomSourcesQueue", {
       visibilityTimeout: cdk.Duration.minutes(15),
       deadLetterQueue: {
@@ -151,9 +150,11 @@ export class DPMainStack extends MatanoStack {
       sourcesIngestionTopic: props.matanoSourcesBucket.topic,
       sourcesIngestionQueue: customSourcesQueue,
     });
-    const customBucketToAccessRoleArnMap = JSON.stringify(Object.fromEntries(
-      customS3Sources.finalCustomSources.map((s) => [s.bucket_name, s.access_role_arn]).filter((s) => s[1])
-    ));
+    const customBucketToAccessRoleArnMap = JSON.stringify(
+      Object.fromEntries(
+        customS3Sources.finalCustomSources.map((s) => [s.bucket_name, s.access_role_arn]).filter((s) => s[1])
+      )
+    );
 
     const icebergMetadata = new IcebergMetadata(this, "IcebergMetadata", {
       lakeStorageBucket: props.lakeStorageBucket,

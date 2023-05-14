@@ -7,6 +7,7 @@ use std::{
     collections::{BTreeMap, HashMap},
     env::var,
     path::{Path, PathBuf},
+    sync::Arc,
 };
 use tracing::log::{debug, error, info, warn};
 use tracing_subscriber::EnvFilter;
@@ -234,5 +235,26 @@ pub fn result_to_option<T, E>(r: Result<Option<T>, E>) -> Option<Result<T, E>> {
         Ok(Some(v)) => Some(Ok(v)),
         Ok(None) => None,
         Err(e) => Some(Err(e)),
+    }
+}
+
+pub trait ArcMutexExt<T> {
+    fn try_unwrap_arc_mutex(self) -> Result<T>;
+}
+
+impl<T> ArcMutexExt<T> for Arc<std::sync::Mutex<T>> {
+    fn try_unwrap_arc_mutex(self) -> Result<T> {
+        Arc::try_unwrap(self)
+            .map_err(|_| anyhow!("failed to unwrap arc"))?
+            .into_inner()
+            .map_err(|_| anyhow!("failed to consume mutex"))
+    }
+}
+
+impl<T> ArcMutexExt<T> for Arc<tokio::sync::Mutex<T>> {
+    fn try_unwrap_arc_mutex(self) -> Result<T> {
+        Arc::try_unwrap(self)
+            .map_err(|_| anyhow!("failed to unwrap arc"))
+            .map(|v| v.into_inner())
     }
 }

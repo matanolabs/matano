@@ -304,7 +304,6 @@ class IcebergExpireSnapshots extends Construct {
   }
 }
 
-
 // TODO: probably remove this, Athena OPTIMIZE actually rewrites manifests.
 class IcebergRewriteManifests extends Construct {
   constructor(scope: Construct, id: string, props: IcebergMaintenanceProps) {

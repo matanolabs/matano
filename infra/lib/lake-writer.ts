@@ -37,7 +37,7 @@ export class LakeWriter extends Construct {
     this.alertsLakeWriterLambda = new lambda.Function(this, "AlertsFunction", {
       code: RustFunctionCode.assetCode({ package: "lake_writer" }),
       handler: "main",
-      memorySize: 1800,
+      memorySize: 3000,
       runtime: lambda.Runtime.PROVIDED_AL2,
       environment: {
         RUST_LOG: "warn,lake_writer=info",
@@ -45,7 +45,7 @@ export class LakeWriter extends Construct {
         OUT_KEY_PREFIX: props.outputObjectPrefix,
         RULE_MATCHES_SNS_TOPIC_ARN: props.ruleMatchesSnsTopic.topicArn,
       },
-      timeout: cdk.Duration.seconds(120),
+      timeout: cdk.Duration.minutes(6),
       // prevent concurrency
       reservedConcurrentExecutions: 1,
     });
