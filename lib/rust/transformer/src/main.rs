@@ -58,13 +58,11 @@ use async_once::AsyncOnce;
 use lazy_static::lazy_static;
 
 use ::value::{Secrets, Value};
-use aws_config::{
-    SdkConfig
-};
-use aws_types::{region::Region};
-use aws_config::sts::{AssumeRoleProvider};
 use aws_config::environment::credentials::EnvironmentVariableCredentialsProvider;
+use aws_config::sts::AssumeRoleProvider;
+use aws_config::SdkConfig;
 use aws_lambda_events::event::sqs::{SqsEvent, SqsMessage};
+use aws_types::region::Region;
 use lambda_runtime::{run, service_fn, Context, Error as LambdaError, LambdaEvent};
 use log::{debug, error, info, log_enabled, warn};
 use urlencoding::decode;
@@ -108,15 +106,24 @@ async fn get_s3_client_using_access_role_cached(bucket: &str) -> aws_sdk_s3::Cli
             None => {
                 let provider = AssumeRoleProvider::builder(access_role_arn)
                     .region(aws_sdk_s3::Region::new("us-east-1"))
-                    .session_name("matano").build(Arc::new(EnvironmentVariableCredentialsProvider::new()) as Arc<_>);
+                    .session_name("matano")
+                    .build(Arc::new(EnvironmentVariableCredentialsProvider::new()) as Arc<_>);
                 let config = aws_sdk_s3::Config::builder()
                     .credentials_provider(provider)
                     .region(aws_sdk_s3::Region::new("us-east-1"))
                     .build();
                 let s3 = aws_sdk_s3::client::Client::from_conf(config);
-                let location_constraint = s3.get_bucket_location().bucket(bucket).send().await.unwrap().location_constraint;
+                let location_constraint = s3
+                    .get_bucket_location()
+                    .bucket(bucket)
+                    .send()
+                    .await
+                    .unwrap()
+                    .location_constraint;
                 let region = match location_constraint {
-                    Some(location_constraint) => Region::new(location_constraint.as_str().to_owned()),
+                    Some(location_constraint) => {
+                        Region::new(location_constraint.as_str().to_owned())
+                    }
                     None => Region::new("us-east-1"),
                 };
                 custom_bucket_to_region_cache.insert(bucket.to_string(), region);
@@ -124,21 +131,26 @@ async fn get_s3_client_using_access_role_cached(bucket: &str) -> aws_sdk_s3::Cli
             }
         };
 
-        let mut custom_role_regional_s3_client_cache = CUSTOM_ROLE_REGIONAL_S3_CLIENT_CACHE.lock().unwrap();
+        let mut custom_role_regional_s3_client_cache =
+            CUSTOM_ROLE_REGIONAL_S3_CLIENT_CACHE.lock().unwrap();
 
         // get the client from the regional (role_arn, region) cache, or create a new one
         let region = bucket_region.as_ref().to_owned();
 
-        let lookup = (access_role_arn.to_string(),region.clone());
-        custom_role_regional_s3_client_cache.entry(lookup.clone()).or_insert_with(|| {
+        let lookup = (access_role_arn.to_string(), region.clone());
+        custom_role_regional_s3_client_cache
+            .entry(lookup.clone())
+            .or_insert_with(|| {
                 let provider = AssumeRoleProvider::builder(access_role_arn)
                     .region(aws_sdk_s3::Region::new(region.clone()))
-                    .session_name("matano").build(Arc::new(EnvironmentVariableCredentialsProvider::new()) as Arc<_>);
-                let config = aws_sdk_s3::Config::builder().credentials_provider(provider)
+                    .session_name("matano")
+                    .build(Arc::new(EnvironmentVariableCredentialsProvider::new()) as Arc<_>);
+                let config = aws_sdk_s3::Config::builder()
+                    .credentials_provider(provider)
                     .region(aws_sdk_s3::Region::new(region))
                     .build();
                 aws_sdk_s3::Client::from_conf(config)
-        });
+            });
         let client = custom_role_regional_s3_client_cache.get(&lookup).unwrap();
         return client.clone();
     }
@@ -964,8 +976,9 @@ pub(crate) async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
 
                 async move {
                     let bytes = writer.into_inner()?;
+                    let bytes_len = bytes.len();
                     if bytes.len() == 0 || rows == 0 {
-                        return Ok(0);
+                        return Ok(None);
                     }
                     info!("Writing number of Rows: {}", rows);
 
@@ -1002,7 +1015,7 @@ pub(crate) async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
                             "resolved_table_name",
                             MessageAttributeValue::builder()
                                 .data_type("String".to_string())
-                                .string_value(resolved_table_name)
+                                .string_value(&resolved_table_name)
                                 .build(),
                         )
                         .send()
@@ -1013,16 +1026,17 @@ pub(crate) async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
                                 key
                             ))
                         })?;
-                    anyhow::Ok(rows)
+                    anyhow::Ok(Some((resolved_table_name, key, ts_hour, rows, bytes_len)))
                 }
                 .map_err(move |e| SQSLambdaError::new(format!("{:#}", e), matching_record_seqs))
             });
 
-    let total_rows_written = join_all(futures)
+    let results = join_all(futures)
         .await
         .into_iter()
         .flat_map(|r| r.map_err(|e| errors.push(e)).ok())
-        .sum::<usize>();
+        .flatten()
+        .collect::<Vec<_>>();
 
     // Error handling strategy:
     // If all records failed, we return an error and the lambda will retry
@@ -1074,6 +1088,26 @@ pub(crate) async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
     }
 
     // emit log
+    results
+        .iter()
+        .for_each(|(resolved_table_name, key, ts_hour, row_count, bytes)| {
+            let log = json!({
+                "matano_log": true,
+                "type": "matano_table_log",
+                "service": "transformer",
+                "table": resolved_table_name,
+                "partition_hour": ts_hour,
+                "write_key": key,
+                "row_count": row_count,
+                "bytes_written": bytes,
+            });
+            info!("{}", serde_json::to_string(&log).unwrap_or_default());
+        });
+    let total_rows_written = results
+        .iter()
+        .map(|(_, _, _, row_count, _)| row_count)
+        .sum::<usize>();
+
     let time_ms = i64::try_from(start.elapsed().as_millis()).ok();
     let log_sources = s3_download_items_copy
         .iter()
@@ -1081,6 +1115,7 @@ pub(crate) async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
         .collect::<HashSet<_>>();
     let bytes_processed: i64 = s3_download_items_copy.iter().map(|(r, _)| r.size).sum();
     let log = json!({
+        "matano_log": true,
         "type": "matano_service_log",
         "service": "transformer",
         "time": time_ms,

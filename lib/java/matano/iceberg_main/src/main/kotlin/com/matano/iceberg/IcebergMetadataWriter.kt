@@ -6,6 +6,7 @@ import com.amazonaws.services.lambda.runtime.events.SQSBatchResponse.BatchItemFa
 import com.amazonaws.services.lambda.runtime.events.SQSEvent
 import com.amazonaws.services.s3.event.S3EventNotification
 import com.amazonaws.services.s3.event.S3EventNotification.S3EventNotificationRecord
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -34,6 +35,7 @@ import java.time.Duration
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+import java.util.Optional
 import java.util.concurrent.*
 import java.util.stream.Stream
 
@@ -62,6 +64,13 @@ fun dtToHours(s: String): Int {
     return hours.toInt()
 }
 
+data class RecordInfo(
+    val messageId: String,
+    val tableName: String,
+    val partitionValue: String,
+    val record: S3EventNotificationRecord,
+)
+
 // Note: This function is highly IO bound. It generally only runs with a few files at a time.
 // But we need to be handle a large number of files in parallel in case of redrives, failures, etc.
 // JVM concurrency story is a mess, we use Async NIO with Netty to make concurrent requests to read
@@ -85,32 +94,34 @@ class IcebergMetadataWriter {
         var sqsMessageIds = mutableSetOf<String>()
     }
 
+    fun partitionValueToPartitionPath(value: String): String {
+        return "ts_hour=${dtToHours(value)}"
+    }
+
     fun parseObjectKey(key: String): Pair<String, String> {
         // lake/TABLE_NAME/data/ts_hour=2022-07-05/<file>.parquet
         val parts = key.split("/")
         val tableName = parts[1]
         val partitionValue = parts[3].substring(8)
-        val intPartitionvalue = dtToHours(partitionValue)
-        val partitionPath = "ts_hour=$intPartitionvalue"
-        return Pair(tableName, partitionPath)
+        return Pair(tableName, partitionValue)
     }
 
     fun handle(sqsEvent: SQSEvent): SQSBatchResponse {
         val tableObjs = LazyConcurrentMap<String, TableObj>({ name -> TableObj(name) })
         val failures = mutableSetOf<String>()
-        val processFutures = mutableListOf<CompletableFuture<Unit>>()
+        val processFutures = mutableListOf<CompletableFuture<Optional<String>>>()
 
         logger.info("Received ${sqsEvent.records.size} records")
 
         val s3Records = sqsEvent.records.map { record ->
             val s3EventRecord = S3EventNotification.parseJson(record.body).records[0]
-            val tableNameAndPartitionPath = parseObjectKey(s3EventRecord.s3.`object`.urlDecodedKey)
-            Triple(record.messageId, s3EventRecord, tableNameAndPartitionPath)
+            val (tableName, partitionValue) = parseObjectKey(s3EventRecord.s3.`object`.urlDecodedKey)
+            RecordInfo(record.messageId, tableName, partitionValue, s3EventRecord)
         }
 
         var start = System.currentTimeMillis()
-        for ((messageId, record, tableAndPartition) in s3Records) {
-            val (tableName, partitionPath) = tableAndPartition
+        for (recordInfo in s3Records) {
+            val (messageId, tableName, partitionValue, record) = recordInfo
             if (tableName == "matano_alerts") {
                 continue
             }
@@ -122,10 +133,13 @@ class IcebergMetadataWriter {
                 continue
             }
             tableObj.sqsMessageIds.add(messageId)
-            val fut = processRecord(record, tableObj, partitionPath).handleAsync { _, e ->
+            val fut = processRecord(record, tableObj, partitionValue).handleAsync { s, e ->
                 if (e != null && e.cause !is NoSuchKeyException) {
                     logger.error(e.message)
                     failures.add(messageId)
+                    Optional.empty()
+                } else {
+                    s
                 }
             }
             processFutures.add(fut)
@@ -158,9 +172,26 @@ class IcebergMetadataWriter {
 
         if (failures.isNotEmpty()) {
             logger.error("Encountered ${failures.size} Failures, cleaning up records...")
+            // TODO: invert this like elsewhere
             val cleanupFutures = failures.map { sequencer -> deleteDuplicateMarker(sequencer) }
             CompletableFuture.allOf(*cleanupFutures.toTypedArray()).join()
         }
+
+        processFutures.forEach {
+            val tableLog = it.get()
+            if (tableLog.isPresent) {
+                logger.info(tableLog.get())
+            }
+        }
+
+        val serviceLog: HashMap<String, Any> = hashMapOf(
+            "matano_log" to true,
+            "type" to "matano_service_log",
+            "service" to "iceberg_metadata_writer",
+            "tables" to tableObjs.keys,
+            "error" to failures.isNotEmpty(),
+        )
+        logger.info(mapper.writeValueAsString(serviceLog))
 
         return SQSBatchResponse(failures.map { BatchItemFailure(it) })
     }
@@ -184,23 +215,25 @@ class IcebergMetadataWriter {
         return ret
     }
 
-    fun processRecord(record: S3EventNotificationRecord, tableObj: TableObj, partitionPath: String): CompletableFuture<Unit> {
+    fun processRecord(record: S3EventNotificationRecord, tableObj: TableObj, partitionValue: String): CompletableFuture<Optional<String>> {
         val s3Bucket = record.s3.bucket.name
         val s3Object = record.s3.`object`
         val s3ObjectKey = s3Object.urlDecodedKey
         val s3ObjectSize = s3Object.sizeAsLong
         val s3Path = "s3://$s3Bucket/$s3ObjectKey"
+        val partitionPath = partitionValueToPartitionPath(partitionValue)
 
         logger.info("Processing record: $s3ObjectKey ($s3ObjectSize bytes) for table: ${tableObj.table.name()}")
 
         return checkDuplicate(s3Object.sequencer).thenComposeAsync { isDuplicate ->
             if (isDuplicate) {
                 logger.info("Found duplicate SQS message for key: $s3ObjectKey. Skipping...")
-                return@thenComposeAsync CompletableFuture.completedFuture(Unit)
+                return@thenComposeAsync CompletableFuture.completedFuture(Optional.empty())
             }
 
             val icebergTable = tableObj.table
-            val isEnrichmentTable = icebergTable.name().split(".").last().startsWith("enrich_")
+            val matanoTableName = icebergTable.name().split(".").last()
+            val isEnrichmentTable = matanoTableName.startsWith("enrich_")
 
             readParquetMetrics(s3Bucket, s3ObjectKey, icebergTable).thenComposeAsync { metrics ->
                 val partition = icebergTable.spec()
@@ -214,12 +247,23 @@ class IcebergMetadataWriter {
                     .withMetrics(metrics)
                     .build()
 
+                val log: HashMap<String, Any> = hashMapOf(
+                    "matano_log" to true,
+                    "type" to "matano_table_log",
+                    "service" to "iceberg_metadata_writer",
+                    "table" to matanoTableName,
+                    "key" to s3ObjectKey,
+                    "ts_hour" to partitionValue,
+                    "file_size_bytes" to s3ObjectSize,
+                )
+                val logStr = mapper.writeValueAsString(log)
+
                 if (isEnrichmentTable) {
                     enrichmentMetadataWriter.doMetadataWrite(icebergCatalog, icebergTable, dataFile, { tableObj.getAppendFiles() }, { tableObj.getOverwrite() })
                 } else {
                     tableObj.getAppendFiles().appendFile(dataFile)
                     CompletableFuture.completedFuture(Unit)
-                }
+                }.thenComposeAsync { CompletableFuture.completedFuture(Optional.of(logStr)) }
             }
         }
     }
@@ -272,6 +316,7 @@ class IcebergMetadataWriter {
             "glue.skip-archive" to "true",
         )
 
+        val mapper = jacksonObjectMapper()
         val parquetMetadataConverter = ParquetMetadataConverter()
 
         val ddb = DynamoDbAsyncClient
