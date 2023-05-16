@@ -92,7 +92,8 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<Option<SQ
         warn!("Skipped {} records not matching structure", skipped_records);
     }
 
-    if downloads.len() == 0 {
+    let input_download_len = downloads.len();
+    if input_download_len == 0 {
         info!("Empty event, returning...");
         return Ok(None);
     }
@@ -126,6 +127,11 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<Option<SQ
     let mut errors = vec![];
     let ts_hour_to_msg_ids: Arc<tokio::sync::Mutex<HashMap<String, Vec<String>>>> =
         Arc::new(tokio::sync::Mutex::new(HashMap::new()));
+
+    let input_keys = downloads
+        .iter()
+        .map(|(_, msg)| msg.key.clone())
+        .collect::<Vec<_>>();
 
     let tasks = downloads
         .into_iter()
@@ -276,11 +282,15 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<Option<SQ
                     .into_iter()
                     .filter_map(|r| r.map_err(|e| errors.lock().unwrap().push(e)).ok())
                     .collect::<Vec<_>>();
+
+                let total_avro_rows = blocks.iter().map(|b| b.number_of_rows).sum::<usize>();
+                let total_avro_bytes = blocks.iter().map(|b| b.data.len()).sum::<usize>();
+
                 if !blocks.is_empty() {
                     // see TODO below
                     let metadata = results
                         .first()
-                        .unwrap()
+                        .context("Need metadata!")?
                         .as_ref()
                         .context("Need metadata!")?;
                     let block = concat_blocks(blocks);
@@ -306,6 +316,15 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<Option<SQ
                         field,
                         arrays,
                     )
+                    .map_ok(move |(partition_hour, key, file_length)| {
+                        (
+                            total_avro_rows,
+                            total_avro_bytes,
+                            partition_hour,
+                            key,
+                            file_length,
+                        )
+                    })
                     .map_err(|e| SQSLambdaError::new(format!("{:#}", e), msg_ids.clone()));
 
                     Ok(Some(result))
@@ -321,13 +340,40 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<Option<SQ
 
         // handle errors
         for result in results {
-            if let Err(e) = result {
-                errors.lock().unwrap().push(e);
-            }
+            match result {
+                Err(e) => {
+                    errors.lock().unwrap().push(e);
+                }
+                Ok((avro_rows, total_avro_bytes, partition_hour, key, file_length)) => {
+                    let log = json!({
+                        "matano_log": true,
+                        "type": "matano_table_log",
+                        "service": "lake_writer",
+                        "table": &resolved_table_name,
+                        "partition_hour": partition_hour,
+                        "write_key": key,
+                        "avro_bytes_uncompressed": total_avro_bytes,
+                        "row_count": avro_rows,
+                        "parquet_bytes": file_length,
+                    });
+                    info!("{}", serde_json::to_string(&log).unwrap_or_default());
+                }
+            };
         }
     }
 
     let errors = errors.try_unwrap_arc_mutex()?;
+
+    let log = json!({
+        "matano_log": true,
+        "type": "matano_service_log",
+        "service": "lake_writer",
+        "input_keys": input_keys,
+        "records_count": input_download_len,
+        "table": &resolved_table_name,
+        "error": !errors.is_empty()
+    });
+    info!("{}", serde_json::to_string(&log).unwrap_or_default());
 
     sqs_errors_to_response(errors)
 }

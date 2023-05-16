@@ -332,6 +332,7 @@ async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
     }
 
     let log = json!({
+        "matano_log": true,
         "type": "matano_service_log",
         "service": "alert_writer",
         "processed_alert_ids": processed_alert_ids,

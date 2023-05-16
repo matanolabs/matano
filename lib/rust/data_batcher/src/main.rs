@@ -1,4 +1,5 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::time::Instant;
 
 use anyhow::{anyhow, Result};
 use async_once::AsyncOnce;
@@ -9,6 +10,8 @@ use futures::future::{join_all, try_join_all};
 use lambda_runtime::{run, service_fn, Error as LambdaError, LambdaEvent};
 use lazy_static::lazy_static;
 use log::{debug, error, info};
+use serde::{Deserialize, Serialize};
+use serde_json::json;
 use shared::{
     duplicates_util::{check_ddb_duplicate, mark_ddb_duplicate_completed},
     setup_logging, DataBatcherOutputRecord,
@@ -146,6 +149,7 @@ impl S3EventExt for S3Event {
 }
 
 async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
+    let start = Instant::now();
     debug!("{:?}", event);
     let ddb = DDB_CLIENT.get().await;
 
@@ -220,7 +224,7 @@ async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
         })
         .collect::<Vec<_>>();
     if new_records.len() == 0 {
-        info!("Empty event, returning...");
+        info!("No records to process, returning...");
         return Ok(());
     }
 
@@ -231,7 +235,7 @@ async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
     let mut current_chunk_size = 0;
     let mut current_chunk = vec![];
 
-    for record in new_records {
+    for record in &new_records {
         let mut bytes_contribution = record.size;
         if is_compressed(&record.key) {
             bytes_contribution *= 5; // compression factor
@@ -300,6 +304,23 @@ async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
         .into_iter()
         .map(|id| mark_ddb_duplicate_completed(ddb.clone(), &duplicates_table_name, id));
     try_join_all(completed_futs).await?;
+
+    let time_ms = i64::try_from(start.elapsed().as_millis()).ok();
+    let log_sources = new_records
+        .iter()
+        .map(|r| r.log_source.clone())
+        .collect::<HashSet<_>>();
+    let log = json!({
+        "matano_log": true,
+        "type": "matano_service_log",
+        "service": "data_batcher",
+        "time": time_ms,
+        "input_records_count": relevant_input_records,
+        "output_records_count": output_length,
+        "log_sources": log_sources,
+        "bytes_processed": total_input_bytes,
+    });
+    info!("{}", serde_json::to_string(&log).unwrap_or_default());
 
     Ok(())
 }
