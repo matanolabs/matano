@@ -159,13 +159,25 @@ function rename(node: IConstruct, resourceName: string, resourceTypeFullName: st
 
   let renamedResourceName = `${renamedName}`.toLowerCase();
 
-  const maxLength = maxResourceNameLengths[resourceTypeFullName as any]!!;
+  let maxLength = maxResourceNameLengths[resourceTypeFullName as any]!!;
+  // if is SNS Topic / SQS queue with fifo, reduce max length by 5 to add .fifo suffix later
+  let isFifo = false;
+  if (resourceTypeFullName === "AWS::SNS::Topic" || resourceTypeFullName === "AWS::SQS::Queue") {
+    if ((node.node.scope as any).fifo === true) {
+      maxLength -= 5;
+      isFifo = true;
+    }
+  }
+
   if (renamedResourceName.length > maxLength) {
     const extraPart = renamedResourceName.slice(maxLength);
     renamedResourceName = `${removeSuffix(renamedResourceName.slice(0, maxLength - 7), "-")}-${md5Hash(extraPart).slice(
       0,
       6
     )}`;
+  }
+  if (isFifo) {
+    renamedResourceName += ".fifo";
   }
 
   // console.log(`Renaming ${resourceTypeFullName} ${resourceName} to ${renamedResourceName}`); // from path ${node.node.path}`);

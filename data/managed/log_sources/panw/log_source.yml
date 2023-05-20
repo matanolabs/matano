@@ -1,973 +1,984 @@
 name: panw
 
+ingest:
+  select_table_from_payload: |
+    .message = string!(.message)
+    if match(.message, r',TRAFFIC,') {
+      "traffic"
+    } else if match(.message, r',GLOBALPROTECT,') {
+      "globalprotect"
+    } else {
+      abort
+    }
+
 schema:
   ecs_field_names:
-  - client.bytes
-  - client.ip
-  - client.nat.ip
-  - client.nat.port
-  - client.packets
-  - client.port
-  - client.user.name
-  - cloud.account.id
-  - cloud.availability_zone
-  - cloud.instance.id
-  - cloud.instance.name
-  - cloud.machine.type
-  - cloud.project.id
-  - cloud.provider
-  - cloud.region
-  - container.image.name
-  - container.labels
-  - container.name
-  - destination.address
-  - destination.as.number
-  - destination.as.organization.name
-  - destination.bytes
-  - destination.domain
-  - destination.geo.city_name
-  - destination.geo.continent_name
-  - destination.geo.country_iso_code
-  - destination.geo.country_name
-  - destination.geo.location
-  - destination.geo.name
-  - destination.geo.region_iso_code
-  - destination.geo.region_name
-  - destination.ip
-  - destination.nat.ip
-  - destination.nat.port
-  - destination.packets
-  - destination.port
-  - destination.user.domain
-  - destination.user.email
-  - destination.user.name
-  - ecs.version
-  - error.message
-  - event.action
-  - event.category
-  - event.code
-  - event.created
-  - event.dataset
-  - event.duration
-  - event.end
-  - event.kind
-  - event.module
-  - event.original
-  - event.outcome
-  - event.reason
-  - event.severity
-  - event.start
-  - event.timezone
-  - event.type
-  - file.name
-  - file.path
-  - file.type
-  - host.architecture
-  - host.domain
-  - host.hostname
-  - host.id
-  - host.ip
-  - host.name
-  - host.os.family
-  - host.os.full
-  - host.os.kernel
-  - host.os.name
-  - host.os.platform
-  - host.os.version
-  - host.type
-  - http.request.method
-  - http.request.referrer
-  - http.version
-  - labels
-  # Labels:
-  # - captive_portal
-  # - client_server_policy_based_forwarding
-  # - connect_to_destination_host
-  # - container_page
-  # - decrypted_traffic
-  # - enterprise_credential_submission
-  # - file_submitted_to_WildFire
-  # - http_proxy
-  # - ipv6_session
-  # - nat_translated
-  # - non_standard_port_usage
-  # - payload_outer_tunnel
-  # - pcap_included
-  # - server_client_policy_based_forwarding
-  # - source_flow_allow_list
-  # - ssl_decrypted
-  # - symmetric_return
-  # - temporary_match
-  # - url_filter_denied
-  # - x_forwarded_for
-  - log.file.path
-  - log.level
-  - log.syslog.facility.code
-  - log.syslog.facility.name
-  - log.syslog.hostname
-  - log.syslog.priority
-  - log.syslog.severity.code
-  - log.syslog.severity.name
-  - log.syslog.version
-  - message
-  - network.application
-  - network.bytes
-  - network.community_id
-  - network.direction
-  - network.forwarded_ip
-  - network.packets
-  - network.transport
-  - network.type
-  - observer.egress.interface.name
-  - observer.egress.zone
-  - observer.geo.name
-  - observer.hostname
-  - observer.ingress.interface.name
-  - observer.ingress.zone
-  - observer.product
-  - observer.serial_number
-  - observer.type
-  - observer.vendor
-  - related.hash
-  - related.hosts
-  - related.ip
-  - related.user
-  - rule.name
-  - rule.uuid
-  - server.bytes
-  - server.ip
-  - server.nat.ip
-  - server.nat.port
-  - server.packets
-  - server.port
-  - server.user.name
-  - source.address
-  - source.as.number
-  - source.as.organization.name
-  - source.bytes
-  - source.geo.city_name
-  - source.geo.continent_name
-  - source.geo.country_iso_code
-  - source.geo.country_name
-  - source.geo.location
-  - source.geo.name
-  - source.geo.region_iso_code
-  - source.geo.region_name
-  - source.ip
-  - source.nat.ip
-  - source.nat.port
-  - source.packets
-  - source.port
-  - source.user.domain
-  - source.user.email
-  - source.user.name
-  - tags
-  - tls.cipher
-  - tls.client.hash.md5
-  - tls.client.hash.sha1
-  - tls.client.hash.sha256
-  - tls.client.not_after
-  - tls.client.not_before
-  - tls.client.server_name
-  - tls.client.x509.public_key_size
-  - tls.client.x509.serial_number
-  - tls.client.x509.version_number
-  - tls.curve
-  - tls.version
-  - tls.version_protocol
-  - url.domain
-  - url.extension
-  - url.original
-  - url.path
-  - url.query
-  - user.domain
-  - user.email
-  - user.name
-  - user_agent.device.name
-  - user_agent.name
-  - user_agent.original
-  - user_agent.os.full
-  - user_agent.os.name
-  - user_agent.os.version
-  - user_agent.version
-  - x509.issuer.common_name
-  - x509.subject.common_name
+    - client.bytes
+    - client.ip
+    - client.nat.ip
+    - client.nat.port
+    - client.packets
+    - client.port
+    - client.user.name
+    - cloud.account.id
+    - cloud.availability_zone
+    - cloud.instance.id
+    - cloud.instance.name
+    - cloud.machine.type
+    - cloud.project.id
+    - cloud.provider
+    - cloud.region
+    - container.image.name
+    - container.labels
+    - container.name
+    - destination.address
+    - destination.as.number
+    - destination.as.organization.name
+    - destination.bytes
+    - destination.domain
+    - destination.geo.city_name
+    - destination.geo.continent_name
+    - destination.geo.country_iso_code
+    - destination.geo.country_name
+    - destination.geo.location
+    - destination.geo.name
+    - destination.geo.region_iso_code
+    - destination.geo.region_name
+    - destination.ip
+    - destination.nat.ip
+    - destination.nat.port
+    - destination.packets
+    - destination.port
+    - destination.user.domain
+    - destination.user.email
+    - destination.user.name
+    - ecs.version
+    - error.message
+    - event.action
+    - event.category
+    - event.code
+    - event.created
+    - event.dataset
+    - event.duration
+    - event.end
+    - event.kind
+    - event.module
+    - event.original
+    - event.outcome
+    - event.reason
+    - event.severity
+    - event.start
+    - event.timezone
+    - event.type
+    - file.name
+    - file.path
+    - file.type
+    - host.architecture
+    - host.domain
+    - host.hostname
+    - host.id
+    - host.ip
+    - host.name
+    - host.os.family
+    - host.os.full
+    - host.os.kernel
+    - host.os.name
+    - host.os.platform
+    - host.os.version
+    - host.type
+    - http.request.method
+    - http.request.referrer
+    - http.version
+    - labels
+    # Labels:
+    # - captive_portal
+    # - client_server_policy_based_forwarding
+    # - connect_to_destination_host
+    # - container_page
+    # - decrypted_traffic
+    # - enterprise_credential_submission
+    # - file_submitted_to_WildFire
+    # - http_proxy
+    # - ipv6_session
+    # - nat_translated
+    # - non_standard_port_usage
+    # - payload_outer_tunnel
+    # - pcap_included
+    # - server_client_policy_based_forwarding
+    # - source_flow_allow_list
+    # - ssl_decrypted
+    # - symmetric_return
+    # - temporary_match
+    # - url_filter_denied
+    # - x_forwarded_for
+    - log.file.path
+    - log.level
+    - log.syslog.facility.code
+    - log.syslog.facility.name
+    - log.syslog.hostname
+    - log.syslog.priority
+    - log.syslog.severity.code
+    - log.syslog.severity.name
+    - log.syslog.version
+    - message
+    - network.application
+    - network.bytes
+    - network.community_id
+    - network.direction
+    - network.forwarded_ip
+    - network.packets
+    - network.transport
+    - network.type
+    - observer.egress.interface.name
+    - observer.egress.zone
+    - observer.geo.name
+    - observer.hostname
+    - observer.ingress.interface.name
+    - observer.ingress.zone
+    - observer.product
+    - observer.serial_number
+    - observer.type
+    - observer.vendor
+    - related.hash
+    - related.hosts
+    - related.ip
+    - related.user
+    - rule.name
+    - rule.uuid
+    - server.bytes
+    - server.ip
+    - server.nat.ip
+    - server.nat.port
+    - server.packets
+    - server.port
+    - server.user.name
+    - source.address
+    - source.as.number
+    - source.as.organization.name
+    - source.bytes
+    - source.geo.city_name
+    - source.geo.continent_name
+    - source.geo.country_iso_code
+    - source.geo.country_name
+    - source.geo.location
+    - source.geo.name
+    - source.geo.region_iso_code
+    - source.geo.region_name
+    - source.ip
+    - source.nat.ip
+    - source.nat.port
+    - source.packets
+    - source.port
+    - source.user.domain
+    - source.user.email
+    - source.user.name
+    - tags
+    - tls.cipher
+    - tls.client.hash.md5
+    - tls.client.hash.sha1
+    - tls.client.hash.sha256
+    - tls.client.not_after
+    - tls.client.not_before
+    - tls.client.server_name
+    - tls.client.x509.public_key_size
+    - tls.client.x509.serial_number
+    - tls.client.x509.version_number
+    - tls.curve
+    - tls.version
+    - tls.version_protocol
+    - url.domain
+    - url.extension
+    - url.original
+    - url.path
+    - url.query
+    - user.domain
+    - user.email
+    - user.name
+    - user_agent.device.name
+    - user_agent.name
+    - user_agent.original
+    - user_agent.os.full
+    - user_agent.os.name
+    - user_agent.os.version
+    - user_agent.version
+    - x509.issuer.common_name
+    - x509.subject.common_name
   fields:
-  - name: panw
-    type:
-      type: struct
-      fields:
-      - name: panos
-        type:
-          type: struct
-          fields:
-          - name: access_point
+    - name: panw
+      type:
+        type: struct
+        fields:
+          - name: panos
             type:
               type: struct
               fields:
-              - name: name
-                type: string
-          - name: action
-            type: string
-          - name: action_flags
-            type: string
-          - name: action_source
-            type: string
-          - name: admin
-            type: string
-          - name: after_change_detail
-            type: string
-          - name: application
-            type:
-              type: struct
-              fields:
-              - name: category
-                type: string
-              - name: characteristics
-                type: string
-              - name: container
-                type: string
-              - name: is_saas
-                type: string
-              - name: is_sanctioned
-                type: string
-              - name: risk_level
-                type: long
-              - name: sub_category
-                type: string
-              - name: technology
-                type: string
-              - name: tunneled
-                type: string
-          - name: area_code
-            type: string
-          - name: attempted_gateways
-            type: string
-          - name: auth_method
-            type: string
-          - name: authentication
-            type:
-              type: struct
-              fields:
-              - name: id
-                type: string
-              - name: policy
-                type: string
-              - name: protocol
-                type: string
-          - name: before_change_detail
-            type: string
-          - name: bytes_received
-            type: long
-          - name: bytes_sent
-            type: long
-          - name: category
-            type: string
-          - name: cause_code
-            type: string
-          - name: cell
-            type:
-              type: struct
-              fields:
-              - name: id
-                type: string
-          - name: certificate
-            type:
-              type: struct
-              fields:
-              - name: fingerprint
-                type: string
-              - name: flags
-                type: string
-              - name: not_after
-                type: timestamp
-              - name: not_before
-                type: timestamp
-              - name: raw_size
-                type: string
-              - name: serial_number
-                type: string
-              - name: size
-                type: long
-              - name: version
-                type: string
-          - name: chain_status
-            type: string
-          - name: client
-            type:
-              type: struct
-              fields:
-              - name: os
-                type: string
-              - name: os_version
-                type: string
-          - name: client_type
-            type: string
-          - name: client_ver
-            type: string
-          - name: cloud_report
-            type:
-              type: struct
-              fields:
-              - name: id
-                type: string
-          - name: cmd
-            type: string
-          - name: comment
-            type: string
-          - name: config_version
-            type: string
-          - name: connect_method
-            type: string
-          - name: container
-            type:
-              type: struct
-              fields:
-              - name: id
-                type: string
-          - name: content_version
-            type: string
-          - name: datasource
-            type: string
-          - name: datasource_subtype
-            type: string
-          - name: datasource_type
-            type: string
-          - name: datasourcename
-            type: string
-          - name: datasourcetype
-            type: string
-          - name: description
-            type: string
-          - name: destination
-            type:
-              type: struct
-              fields:
-              - name: ip
-                type: string
-              - name: location
-                type: string
-              - name: nat
-                type:
-                  type: struct
-                  fields:
-                  - name: ip
-                    type: string
-                  - name: port
-                    type: long
-              - name: port
-                type: long
-              - name: user
-                type: string
-              - name: zone
-                type: string
-          - name: destination_vm_uuid
-            type: string
-          - name: device_group_hierarchy1
-            type: string
-          - name: device_group_hierarchy2
-            type: string
-          - name: device_group_hierarchy3
-            type: string
-          - name: device_group_hierarchy4
-            type: string
-          - name: device_group_id
-            type: string
-          - name: device_name
-            type: string
-          - name: diameter_app_id
-            type: string
-          - name: diameter_avp_code
-            type: string
-          - name: diameter_cmd_code
-            type: string
-          - name: domain_edl
-            type: string
-          - name: dst
-            type:
-              type: struct
-              fields:
-              - name: category
-                type: string
-              - name: dynamic_address_group
-                type: string
-              - name: external_dynamic_list
-                type: string
-              - name: host
-                type: string
-              - name: mac
-                type: string
-              - name: model
-                type: string
-              - name: os
-                type:
-                  type: struct
-                  fields:
-                  - name: family
-                    type: string
-                  - name: version
-                    type: string
-              - name: profile
-                type: string
-              - name: vendor
-                type: string
-          - name: dynamic_user
-            type:
-              type: struct
-              fields:
-              - name: group
-                type:
-                  type: struct
-                  fields:
-                  - name: name
-                    type: string
-          - name: elapsed_time
-            type: long
-          - name: elliptic_curve
-            type: string
-          - name: end_ip_address
-            type: string
-          - name: endreason
-            type: string
-          - name: error_code
-            type: int
-          - name: error_message
-            type: string
-          - name: event
-            type:
-              type: struct
-              fields:
-              - name: id
-                type: string
-              - name: reason
-                type: string
-              - name: result
-                type: string
-              - name: status
-                type: string
-          - name: event_code
-            type: string
-          - name: event_type
-            type: string
-          - name: evidence
-            type: string
-          - name: factorcompletiontime
-            type: timestamp
-          - name: factorno
-            type: int
-          - name: factortype
-            type: string
-          - name: file
-            type:
-              type: struct
-              fields:
-              - name: hash
-                type: string
-              - name: type
-                type: string
-          - name: flow_id
-            type: string
-          - name: forwarded_ip
-            type: string
-          - name: gateway
-            type: string
-          - name: generated_time
-            type: timestamp
-          - name: hash
-            type: string
-          - name: high_resolution_timestamp
-            type: timestamp
-          - name: host
-            type:
-              type: struct
-              fields:
-              - name: id
-                type: string
-              - name: ip
-                type: string
-          - name: hs_stage_c2f
-            type: string
-          - name: hs_stage_f2s
-            type: string
-          - name: http2_connection
-            type: string
-          - name: http_content_type
-            type: string
-          - name: http_headers
-            type: string
-          - name: http_method
-            type: string
-          - name: imei
-            type: string
-          - name: imsi
-            type: string
-          - name: inbound_interface
-            type: string
-          - name: interface
-            type: string
-          - name: is_offloaded
-            type: string
-          - name: issuer_common_name
-            type:
-              type: struct
-              fields:
-              - name: length
-                type: long
-              - name: value
-                type: string
-          - name: justification
-            type: string
-          - name: link
-            type:
-              type: struct
-              fields:
-              - name: change_count
-                type: long
-              - name: switches
-                type: string
-          - name: location
-            type: string
-          - name: log_profile
-            type: string
-          - name: logged_time
-            type: timestamp
-          - name: login_duration
-            type: long
-          - name: machine
-            type:
-              type: struct
-              fields:
-              - name: mac_address
-                type: string
-              - name: name
-                type: string
-              - name: os
-                type: string
-          - name: matchname
-            type: string
-          - name: matchtype
-            type: string
-          - name: max_encapsulation
-            type: long
-          - name: mcc
-            type: string
-          - name: message_type
-            type: string
-          - name: misc
-            type: string
-          - name: mnc
-            type: string
-          - name: module
-            type: string
-          - name: msisdn
-            type: string
-          - name: network
-            type:
-              type: struct
-              fields:
-              - name: application
-                type: string
-              - name: bytes
-                type: long
-              - name: direction
-                type: string
-              - name: nat
-                type:
-                  type: struct
-                  fields:
-                  - name: community_id
-                    type: string
-              - name: packets
-                type: long
-              - name: pcap_id
-                type: string
-          - name: normalize_user
-            type: string
-          - name: nsdsai_sd
-            type: string
-          - name: nsdsai_sst
-            type: string
-          - name: nssai_sd
-            type: string
-          - name: nssai_sst
-            type: string
-          - name: object
-            type:
-              type: struct
-              fields:
-              - name: id
-                type: string
-              - name: name
-                type: string
-          - name: observer
-            type:
-              type: struct
-              fields:
-              - name: serial_number
-                type: string
-          - name: op_code
-            type: string
-          - name: outbound_interface
-            type: string
-          - name: packets_received
-            type: long
-          - name: packets_sent
-            type: long
-          - name: parent_session
-            type:
-              type: struct
-              fields:
-              - name: id
-                type: string
-              - name: start_time
-                type: timestamp
-          - name: partial_hash
-            type: string
-          - name: path
-            type: string
-          - name: payload_protocol_id
-            type: string
-          - name: pcap_id
-            type: string
-          - name: pdu_session
-            type:
-              type: struct
-              fields:
-              - name: id
-                type: string
-          - name: pod
-            type:
-              type: struct
-              fields:
-              - name: name
-                type: string
-              - name: namespace
-                type: string
-          - name: policy
-            type:
-              type: struct
-              fields:
-              - name: id
-                type: string
-              - name: name
-                type: string
-          - name: portal
-            type: string
-          - name: priority
-            type: string
-          - name: private
-            type:
-              type: struct
-              fields:
-              - name: ip
-                type: string
-              - name: ipv6
-                type: string
-          - name: protocol
-            type: string
-          - name: proxy_type
-            type: string
-          - name: public
-            type:
-              type: struct
-              fields:
-              - name: ip
-                type: string
-              - name: ipv6
-                type: string
-          - name: radio_access_technology_type
-            type: string
-          - name: reason
-            type: string
-          - name: received_time
-            type: timestamp
-          - name: recipient
-            type: string
-          - name: referrer
-            type: string
-          - name: region
-            type: string
-          - name: related_vsys
-            type: string
-          - name: remote_user
-            type:
-              type: struct
-              fields:
-              - name: id
-                type: string
-              - name: ip
-                type: string
-          - name: repeat_count
-            type: long
-          - name: response_time
-            type: long
-          - name: result
-            type: string
-          - name: root_certificate_status
-            type: string
-          - name: root_common_name
-            type:
-              type: struct
-              fields:
-              - name: length
-                type: long
-              - name: value
-                type: string
-          - name: rule_uuid
-            type: string
-          - name: ruleset
-            type: string
-          - name: sccp
-            type:
-              type: struct
-              fields:
-              - name: calling_gt
-                type: string
-              - name: calling_ssn
-                type: string
-          - name: sctp
-            type:
-              type: struct
-              fields:
-              - name: assoc_end_reason
-                type: string
-              - name: assoc_id
-                type: string
-              - name: cause_code
-                type: string
-              - name: chunk_type
-                type: string
-              - name: chunks
-                type: long
-              - name: chunks_received
-                type: long
-              - name: chunks_sent
-                type: long
-              - name: filter
-                type: string
-              - name: stream_id
-                type: string
-              - name: verification
-                type:
-                  type: struct
-                  fields:
-                  - name: tag_1
-                    type: string
-                  - name: tag_2
-                    type: string
-          - name: sdwan
-            type:
-              type: struct
-              fields:
-              - name: cluster
-                type:
-                  type: struct
-                  fields:
-                  - name: name
-                    type: string
-                  - name: type
-                    type: string
-              - name: device_type
-                type: string
-              - name: site
-                type: string
-          - name: selection_type
-            type: string
-          - name: sender
-            type: string
-          - name: sequence_number
-            type: string
-          - name: serial_number
-            type: string
-          - name: server_name_indication
-            type:
-              type: struct
-              fields:
-              - name: length
-                type: long
-              - name: value
-                type: string
-          - name: server_profile
-            type: string
-          - name: session
-            type:
-              type: struct
-              fields:
-              - name: owner
-                type: string
-          - name: sessions
-            type:
-              type: struct
-              fields:
-              - name: closed
-                type: long
-              - name: created
-                type: long
-          - name: severity
-            type: string
-          - name: source
-            type:
-              type: struct
-              fields:
-              - name: ip
-                type: string
-              - name: ipv6
-                type: string
-              - name: location
-                type: string
-              - name: nat
-                type:
-                  type: struct
-                  fields:
-                  - name: ip
-                    type: string
-                  - name: port
-                    type: long
-              - name: port
-                type: long
-              - name: region
-                type: string
-              - name: user
-                type: string
-              - name: zone
-                type: string
-          - name: source_vm_uuid
-            type: string
-          - name: src
-            type:
-              type: struct
-              fields:
-              - name: category
-                type: string
-              - name: dynamic_address_group
-                type: string
-              - name: external_dynamic_list
-                type: string
-              - name: host
-                type: string
-              - name: mac
-                type: string
-              - name: model
-                type: string
-              - name: os
-                type:
-                  type: struct
-                  fields:
-                  - name: family
-                    type: string
-                  - name: version
-                    type: string
-              - name: profile
-                type: string
-              - name: vendor
-                type: string
-          - name: stage
-            type: string
-          - name: start_time
-            type: timestamp
-          - name: strict_check
-            type: long
-          - name: sub_type
-            type: string
-          - name: subject
-            type: string
-          - name: subject_common_name
-            type:
-              type: struct
-              fields:
-              - name: length
-                type: long
-              - name: value
-                type: string
-          - name: tag
-            type:
-              type: struct
-              fields:
-              - name: name
-                type: string
-          - name: threat
-            type:
-              type: struct
-              fields:
-              - name: id
-                type: string
-              - name: name
-                type: string
-          - name: threat_category
-            type: string
-          - name: timeout
-            type: int
-          - name: tls
-            type:
-              type: struct
-              fields:
-              - name: auth
-                type: string
-              - name: encryption
-                type: string
-              - name: error_type
-                type: string
-              - name: key_exchange_algorithm
-                type: string
-              - name: version
-                type: string
-          - name: tunnel_endpoint
-            type:
-              type: struct
-              fields:
-              - name: identifier1
-                type: string
-              - name: identifier2
-                type: string
-          - name: tunnel_fragment
-            type: long
-          - name: tunnel_inspection_rule
-            type: string
-          - name: tunnel_type
-            type: string
-          - name: type
-            type: string
-          - name: ugflags
-            type: string
-          - name: unknown_protocol
-            type: long
-          - name: url
-            type:
-              type: struct
-              fields:
-              - name: category
-                type: string
-          - name: url_category_list
-            type: string
-          - name: url_idx
-            type: string
-          - name: user
-            type: string
-          - name: user_agent
-            type: string
-          - name: user_by_source
-            type: string
-          - name: vendor
-            type: string
-          - name: virtual_sys
-            type: string
-          - name: vsys_id
-            type: string
-          - name: vsys_name
-            type: string
-          - name: wildfire
-            type:
-              type: struct
-              fields:
-              - name: name
-                type: string
-              - name: report_id
-                type: string
-          - name: x_forwarded_for
-            type: string
-          - name: xff
-            type:
-              type: struct
-              fields:
-              - name: ip
-                type: string
+                - name: access_point
+                  type:
+                    type: struct
+                    fields:
+                      - name: name
+                        type: string
+                - name: action
+                  type: string
+                - name: action_flags
+                  type: string
+                - name: action_source
+                  type: string
+                - name: admin
+                  type: string
+                - name: after_change_detail
+                  type: string
+                - name: application
+                  type:
+                    type: struct
+                    fields:
+                      - name: category
+                        type: string
+                      - name: characteristics
+                        type: string
+                      - name: container
+                        type: string
+                      - name: is_saas
+                        type: string
+                      - name: is_sanctioned
+                        type: string
+                      - name: risk_level
+                        type: long
+                      - name: sub_category
+                        type: string
+                      - name: technology
+                        type: string
+                      - name: tunneled
+                        type: string
+                - name: area_code
+                  type: string
+                - name: attempted_gateways
+                  type: string
+                - name: auth_method
+                  type: string
+                - name: authentication
+                  type:
+                    type: struct
+                    fields:
+                      - name: id
+                        type: string
+                      - name: policy
+                        type: string
+                      - name: protocol
+                        type: string
+                - name: before_change_detail
+                  type: string
+                - name: bytes_received
+                  type: long
+                - name: bytes_sent
+                  type: long
+                - name: category
+                  type: string
+                - name: cause_code
+                  type: string
+                - name: cell
+                  type:
+                    type: struct
+                    fields:
+                      - name: id
+                        type: string
+                - name: certificate
+                  type:
+                    type: struct
+                    fields:
+                      - name: fingerprint
+                        type: string
+                      - name: flags
+                        type: string
+                      - name: not_after
+                        type: timestamp
+                      - name: not_before
+                        type: timestamp
+                      - name: raw_size
+                        type: string
+                      - name: serial_number
+                        type: string
+                      - name: size
+                        type: long
+                      - name: version
+                        type: string
+                - name: chain_status
+                  type: string
+                - name: client
+                  type:
+                    type: struct
+                    fields:
+                      - name: os
+                        type: string
+                      - name: os_version
+                        type: string
+                - name: client_type
+                  type: string
+                - name: client_ver
+                  type: string
+                - name: cloud_report
+                  type:
+                    type: struct
+                    fields:
+                      - name: id
+                        type: string
+                - name: cmd
+                  type: string
+                - name: comment
+                  type: string
+                - name: config_version
+                  type: string
+                - name: connect_method
+                  type: string
+                - name: container
+                  type:
+                    type: struct
+                    fields:
+                      - name: id
+                        type: string
+                - name: content_version
+                  type: string
+                - name: datasource
+                  type: string
+                - name: datasource_subtype
+                  type: string
+                - name: datasource_type
+                  type: string
+                - name: datasourcename
+                  type: string
+                - name: datasourcetype
+                  type: string
+                - name: description
+                  type: string
+                - name: destination
+                  type:
+                    type: struct
+                    fields:
+                      - name: ip
+                        type: string
+                      - name: location
+                        type: string
+                      - name: nat
+                        type:
+                          type: struct
+                          fields:
+                            - name: ip
+                              type: string
+                            - name: port
+                              type: long
+                      - name: port
+                        type: long
+                      - name: user
+                        type: string
+                      - name: zone
+                        type: string
+                - name: destination_vm_uuid
+                  type: string
+                - name: device_group_hierarchy1
+                  type: string
+                - name: device_group_hierarchy2
+                  type: string
+                - name: device_group_hierarchy3
+                  type: string
+                - name: device_group_hierarchy4
+                  type: string
+                - name: device_group_id
+                  type: string
+                - name: device_name
+                  type: string
+                - name: diameter_app_id
+                  type: string
+                - name: diameter_avp_code
+                  type: string
+                - name: diameter_cmd_code
+                  type: string
+                - name: domain_edl
+                  type: string
+                - name: dst
+                  type:
+                    type: struct
+                    fields:
+                      - name: category
+                        type: string
+                      - name: dynamic_address_group
+                        type: string
+                      - name: external_dynamic_list
+                        type: string
+                      - name: host
+                        type: string
+                      - name: mac
+                        type: string
+                      - name: model
+                        type: string
+                      - name: os
+                        type:
+                          type: struct
+                          fields:
+                            - name: family
+                              type: string
+                            - name: version
+                              type: string
+                      - name: profile
+                        type: string
+                      - name: vendor
+                        type: string
+                - name: dynamic_user
+                  type:
+                    type: struct
+                    fields:
+                      - name: group
+                        type:
+                          type: struct
+                          fields:
+                            - name: name
+                              type: string
+                - name: elapsed_time
+                  type: long
+                - name: elliptic_curve
+                  type: string
+                - name: end_ip_address
+                  type: string
+                - name: endreason
+                  type: string
+                - name: error_code
+                  type: int
+                - name: error_message
+                  type: string
+                - name: event
+                  type:
+                    type: struct
+                    fields:
+                      - name: id
+                        type: string
+                      - name: reason
+                        type: string
+                      - name: result
+                        type: string
+                      - name: status
+                        type: string
+                - name: event_code
+                  type: string
+                - name: event_type
+                  type: string
+                - name: evidence
+                  type: string
+                - name: factorcompletiontime
+                  type: timestamp
+                - name: factorno
+                  type: int
+                - name: factortype
+                  type: string
+                - name: file
+                  type:
+                    type: struct
+                    fields:
+                      - name: hash
+                        type: string
+                      - name: type
+                        type: string
+                - name: flow_id
+                  type: string
+                - name: forwarded_ip
+                  type: string
+                - name: gateway
+                  type: string
+                - name: generated_time
+                  type: timestamp
+                - name: hash
+                  type: string
+                - name: high_resolution_timestamp
+                  type: timestamp
+                - name: host
+                  type:
+                    type: struct
+                    fields:
+                      - name: id
+                        type: string
+                      - name: ip
+                        type: string
+                - name: hs_stage_c2f
+                  type: string
+                - name: hs_stage_f2s
+                  type: string
+                - name: http2_connection
+                  type: string
+                - name: http_content_type
+                  type: string
+                - name: http_headers
+                  type: string
+                - name: http_method
+                  type: string
+                - name: imei
+                  type: string
+                - name: imsi
+                  type: string
+                - name: inbound_interface
+                  type: string
+                - name: interface
+                  type: string
+                - name: is_offloaded
+                  type: string
+                - name: issuer_common_name
+                  type:
+                    type: struct
+                    fields:
+                      - name: length
+                        type: long
+                      - name: value
+                        type: string
+                - name: justification
+                  type: string
+                - name: link
+                  type:
+                    type: struct
+                    fields:
+                      - name: change_count
+                        type: long
+                      - name: switches
+                        type: string
+                - name: location
+                  type: string
+                - name: log_profile
+                  type: string
+                - name: logged_time
+                  type: timestamp
+                - name: login_duration
+                  type: long
+                - name: machine
+                  type:
+                    type: struct
+                    fields:
+                      - name: mac_address
+                        type: string
+                      - name: name
+                        type: string
+                      - name: os
+                        type: string
+                - name: matchname
+                  type: string
+                - name: matchtype
+                  type: string
+                - name: max_encapsulation
+                  type: long
+                - name: mcc
+                  type: string
+                - name: message_type
+                  type: string
+                - name: misc
+                  type: string
+                - name: mnc
+                  type: string
+                - name: module
+                  type: string
+                - name: msisdn
+                  type: string
+                - name: network
+                  type:
+                    type: struct
+                    fields:
+                      - name: application
+                        type: string
+                      - name: bytes
+                        type: long
+                      - name: direction
+                        type: string
+                      - name: nat
+                        type:
+                          type: struct
+                          fields:
+                            - name: community_id
+                              type: string
+                      - name: packets
+                        type: long
+                      - name: pcap_id
+                        type: string
+                - name: normalize_user
+                  type: string
+                - name: nsdsai_sd
+                  type: string
+                - name: nsdsai_sst
+                  type: string
+                - name: nssai_sd
+                  type: string
+                - name: nssai_sst
+                  type: string
+                - name: object
+                  type:
+                    type: struct
+                    fields:
+                      - name: id
+                        type: string
+                      - name: name
+                        type: string
+                - name: observer
+                  type:
+                    type: struct
+                    fields:
+                      - name: serial_number
+                        type: string
+                - name: op_code
+                  type: string
+                - name: outbound_interface
+                  type: string
+                - name: packets_received
+                  type: long
+                - name: packets_sent
+                  type: long
+                - name: parent_session
+                  type:
+                    type: struct
+                    fields:
+                      - name: id
+                        type: string
+                      - name: start_time
+                        type: timestamp
+                - name: partial_hash
+                  type: string
+                - name: path
+                  type: string
+                - name: payload_protocol_id
+                  type: string
+                - name: pcap_id
+                  type: string
+                - name: pdu_session
+                  type:
+                    type: struct
+                    fields:
+                      - name: id
+                        type: string
+                - name: pod
+                  type:
+                    type: struct
+                    fields:
+                      - name: name
+                        type: string
+                      - name: namespace
+                        type: string
+                - name: policy
+                  type:
+                    type: struct
+                    fields:
+                      - name: id
+                        type: string
+                      - name: name
+                        type: string
+                - name: portal
+                  type: string
+                - name: priority
+                  type: string
+                - name: private
+                  type:
+                    type: struct
+                    fields:
+                      - name: ip
+                        type: string
+                      - name: ipv6
+                        type: string
+                - name: protocol
+                  type: string
+                - name: proxy_type
+                  type: string
+                - name: public
+                  type:
+                    type: struct
+                    fields:
+                      - name: ip
+                        type: string
+                      - name: ipv6
+                        type: string
+                - name: radio_access_technology_type
+                  type: string
+                - name: reason
+                  type: string
+                - name: received_time
+                  type: timestamp
+                - name: recipient
+                  type: string
+                - name: referrer
+                  type: string
+                - name: region
+                  type: string
+                - name: related_vsys
+                  type: string
+                - name: remote_user
+                  type:
+                    type: struct
+                    fields:
+                      - name: id
+                        type: string
+                      - name: ip
+                        type: string
+                - name: repeat_count
+                  type: long
+                - name: response_time
+                  type: long
+                - name: result
+                  type: string
+                - name: root_certificate_status
+                  type: string
+                - name: root_common_name
+                  type:
+                    type: struct
+                    fields:
+                      - name: length
+                        type: long
+                      - name: value
+                        type: string
+                - name: rule_uuid
+                  type: string
+                - name: ruleset
+                  type: string
+                - name: sccp
+                  type:
+                    type: struct
+                    fields:
+                      - name: calling_gt
+                        type: string
+                      - name: calling_ssn
+                        type: string
+                - name: sctp
+                  type:
+                    type: struct
+                    fields:
+                      - name: assoc_end_reason
+                        type: string
+                      - name: assoc_id
+                        type: string
+                      - name: cause_code
+                        type: string
+                      - name: chunk_type
+                        type: string
+                      - name: chunks
+                        type: long
+                      - name: chunks_received
+                        type: long
+                      - name: chunks_sent
+                        type: long
+                      - name: filter
+                        type: string
+                      - name: stream_id
+                        type: string
+                      - name: verification
+                        type:
+                          type: struct
+                          fields:
+                            - name: tag_1
+                              type: string
+                            - name: tag_2
+                              type: string
+                - name: sdwan
+                  type:
+                    type: struct
+                    fields:
+                      - name: cluster
+                        type:
+                          type: struct
+                          fields:
+                            - name: name
+                              type: string
+                            - name: type
+                              type: string
+                      - name: device_type
+                        type: string
+                      - name: site
+                        type: string
+                - name: selection_type
+                  type: string
+                - name: sender
+                  type: string
+                - name: sequence_number
+                  type: string
+                - name: serial_number
+                  type: string
+                - name: server_name_indication
+                  type:
+                    type: struct
+                    fields:
+                      - name: length
+                        type: long
+                      - name: value
+                        type: string
+                - name: server_profile
+                  type: string
+                - name: session
+                  type:
+                    type: struct
+                    fields:
+                      - name: owner
+                        type: string
+                - name: sessions
+                  type:
+                    type: struct
+                    fields:
+                      - name: closed
+                        type: long
+                      - name: created
+                        type: long
+                - name: severity
+                  type: string
+                - name: source
+                  type:
+                    type: struct
+                    fields:
+                      - name: ip
+                        type: string
+                      - name: ipv6
+                        type: string
+                      - name: location
+                        type: string
+                      - name: nat
+                        type:
+                          type: struct
+                          fields:
+                            - name: ip
+                              type: string
+                            - name: port
+                              type: long
+                      - name: port
+                        type: long
+                      - name: region
+                        type: string
+                      - name: user
+                        type: string
+                      - name: zone
+                        type: string
+                - name: source_vm_uuid
+                  type: string
+                - name: src
+                  type:
+                    type: struct
+                    fields:
+                      - name: category
+                        type: string
+                      - name: dynamic_address_group
+                        type: string
+                      - name: external_dynamic_list
+                        type: string
+                      - name: host
+                        type: string
+                      - name: mac
+                        type: string
+                      - name: model
+                        type: string
+                      - name: os
+                        type:
+                          type: struct
+                          fields:
+                            - name: family
+                              type: string
+                            - name: version
+                              type: string
+                      - name: profile
+                        type: string
+                      - name: vendor
+                        type: string
+                - name: stage
+                  type: string
+                - name: start_time
+                  type: timestamp
+                - name: strict_check
+                  type: long
+                - name: sub_type
+                  type: string
+                - name: subject
+                  type: string
+                - name: subject_common_name
+                  type:
+                    type: struct
+                    fields:
+                      - name: length
+                        type: long
+                      - name: value
+                        type: string
+                - name: tag
+                  type:
+                    type: struct
+                    fields:
+                      - name: name
+                        type: string
+                - name: threat
+                  type:
+                    type: struct
+                    fields:
+                      - name: id
+                        type: string
+                      - name: name
+                        type: string
+                - name: threat_category
+                  type: string
+                - name: timeout
+                  type: int
+                - name: tls
+                  type:
+                    type: struct
+                    fields:
+                      - name: auth
+                        type: string
+                      - name: encryption
+                        type: string
+                      - name: error_type
+                        type: string
+                      - name: key_exchange_algorithm
+                        type: string
+                      - name: version
+                        type: string
+                - name: tunnel_endpoint
+                  type:
+                    type: struct
+                    fields:
+                      - name: identifier1
+                        type: string
+                      - name: identifier2
+                        type: string
+                - name: tunnel_fragment
+                  type: long
+                - name: tunnel_inspection_rule
+                  type: string
+                - name: tunnel_type
+                  type: string
+                - name: type
+                  type: string
+                - name: ugflags
+                  type: string
+                - name: unknown_protocol
+                  type: long
+                - name: url
+                  type:
+                    type: struct
+                    fields:
+                      - name: category
+                        type: string
+                - name: url_category_list
+                  type: string
+                - name: url_idx
+                  type: string
+                - name: user
+                  type: string
+                - name: user_agent
+                  type: string
+                - name: user_by_source
+                  type: string
+                - name: vendor
+                  type: string
+                - name: virtual_sys
+                  type: string
+                - name: vsys_id
+                  type: string
+                - name: vsys_name
+                  type: string
+                - name: wildfire
+                  type:
+                    type: struct
+                    fields:
+                      - name: name
+                        type: string
+                      - name: report_id
+                        type: string
+                - name: x_forwarded_for
+                  type: string
+                - name: xff
+                  type:
+                    type: struct
+                    fields:
+                      - name: ip
+                        type: string
