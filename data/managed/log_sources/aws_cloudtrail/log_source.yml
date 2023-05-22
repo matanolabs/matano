@@ -64,18 +64,11 @@ transform: |
   .aws.cloudtrail.error_code = del(.json.errorCode)
   .aws.cloudtrail.error_message = del(.json.errorMessage)
 
-  if .json.requestParameters != null {
-      .aws.cloudtrail.flattened.request_parameters = del(.json.requestParameters)
-  }
-  if .json.responseElements != null {
-      .aws.cloudtrail.flattened.response_elements = del(.json.responseElements)
-  }
-  if .json.additionalEventData != null {
-      .aws.cloudtrail.flattened.additional_eventdata = del(.json.additionalEventData)
-  }
-  if .json.serviceEventDetails != null {
-      .aws.cloudtrail.flattened.service_event_details = del(.json.serviceEventDetails)
-  }
+  .aws.cloudtrail.request_parameters = compact(del(.json.requestParameters)) ?? null
+  .aws.cloudtrail.response_elements = compact(del(.json.responseElements)) ?? null
+  .aws.cloudtrail.additional_eventdata = compact(del(.json.additionalEventData)) ?? null
+  .aws.cloudtrail.service_event_details = compact(del(.json.serviceEventDetails)) ?? null
+  .aws.cloudtrail.edge_device_details = compact(del(.json.edgeDeviceDetails)) ?? null
 
   .aws.cloudtrail.request_id = del(.json.requestID)
   .event.id = del(.json.eventID)
@@ -89,22 +82,22 @@ transform: |
   .aws.cloudtrail.recipient_account_id = del(.json.recipientAccountId)
   .aws.cloudtrail.shared_event_id = del(.json.sharedEventId)
   .aws.cloudtrail.vpc_endpoint_id = del(.json.vpcEndpointId)
-  if .aws.cloudtrail.flattened.request_parameters.userName != null {
-      .related.user = push!(.related.user, .aws.cloudtrail.flattened.request_parameters.userName)
+  if .aws.cloudtrail.request_parameters.userName != null {
+      .related.user = push!(.related.user, .aws.cloudtrail.request_parameters.userName)
   }
-  if .aws.cloudtrail.flattened.request_parameters.newUserName != null {
-      .related.user = push!(.related.user, .aws.cloudtrail.flattened.request_parameters.newUserName)
+  if .aws.cloudtrail.request_parameters.newUserName != null {
+      .related.user = push!(.related.user, .aws.cloudtrail.request_parameters.newUserName)
   }
 
   if (.event.action == "ConsoleLogin") {
-    if .aws.cloudtrail.flattened.additional_eventdata.MobileVersion != null {
-      .aws.cloudtrail.console_login.additional_eventdata.mobile_version = .aws.cloudtrail.flattened.additional_eventdata.MobileVersion != "No"
+    if .aws.cloudtrail.additional_eventdata.MobileVersion != null {
+      .aws.cloudtrail.console_login.additional_eventdata.mobile_version = .aws.cloudtrail.additional_eventdata.MobileVersion != "No"
     }
-    if .aws.cloudtrail.flattened.additional_eventdata.MFAUsed != null {
-      .aws.cloudtrail.console_login.additional_eventdata.mfa_used = .aws.cloudtrail.flattened.additional_eventdata.MFAUsed != "No"
+    if .aws.cloudtrail.additional_eventdata.MFAUsed != null {
+      .aws.cloudtrail.console_login.additional_eventdata.mfa_used = .aws.cloudtrail.additional_eventdata.MFAUsed != "No"
     }
-    if .aws.cloudtrail.flattened.additional_eventdata.LoginTo != null {
-      .aws.cloudtrail.console_login.additional_eventdata.login_to = .aws.cloudtrail.flattened.additional_eventdata.LoginTo
+    if .aws.cloudtrail.additional_eventdata.LoginTo != null {
+      .aws.cloudtrail.console_login.additional_eventdata.login_to = .aws.cloudtrail.additional_eventdata.LoginTo
     }
   }
 
@@ -578,8 +571,8 @@ transform: |
   .event.type = ["info"]
   .event.outcome = if .aws.cloudtrail.error_code != null || .aws.cloudtrail.error_message != null {
       "failure"
-  } else if .event.action == "ConsoleLogin" && .aws.cloudtrail.flattened.response_elements.ConsoleLogin != null {
-      downcase!(.aws.cloudtrail.flattened.response_elements.ConsoleLogin)
+  } else if .event.action == "ConsoleLogin" && .aws.cloudtrail.response_elements.ConsoleLogin != null {
+      downcase!(.aws.cloudtrail.response_elements.ConsoleLogin)
   } else {
       "success"
   }
@@ -592,17 +585,65 @@ transform: |
   .cloud.account.id = del(.json.awsAccountId) || .cloud.account.id
 
   .aws.cloudtrail.insight_details = del(.json.insightDetails)
-  .group.id = .aws.cloudtrail.flattened.response_elements.group.groupId
-  .user.target.id = .aws.cloudtrail.flattened.response_elements.user.userId
-  .user.changes.name = .aws.cloudtrail.flattened.request_parameters.newUserName
-  .group.name = .aws.cloudtrail.flattened.request_parameters.groupName
-  .user.target.name = .aws.cloudtrail.flattened.request_parameters.userName
-  .aws.cloudtrail.flattened.insight_details = del(.aws.cloudtrail.insight_details)
+  .group.id = .aws.cloudtrail.response_elements.group.groupId
+  .user.target.id = .aws.cloudtrail.response_elements.user.userId
+  .user.changes.name = .aws.cloudtrail.request_parameters.newUserName
+  .group.name = .aws.cloudtrail.request_parameters.groupName
+  .user.target.name = .aws.cloudtrail.request_parameters.userName
+  .aws.cloudtrail.insight_details = del(.aws.cloudtrail.insight_details)
+
+  .aws.cloudtrail.addendum.reason = .json.addendum.reason
+  .aws.cloudtrail.addendum.updated_fields = .json.addendum.updatedFields
+  .aws.cloudtrail.addendum.original_request_id = .json.addendum.originalRequestID
+  .aws.cloudtrail.addendum.original_event_id = .json.addendum.originalEventID
+
+  # only set with "true"
+  .aws.cloudtrail.session_credential_from_console = if .json.sessionCredentialFromConsole == "true" {
+    true
+  } else { null }
+
+  .tls.cipher = .json.tlsDetails.cipherSuite
+  if .json.tlsDetails.tlsVersion != null { # e.g. TLSv1.2
+  	parts = split!(.json.tlsDetails.tlsVersion, "v", limit: 2)
+  	if (contains!(parts[1], ".")) {
+  	  .tls.version = parts[1]
+  	} else {
+  	  ver, err = slice!(parts, start: 0, end: 1) + "." + slice!(parts, start: 1)
+      if err == null {
+        .tls.version = ver
+      }
+  	}
+    .tls.version_protocol = downcase!(parts[0]);
+  }
+  .tls.client.server_name = .json.tlsDetails.clientProvidedHostHeader
+  .destination.domain = .tls.client.server_name
 
   .related.user = unique!(.related.user)
 
-  # .aws.cloudtrail = merge(.aws.cloudtrail, map_values(.aws.cloudtrail.flattened) -> |value| { encode_json(value) }, deep: true)
-  .aws.cloudtrail.flattened = map_values(compact(.aws.cloudtrail.flattened)) -> |value| { encode_json(value) } # TODO(): should inject based on schema
+  # TODO: this should be automated based on schema
+  if .aws.cloudtrail.additional_eventdata != null {
+    .aws.cloudtrail.additional_eventdata = encode_json(.aws.cloudtrail.additional_eventdata)
+  }
+  if .aws.cloudtrail.request_parameters != null {
+    .aws.cloudtrail.request_parameters = encode_json(.aws.cloudtrail.request_parameters)
+  }
+  if .aws.cloudtrail.response_elements != null {
+    .aws.cloudtrail.response_elements = encode_json(.aws.cloudtrail.response_elements)
+  }
+  if .aws.cloudtrail.service_event_details != null {
+    .aws.cloudtrail.service_event_details = encode_json(.aws.cloudtrail.service_event_details)
+  }
+  if .aws.cloudtrail.edge_device_details != null {
+    .aws.cloudtrail.edge_device_details = encode_json(.aws.cloudtrail.edge_device_details)
+  }
+
+  # don't break legacy flattened field
+  .aws.cloudtrail.flattened = {
+      "additional_eventdata": .aws.cloudtrail.additional_eventdata,
+      "request_parameters": .aws.cloudtrail.request_parameters,
+      "response_elements": .aws.cloudtrail.response_elements,
+      "service_event_details": .aws.cloudtrail.service_event_details,
+  }
 schema:
   ecs_field_names:
     - cloud.account.id
@@ -617,6 +658,7 @@ schema:
     - container.image.name
     - container.labels
     - container.name
+    - destination.domain
     - ecs.version
     - error.message
     - event.action
@@ -666,6 +708,9 @@ schema:
     - source.geo.region_name
     - source.ip
     - tags
+    - tls.cipher
+    - tls.client.server_name
+    - tls.version
     - user.changes.name
     - user.id
     - user.name
@@ -775,15 +820,19 @@ schema:
                               type: string
                             - name: mfa_used
                               type: boolean
-                - name: flattened
+                - name: addendum
                   type:
                     type: struct
                     fields:
-                      - name: additional_eventdata
+                      - name: reason
                         type: string
-                      - name: request_parameters
+                      - name: updated_fields
                         type: string
-                      - name: response_elements
+                      - name: original_request_id
                         type: string
-                      - name: service_event_details
+                      - name: original_event_id
                         type: string
+                - name: session_credential_from_console
+                  type: boolean
+                - name: edge_device_details
+                  type: string
