@@ -810,10 +810,6 @@ schema:
                   type: string
                 - name: AlertId
                   type: string
-                - name: .
-                  type:
-                    type: list
-                    element: string
                 - name: AlertType
                   type: string
                 - name: AppId
