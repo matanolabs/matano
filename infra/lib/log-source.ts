@@ -119,6 +119,7 @@ const MANAGED_LOG_SOURCE_PREFIX_MAP: Record<string, string> = {
   crowdstrike_falcon: "crowdstrike",
   duo: "duo",
   msft: "msft",
+  teleport: "teleport",
   o365: "o365",
   google_workspace: "google_workspace",
   gcp_audit: "gcp_audit",
