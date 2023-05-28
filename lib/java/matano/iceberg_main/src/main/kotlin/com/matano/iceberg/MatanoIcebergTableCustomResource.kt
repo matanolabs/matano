@@ -172,7 +172,6 @@ class MatanoIcebergTableCustomResource : CFNCustomResource {
         logger.info("Received event: ${mapper.writeValueAsString(event)}")
 
         val newProps = mapper.convertValue<MatanoTableRequest>(event.resourceProperties)
-        val oldProps = mapper.convertValue<MatanoTableRequest>(event.oldResourceProperties)
 
         val namespace = newProps.glueDatabaseName ?: MATANO_NAMESPACE
         val tableId = TableIdentifier.of(Namespace.of(namespace), newProps.tableName)
@@ -180,11 +179,10 @@ class MatanoIcebergTableCustomResource : CFNCustomResource {
         val existingSchema = table.schema()
         val newSchema = newProps.loadSchema()
 
-        val shouldUpdateSchema = Pair(oldProps.schemaBucket, oldProps.schemaKey) != Pair(newProps.schemaBucket, newProps.schemaKey)
+        val shouldUpdateSchema = newSchema != existingSchema
 
-        val oldInputPartitions = oldProps.partitions
         val newInputPartitions = newProps.partitions
-        val shouldUpdatePartitions = oldInputPartitions != newInputPartitions
+        val shouldUpdatePartitions = table.spec() != createIcebergPartitionSpec(newInputPartitions, newSchema)
         val tx = table.newTransaction()
 
         // TODO: is this actually an issue? Rexamine if/when we add user partitions.
@@ -213,23 +211,7 @@ class MatanoIcebergTableCustomResource : CFNCustomResource {
         }
 
         if (shouldUpdatePartitions) {
-            logger.info("Updating partitions of ${table.name()}")
-            val update = tx.updateSpec()
-
-            val oldFields = oldInputPartitions.toSet()
-            val newFields = newInputPartitions.toSet()
-
-            val additions = newFields - oldFields
-            val removals = oldFields - newFields
-
-            for (addition in additions) {
-                val term = createIcebergTerm(addition)
-                update.addField(addition.column, term)
-            }
-            for (removal in removals) {
-                update.removeField(removal.column)
-            }
-            update.commit()
+            throw RuntimeException("Updating partitions is not currently supported.")
         }
 
         val oldProperties = table.properties().toMap().filterKeys { it != DEFAULT_NAME_MAPPING }
