@@ -138,7 +138,7 @@ export class DPMainStack extends MatanoStack {
     // to allow for custom bucket's sns to send messages to our queue
     const customSourcesDlq = new sqs.Queue(this, "CustomSourcesDlq", {});
     const customSourcesQueue = new sqs.Queue(this, "CustomSourcesQueue", {
-      visibilityTimeout: cdk.Duration.minutes(15),
+      visibilityTimeout: cdk.Duration.seconds(30),
       deadLetterQueue: {
         queue: customSourcesDlq,
         maxReceiveCount: 3,
