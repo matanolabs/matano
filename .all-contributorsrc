@@ -156,7 +156,17 @@
         "code",
         "doc"
       ]
+    },
+    {
+      "login": "chrismsnz",
+      "name": "Chris Smith",
+      "avatar_url": "https://avatars.githubusercontent.com/u/171317?v=4",
+      "profile": "http://www.nevermind.co.nz",
+      "contributions": [
+        "code"
+      ]
     }
   ],
-  "contributorsPerLine": 7
+  "contributorsPerLine": 7,
+  "commitType": "docs"
 }
