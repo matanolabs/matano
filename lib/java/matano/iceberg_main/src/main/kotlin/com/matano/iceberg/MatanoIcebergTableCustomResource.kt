@@ -182,7 +182,8 @@ class MatanoIcebergTableCustomResource : CFNCustomResource {
         val shouldUpdateSchema = newSchema != existingSchema
 
         val newInputPartitions = newProps.partitions
-        val shouldUpdatePartitions = table.spec() != createIcebergPartitionSpec(newInputPartitions, newSchema)
+        val newSpec = createIcebergPartitionSpec(newInputPartitions, newSchema)
+        val shouldUpdatePartitions = table.spec().compatibleWith(newSpec)
         val tx = table.newTransaction()
 
         // TODO: is this actually an issue? Rexamine if/when we add user partitions.
