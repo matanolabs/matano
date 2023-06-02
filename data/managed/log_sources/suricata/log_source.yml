@@ -36,11 +36,7 @@ schema:
   - destination.mac
   - destination.packets
   - destination.port
-  - dns.answers.class
-  - dns.answers.data
-  - dns.answers.name
-  - dns.answers.ttl
-  - dns.answers.type
+  - dns.answers
   - dns.header_flags
   - dns.id
   - dns.op_code
