@@ -134,3 +134,7 @@ transform: |
   }
 
   del(.zeek.radius.id)
+
+meta:
+  display_name: "radius.log"
+  description: "RADIUS authentication attempts"

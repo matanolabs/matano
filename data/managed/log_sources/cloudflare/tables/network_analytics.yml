@@ -697,3 +697,7 @@ transform: |
   # 	del(.cloudflare.network_analytics.source.port)
   # 	del(.cloudflare.network_analytics.rule.id)
   # }
+
+meta:
+  display_name: "Network Analytics logs"
+  description: "Cloudflare Network Analytics Logs provide information about network traffic, including packet samples dropped and passed by the systems such as Advanced TCP Protection and Magic Firewall."

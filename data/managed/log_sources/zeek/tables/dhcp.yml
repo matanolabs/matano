@@ -174,3 +174,7 @@ transform: |
   .related.ip = unique(filter(flatten([.source.ip, .destination.ip])) -> |_, v| { v != null })
 
   # TODO(): compute a network community id
+
+meta:
+  display_name: "dhcp.log"
+  description: "Information about DHCP (Dynamic Host Configuration Protocol) leases."

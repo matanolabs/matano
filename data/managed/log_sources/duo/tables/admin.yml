@@ -165,3 +165,7 @@ transform: |
   }
       
   del(.json)
+
+meta:
+  display_name: Administrator Logs
+  description: "Administrator log events let you track the username, time and type of administrator activity, including groups, user, integration and device management."

@@ -1,3 +1,7 @@
 ingest:
   select_table_from_payload: |
     string!(del(.json._table))
+
+meta:
+  display_name: "1Password"
+  description: "Monitor 1Password account activity, including sign-in attempts and item usage."

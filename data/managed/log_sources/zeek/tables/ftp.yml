@@ -214,3 +214,7 @@ transform: |
   # TODO(): compute network.community_id
 
   del(.zeek.ftp.id)
+
+meta:
+  display_name: "ftp.log"
+  description: "Summarizes activity using the File Transfer Protocol (FTP)."

@@ -65,3 +65,7 @@ transform: |
   .duo.summary.user_count = del(.json.user_count)
 
   del(.json)
+
+meta:
+  display_name: "Admin Summary"
+  description: "Provides a summary of account utilization information."

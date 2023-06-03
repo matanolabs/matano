@@ -1004,3 +1004,7 @@ schema:
                   type: string
                 - name: YammerNetworkId
                   type: string
+
+meta:
+  display_name: "Office 365 Audit Log"
+  description: "Provides audit events the from the Microsoft 365 unified audit log via the Office 365 Management Activity API."

@@ -299,3 +299,7 @@ transform: |
   # 	del(.cloudflare.spectrum_event.client.ip)
   # 	del(.cloudflare.spectrum_event.client.port)
   # }
+
+meta:
+  display_name: "Spectrum events"
+  description: "Spectrum events are logs that track every client connection through Cloudflare Spectrum."

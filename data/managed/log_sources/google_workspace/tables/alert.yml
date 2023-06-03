@@ -936,3 +936,7 @@ transform: |-
   # }
   # script
   #
+
+meta:
+  display_name: "Alert"
+  description: "Alerts affecting your domain from Google Workspace Alert Center."

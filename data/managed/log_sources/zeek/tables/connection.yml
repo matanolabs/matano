@@ -321,3 +321,7 @@ transform: |
   del(.zeek.connection.orig_bytes)
   del(.zeek.connection.resp_bytes)
   del(.zeek.connection.tunnel_parents)
+
+meta:
+  display_name: "conn.log"
+  description: "General information regarding TCP/UDP/ICMP connections."

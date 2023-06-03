@@ -184,3 +184,10 @@ transform: |2-
   .event.category = unique(.event.category)
 
   del(._temp)
+
+meta:
+  display_name: "GitHub"
+  description: "Track admin, audit, and Git activity across your Github organization."
+  default:
+    display_name: "GitHub Audit Logs"
+    description: "Audit logs track activity across your organization, including access, permission changes, user changes, API requests, and Git events."

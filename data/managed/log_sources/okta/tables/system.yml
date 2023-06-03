@@ -680,3 +680,7 @@ schema:
             type: string
           - name: version
             type: string
+
+meta:
+  display_name: "Okta System Log"
+  description: "The Okta System Log records system events that are related to your organization in order to provide an audit trail that can be used to understand platform activity and to diagnose problems."

@@ -860,3 +860,7 @@ transform: |-
   del(.google_workspace.admin.END_DATE)
   del(.google_workspace.admin.END_DATE_TIME)
   del(.google_workspace.admin.WHITELISTED_GROUPS)
+
+meta:
+  display_name: "Admin"
+  description: "Track activities done by administrators using the Admin console."

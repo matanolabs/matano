@@ -762,3 +762,7 @@ schema:
                 type: string
           - name: tx_id
             type: long
+
+meta:
+  display_name: "Suricata"
+  description: "Track network activity from Suricata IDS, including EVE output, alerts, metadata, and more."

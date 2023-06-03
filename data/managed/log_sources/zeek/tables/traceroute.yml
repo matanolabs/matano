@@ -73,3 +73,7 @@ transform: |
   .destination.as.organization.name = del(.destination.as.organization_name)
 
   .related.ip = unique(filter(flatten([.source.ip, .destination.ip])) -> |_, v| { v != null })
+
+meta:
+  display_name: "traceroute.log"
+  description: "Traceroute detection"

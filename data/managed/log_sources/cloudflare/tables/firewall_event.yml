@@ -291,3 +291,7 @@ transform: |
   # 	del(.cloudflare.firewall_event.client.country)
   # 	del(.cloudflare.firewall_event.client.ip)
   # }
+
+meta:
+  display_name: "Firewall events"
+  description: "Cloudflare firewall events track actions taken by the Cloudflare Firewall on requests, including which rule triggered the action and what action was taken."

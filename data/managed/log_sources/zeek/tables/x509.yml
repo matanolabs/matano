@@ -351,3 +351,7 @@ transform: |
 
   .file.x509.subject = map_values(compact(.file.x509.subject)) -> |v| { [v] }
   .file.x509.issuer = map_values(compact(.file.x509.issuer)) -> |v| { [v] }
+
+meta:
+  display_name: "x509.log"
+  description: "X.509 certificate info"

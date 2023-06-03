@@ -614,3 +614,7 @@ transform: |-
   del(.suricata.eve.src_port)
   del(.suricata.eve.dest_port)
   del(.dns.question.domain)
+
+meta:
+  display_name: "EVE"
+  description: "The EVE output facility outputs alerts, anomalies, metadata, file info and protocol specific records through JSON."

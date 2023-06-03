@@ -101,3 +101,7 @@ transform: |
   if .zeek.ocsp.issuerKeyHash != null { 
       .related.hash = push(.related.hash, .zeek.ocsp.issuerKeyHash) 
   }
+
+meta:
+  display_name: "ocsp.log"
+  description: "Online Certificate Status Protocol (OCSP)"

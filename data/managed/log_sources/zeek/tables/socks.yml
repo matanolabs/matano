@@ -158,3 +158,7 @@ transform: |
   # TODO(): add community network id
 
   del(.zeek.socks.id)
+
+meta:
+  display_name: "socks.log"
+  description: "SOCKS proxy requests"

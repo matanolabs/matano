@@ -3,3 +3,7 @@ name: msft
 ingest:
   select_table_from_payload: |
     string(del(.json._table)) ?? { abort }
+
+meta:
+  display_name: "Microsoft"
+  description: "Track activity across Microsoft services, including Azure Active Directory (AD)."

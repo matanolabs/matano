@@ -169,3 +169,7 @@ transform: |
   .ts = to_timestamp!(.zeek.stats.ts, "seconds") 
 
   del(.zeek.stats.ts)
+
+meta:
+  display_name: "stats.log"
+  description: "Memory/event/packet/lag statistics"

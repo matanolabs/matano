@@ -168,3 +168,10 @@ transform: |
       ["change"]
     }
   }
+
+meta:
+  display_name: "AWS Config"
+  description: "Gain a detailed view of the configuration of AWS resources in your AWS account."
+  default:
+    display_name: "Configuration History"
+    description: "AWS Config configuration history files track historical configuration changes to resources in your AWS account."

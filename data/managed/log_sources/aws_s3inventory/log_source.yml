@@ -116,3 +116,7 @@ transform: |
   if .file.hash.md5 != null {
     .related.hash = [.file.hash.md5]
   }
+
+meta:
+  display_name: "Amazon S3 Inventory"
+  description: "Build a complete inventory of all objects in your Amazon S3 buckets."

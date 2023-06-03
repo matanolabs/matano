@@ -113,3 +113,7 @@ transform: |
   # TODO(): add community network id
 
   del(.zeek.dpd.id)
+
+meta:
+  display_name: "dpd.log"
+  description: "Reports problems with the Dynamic protocol detection (DPD) mechanism (detection failures)."

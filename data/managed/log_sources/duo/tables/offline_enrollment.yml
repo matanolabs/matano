@@ -104,3 +104,7 @@ transform: |
   }
 
   del(.json)
+
+meta:
+  display_name: "Offline Enrollment Events"
+  description: "Offline enrollment events from Duo Authentication for Windows Logon."

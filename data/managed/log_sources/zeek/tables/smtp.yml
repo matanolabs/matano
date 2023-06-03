@@ -172,3 +172,7 @@ transform: |
   # TODO(): add community network id
       
   del(.zeek.smtp.id)
+
+meta:
+  display_name: "smtp.log"
+  description: "Simple Mail Transfer Protocol (SMTP) transactions"

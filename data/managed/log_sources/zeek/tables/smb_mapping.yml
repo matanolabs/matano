@@ -114,3 +114,7 @@ transform: |
   # TODO(): add network community id
 
   del(.zeek.smb_mapping.id)
+
+meta:
+  display_name: "smb_mapping.log"
+  description: "SMB trees"

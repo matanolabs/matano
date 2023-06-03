@@ -151,3 +151,7 @@ transform: |
   # TODO(): add community network id
 
   del(.zeek.mysql.id)
+
+meta:
+  display_name: "mysql.log"
+  description: "MySQL data."

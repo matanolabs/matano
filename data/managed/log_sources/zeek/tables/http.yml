@@ -238,3 +238,7 @@ transform: |
   # TODO(): compute network community id
 
   del(.zeek.http.id)
+
+meta:
+  display_name: "http.log"
+  description: "Information about HTTP requests and responses."

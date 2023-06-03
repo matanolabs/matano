@@ -690,3 +690,7 @@ transform: |
   # 	del(.cloudflare.http_request.client.ip)
   # 	del(.cloudflare.http_request.client.request.user.agent)
   # }
+
+meta:
+  display_name: "HTTP Requests"
+  description: "Cloudflare HTTP request logs track detailed information on all HTTP requests made to a Cloudflare-protected domain."

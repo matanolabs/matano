@@ -83,3 +83,7 @@ schema:
                         type: string
                       - name: signature_algorithm
                         type: string
+
+meta:
+  display_name: "CloudTrail Digest logs"
+  description: "Digest files track hash and signature values for log files delivered by CloudTrail, for integrity validation"

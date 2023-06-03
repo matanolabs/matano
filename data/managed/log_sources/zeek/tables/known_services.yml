@@ -62,3 +62,7 @@ transform: |
   }
 
   del(.json)
+
+meta:
+  display_name: "known_services.log"
+  description: "Records a timestamp, IP, port number, protocol, and service (if available) when Zeek observes a system offering a new service on the local network."

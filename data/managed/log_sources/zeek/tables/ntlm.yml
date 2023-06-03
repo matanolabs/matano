@@ -156,3 +156,7 @@ transform: |
   # TODO: add community network id
 
   del(.zeek.ntlm.id)
+
+meta:
+  display_name: "ntlm.log"
+  description: "NT LAN Manager (NTLM) data"

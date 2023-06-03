@@ -320,3 +320,10 @@ schema:
                   type: string
                 - name: vpc_id
                   type: string
+
+meta:
+  display_name: "AWS VPC Flow Logs"
+  description: "Analyze network traffic across your AWS infrastructure"
+  default:
+    display_name: "VPC flow logs"
+    description: "Flow logs capture information about the IP traffic going to and from network interfaces in your VPC."

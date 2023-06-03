@@ -982,3 +982,8 @@ schema:
                     fields:
                       - name: ip
                         type: string
+
+
+meta:
+  display_name: "Palo Alto Networks Firewall"
+  description: "Monitor Palo Alto Next Gen Firewall activity, including Traffic, GlobalProtect, and more log types."

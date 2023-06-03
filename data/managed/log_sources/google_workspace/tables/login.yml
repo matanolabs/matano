@@ -225,3 +225,7 @@ transform: |-
   .source.as.organization.name = del(.source.as.organization_name)
 
   .related.user = compact(.related.user)
+
+meta:
+  display_name: "Login"
+  description: "Provides information on when your account's users log in and out of their accounts."

@@ -156,3 +156,7 @@ transform: |
   # TODO(): add community network id
 
   del(.zeek.rfb.id)
+
+meta:
+  display_name: "rfb.log"
+  description: "Remote Framebuffer (RFB)"

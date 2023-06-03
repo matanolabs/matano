@@ -123,3 +123,7 @@ transform: |
   # TODO(): add community network id
 
   del(.zeek.modbus.id)
+
+meta:
+  display_name: "modbus.log"
+  description: "Modbus activity, including modbus commands and responses."

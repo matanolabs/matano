@@ -19,3 +19,7 @@ ingest:
     } else {
       abort # unknown table
     }
+
+meta:
+  display_name: "Cloudflare"
+  description: "Monitor audit, DNS, Firewall, HTTP, NEL Report, Network Analytics and Spectrum Event Logs (Logpush) from Cloudflare."

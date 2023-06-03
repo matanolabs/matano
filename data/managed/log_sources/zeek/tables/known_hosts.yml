@@ -35,3 +35,7 @@ transform: |
   }
 
   del(.json)
+
+meta:
+  display_name: "known_hosts.log"
+  description: "Records a timestamp and an IP address when Zeek observes a new system on the local network."

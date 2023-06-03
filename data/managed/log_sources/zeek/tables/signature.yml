@@ -118,3 +118,7 @@ transform: |
   .destination.as.organization.name = del(.destination.as.organization_name) || .destination.as.organization.name
 
   del(.zeek.signature.ts)
+
+meta:
+  display_name: "signatures.log"
+  description: "Signature matches"

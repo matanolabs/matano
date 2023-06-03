@@ -3,3 +3,7 @@ ingest:
     if match(.__metadata.s3.key, r'.*') {
       "audit"
     }
+
+meta:
+  display_name: "Microsoft Office 365"
+  description: "Track user, admin, audit, and other activity across dozens of Microsoft Office 365 services."

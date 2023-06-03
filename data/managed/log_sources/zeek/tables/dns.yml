@@ -305,3 +305,7 @@ transform: |
   del(.zeek.dns.auth)
   del(.zeek.dns.addl)
   del(.zeek.dns.id)
+
+meta:
+  display_name: "dns.log"
+  description: "DNS activity"

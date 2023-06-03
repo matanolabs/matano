@@ -430,3 +430,7 @@ transform: |
   # TODO(): add network community id                      
       
   del(.zeek.ssl.id)
+
+meta:
+  display_name: "ssl.log"
+  description: "SSL/TLS handshake information"

@@ -5,3 +5,7 @@ ingest:
     if match(.__metadata.s3.key, r'data/|fdr/') {
       "fdr"
     }
+
+meta:
+  display_name: "CrowdStrike"
+  description: "Collect Crowdstrike logs and events from cloud workloads and endpoints sent via Falcon Data Replicator (FDR)."

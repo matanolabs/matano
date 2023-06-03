@@ -144,3 +144,7 @@ schema:
           - name: session_id
             type: string
         type: struct
+
+meta:
+  display_name: Zeek
+  description: "Analyze Zeek network traffic logs, with support for 40+ Zeek logs."

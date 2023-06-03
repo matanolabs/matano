@@ -417,3 +417,10 @@ transform: |-
 
   del(.json)
 name: aws_waf
+
+meta:
+  display_name: "AWS WAF"
+  description: "Detailed information about traffic analyzed by your AWS Web Application Firewall web access control list (ACL)."
+  default:
+    display_name: "Web ACL traffic logs"
+    description: "AWS WAF Web ACL logs providing detailed traffic logs, including request information and details about the rules that the request matched."

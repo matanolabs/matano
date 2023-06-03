@@ -415,3 +415,7 @@ transform: |
   .related.ip = unique(.related.ip)
       
   del(.json)
+
+meta:
+  display_name: "Authentication Logs"
+  description: "Authentication logs show you where and how users authenticate, with usernames, location, time, type of authentication factor and more."

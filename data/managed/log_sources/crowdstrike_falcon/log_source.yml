@@ -664,3 +664,10 @@ transform: |
       }
     }
   }
+
+meta:
+  display_name: "CrowdStrike Falcon"
+  description: "Detections and alerts from CrowdStrike Falcon platform."
+  default:
+    display_name: "CrowdStrike Falcon Streaming"
+    description: "CrowdStrike Falcon Streaming provides a realtime stream of threat detection and prevention information, including detections, incidents, and alerts, via the Event Streaming API or Crowdstrike SIEM Connector."

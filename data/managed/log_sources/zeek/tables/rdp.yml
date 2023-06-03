@@ -182,3 +182,7 @@ transform: |
   # TODO(): add network community id
 
   del(.zeek.rdp.id)
+
+meta:
+  display_name: "rdp.log"
+  description: "Remote Desktop Protocol (RDP) data"

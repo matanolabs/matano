@@ -836,3 +836,7 @@ schema:
                   type: boolean
                 - name: edge_device_details
                   type: string
+
+meta:
+  display_name: "AWS CloudTrail"
+  description: "Track AWS API activity across your AWS infrastructure."

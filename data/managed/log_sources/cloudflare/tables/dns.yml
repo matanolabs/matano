@@ -124,3 +124,7 @@ transform: |
   # 	del(.cloudflare.dns.query.name)
   # 	del(.cloudflare.dns.source.ip)
   # }
+
+meta:
+  display_name: "DNS logs"
+  description: "Cloudflare DNS logs track DNS queries and responses made through Cloudflare's network."

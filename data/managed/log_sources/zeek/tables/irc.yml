@@ -153,3 +153,7 @@ transform: |
   # TODO(): add community network id                      
 
   del(.zeek.irc.id)
+
+meta:
+  display_name: "irc.log"
+  description: "Internet Relay Chat (IRC) commands and responses."

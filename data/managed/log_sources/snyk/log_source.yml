@@ -1,3 +1,7 @@
 ingest:
   select_table_from_payload: |
     string!(del(.json._table))
+
+meta:
+  display_name: "Snyk"
+  description: "Monitor Snyk activity, including vulnerability data and audit events."

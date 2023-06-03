@@ -285,3 +285,10 @@ transform: |2
 
   del(._tmp)
   del(.message)
+
+meta:
+  display_name: "AWS ELB"
+  description: "Load Balancer access logs from AWS NLB, ALB, and ELB"
+  default:
+    display_name: "AWS ELB access logs"
+    description: "Detailed information about requests sent to NLB, ALB, and ELB load balancers."

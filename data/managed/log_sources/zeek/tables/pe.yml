@@ -70,3 +70,7 @@ transform: |
   del(.zeek.pe.ts)
 
   .zeek.pe.compile_time = to_timestamp(.zeek.pe.compile_time, "seconds") ?? null
+
+meta:
+  display_name: "pe.log"
+  description: "Portable Executable (PE) data"

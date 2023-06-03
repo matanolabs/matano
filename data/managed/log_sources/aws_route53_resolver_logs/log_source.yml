@@ -256,3 +256,10 @@ transform: |
   .related.ip = unique(.related.ip)
 
   del(.json)
+
+meta:
+  display_name: "AWS Route53 Resolver"
+  description: "DNS query logs from AWS Route53."
+  default:
+    display_name: "DNS Query logs"
+    description: "Information about the public DNS queries that AWS Route 53 receives."

@@ -73,3 +73,7 @@ transform: |
   .duo.telephony.type = del(.json.type)
 
   del(.json)
+
+meta:
+  display_name: "Telephony Logs"
+  description: "Telephony logs give you insight into the type of telephony event (SMS or phone), phone numbers, and the number of telephony credits used."

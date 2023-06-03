@@ -2,3 +2,7 @@ name: default
 
 ingest:
   expand_records_from_payload: parse_json!(.__raw).Records
+
+meta:
+  display_name: "CloudTrail Trail Events"
+  description: "Events captured by CloudTrail trails, including data and management events."

@@ -228,3 +228,7 @@ transform: |
   }
   .related.user = unique(.related.user)
   .related.hosts = push(.related.hosts, .host.hostname)
+
+meta:
+  displayName: "Audit Events"
+  description: "Audit events track Teleport activity events, including auth, session, exec, user login, and other events."

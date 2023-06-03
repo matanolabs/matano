@@ -79,3 +79,7 @@ transform: |
   .tls.server.issuer = .tls.server.x509.issuer.distinguished_name
 
   .tls.server.subject = .tls.server.x509.subject.distinguished_name
+
+meta:
+  display_name: "known_certs.log"
+  description: "Captures information about SSL/TLS certificates seen on the local network."

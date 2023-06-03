@@ -244,3 +244,7 @@ transform: |
   del(.zeek.notice.action)
   del(.zeek.notice.remote_location)
   del(.zeek.notice.f)
+
+meta:
+  display_name: "notice.log"
+  description: "Zeek notices are situations explicitly detected and reported by Zeek scripts as inspection-worthy."

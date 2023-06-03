@@ -164,3 +164,7 @@ transform: |
   # TODO(): add community network id
 
   del(.zeek.ssh.id)
+
+meta:
+  display_name: "ssh.log"
+  description: "SSH connections"

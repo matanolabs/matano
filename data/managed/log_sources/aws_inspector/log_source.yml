@@ -575,3 +575,10 @@ transform: |2-
   del(.aws.inspector.description)
   del(.aws.inspector.aws_account_id)
   del(.aws.inspector.network_reachability_details.protocol)
+
+meta:
+  display_name: "Amazon Inspector"
+  description: "Ingest findings regarding vulnerabilities across your AWS resources"
+  default:
+    display_name: "Amazon Inspector findings"
+    description: "Findings track vulnerabilities across your AWS resources"

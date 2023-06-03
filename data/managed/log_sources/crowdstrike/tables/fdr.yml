@@ -3742,3 +3742,8 @@ transform: |-
   del(.crowdstrike.UserIsAdmin)
   del(.crowdstrike.UTCTimestamp)
   del(.crowdstrike.TargetDirectoryName)
+
+
+meta:
+  display_name: "Falcon Data Replicator (FDR)"
+  description: "FDR provides near real-time data collected by the CrowdStrike platform across all of your cloud workloads, identities and managed endpoints."

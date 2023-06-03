@@ -311,3 +311,7 @@ transform: |2-
   } else if is_string(.azure.aad_signinlogs.risk_level_during_signin) {
     get(riskmap, [.azure.aad_signinlogs.risk_level_during_signin]) ?? null
   }
+
+meta:
+  display_name: "Azure AD Sign-in logs"
+  description: "Information about sign-ins and how your resources are used by your users."

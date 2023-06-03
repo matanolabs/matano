@@ -238,3 +238,7 @@ transform: |
   # TODO(): add community network id
 
   del(.zeek.smb_cmd.id)
+
+meta:
+  display_name: "smb_cmd.log"
+  description: "SMB commands"

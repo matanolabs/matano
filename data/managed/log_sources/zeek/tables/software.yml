@@ -87,3 +87,7 @@ transform: |
   .zeek.software.version.additional = del(.zeek.software.version.addl)
 
   del(.zeek.software.ts)
+
+meta:
+  display_name: "software.log"
+  description: "Collects details on applications operated by the hosts it sees on the local network."

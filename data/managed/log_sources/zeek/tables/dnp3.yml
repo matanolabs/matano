@@ -134,3 +134,7 @@ transform: |
   # TODO(): add community network id
 
   del(.zeek.dnp3.id)
+
+meta:
+  display_name: "dnp3.log"
+  description: "DNP3 (Distributed Network Protocol 3) requests and replies."

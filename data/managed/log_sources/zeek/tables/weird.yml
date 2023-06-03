@@ -115,3 +115,7 @@ transform: |
   .related.ip = unique(filter(flatten([.source.ip, .destination.ip])) -> |_, v| { v != null }) 
 
   del(.zeek.weird.id)
+
+meta:
+  display_name: "weird.log"
+  description: "Unexpected network-level activity"

@@ -202,3 +202,7 @@ transform: |-
   }
 
   del(.message)
+
+meta:
+  display_name: Amazon S3 Access logs
+  description: "Server access logs provide detailed records for the requests made to Amazon S3 buckets."

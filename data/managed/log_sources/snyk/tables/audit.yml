@@ -77,3 +77,7 @@ transform: |
 
   del(.snyk.audit.created)
   del(.json)
+
+meta:
+  display_name: "Audit Logs"
+  description: "Snyk Audit logs, providing informating about users, groups, permissions, API calls, and other activity."

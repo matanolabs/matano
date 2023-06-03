@@ -153,3 +153,7 @@ transform: |
   }
 
   del(.zeek.files.x509)
+
+meta:
+  display_name: "files.log"
+  description: "A record of files that Zeek observed while inspecting network traffic."

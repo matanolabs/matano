@@ -1021,3 +1021,7 @@ transform: |
   # }
 
   .related.ip = unique(.related.ip)
+
+meta:
+  display_name: "Traffic"
+  description: "Palo Alto (PAN-OS) Traffic logs"

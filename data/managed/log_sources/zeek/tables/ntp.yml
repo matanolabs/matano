@@ -153,3 +153,7 @@ transform: |
 
   del(.zeek.ntp.id)
   del(.zeek.ntp.ts)
+
+meta:
+  display_name: "ntp.log"
+  description: "Network Time Protocol (NTP) data"

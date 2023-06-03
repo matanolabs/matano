@@ -1,3 +1,8 @@
 ingest:
   select_table_from_payload: |
     string!(del(.json._table))
+
+
+meta:
+  display_name: Cisco Duo
+  description: "Administrative, audit, authentication, telephony, and other events and logs from the Cisco Duo Admin APIs."

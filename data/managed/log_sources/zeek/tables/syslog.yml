@@ -118,3 +118,7 @@ transform: |
   .related.ip = unique(filter(flatten([.source.ip, .destination.ip])) -> |_, v| { v != null })
 
   # TODO(): add network community id
+
+meta:
+  display_name: "syslog.log"
+  description: "Syslog messages"

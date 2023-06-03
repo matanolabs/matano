@@ -41,3 +41,7 @@ transform: |
   if .zeek.percent_lost != null {                      
     .zeek.percent_lost = to_int!(.zeek.percent_lost) 
   }
+
+meta:
+  display_name: "capture_loss.log"
+  description: "Analysis of missing traffic (packet loss rate data)"

@@ -24,3 +24,7 @@ schema:
                         type: string
                 - name: insight_details
                   type: string
+
+meta:
+  display_name: "CloudTrail Insights Events"
+  description: "Insights events monitor unusual activity from management events"

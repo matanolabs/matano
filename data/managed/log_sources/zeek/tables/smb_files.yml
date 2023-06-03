@@ -179,3 +179,7 @@ transform: |
   }
 
   del(.zeek.smb_files.id)
+
+meta:
+  display_name: "smb_files.log"
+  description: "SMB files"

@@ -264,3 +264,7 @@ transform: |2-
 
   .related.ip = unique(.related.ip)
   .related.user = unique(.related.user)
+
+meta:
+  display_name: "Azure AD Audit Logs"
+  description: "Audit Logs provide access to system activity records tracking every logged event in Azure AD, including changes to applications, groups, users, and licenses."

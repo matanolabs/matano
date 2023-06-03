@@ -3,3 +3,7 @@ name: google_workspace
 ingest:
   select_table_from_payload: |
     string(del(.json._table)) ?? { abort }
+
+meta:
+  display_name: "Google Workspace"
+  description: "Track activity across Google Workspace via Workspace audit reports APIs."

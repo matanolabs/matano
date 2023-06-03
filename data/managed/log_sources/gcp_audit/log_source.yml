@@ -481,3 +481,10 @@ transform: |-
   .event.type = unique(.event.type)
   .event.category = unique(.event.category)
 name: gcp_audit
+
+meta:
+  display_name: GCP Audit Logs
+  description: "Track API activity across your Google Cloud Platform infrastructure."
+  default:
+    display_name: GCP Audit Logs
+    description: "GCP Audit Logs including Admin Activity, Data Access, System Event, and Policy Denied audit logs."

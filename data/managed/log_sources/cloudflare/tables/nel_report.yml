@@ -92,3 +92,8 @@ transform: |
   #   del(.cloudflare.nel_report.timestamp)
   # 	del(.cloudflare.nel_report.error.type)
   # }
+
+
+meta:
+  display_name: Network Error Logging (NEL) reports
+  description: "Cloudflare NEL Reports track network errors experienced by web application users, based on the standard NEL HTTP header."

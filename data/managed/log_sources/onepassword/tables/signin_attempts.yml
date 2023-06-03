@@ -119,3 +119,7 @@ transform: |
   del(.onepassword.timestamp)
   del(.onepassword.target_user)
   del(.onepassword.location)
+
+meta:
+  display_name: "Sign-in Attempts"
+  description: "Information about sign-in attempts, includi the name and IP address of the user who attempted to sign in to the account, when the attempt was made, and for failed attempts, the cause of the failure."

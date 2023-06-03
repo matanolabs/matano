@@ -110,3 +110,7 @@ transform: |
   del(.onepassword.timestamp)
   del(.onepassword.user)
   del(.onepassword.location)
+
+meta:
+  display_name: "Item Usages"
+  description: "Information about items in shared vaults that have been modified, accessed, or used. Events include the name and IP address of the user who accessed the item, when it was accessed, and the vault where the item is stored."

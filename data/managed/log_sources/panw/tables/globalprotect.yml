@@ -923,3 +923,7 @@ transform: |
   # }
 
   .related.ip = unique(.related.ip)
+
+meta:
+  display_name: "GlobalProtect"
+  description: "Palo Alto (PAN-OS) GlobalProtect logs"

@@ -316,3 +316,7 @@ transform: |
   .tls.server.x509.subject.state_or_province = subject_info.ST
 
   del(.zeek.kerberos.id)
+
+meta:
+  display_name: "kerberos.log"
+  description: "Information about Kerberos authentication traffic."

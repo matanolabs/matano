@@ -224,3 +224,7 @@ transform: |
   # TODO(): indicator GeoIP enrichment etc.
 
   del(.zeek.intel.id)
+
+meta:
+  display_name: "intel.log"
+  description: "Intelligence data matches."
