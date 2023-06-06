@@ -7,6 +7,8 @@
       "./data/**/*",
       "./infra/node_modules/aws-cdk-lib/custom-resources/lib/provider-framework/runtime/*.js",
       "./infra/node_modules/aws-cdk-lib/lambda-layer-awscli/**/*",
+      "./infra/node_modules/aws-cdk-lib/asset-awscli-v1/**/*",
+      "./infra/node_modules/@aws-cdk/asset-awscli-v1/**/*",
       "./infra/node_modules/aws-cdk-lib/aws-s3-assets/**/*",
       "./infra/node_modules/aws-cdk-lib/aws-s3-deployment/**/*",
       "./infra/node_modules/aws-cdk-lib/aws-s3/**/*"
