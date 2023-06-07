@@ -2,6 +2,7 @@ name: github_audit
 schema:
   ecs_field_names:
     - client.geo.country_iso_code
+    - client.ip
     - ecs.version
     - error.message
     - event.action
@@ -20,6 +21,7 @@ schema:
     - event.type
     - group.name
     - message
+    - related.ip
     - related.user
     - tags
     - user.email
@@ -141,6 +143,11 @@ transform: |2-
   }
 
   .client.geo.country_iso_code = del(.json.actor_location.country_code)
+  .client.ip = del(.json.actor_ip)
+
+  if .client.ip != null {
+    .related.ip = push(.related.ip, .client.ip)
+  }
 
   action_info, err = parse_groks(
     .event.action,
