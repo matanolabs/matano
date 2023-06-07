@@ -189,6 +189,7 @@ export class DPMainStack extends MatanoStack {
         "ENRICHMENT_TABLES_BUCKET",
         enrichment.enrichmentTablesBucket.bucketName
       );
+      enrichment.enrichmentTablesBucket.grantRead(detections.detectionFunction);
     }
 
     const resolvedLogSourceConfigs: Record<string, any> = Object.fromEntries(
