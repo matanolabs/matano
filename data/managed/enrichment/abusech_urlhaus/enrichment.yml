@@ -13,7 +13,7 @@ transform: |
   .threat.indicator.first_seen = to_timestamp(.json.dateadded) ?? null
 
   # 2022-12-16 04:XX:XX
-  if .json.last_online != null && .json.last_online != "None" {
+  if .json.last_online != null && .json.last_online != "None" && json.last_online != "" {
       .threat.indicator.last_seen = to_timestamp!(replace!(.json.last_online, "X", "0"))
   }
 
