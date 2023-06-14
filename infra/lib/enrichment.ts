@@ -49,6 +49,7 @@ const MANAGED_ENRICHMENT_PREFIX_MAP: Record<string, string> = {
   "abusech_malwarebazaar": "abusech_malwarebazaar",
   "abusech_threatfox": "abusech_threatfox",
   "otx": "otx",
+  "cisa_kev": "cisa_kev"
 }
 
 export class EnrichmentTable extends Construct {

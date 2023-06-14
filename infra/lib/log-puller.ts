@@ -37,6 +37,7 @@ const NO_SECRET_LOG_SOURCES: string[] = [
   "enrich_abusech_urlhaus",
   "enrich_abusech_malwarebazaar",
   "enrich_abusech_threatfox",
+  "enrich_cisa_kev"
 ];
 
 const LOG_SOURCE_RATES: Record<string, cdk.Duration> = {
