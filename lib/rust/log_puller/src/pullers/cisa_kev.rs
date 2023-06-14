@@ -38,16 +38,14 @@ impl PullLogs for CisaKevPuller {
     ) -> Result<Vec<u8>> {
         info!("Pulling CISA KEV...");
         let resp = client.get(CISA_KEV_URL).send().await?.bytes().await?;
-        let mut zipfile = zip::ZipArchive::new(std::io::Cursor::new(resp))?;
-        let csvfile = zipfile.by_name("csv.txt")?;
 
         let mut json_bytes = vec![];
 
         let mut csv_reader = csv::ReaderBuilder::new()
             .comment(Some(b'#'))
-            .from_reader(csvfile);
+            .from_reader(resp);
 
-        csv_reader.set_headers(csv::StringRecord::from(URLHAUS_HEADERS.to_vec()));
+        csv_reader.set_headers(csv::StringRecord::from(CISA_KEV_HEADERS.to_vec()));
         for result in csv_reader.deserialize() {
             let record: HashMap<String, String> = result?;
             let bytes = serde_json::to_vec(&record)?;
