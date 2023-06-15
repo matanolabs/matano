@@ -30,6 +30,7 @@ export const PULLER_LOG_SOURCE_TYPES: string[] = [
   "enrich_abusech_malwarebazaar",
   "enrich_abusech_threatfox",
   "enrich_otx",
+  "enrich_cisa_kev"
 ];
 /** Some puller log sources don't need secrets. */
 const NO_SECRET_LOG_SOURCES: string[] = [
@@ -53,6 +54,7 @@ const LOG_SOURCE_RATES: Record<string, cdk.Duration> = {
   enrich_abusech_malwarebazaar: cdk.Duration.hours(1),
   enrich_abusech_threatfox: cdk.Duration.hours(1),
   enrich_otx: cdk.Duration.minutes(5),
+  enrich_cisa_kev: cdk.Duration.hours(24)
 };
 
 const LOG_SOURCE_PLACEHOLDER_MAP: Record<string, string> = {

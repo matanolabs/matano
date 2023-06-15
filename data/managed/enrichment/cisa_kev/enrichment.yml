@@ -1,0 +1,23 @@
+enirchment_type: dynamic
+write_mode: overwrite
+
+schema:
+  fields:
+    - name: cveId
+      type: string
+    - name: vendorProject
+      type: string
+    - name: product
+      type: string
+    - name: vulnerabilityName
+      type: string
+    - name: dateAdded
+      type: string
+    - name: shortDescription
+      type: string
+    - name: requiredAction
+      type: string
+    - name: dueDate
+      type: string
+    - name: notes
+      type: string
