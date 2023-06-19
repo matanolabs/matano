@@ -1,4 +1,5 @@
 use arrow2::datatypes::Schema;
+use arrow2::io::avro::avro_schema::file::FileMetadata;
 use async_once::AsyncOnce;
 use aws_config::SdkConfig;
 use futures::future::join_all;
@@ -119,7 +120,7 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<Option<SQ
     let pool_ref = Arc::new(pool);
 
     let partition_hour_to_blocks_ref: Arc<
-        Mutex<HashMap<String, Vec<Result<Block, SQSLambdaError>>>>,
+        Mutex<HashMap<String, Vec<Result<(Block, Arc<FileMetadata>), SQSLambdaError>>>>,
     > = Arc::new(Mutex::new(HashMap::new()));
     let partition_hour_to_alert_blocks_ref: Arc<tokio::sync::Mutex<HashMap<String, Vec<Vec<u8>>>>> =
         Arc::new(tokio::sync::Mutex::new(HashMap::new()));
@@ -192,11 +193,12 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<Option<SQ
 
                 alert_blocks_ref.push(buf);
 
-                anyhow::Ok(None)
+                anyhow::Ok(())
             } else {
                 let metadata = read_metadata(&mut reader).await.map_err(|e| anyhow!(e))?;
+                let meta = Arc::new(metadata);
 
-                let blocks = block_stream(&mut reader, metadata.marker).await;
+                let blocks = block_stream(&mut reader, meta.marker).await;
 
                 let fut = blocks.map_err(|e| anyhow!(e)).try_for_each_concurrent(
                     1000000,
@@ -205,6 +207,7 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<Option<SQ
                         let msg_id = msg_id.clone();
                         let ts_hour = ts_hour.clone();
                         let partition_hour_to_blocks_ref = partition_hour_to_blocks_ref.clone();
+                        let metadata = meta.clone();
 
                         async move {
                             // the content here is CPU-bounded. It should run on a dedicated thread pool
@@ -224,7 +227,8 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<Option<SQ
                                             format!("{:#}", e),
                                             vec![msg_id.clone()],
                                         )
-                                    });
+                                    })
+                                    .map(|block| (block, metadata.clone()));
 
                                 let mut partition_hour_to_blocks_ref =
                                     partition_hour_to_blocks_ref.lock().unwrap();
@@ -240,7 +244,7 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<Option<SQ
                 );
 
                 fut.await?;
-                anyhow::Ok(Some(metadata))
+                anyhow::Ok(())
             };
             ret
         }
@@ -273,32 +277,28 @@ pub(crate) async fn my_handler(event: LambdaEvent<SqsEvent>) -> Result<Option<SQ
         let ts_hour_to_msg_ids = ts_hour_to_msg_ids.try_unwrap_arc_mutex()?;
         let futures = partition_hour_to_blocks_ref
             .into_par_iter()
-            .map(|(partition_hour, blocks)| {
-                let msg_ids = ts_hour_to_msg_ids
-                    .get(&partition_hour)
-                    .ok_or_else(|| anyhow!("no msg ids for partition {}", partition_hour))?;
-
+            .flat_map(|(partition_hour, blocks)| {
                 let blocks = blocks
                     .into_iter()
                     .filter_map(|r| r.map_err(|e| errors.lock().unwrap().push(e)).ok())
                     .collect::<Vec<_>>();
+                let groups = group_block_meta_pairs(blocks);
 
-                let total_avro_rows = blocks.iter().map(|b| b.number_of_rows).sum::<usize>();
-                let total_avro_bytes = blocks.iter().map(|b| b.data.len()).sum::<usize>();
+                groups
+                    .into_par_iter()
+                    .map(move |(block, meta)| (partition_hour.clone(), block, meta))
+            })
+            .map(|(partition_hour, block, metadata)| {
+                let msg_ids = ts_hour_to_msg_ids
+                    .get(&partition_hour)
+                    .ok_or_else(|| anyhow!("no msg ids for partition {}", partition_hour))?;
 
-                if !blocks.is_empty() {
-                    // see TODO below
-                    let metadata = results
-                        .first()
-                        .context("Need metadata!")?
-                        .as_ref()
-                        .context("Need metadata!")?;
-                    let block = concat_blocks(blocks);
+                let total_avro_rows = block.number_of_rows;
+                let total_avro_bytes = block.data.len();
+
+                if !block.data.is_empty() {
                     let projection = table_schema.fields.iter().map(|_| true).collect::<Vec<_>>();
 
-                    // There's an edge case bug here when schema is updated. Using static schema
-                    // on old data before schema will throw since field length unequal.
-                    // TODO: Group block's by schema and then deserialize.
                     let chunk = deserialize(
                         &block,
                         &table_schema.fields,
@@ -386,11 +386,27 @@ pub(crate) struct S3SQSMessage {
     pub ts_hour: String,
 }
 
-fn concat_blocks(mut blocks: Vec<Block>) -> Block {
-    let mut ret = Block::new(0, vec![]);
-    for block in blocks.iter_mut() {
-        ret.number_of_rows += block.number_of_rows;
-        ret.data.extend(block.data.as_slice());
+fn concat_block(block: &mut Block, other: &Block) {
+    block.number_of_rows += other.number_of_rows;
+    block.data.extend(other.data.as_slice());
+}
+
+fn group_block_meta_pairs(
+    items: Vec<(Block, Arc<FileMetadata>)>,
+) -> Vec<(Block, Arc<FileMetadata>)> {
+    let mut ret: Vec<(Block, Arc<FileMetadata>)> = vec![];
+    for (cur_block, cur_meta) in items.into_iter() {
+        let mut found = false;
+        for (prev_block, prev_meta) in ret.iter_mut() {
+            if prev_meta.record == cur_meta.record {
+                found = true;
+                concat_block(prev_block, &cur_block);
+                break;
+            }
+        }
+        if !found {
+            ret.push((cur_block, cur_meta));
+        }
     }
     ret
 }
