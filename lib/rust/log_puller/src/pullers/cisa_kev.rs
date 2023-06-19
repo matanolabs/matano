@@ -37,13 +37,13 @@ impl PullLogs for CisaKevPuller {
         end_dt: DateTime<FixedOffset>,
     ) -> Result<Vec<u8>> {
         info!("Pulling CISA KEV...");
-        let resp = client.get(CISA_KEV_URL).send().await?.bytes().await?;
+        let resp = client.get(CISA_KEV_URL).send().await?.text().await?;
 
         let mut json_bytes = vec![];
 
         let mut csv_reader = csv::ReaderBuilder::new()
             .comment(Some(b'#'))
-            .from_reader(resp);
+            .from_reader(resp.as_bytes());
 
         csv_reader.set_headers(csv::StringRecord::from(CISA_KEV_HEADERS.to_vec()));
         for result in csv_reader.deserialize() {
