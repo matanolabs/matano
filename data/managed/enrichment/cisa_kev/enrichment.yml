@@ -1,9 +1,9 @@
-enirchment_type: dynamic
+enrichment_type: dynamic
 write_mode: overwrite
 
 schema:
   fields:
-    - name: cveId
+    - name: cveID
       type: string
     - name: vendorProject
       type: string

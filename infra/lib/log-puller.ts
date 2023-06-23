@@ -54,7 +54,7 @@ const LOG_SOURCE_RATES: Record<string, cdk.Duration> = {
   enrich_abusech_malwarebazaar: cdk.Duration.hours(1),
   enrich_abusech_threatfox: cdk.Duration.hours(1),
   enrich_otx: cdk.Duration.minutes(5),
-  enrich_cisa_kev: cdk.Duration.hours(24)
+  enrich_cisa_kev: cdk.Duration.hours(1)
 };
 
 const LOG_SOURCE_PLACEHOLDER_MAP: Record<string, string> = {
