@@ -45,7 +45,7 @@ impl PullLogs for CisaKevPuller {
             .comment(Some(b'#'))
             .from_reader(resp.as_bytes());
 
-        csv_reader.set_headers(csv::StringRecord::from(CISA_KEV_HEADERS.to_vec()));
+        //csv_reader.set_headers(csv::StringRecord::from(CISA_KEV_HEADERS.to_vec()));
         for result in csv_reader.deserialize() {
             let record: HashMap<String, String> = result?;
             let bytes = serde_json::to_vec(&record)?;
