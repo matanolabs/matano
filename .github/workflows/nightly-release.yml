@@ -3,6 +3,10 @@ name: "nightly-release"
 env:
   MTN_GPG_SIGN: "1"
 
+  # See: https://github.com/marketplace/actions/sccache-action
+  SCCACHE_GHA_ENABLED: "true"
+  RUSTC_WRAPPER: "sccache"
+
 on:
   workflow_dispatch:
   schedule:
@@ -23,9 +27,20 @@ jobs:
         with:
           toolchain: 1.63
 
-      - uses: Swatinem/rust-cache@v2
+    
+      # Use rust-cache to cache dependencies, which is a large chunk of the build.
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
         with:
+          # TODO(): Maybe don't cache ./target, as it takes tons of space, rely sccache instead?
+          # cache-targets: false
+          # We set a shared key, as our cache is reusable between jobs
+          shared-key: rust-cargo
           workspaces: lib/rust
+
+      # Use sccache to cache everything else.
+      - name: Run sccache-cache
+        uses: mozilla-actions/sccache-action@v0.0.3
 
       - uses: actions/setup-java@v3
         with:
