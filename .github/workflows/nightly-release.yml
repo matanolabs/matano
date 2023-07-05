@@ -26,14 +26,13 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: 1.63
-
     
       # Use rust-cache to cache dependencies, which is a large chunk of the build.
       - name: Cache Rust
         uses: Swatinem/rust-cache@v2
         with:
-          # TODO(): Maybe don't cache ./target, as it takes tons of space, rely sccache instead?
-          # cache-targets: false
+          # Don't cache ./target, as it takes tons of space, rely on sccache instead. 
+          cache-targets: false
           # We set a shared key, as our cache is reusable between jobs
           shared-key: rust-cargo
           workspaces: lib/rust
