@@ -7,6 +7,8 @@ ingest:
       "traffic"
     } else if match(.message, r',GLOBALPROTECT,') {
       "globalprotect"
+    } else if match(.message, r',THREAT,') {
+      "threat"
     } else {
       abort
     }
@@ -986,4 +988,4 @@ schema:
 
 meta:
   display_name: "Palo Alto Networks Firewall"
-  description: "Monitor Palo Alto Next Gen Firewall activity, including Traffic, GlobalProtect, and more log types."
+  description: "Monitor Palo Alto Next Gen Firewall activity, including Threat, Traffic, GlobalProtect, and more log types."
