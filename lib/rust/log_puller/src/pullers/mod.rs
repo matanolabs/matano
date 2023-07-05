@@ -22,6 +22,7 @@ mod okta;
 mod onepassword;
 mod otx;
 mod snyk;
+mod cisa_kev;
 
 #[derive(Clone)]
 pub struct PullerCache {
@@ -205,6 +206,7 @@ pub enum LogSource {
     OnePasswordPuller(onepassword::OnePasswordPuller),
     Otx(otx::OtxPuller),
     Snyk(snyk::SnykPuller),
+    CisaKevPuller(cisa_kev::CisaKevPuller),
     AbuseChUrlhausPuller(abusech::AbuseChUrlhausPuller),
     AbuseChMalwareBazaarPuller(abusech::AbuseChMalwareBazaarPuller),
     AbuseChThreatfoxPuller(abusech::AbuseChThreatfoxPuller),
@@ -239,6 +241,9 @@ impl LogSource {
             "abusech_threatfox" => Some(LogSource::AbuseChThreatfoxPuller(
                 abusech::AbuseChThreatfoxPuller {},
             )),
+            "cisa_kev" => Some(LogSource::CisaKevPuller(
+                cisa_kev::CisaKevPuller {},
+            )),
             _ => None,
         }
     }
@@ -256,6 +261,7 @@ impl LogSource {
             LogSource::AbuseChUrlhausPuller(_) => "abusech_urlhaus",
             LogSource::AbuseChMalwareBazaarPuller(_) => "abusech_malwarebazaar",
             LogSource::AbuseChThreatfoxPuller(_) => "abusech_threatfox",
+            LogSource::CisaKevPuller(_) => "cisa_kev"
         }
     }
 }

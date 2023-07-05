@@ -1,0 +1,41 @@
+enrichment_type: dynamic
+write_mode: overwrite
+
+transform: |
+  .event.kind = "enrichment"
+  .event.category = ["vulnerability"]
+
+  .vulnerability.category = [del(.json.product), del(.json.vendorProject)]
+  .vulnerability.classification = "CVSS"
+  .vulnerability.description = del(.json.shortDescription)
+  .vulnerability.enumeration = "CVE"
+  .vulnerability.id = del(.json.cveID)
+  .cisa_kev.dateAdded = del(.json.dateAdded)
+  .cisa_kev.requiredAction = del(.json.requiredAction)
+  .cisa_kev.dueDate = del(.json.dueDate)
+  .cisa_kev.notes = del(.json.notes)
+
+schema:
+  ecs_field_names:
+    - ecs.version
+    - event.kind
+    - event.category
+    - vulnerability.category
+    - vulnerability.classification
+    - vulnerability.description
+    - vulnerability.enumeration
+    - vulnerability.id
+
+  fields:
+    - name: cisa_kev
+      type:
+        type: struct
+        fields:
+          - name: dateAdded
+            type: string
+          - name: requiredAction
+            type: string
+          - name: dueDate
+            type: string
+          - name: notes
+            type: string
