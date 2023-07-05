@@ -1,0 +1,1088 @@
+name: threat
+
+transform: |
+  # default pipeline
+  .event.category = []
+  .event.type = []
+  .network.community_id = []
+  .related.hosts = []
+  tz_offset = null
+
+  .observer.vendor = "Palo Alto Networks"
+
+  .observer.product = "PAN-OS"
+
+  .observer.type = "firewall"
+
+  if tz_offset != null && tz_offset != "local" { 
+    .event.timezone = tz_offset
+  }
+
+  .event.original = .message
+  .message = del(.message)
+
+  _grokked, err = parse_groks(.message, [
+    "^%{DATA},%{TIMESTAMP:event.created},%{FIELD:observer.serial_number},%{FIELD:panw.panos.type},(?:%{FIELD:panw.panos.sub_type})?,%{FIELD:_temp_.config_version},%{TIMESTAMP:_temp_.generated_time},%{GREEDYDATA:message}$"
+  ], {
+    "TIMESTAMP": "%{PANW_DATE}|%{TIMESTAMP_ISO8601}",
+    "PANW_DATE": "%{YEAR}/%{MONTHNUM}/%{MONTHDAY} %{TIME}",
+    "FIELD": "[^,]*"
+  })  
+  if err == null {                                                            
+      .message = _grokked.message
+      .event.created = _grokked.event.created
+      .observer.serial_number = _grokked.observer.serial_number
+      .panw.panos.type = _grokked.panw.panos.type
+      .panw.panos.sub_type = _grokked.panw.panos.sub_type
+      ._temp_.config_version = _grokked._temp_.config_version
+      ._temp_.generated_time = _grokked._temp_.generated_time                                                            
+  }
+
+  message_values = parse_csv!(.message)
+  # todo: make more efficient
+  message_values = map_values(message_values) -> |v| {
+    if v == " " || v == "" { null } else { v }
+  }
+
+  .panw.panos.source.ip = message_values[0]
+  .panw.panos.destination.ip = message_values[1]
+  .panw.panos.source.nat.ip = message_values[2]
+  .panw.panos.destination.nat.ip = message_values[3]
+  .panw.panos.ruleset = message_values[4]
+  ._temp_.srcuser = message_values[5]
+  ._temp_.dstuser = message_values[6]
+  .panw.panos.network.application = message_values[7]
+  .panw.panos.virtual_sys = message_values[8]
+  .panw.panos.source.zone = message_values[9]
+  .panw.panos.destination.zone = message_values[10]
+  .panw.panos.inbound_interface = message_values[11]
+  .panw.panos.outbound_interface = message_values[12]
+  .panw.panos.log_profile = message_values[13]
+  ._temp_.logged_time = message_values[14]
+  .panw.panos.flow_id = message_values[15]
+  .panw.panos.repeat_count = message_values[16]
+  .panw.panos.source.port = message_values[17]
+  .panw.panos.destination.port = message_values[18]
+  .panw.panos.source.nat.port = message_values[19]
+  .panw.panos.destination.nat.port = message_values[20]
+  ._temp_.labels = message_values[21]
+  .panw.panos.protocol = message_values[22]
+  .panw.panos.action = message_values[23]
+  .panw.panos.misc = message_values[24]
+  .panw.panos.threat.name = message_values[25]
+  .panw.panos.url.category = message_values[26]
+  .panw.panos.severity = message_values[27]
+  ._temp_.direction = message_values[28]
+  .panw.panos.sequence_number = message_values[29]
+  .panw.panos.action_flags = message_values[30]
+  ._temp_.srcloc = message_values[31]
+  ._temp_.dstloc = message_values[32]
+  ._temp_.future_use2 = message_values[33]
+  .panw.panos.http_content_type = message_values[34]
+  .panw.panos.network.pcap_id = message_values[35]
+  .panw.panos.file.hash = message_values[36]
+  .panw.panos.wildfire.name = message_values[37]
+  .panw.panos.url_idx = message_values[38]
+  ._temp_.user_agent = message_values[39]
+  .panw.panos.file.type = message_values[40]
+  ._temp_.forwarded_ip = message_values[41]
+  .panw.panos.referrer = message_values[42]
+  .panw.panos.sender = message_values[43]
+  .panw.panos.subject = message_values[44]
+  .panw.panos.recipient = message_values[45]
+  .panw.panos.wildfire.report_id = message_values[46]
+  .panw.panos.device_group_hierarchy1 = message_values[47]
+  .panw.panos.device_group_hierarchy2 = message_values[48]
+  .panw.panos.device_group_hierarchy3 = message_values[49]
+  .panw.panos.device_group_hierarchy4 = message_values[50]
+  .panw.panos.vsys_name = message_values[51]
+  .panw.panos.device_name = message_values[52]
+  ._temp_.future_use3 = message_values[53]
+  .panw.panos.source_vm_uuid = message_values[54]
+  .panw.panos.destination_vm_uuid = message_values[55]
+  .panw.panos.http_method = message_values[56]
+  .panw.panos.imsi = message_values[57]
+  .panw.panos.imei = message_values[58]
+  .panw.panos.parent_session.id = message_values[59]
+  .panw.panos.parent_session.start_time = message_values[60]
+  .panw.panos.tunnel_type = message_values[61]
+  .panw.panos.threat_category = message_values[62]
+  .panw.panos.content_version = message_values[63]
+  ._temp_.future_use4 = message_values[64]
+  .panw.panos.sctp.assoc_id = message_values[65]
+  .panw.panos.payload_protocol_id = message_values[66]
+  .panw.panos.http_headers = message_values[67]
+  .panw.panos.url_category_list = message_values[68]
+  .panw.panos.rule_uuid = message_values[69]
+  .panw.panos.http2_connection = message_values[70]
+  .panw.panos.dynamic_user.group.name = message_values[71]
+  .panw.panos.xff.ip = message_values[72]
+  .panw.panos.src.category = message_values[73]
+  .panw.panos.src.profile = message_values[74]
+  .panw.panos.src.model = message_values[75]
+  .panw.panos.src.vendor = message_values[76]
+  .panw.panos.src.os.family = message_values[77]
+  .panw.panos.src.os.version = message_values[78]
+  .panw.panos.src.host = message_values[79]
+  .panw.panos.src.mac = message_values[80]
+  .panw.panos.dst.category = message_values[81]
+  .panw.panos.dst.profile = message_values[82]
+  .panw.panos.dst.model = message_values[83]
+  .panw.panos.dst.vendor = message_values[84]
+  .panw.panos.dst.os.family = message_values[85]
+  .panw.panos.dst.os.version = message_values[86]
+  .panw.panos.dst.host = message_values[87]
+  .panw.panos.dst.mac = message_values[88]
+  .panw.panos.container.id = message_values[89]
+  .panw.panos.pod.namespace = message_values[90]
+  .panw.panos.pod.name = message_values[91]
+  .panw.panos.src.external_dynamic_list = message_values[92]
+  .panw.panos.dst.external_dynamic_list = message_values[93]
+  .panw.panos.host.id = message_values[94]
+  .panw.panos.serial_number = message_values[95]
+  .panw.panos.domain_edl = message_values[96]
+  .panw.panos.src.dynamic_address_group = message_values[97]
+  .panw.panos.dst.dynamic_address_group = message_values[98]
+  .panw.panos.partial_hash = message_values[99]
+  ._temp_.high_res_timestamp = message_values[100]
+  .panw.panos.reason = message_values[101]
+  .panw.panos.justification = message_values[102]
+  .panw.panos.nssai_sst = message_values[103]
+  .panw.panos.application.sub_category = message_values[104]
+  .panw.panos.application.category = message_values[105]
+  .panw.panos.application.technology = message_values[106]
+  .panw.panos.application.risk_level = message_values[107]
+  .panw.panos.application.characteristics = message_values[108]
+  .panw.panos.application.container = message_values[109]
+  .panw.panos.application.tunneled = message_values[110]
+  .panw.panos.application.is_saas = message_values[111]
+  .panw.panos.application.is_sanctioned = message_values[112]
+  .panw.panos.cloud_report.id = message_values[113]                
+
+  if .panw.panos.http2_connection != null && .panw.panos.http2_connection != 0 && .panw.panos.http2_connection != "0" { 
+      .http.version = "2"
+  }
+   
+  if ._temp_.direction == "0" || ._temp_.direction == "client-to-server" { 
+      .network.direction = "inbound"
+  } else if ._temp_.direction == "1" || ._temp_.direction == "server-to-client" { 
+      .network.direction = "outbound"
+  } else {
+      .network.direction = "unknown"
+  }
+      
+  .event.kind = "alert"
+  .event.category = push(.event.category, "intrusion_detection")
+  .event.category = push(.event.category, "threat")
+  .event.category = push(.event.category, "network")
+
+  if .panw.panos.action != null && includes(["alert", "allow", "continue"], .panw.panos.action) { 
+      .event.outcome = "success"
+  } else { 
+      .event.outcome = "failure"
+  }
+
+  if ._temp_.forwarded_ip != null {                       
+      .network.forwarded_ip = to_string(._temp_.forwarded_ip) 
+  }                                                  
+
+  .panw.panos.destination.location = ._temp_.dstloc
+
+  .destination.ip = .panw.panos.destination.ip
+
+  .destination.nat.ip = .panw.panos.destination.nat.ip
+
+  .destination.nat.port = .panw.panos.destination.nat.port
+
+  .destination.port = .panw.panos.destination.port
+
+  .destination.user.email = .panw.panos.recipient
+
+  .file.type = .panw.panos.file.type
+
+  .http.request.method = .panw.panos.http_method
+
+  .http.request.referrer = .panw.panos.referrer
+
+  .log.level = .panw.panos.severity
+
+  .network.application = .panw.panos.network.application
+
+  .panw.panos.network.direction = ._temp_.direction
+
+  .panw.panos.forwarded_ip = .network.forwarded_ip
+
+  .network.transport = .panw.panos.protocol
+
+  .observer.egress.interface.name = .panw.panos.outbound_interface
+
+  .observer.egress.zone = .panw.panos.destination.zone
+
+  .observer.hostname = .panw.panos.device_name
+
+  .observer.ingress.interface.name = .panw.panos.inbound_interface
+
+  .observer.ingress.zone = .panw.panos.source.zone
+
+  .rule.uuid = .panw.panos.rule_uuid
+
+  .panw.panos.source.location = ._temp_.srcloc
+
+  .source.ip = .panw.panos.source.ip
+
+  .source.nat.ip = .panw.panos.source.nat.ip
+
+  .source.port = .panw.panos.source.port
+
+  .source.nat.port = .panw.panos.source.nat.port
+
+  .source.user.email = .panw.panos.sender
+
+  if .url.scheme == null && .panw.panos.sub_type == "url" && is_string(.panw.panos.misc) && contains!(.panw.panos.misc, "/") { 
+    url = {}
+  	url_original = .panw.panos.misc
+  	url.original = url_original
+    url_parts = split!(.panw.panos.misc, "/", 2)
+    domain_port = string!(url_parts[0])
+  	if contains(domain_port, ":") {
+        parts = split(domain_port, ":", 2)
+  	    url.domain = parts[0]
+  	    url.port = parts[1]
+  	} else {
+  	    url.domain = domain_port
+  	    .destination.domain = domain_port
+  	}
+  	after_domain = "/" + string!(url_parts[1])
+  	if !contains(after_domain, "?") {
+  	    url.path = after_domain
+  	} else {
+        parts = split(after_domain, "?", 2)
+  	    url.path = parts[0]
+  	    url.query = parts[1]
+  	}
+  	if contains(string!(url.path), ".") {
+        parts = split!(url.path, ".", 2)
+  	    url.extension = parts[1]
+  	}
+  	.url = url                      
+  }
+
+  if .panw.panos.sub_type == "file" && is_string(.panw.panos.misc) {
+    if contains!(.panw.panos.misc, "/") || contains!(.panw.panos.misc, "\\") {
+      .file.path = .panw.panos.misc
+    } else {
+      .file.name = .panw.panos.misc
+    }
+  }
+
+  if is_string(.file.path) {      
+    parts = split!(.file.path, "/")
+    if length(parts) == 1 {
+      parts = split!(.file.path, "\\")
+    }
+    for_each(parts) -> |i, part| {
+      if i == length(parts) - 1 {
+        .file.name = part
+      }
+    }                       
+  }
+
+  .panw.panos.user_agent = ._temp_.user_agent
+
+  if .panw.panos.url_category_list != null {
+    .panw.panos.url_category_list = split(strip_whitespace!(.panw.panos.url_category_list), ",")
+  }
+
+  # default pipeline
+  .panw.panos.observer.serial_number = .observer.serial_number
+
+  if ._temp_.srcuser != null {                                                             
+    _grokked, err = parse_groks(._temp_.srcuser, [
+      "^%{HOSTNAME:source.user.domain}\\\\%{USERNAME:source.user.name}$",
+      "^%{HOSTNAME:source.user.domain}\\\\\\\\%{USERNAME:source.user.name}$",
+      "^%{USERNAME:source.user.name}@%{HOSTNAME:source.user.domain}$",
+      "^%{USERNAME:source.user.name}$"
+    ], {
+      "USERNAME": "[ a-zA-Z0-9._-]+[$]?"
+    })  
+    if err == null {                                                            
+        .source.user = _grokked.source.user                                                           
+    }                                                                           
+  }
+
+  if ._temp_.dstuser != null {                                                                  
+    _grokked, err = parse_groks(._temp_.dstuser, [
+      "^%{HOSTNAME:destination.user.domain}\\\\%{USERNAME:destination.user.name}$", "^%{HOSTNAME:destination.user.domain}\\\\\\\\%{USERNAME:destination.user.name}$", "^%{USERNAME:destination.user.name}@%{HOSTNAME:destination.user.domain}$", "^%{USERNAME:destination.user.name}$"
+    ], {
+      "USERNAME": "[ a-zA-Z0-9._-]+[$]?"
+    }) 
+    if err == null {                                                            
+        .destination.user = _grokked.destination.user                                                           
+    }                                                                           
+  }
+
+  .panw.panos.source.user = .source.user.name
+
+  .panw.panos.destination.user = .destination.user.name
+
+  .user = .source.user
+
+  if !is_nullish(._temp_.generated_time) {         
+    # todo timezones
+    ._temp_.generated_time = string!(._temp_.generated_time)
+    if !match(._temp_.generated_time, r'([+-]\d{2}):(\d{2})$|Z$') {
+      ._temp_.generated_time = ._temp_.generated_time + string!(.event.timezone || "+00:00")  
+    }
+    .ts = parse_timestamp(._temp_.generated_time, "%Y/%m/%d %H:%M:%S%:z") ?? to_timestamp!(._temp_.generated_time)
+  }
+
+  .panw.panos.generated_time = .ts
+
+  if !is_nullish(.event.created) {
+    # todo timezones                                            
+    .event.created = string!(.event.created)
+    if !match(.event.created, r'([+-]\d{2}):(\d{2})$|Z$') {
+      .event.created = .event.created + string!(.event.timezone || "+00:00")
+    }
+    .event.created = parse_timestamp(.event.created, "%Y/%m/%d %H:%M:%S%:z") ?? to_timestamp!(.event.created)
+  }
+   
+  .panw.panos.received_time = .event.created
+
+  if !is_nullish(._temp_.logged_time) {
+    # todo timezones
+    ._temp_.logged_time = string!(._temp_.logged_time)
+    if !match(._temp_.logged_time, r'([+-]\d{2}):(\d{2})$|Z$') {
+      ._temp_.logged_time = ._temp_.logged_time + string!(.event.timezone || "+00:00")
+    }  
+    .panw.panos.logged_time = parse_timestamp(._temp_.logged_time, "%Y/%m/%d %H:%M:%S%:z") ?? to_timestamp!(._temp_.logged_time)                                 
+  }
+      
+  if !is_nullish(._temp_.high_res_timestamp) {  
+    # todo timezones
+    ._temp_.high_res_timestamp = string!(._temp_.high_res_timestamp)
+    if !match(._temp_.high_res_timestamp, r'([+-]\d{2}):(\d{2})$|Z$') {
+      ._temp_.high_res_timestamp = ._temp_.high_res_timestamp + string!(.event.timezone || "+00:00")
+    }   
+    .panw.panos.high_resolution_timestamp = parse_timestamp(._temp_.high_res_timestamp, "%Y/%m/%d %H:%M:%S%:z") ?? to_timestamp!(._temp_.high_res_timestamp)
+  }
+      
+  if !is_nullish(.event.start) {    
+    # todo timezones
+    .event.start = string!(.event.start)
+    if !match(.event.start, r'([+-]\d{2}):(\d{2})$|Z$') {
+      .event.start = .event.start + string!(.event.timezone || "+00:00") 
+    } 
+    .event.start = parse_timestamp(.event.start, "%Y/%m/%d %H:%M:%S%:z") ?? to_timestamp!(.event.start)
+  }
+   
+  if !is_nullish(.panw.panos.start_time) {
+    # todo timezones                                           
+    .panw.panos.start_time = string!(.panw.panos.start_time)
+    if !match(.panw.panos.start_time,  r'([+-]\d{2}):(\d{2})$|Z$') {
+      .panw.panos.start_time = .panw.panos.start_time + string!(.event.timezone || "+00:00")
+    }
+    .panw.panos.start_time = parse_timestamp(.panw.panos.start_time, "%Y/%m/%d %H:%M:%S%:z") ?? to_timestamp!(.panw.panos.start_time)
+  }
+      
+  if !is_nullish(.panw.panos.parent_session.start_time) {
+    # todo timezones                                            
+    .panw.panos.parent_session.start_time = string!(.panw.panos.parent_session.start_time)
+    if !match(.panw.panos.parent_session.start_time, r'([+-]\d{2}):(\d{2})$|Z$') {
+      .panw.panos.parent_session.start_time = .panw.panos.parent_session.start_time + string!(.event.timezone || "+00:00")
+    }
+    .panw.panos.parent_session.start_time = parse_timestamp(.panw.panos.parent_session.start_time, "%Y/%m/%d %H:%M:%S%:z") ?? to_timestamp!(.panw.panos.parent_session.start_time)
+  }
+   
+  if .source.ip != null {                       
+    .source.ip = to_string(.source.ip) 
+  }                                                  
+
+  if .destination.ip != null {                       
+    .destination.ip = to_string(.destination.ip) 
+  }                                                  
+
+  if .source.nat.ip != null {                       
+    .source.nat.ip = to_string(.source.nat.ip) 
+  }                                                  
+
+  if .destination.nat.ip != null {                       
+    .destination.nat.ip = to_string(.destination.nat.ip) 
+  }                                                  
+
+  # if .host.ip != null {                       
+  #   .host.ip = to_string!(.host.ip) 
+  # }                                                  
+
+  if .network.forwarded_ip != null {                       
+    .network.forwarded_ip = to_string!(.network.forwarded_ip) 
+  }                                                  
+
+  if .panw.panos.xff.ip != null {                       
+    .panw.panos.xff.ip = to_string(.panw.panos.xff.ip) 
+  }                                                  
+
+  if .panw.panos.source.ip != null {                       
+    .panw.panos.source.ip = to_string(.panw.panos.source.ip) 
+  }                                                  
+
+  if .panw.panos.source.ipv6 != null {                       
+    .panw.panos.source.ipv6 = to_string!(.panw.panos.source.ipv6) 
+  }                                                  
+
+  if .panw.panos.source.nat.ip != null {                       
+    .panw.panos.source.nat.ip = to_string(.panw.panos.source.nat.ip) 
+  }                                                  
+
+  if .panw.panos.destination.ip != null {                       
+    .panw.panos.destination.ip = to_string(.panw.panos.destination.ip) 
+  }                                                  
+
+  if .panw.panos.destination.nat.ip != null {                       
+    .panw.panos.destination.nat.ip = to_string(.panw.panos.destination.nat.ip) 
+  }                                                  
+
+  if .panw.panos.forwarded_ip != null {                       
+    .panw.panos.forwarded_ip = to_string!(.panw.panos.forwarded_ip) 
+  }                                                
+
+  if .panw.panos.host.ip != null {                       
+    .panw.panos.host.ip = to_string!(.panw.panos.host.ip) 
+  }                                                  
+
+  if .panw.panos.public.ip != null {                       
+    .panw.panos.public.ip = to_string!(.panw.panos.public.ip) 
+  }                                                  
+
+  if .panw.panos.private.ip != null {                       
+    .panw.panos.private.ip = to_string!(.panw.panos.private.ip) 
+  }                                                  
+
+  if .panw.panos.public.ipv6 != null {                       
+    .panw.panos.public.ipv6 = to_string!(.panw.panos.public.ipv6) 
+  }                                                  
+
+  if .panw.panos.private.ipv6 != null {                       
+    .panw.panos.private.ipv6 = to_string!(.panw.panos.private.ipv6) 
+  }                                                  
+
+  if .panw.panos.end_ip_address != null {                       
+    .panw.panos.end_ip_address = to_string!(.panw.panos.end_ip_address) 
+  }                                                  
+
+  if .panw.panos.remote_user.ip != null {                       
+    .panw.panos.remote_user.ip = to_string!(.panw.panos.remote_user.ip) 
+  }                                                  
+
+  if .source.bytes != null {                       
+    .source.bytes = to_int(.source.bytes) ?? null 
+  }                                                  
+
+  if .source.packets != null {                       
+    .source.packets = to_int(.source.packets) ?? null 
+  }                                                  
+
+  if .source.port != null {                       
+    .source.port = to_int(.source.port) ?? null 
+  }                                                  
+
+  if .panw.panos.source.port != null {                       
+    .panw.panos.source.port = to_int(.panw.panos.source.port) ?? null 
+  }                                                  
+
+  if .panw.panos.source.nat.port != null {                       
+    .panw.panos.source.nat.port = to_int(.panw.panos.source.nat.port) ?? null 
+  }                                                  
+
+  if .destination.bytes != null {                       
+    .destination.bytes = to_int(.destination.bytes) ?? null 
+  }                                                  
+
+  if .destination.packets != null {                       
+    .destination.packets = to_int(.destination.packets) ?? null 
+  }                                                  
+
+  if .destination.port != null {                       
+    .destination.port = to_int(.destination.port) ?? null 
+  }                                                  
+
+  if .panw.panos.destination.port != null {                       
+    .panw.panos.destination.port = to_int(.panw.panos.destination.port) ?? null 
+  }                                                  
+
+  if .panw.panos.destination.nat.port != null {                       
+    .panw.panos.destination.nat.port = to_int(.panw.panos.destination.nat.port) ?? null 
+  }                                                  
+
+  if .network.bytes != null {                       
+    .network.bytes = to_int(.network.bytes) ?? null 
+  }                                                  
+
+  if .network.packets != null {                       
+    .network.packets = to_int(.network.packets) ?? null 
+  }                                                  
+
+  if .event.duration != null {                       
+    .event.duration = to_int(.event.duration) ?? null 
+  }                                                  
+
+  if ._temp_.labels != null {                       
+    ._temp_.labels = to_int(._temp_.labels) ?? null 
+  }                                                  
+
+  if .source.nat.port != null {                       
+    .source.nat.port = to_int(.source.nat.port) ?? null 
+  }                                                  
+
+  if .destination.nat.port != null {                       
+    .destination.nat.port = to_int(.destination.nat.port) ?? null 
+  }                                                  
+
+  if .panw.panos.repeat_count != null {                       
+    .panw.panos.repeat_count = to_int(.panw.panos.repeat_count) ?? null 
+  }                                                  
+
+  if .panw.panos.sctp.chunks != null {                       
+    .panw.panos.sctp.chunks = to_int(.panw.panos.sctp.chunks) ?? null 
+  }                                                  
+
+  if .panw.panos.sctp.chunks_sent != null {                       
+    .panw.panos.sctp.chunks_sent = to_int(.panw.panos.sctp.chunks_sent) ?? null 
+  }                                                  
+
+  if .panw.panos.sctp.chunks_received != null {                       
+    .panw.panos.sctp.chunks_received = to_int(.panw.panos.sctp.chunks_received) ?? null 
+  }                                                  
+
+  if .panw.panos.network.bytes != null {                       
+    .panw.panos.network.bytes = to_int(.panw.panos.network.bytes) ?? null 
+  }                                                  
+
+  if .panw.panos.network.packets != null {                       
+    .panw.panos.network.packets = to_int(.panw.panos.network.packets) ?? null 
+  }                                                  
+
+  if .panw.panos.bytes_sent != null {                       
+    .panw.panos.bytes_sent = to_int(.panw.panos.bytes_sent) ?? null 
+  }                                                  
+
+  if .panw.panos.packets_sent != null {                       
+    .panw.panos.packets_sent = to_int(.panw.panos.packets_sent) ?? null 
+  }                                                  
+
+  if .panw.panos.bytes_received != null {                       
+    .panw.panos.bytes_received = to_int(.panw.panos.bytes_received) ?? null 
+  }                                                  
+
+  if .panw.panos.packets_received != null {                       
+    .panw.panos.packets_received = to_int(.panw.panos.packets_received) ?? null 
+  }                                                  
+
+  if .panw.panos.elapsed_time != null {                       
+    .panw.panos.elapsed_time = to_int(.panw.panos.elapsed_time) ?? null 
+  }                                                  
+
+  if .panw.panos.timeout != null {                       
+    .panw.panos.timeout = to_int(.panw.panos.timeout) ?? null 
+  }                                                  
+
+  if .panw.panos.error_code != null {                       
+    .panw.panos.error_code = to_int(.panw.panos.error_code) ?? null 
+  }                                                  
+
+  if .panw.panos.factorno != null {                       
+    .panw.panos.factorno = to_int(.panw.panos.factorno) ?? null 
+  }                                                  
+
+  if .panw.panos.certificate.size != null {                       
+    .panw.panos.certificate.size = to_int(.panw.panos.certificate.size) ?? null 
+  }                                                  
+
+  if .tls.client.x509.public_key_size != null {                       
+    .tls.client.x509.public_key_size = to_int(.tls.client.x509.public_key_size) ?? null 
+  }                                                  
+
+  if .panw.panos.issuer_common_name.length != null {                       
+    .panw.panos.issuer_common_name.length = to_int(.panw.panos.issuer_common_name.length) ?? null 
+  }                                                  
+
+  if .panw.panos.root_common_name.length != null {                       
+    .panw.panos.root_common_name.length = to_int(.panw.panos.root_common_name.length) ?? null 
+  }                                                  
+
+  if .panw.panos.subject_common_name.length != null {                       
+    .panw.panos.subject_common_name.length = to_int(.panw.panos.subject_common_name.length) ?? null 
+  }                                                  
+
+  if .panw.panos.server_name_indication.length != null {                       
+    .panw.panos.server_name_indication.length = to_int(.panw.panos.server_name_indication.length) ?? null 
+  }                                                  
+
+  if .panw.panos.link.change_count != null {                       
+    .panw.panos.link.change_count = to_int(.panw.panos.link.change_count) ?? null 
+  }                                                  
+
+  if .panw.panos.login_duration != null {                       
+    .panw.panos.login_duration = to_int(.panw.panos.login_duration) ?? null 
+  }                                                  
+
+  if .panw.panos.link.change_count != null {                       
+    .panw.panos.link.change_count = to_int(.panw.panos.link.change_count) ?? null 
+  }                                                  
+
+  if .panw.panos.strict_check != null {                       
+    .panw.panos.strict_check = to_int(.panw.panos.strict_check) ?? null 
+  }                                                  
+
+  if .panw.panos.tunnel_fragment != null {                       
+    .panw.panos.tunnel_fragment = to_int(.panw.panos.tunnel_fragment) ?? null 
+  }                                                  
+
+  if .panw.panos.unknown_protocol != null {                       
+    .panw.panos.unknown_protocol = to_int(.panw.panos.unknown_protocol) ?? null 
+  }                                                  
+
+  if .panw.panos.sessions.closed != null {                       
+    .panw.panos.sessions.closed = to_int(.panw.panos.sessions.closed) ?? null 
+  }                                                  
+
+  if .panw.panos.sessions.created != null {                       
+    .panw.panos.sessions.created = to_int(.panw.panos.sessions.created) ?? null 
+  }                                                  
+
+  if .panw.panos.max_encapsulation != null {                       
+    .panw.panos.max_encapsulation = to_int(.panw.panos.max_encapsulation) ?? null 
+  }                                                  
+
+  if .panw.panos.application.risk_level != null {                       
+    .panw.panos.application.risk_level = to_int(.panw.panos.application.risk_level) ?? null 
+  }                                                  
+
+  if .panw.panos.response_time != null {                       
+    .panw.panos.response_time = to_int(.panw.panos.response_time) ?? null 
+  }                                                  
+                             
+  if .panw.panos.src.mac != null {                       
+    .panw.panos.src.mac = replace!(.panw.panos.src.mac, r'[:.]', "-") 
+  }                  
+
+  if .panw.panos.src.mac != null {                       
+    .panw.panos.src.mac = upcase!(.panw.panos.src.mac) 
+  }                    
+
+  if .panw.panos.dst.mac != null {                       
+    .panw.panos.dst.mac = replace!(.panw.panos.dst.mac, r'[:.]', "-") 
+  }                     
+
+  if .panw.panos.dst.mac != null {                       
+    .panw.panos.dst.mac = upcase!(.panw.panos.dst.mac) 
+  }                     
+
+  if .host.mac != null {                       
+    .host.mac = replace!(.host.mac, r'[:.]', "-") 
+  }                   
+
+  if .host.mac != null {                       
+    .host.mac = upcase!(.host.mac) 
+  }                   
+
+  if .panw.panos.machine.mac_address != null {                       
+    .panw.panos.machine.mac_address = replace!(.panw.panos.machine.mac_address, r'[:.]', "-") 
+  }                      
+
+  if .panw.panos.machine.mac_address != null {                       
+    .panw.panos.machine.mac_address = upcase!(.panw.panos.machine.mac_address) 
+  }                    
+
+  if .network.application != null {                       
+    .network.application = downcase!(.network.application) 
+  }                     
+
+  if .network.transport != null {                       
+    .network.transport = downcase!(.network.transport) 
+  }                      
+
+  if .network.protocol != null {                       
+    .network.protocol = downcase!(.network.protocol) 
+  }                     
+
+  if .panw.panos.network.pcap_id == "0" { 
+      del(.panw.panos.network.pcap_id)
+  }
+
+  if ._temp_.labels != null && ._temp_.labels != 0 {           
+    script = true                         
+    # TODO: add support for labels / flag to set            
+  }
+
+  if .event.duration != null {           
+    nanos = int!(.event.duration) * 1000000000
+    .event.duration = nanos
+    if .event.start != null {
+      start_epoch_ns = to_unix_timestamp!(.event.start, unit: "nanoseconds")
+      .event.end = to_timestamp!(start_epoch_ns + nanos, unit: "nanoseconds")
+    }
+  }
+      
+  if .panw.panos.action != null && includes(["alert", "allow", "continue"], .panw.panos.action) { 
+      .event.type = push(.event.type, "allowed") 
+  }
+
+  if .panw.panos.action != null && includes(["deny", "drop", "reset-client", "reset-server", "reset-both", "block-url", "block-ip", "random-drop", "sinkhole", "block"], .panw.panos.action) { 
+      .event.type = push(.event.type, "denied") 
+  }
+
+  if .panw.panos.sub_type == "start" { 
+      .event.action = "flow_started"
+      .event.type = push(.event.type, "start")
+      .event.type = push(.event.type, "connection")
+  }
+
+  if .panw.panos.sub_type == "end" { 
+      .event.action = "flow_terminated"
+      .event.type = push(.event.type, "end")
+      .event.type = push(.event.type, "connection")
+  }
+   
+  if .panw.panos.sub_type == "drop" { 
+      .event.action = "flow_dropped"
+      .event.type = push(.event.type, "denied")
+      .event.type = push(.event.type, "connection")
+  }
+      
+  if .panw.panos.sub_type == "deny" { 
+      .event.action = "flow_denied"
+      .event.type = push(.event.type, "denied")
+      .event.type = push(.event.type, "connection")
+  }
+
+  if .panw.panos.sub_type == "data" { 
+      .event.action = "data_match"
+  }
+
+  if .panw.panos.sub_type == "file" { 
+      .event.action = "file_match"
+  }
+
+  if .panw.panos.sub_type == "flood" { 
+      .event.action = "flood_detected"
+  }
+      
+  if .panw.panos.sub_type == "packet" { 
+      .event.action = "packet_attack"
+  }
+   
+  if .panw.panos.sub_type == "scan" { 
+      .event.action = "scan_detected"
+  }
+
+  if .panw.panos.sub_type == "spyware" { 
+      .event.action = "spyware_detected"
+  }
+
+  if .panw.panos.sub_type == "url" { 
+      .event.action = "url_filtering"
+  }
+
+  if .panw.panos.sub_type == "virus" || .panw.panos.sub_type == "ml-virus" { 
+      .event.action = "virus_detected"
+  }
+
+  if .panw.panos.sub_type == "vulnerability" { 
+      .event.action = "exploit_detected"
+  }
+      
+  if .panw.panos.sub_type == "wildfire" { 
+      .event.action = "wildfire_verdict"
+  }
+   
+  if .panw.panos.sub_type == "wildfire-virus" { 
+      .event.action = "wildfire_virus_detected"
+  }
+
+  if .log.level == "critical" { 
+      .event.severity = 1
+  } else if .log.level == "high" { 
+      .event.severity = 2
+  } else if .log.level == "medium" { 
+      .event.severity = 3
+  } else if .log.level == "low" { 
+      .event.severity = 4
+  } else if .log.level == "informational" { 
+      .event.severity = 5
+  }
+
+  if .panw.panos.action == "drop icmp" || .panw.panos.action == "drop ICMP" { 
+      .panw.panos.action = "drop-icmp"
+  }
+
+  if .panw.panos.action == "reset both" { 
+      .panw.panos.action = "reset-both"
+  }
+   
+  if .panw.panos.action == "reset client" { 
+      .panw.panos.action = "reset-client"
+  }
+
+  if .panw.panos.action == "reset server" { 
+      .panw.panos.action = "reset-server"
+  }
+
+  if .network.type == null && .source.ip != null && contains(string!(.source.ip), ".") { 
+      .network.type = "ipv4"
+  }
+
+  if .network.type == null && .source.ip != null && contains(string!(.source.ip), ":") { 
+      .network.type = "ipv6"
+  }
+
+      
+  if .source.ip != null { 
+      .related.ip = push(.related.ip, .source.ip) 
+  }
+
+  if .destination.ip != null { 
+      .related.ip = push(.related.ip, .destination.ip) 
+  }
+
+      
+  if .source.nat.ip != null { 
+      .related.ip = push(.related.ip, .source.nat.ip)
+  }
+
+      
+  if .destination.nat.ip != null { 
+      .related.ip = push(.related.ip, .destination.nat.ip)
+  }
+      
+  if .host.ip != null { 
+      .related.ip = flatten([.related.ip, .host.ip]) 
+  }
+      
+  if .panw.panos.xff.ip != null { 
+      .related.ip = push(.related.ip, .panw.panos.xff.ip)
+  }
+
+      
+  if .network.forwarded_ip != null { 
+      .related.ip = push(.related.ip, .network.forwarded_ip)
+  }
+
+      
+  if .panw.panos.remote_user.ip != null { 
+      .related.ip = push(.related.ip, .panw.panos.remote_user.ip)
+  }
+
+      
+  if .panw.panos.end_ip_address != null { 
+      .related.ip = push(.related.ip, .panw.panos.end_ip_address)
+  }
+
+  # TODO: user agent
+  # .user_agent = parse_user_agent!(del(._temp_.user_agent))
+
+  .source.as.number = del(.source.as.asn)
+
+  .source.as.organization.name = del(.source.as.organization_name)
+
+  .destination.as.number = del(.destination.as.asn)
+
+  .destination.as.organization.name = del(.destination.as.organization_name)
+
+  if .source.geo.name == null { 
+      .source.geo.name = del(._temp_.srcloc)
+  }
+
+  if .destination.geo.name == null { 
+      .destination.geo.name = del(._temp_.dstloc)
+  }
+
+  if .source.port != null {                       
+      .source.port = to_int(.source.port) ?? null
+  }
+
+  if .destination.port != null {                       
+      .destination.port = to_int(.destination.port) ?? null
+  }
+
+  if .source.nat.port != null {                      
+      .source.nat.port = to_int(.source.nat.port) ?? null
+  }
+      
+  if .destination.nat.port != null { 
+      .destination.nat.port = to_int(.destination.nat.port) ?? null
+  }
+
+  if .source.port != null && .source.port != 0 && .destination.port != null && .destination.port != 0 { 
+      # TODO(): add community network id
+      todo = true
+  }
+  if .source.nat.port != null && .source.nat.port != 0 && .destination.nat.port != null && .destination.nat.port != 0 { 
+      # TODO(): add community network id
+      todo = true
+  }
+  # hm handle multiple community ids
+  # if .panw.panos.network.nat.community_id != null && .panw.panos.network.nat.community_id != .network.community_id { 
+  #     .network.community_id = .panw.panos.network.nat.community_id
+  # }
+
+  if .panw.panos.threat.name != null {                                                          
+    _grokked, err = parse_groks(.panw.panos.threat.name, ["^%{GREEDYDATA:panw.panos.threat.name}\\(\\s*%{NUMBER:panw.panos.threat.id}\\s*\\)$"])  
+    if err == null {                                                            
+        .panw.panos.threat = _grokked.panw.panos.threat                                                          
+    }                                                                           
+  }
+
+  if .panw.panos.threat.id == "9999" { 
+      .panw.panos.threat.name = "URL-filtering"
+  }
+
+  if .rule.name == null { 
+      .rule.name = .panw.panos.ruleset
+  }
+
+  if .client.user.name != null { 
+      .related.user = push(.related.user, .client.user.name) 
+  }
+
+  if .source.user.name != null { 
+      .related.user = flatten([.related.user, .source.user.name]) 
+  }
+   
+  if .server.user.name != null { 
+      .related.user = push(.related.user, .server.user.name) 
+  }
+
+  if .destination.user.name != null { 
+      .related.user = push(.related.user, .destination.user.name) 
+  }
+
+  if .panw.panos.file.hash != null { 
+      .related.hash = push(.related.hash, .panw.panos.file.hash) 
+  }
+
+  if .tls.client.hash.md5 != null && .tls.client.hash.md5 != "" { 
+      .related.hash = push(.related.hash, .tls.client.hash.md5) 
+  }
+      
+  if .tls.client.hash.sha1 != null && .tls.client.hash.sha1 != "" { 
+      .related.hash = push(.related.hash, .tls.client.hash.sha1) 
+  }
+      
+  if .tls.client.hash.sha256 != null && .tls.client.hash.sha256 != "" { 
+      .related.hash = push(.related.hash, .tls.client.hash.sha256) 
+  }
+      
+  if .observer.hostname != null && .observer.hostname != "" { 
+      .related.hosts = push(.related.hosts, .observer.hostname) 
+  }
+   
+  if .host.name != null && .host.name != "" { 
+      .related.hosts = push(.related.hosts, .host.name) 
+  }
+   
+  if .panw.panos.dst.host != null && .panw.panos.dst.host != "" { 
+      .related.hosts = push(.related.hosts, .panw.panos.dst.host) 
+  }
+
+  if .panw.panos.src.host != null && .panw.panos.src.host != "" { 
+      .related.hosts = push(.related.hosts, .panw.panos.src.host) 
+  }
+
+  del(._temp_)
+
+  if .source.nat.ip == "0.0.0.0" && .source.nat.port == 0 { 
+      del(.source.nat.ip)
+      del(.source.nat.port)
+  }
+
+  if .destination.nat.ip == "0.0.0.0" && .destination.nat.port == 0 { 
+      del(.destination.nat.ip)
+      del(.destination.nat.port)
+  }
+
+  # # todo || !(contains(.tags, "preserve_duplicate_custom_fields"))
+  # if .tags == null { 
+    del(.panw.panos.bytes_received)
+    del(.panw.panos.bytes_sent)
+    del(.panw.panos.certificate.fingerprint)
+    del(.panw.panos.certificate.not_after)
+    del(.panw.panos.certificate.not_before)
+    del(.panw.panos.certificate.serial_number)
+    del(.panw.panos.certificate.size)
+    del(.panw.panos.certificate.version)
+    del(.panw.panos.client.os)
+    del(.panw.panos.client.os_version)
+    del(.panw.panos.destination.ip)
+    del(.panw.panos.destination.location)
+    del(.panw.panos.destination.nat.ip)
+    del(.panw.panos.destination.nat.port)
+    del(.panw.panos.destination.port)
+    del(.panw.panos.destination.user)
+    del(.panw.panos.destination.zone)
+    del(.panw.panos.device_name)
+    del(.panw.panos.elapsed_time)
+    del(.panw.panos.elliptic_curve)
+    del(.panw.panos.event.id)
+    del(.panw.panos.event.reason)
+    del(.panw.panos.event.status)
+    del(.panw.panos.file.type)
+    del(.panw.panos.forwarded_ip)
+    del(.panw.panos.generated_time)
+    del(.panw.panos.host.id)
+    del(.panw.panos.host.ip)
+    del(.panw.panos.http_method)
+    del(.panw.panos.inbound_interface)
+    del(.panw.panos.location)
+    del(.panw.panos.login_duration)
+    del(.panw.panos.machine.mac_address)
+    del(.panw.panos.machine.name)
+    del(.panw.panos.machine.os)
+    del(.panw.panos.misc)
+    del(.panw.panos.network.application)
+    del(.panw.panos.network.bytes)
+    del(.panw.panos.network.direction)
+    del(.panw.panos.network.packets)
+    del(.panw.panos.normalize_user)
+    del(.panw.panos.observer.serial_number)
+    del(.panw.panos.outbound_interface)
+    del(.panw.panos.packets_received)
+    del(.panw.panos.packets_sent)
+    del(.panw.panos.private.ip)
+    del(.panw.panos.private.ipv6)
+    del(.panw.panos.protocol)
+    del(.panw.panos.public.ip)
+    del(.panw.panos.public.ipv6)
+    del(.panw.panos.received_time)
+    del(.panw.panos.recipient)
+    del(.panw.panos.referrer)
+    del(.panw.panos.rule_uuid)
+    del(.panw.panos.sender)
+    del(.panw.panos.server_name_indication.value)
+    del(.panw.panos.severity)
+    del(.panw.panos.source.ip)
+    del(.panw.panos.source.ipv6)
+    del(.panw.panos.source.location)
+    del(.panw.panos.source.nat.ip)
+    del(.panw.panos.source.nat.port)
+    del(.panw.panos.source.port)
+    del(.panw.panos.source.region)
+    del(.panw.panos.source.user)
+    del(.panw.panos.source.zone)
+    del(.panw.panos.start_time)
+    del(.panw.panos.tls.encryption)
+    del(.panw.panos.tls.version)
+    del(.panw.panos.tunnel_inspection_rule)
+    del(.panw.panos.user)
+    del(.panw.panos.user_agent)
+    del(.panw.panos.user_by_source)
+    del(.panw.panos.subject_common_name.value)
+    del(.panw.panos.issuer_common_name.value)
+    del(.panw.panos.hash)
+  # }
+
+  .related.ip = unique(.related.ip)
+
+meta:
+  display_name: "Threat"
+  description: "Palo Alto (PAN-OS) Threat logs"
