@@ -39,3 +39,5 @@ schema:
             type: string
           - name: notes
             type: string
+lookup_keys:
+  - vulnerability.id
