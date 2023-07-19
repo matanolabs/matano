@@ -145,6 +145,7 @@ def handler(event, context):
 
     if DETECTION_CONFIGS is None:
         _load_detection_configs()
+    if TABLE_DETECTION_CONFIG is None:
         _load_table_detection_config()
 
     alert_responses = []
