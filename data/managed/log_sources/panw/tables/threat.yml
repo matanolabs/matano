@@ -351,47 +351,32 @@ transform: |
 
   if !is_nullish(._temp_.logged_time) {
     # todo timezones
-    ._temp_.logged_time = string!(._temp_.logged_time)
-    if !match(._temp_.logged_time, r'([+-]\d{2}):(\d{2})$|Z$') {
-      ._temp_.logged_time = ._temp_.logged_time + string!(.event.timezone || "+00:00")
-    }  
-    .panw.panos.logged_time = parse_timestamp(._temp_.logged_time, "%Y/%m/%d %H:%M:%S%:z") ?? to_timestamp!(._temp_.logged_time)                                 
+    logged_time = string!(._temp_.logged_time) + string!(.event.timezone || "+00:00")
+    .panw.panos.logged_time = parse_timestamp(logged_time, "%Y/%m/%d %H:%M:%S%:z") ?? to_timestamp!(._temp_.logged_time)
   }
       
   if !is_nullish(._temp_.high_res_timestamp) {  
     # todo timezones
-    ._temp_.high_res_timestamp = string!(._temp_.high_res_timestamp)
-    if !match(._temp_.high_res_timestamp, r'([+-]\d{2}):(\d{2})$|Z$') {
-      ._temp_.high_res_timestamp = ._temp_.high_res_timestamp + string!(.event.timezone || "+00:00")
-    }   
-    .panw.panos.high_resolution_timestamp = parse_timestamp(._temp_.high_res_timestamp, "%Y/%m/%d %H:%M:%S%:z") ?? to_timestamp!(._temp_.high_res_timestamp)
+    _temp_high_res_timestamp = string!(._temp_.high_res_timestamp) + string!(.event.timezone || "+00:00")
+    .panw.panos.high_resolution_timestamp = parse_timestamp(_temp_high_res_timestamp, "%Y/%m/%d %H:%M:%S%:z") ?? to_timestamp!(._temp_.high_res_timestamp)
   }
       
   if !is_nullish(.event.start) {    
     # todo timezones
-    .event.start = string!(.event.start)
-    if !match(.event.start, r'([+-]\d{2}):(\d{2})$|Z$') {
-      .event.start = .event.start + string!(.event.timezone || "+00:00") 
-    } 
-    .event.start = parse_timestamp(.event.start, "%Y/%m/%d %H:%M:%S%:z") ?? to_timestamp!(.event.start)
+    event_start = string!(.event.start) + string!(.event.timezone || "+00:00")
+    .event.start = parse_timestamp(event_start, "%Y/%m/%d %H:%M:%S%:z") ?? to_timestamp!(.event.start)
   }
    
   if !is_nullish(.panw.panos.start_time) {
     # todo timezones                                           
-    .panw.panos.start_time = string!(.panw.panos.start_time)
-    if !match(.panw.panos.start_time,  r'([+-]\d{2}):(\d{2})$|Z$') {
-      .panw.panos.start_time = .panw.panos.start_time + string!(.event.timezone || "+00:00")
-    }
-    .panw.panos.start_time = parse_timestamp(.panw.panos.start_time, "%Y/%m/%d %H:%M:%S%:z") ?? to_timestamp!(.panw.panos.start_time)
+    panw_panos_start_time = string!(.panw.panos.start_time) + string!(.event.timezone || "+00:00")
+    .panw.panos.start_time = parse_timestamp(panw_panos_start_time, "%Y/%m/%d %H:%M:%S%:z") ?? to_timestamp!(.panw.panos.start_time)
   }
       
   if !is_nullish(.panw.panos.parent_session.start_time) {
     # todo timezones                                            
-    .panw.panos.parent_session.start_time = string!(.panw.panos.parent_session.start_time)
-    if !match(.panw.panos.parent_session.start_time, r'([+-]\d{2}):(\d{2})$|Z$') {
-      .panw.panos.parent_session.start_time = .panw.panos.parent_session.start_time + string!(.event.timezone || "+00:00")
-    }
-    .panw.panos.parent_session.start_time = parse_timestamp(.panw.panos.parent_session.start_time, "%Y/%m/%d %H:%M:%S%:z") ?? to_timestamp!(.panw.panos.parent_session.start_time)
+    panw_panos_parent_session_start_time = string!(.panw.panos.parent_session.start_time) + string!(.event.timezone || "+00:00")
+    .panw.panos.parent_session.start_time = parse_timestamp(panw_panos_parent_session_start_time, "%Y/%m/%d %H:%M:%S%:z") ?? to_timestamp!(.panw.panos.parent_session.start_time)
   }
    
   if .source.ip != null {                       
