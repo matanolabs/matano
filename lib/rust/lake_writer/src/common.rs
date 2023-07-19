@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Result};
-use arrow::record_batch::RecordBatchReader;
+use arrow::{compute::concat_batches, record_batch::RecordBatchReader};
 use arrow2::chunk::Chunk;
 use aws_sdk_s3::types::ByteStream;
 use log::{error, info};
@@ -54,18 +54,17 @@ pub fn serialize_arrow_parquet(
         .build();
 
     let buf = std::io::Cursor::new(vec![]);
-    let mut writer = ArrowWriter::try_new(buf, imported_schema, Some(props)).unwrap();
+    let mut writer = ArrowWriter::try_new(buf, imported_schema.clone(), Some(props)).unwrap();
 
-    for record_batch in stream_reader {
-        let record_batch = record_batch?;
-        writer.write(&record_batch)?;
-    }
-    writer.flush()?;
+    let record_batches = stream_reader.collect::<Result<Vec<_>, _>>()?;
+    let record_batch = concat_batches(&imported_schema, &record_batches)?;
+
+    writer.write(&record_batch)?;
 
     let bytes = writer.into_inner()?.into_inner();
     // (drop/release)
     unsafe {
-        Box::from_raw(stream_ptr);
+        drop(Box::from_raw(stream_ptr));
     };
 
     Ok(bytes)
