@@ -32,7 +32,7 @@ arrow2 = { git = "https://github.com/jorgecarleitao/arrow2", features = [
   "io_json",
 ] }
 indexmap = "1.9.1"
-apache-avro = { git = "https://github.com/apache/avro.git", rev = "05099c3", features = [
+apache-avro = { git = "https://github.com/apache/avro.git", features = [
   "zstandard",
   "snappy",
 ] }
