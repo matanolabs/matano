@@ -24,7 +24,7 @@ futures-util = "0.3.23"
 serde = "^1"
 serde_json = "^1.0.89"
 serde_yaml = "0.9"
-log = "^0.4"
+log = "^0.4.19"
 tracing-subscriber = { version = "0.3.8", features = ["env-filter"] }
 tracing = { version = "0.1.30", features = ["log"] }
 lambda_runtime = "0.7.0"

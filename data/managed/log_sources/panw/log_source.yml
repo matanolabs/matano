@@ -951,7 +951,9 @@ schema:
                       - name: category
                         type: string
                 - name: url_category_list
-                  type: string
+                  type:
+                    element: string
+                    type: list
                 - name: url_idx
                   type: string
                 - name: user

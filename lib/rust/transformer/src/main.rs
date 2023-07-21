@@ -883,114 +883,115 @@ pub(crate) async fn handler(event: LambdaEvent<SqsEvent>) -> Result<()> {
                                             let raw_line_clone = v.get("message").or(v.get("json")).map(|x| x.to_owned()).context("Failed to get raw line from event");
 
                                             let process = |raw_line: Value| {
-                                            match vrl(PRE_TRANSFORM_JSON_PARSE, &mut v).map_err(|e| {
-                                                anyhow!("Failed to run pre-transform: {}", e)
-                                            }) {
-                                                Ok(_) => {},
-                                                Err(e) => {
-                                                    error!("Failed to process event, mutated event state: {}\n {}", v.to_string_lossy(), e);
-                                                    return Err(e);
-                                                }
-                                            }
-
-
-                                            let table_name = match select_table_from_payload_expr {
-                                                Some(ref select_table_from_payload_expr) => match vrl_opt(select_table_from_payload_expr, &mut v).map_err(|e| {
-                                                    anyhow!("Failed to select table: {}", e)
+                                                match vrl(PRE_TRANSFORM_JSON_PARSE, &mut v).map_err(|e| {
+                                                    anyhow!("Failed to run pre-transform: {}", e)
                                                 }) {
-                                                    Ok(Some((table_name, _))) => table_name.as_str().unwrap_or_else(|| Cow::from(default_table_name.to_owned())).to_string(),
-                                                    Ok(None) => {
-                                                        return Ok(None);
-                                                    },
+                                                    Ok(_) => {},
                                                     Err(e) => {
-                                                        error!("Failed to process event, mutated event state: {}\n {}", v.to_string_lossy(), e);
+                                                        // error!("Failed to process event, mutated event state: {}\n {}", v.to_string_lossy(), e);
                                                         return Err(e);
                                                     }
-                                                },
-                                                None => default_table_name.to_owned(),
-                                            };
-
-                                            // Treated differently than a regular table, e.g. no required ts. Currently just enrichment tables.
-                                            let is_passthrough = log_source.starts_with("enrich_");
-
-                                            // Use empty transform if no transform is defined
-                                            let transform_expr = LOG_SOURCES_CONFIG.with(|c| {
-                                                let log_sources_config = c.borrow();
-
-                                                let transform = (*log_sources_config)
-                                                .get(&log_source)?
-                                                .tables.get(&table_name)?.get_string("transform");
-
-                                                transform.ok()
-                                            }).unwrap_or("".to_string());
-
-                                            // TODO(shaeq): does this have performance implications?
-                                            let wrapped_transform_expr = format_transform_expr(&transform_expr, log_source.starts_with("enrich_"));
-
-                                            match vrl_opt(&wrapped_transform_expr, &mut v).map_err(|e| {
-                                                anyhow!("Failed to transform: {}", e)
-                                            }) {
-                                                Ok(Some(_)) => {},
-                                                Ok(None) => {
-                                                    return Ok(None);
                                                 }
-                                                Err(e) => {
-                                                    error!("Failed to process event, mutated event state: {}\n {}", v.to_string_lossy(), e);
-                                                    return Err(e);
-                                                }
-                                            }
 
-                                            let resolved_table_name = if table_name == "default" {
-                                                log_source.to_owned()
-                                            } else {
-                                                format!("{}_{}", &log_source, &table_name)
-                                            };
 
-                                            let avro_schema = AVRO_SCHEMAS
-                                                .get(&resolved_table_name)
-                                                .context("Failed to find avro schema")?;
-
-                                            let v_clone = log_enabled!(log::Level::Debug).then(|| v.clone());
-
-                                            let ts_hour = if is_passthrough {
-                                                chrono::Utc::now().format("%Y-%m-%d-%H").to_string()
-                                            } else {
-                                                v.get("ts").context("Failed to find matano timestamp")?.as_timestamp().context("Failed to parse matano timestamp")?.format("%Y-%m-%d-%H").to_string()
-                                            };
-
-                                            let v_avro = TryIntoAvro::try_into(v)?;
-                                            let v_avro = v_avro.resolve(avro_schema)
-                                            .map_err(|e| {
-                                                match e {
-                                                    apache_avro::Error::FindUnionVariant => {
-                                                        // TODO: report errors
-                                                        if log_enabled!(log::Level::Debug) {
-                                                            debug!("{}", v_clone.and_then(|x| serde_json::to_string(&x).ok()).unwrap_or_default());
+                                                let table_name = match select_table_from_payload_expr {
+                                                    Some(ref select_table_from_payload_expr) => match vrl_opt(select_table_from_payload_expr, &mut v).map_err(|e| {
+                                                        anyhow!("Failed to select table: {}", e)
+                                                    }) {
+                                                        Ok(Some((table_name, _))) => table_name.as_str().unwrap_or_else(|| Cow::from(default_table_name.to_owned())).to_string(),
+                                                        Ok(None) => {
+                                                            return Ok(None);
+                                                        },
+                                                        Err(e) => {
+                                                            // error!("Failed to process event, mutated event state: {}\n {}", v.to_string_lossy(), e);
+                                                            return Err(e);
                                                         }
+                                                    },
+                                                    None => default_table_name.to_owned(),
+                                                };
 
-                                                        let error = LineLevelError::new("SchemaMismatchError", "Failed to resolve schema due to schema mismatch.");
-                                                        anyhow!(error)
+                                                // Treated differently than a regular table, e.g. no required ts. Currently just enrichment tables.
+                                                let is_passthrough = log_source.starts_with("enrich_");
+
+                                                // Use empty transform if no transform is defined
+                                                let transform_expr = LOG_SOURCES_CONFIG.with(|c| {
+                                                    let log_sources_config = c.borrow();
+
+                                                    let transform = (*log_sources_config)
+                                                    .get(&log_source)?
+                                                    .tables.get(&table_name)?.get_string("transform");
+
+                                                    transform.ok()
+                                                }).unwrap_or("".to_string());
+
+                                                // TODO(shaeq): does this have performance implications?
+                                                let wrapped_transform_expr = format_transform_expr(&transform_expr, log_source.starts_with("enrich_"));
+
+                                                let resolved_table_name = if table_name == "default" {
+                                                    log_source.to_owned()
+                                                } else {
+                                                    format!("{}_{}", &log_source, &table_name)
+                                                };
+
+                                                match vrl_opt(&wrapped_transform_expr, &mut v).map_err(|e| {
+                                                    anyhow!("Failed to transform log for table {}: {}", &resolved_table_name, e)
+                                                }) {
+                                                    Ok(Some(_)) => {},
+                                                    Ok(None) => {
+                                                        return Ok(None);
                                                     }
-                                                    e => anyhow!(e)
+                                                    Err(e) => {
+                                                        // error!("Failed to process event, mutated event state: {}\n {}", v.to_string_lossy(), e);
+                                                        return Err(e);
+                                                    }
                                                 }
-                                            })?;
 
-                                            let ret = LineResult::new(raw_line.clone(), v_avro, resolved_table_name.clone(), log_source.clone(), ts_hour.clone(), Some(record_id.clone()));
-                                            Ok(Some(ret))
+                                                let avro_schema = AVRO_SCHEMAS
+                                                    .get(&resolved_table_name)
+                                                    .context("Failed to find avro schema")?;
+
+                                                let v_clone = log_enabled!(log::Level::Debug).then(|| v.clone());
+
+                                                let ts_hour = if is_passthrough {
+                                                    chrono::Utc::now().format("%Y-%m-%d-%H").to_string()
+                                                } else {
+                                                    v.get("ts").context("Failed to find matano timestamp")?.as_timestamp().context("Failed to parse matano timestamp")?.format("%Y-%m-%d-%H").to_string()
+                                                };
+
+                                                let v_avro = TryIntoAvro::try_into(v)?;
+                                                let v_avro = v_avro.resolve(avro_schema)
+                                                .map_err(|e| {
+                                                    match e {
+                                                        apache_avro::Error::FindUnionVariant => {
+                                                            // TODO: report errors
+                                                            if log_enabled!(log::Level::Debug) {
+                                                                debug!("{}", v_clone.and_then(|x| serde_json::to_string(&x).ok()).unwrap_or_default());
+                                                            }
+
+                                                            let error = LineLevelError::new("SchemaMismatchError", format!("Failed to resolve schema for due to schema mismatch for table {}.", &resolved_table_name).as_str());
+                                                            anyhow!(error)
+                                                        }
+                                                        e => anyhow!(e)
+                                                    }
+                                                })?;
+
+                                                let ret = LineResult::new(raw_line.clone(), v_avro, resolved_table_name.clone(), log_source.clone(), ts_hour.clone(), Some(record_id.clone()));
+                                                Ok(Some(ret))
                                             };
+
                                             match raw_line_clone {
                                                 Ok(raw_line) => {
                                                     process(raw_line.clone()).map_err(|e| {
                                                         let err_type = e.downcast_ref::<LineLevelError>().map(|e| e.err_type.as_str()).unwrap_or("UnknownError");
-                                                        LineError::new_partial(raw_line, log_source.clone(), err_type.to_string(), format!("{:#}", e), Some(record_id.clone()))
+                                                        LineError::new_partial(raw_line, log_source.clone(), err_type.to_string(), format!("{:#} (log source: {})", e, &log_source), Some(record_id.clone()))
                                                     })
                                                 },
                                                 Err(e) => {
-                                                    Err(LineError::new_total(log_source.clone(), format!("{:#}", e), record_id.clone()))
+                                                    Err(LineError::new_total(log_source.clone(), format!("{:#} (log source: {})", e, &log_source), record_id.clone()))
                                                 }
                                             }
                                         }
-                                        Err(e) => Err(LineError::new_total(log_source.clone(), format!("{:#}", e),  record_id.clone()))
+                                        Err(e) => Err(LineError::new_total(log_source.clone(), format!("{:#} (log source: {})", e, &log_source),  record_id.clone()))
                                     })
                                     .collect::<Vec<_>>();
                                 transformed_chunk
