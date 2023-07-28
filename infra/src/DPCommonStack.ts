@@ -29,6 +29,13 @@ export class DPCommonStack extends MatanoStack {
     super(scope, id, props);
 
     this.matanoIngestionBucket = new S3BucketWithNotifications(this, "MatanoIngestionBucket", {
+      bucketProps: {
+        lifecycleRules: [
+          {
+            expiration: cdk.Duration.days(14),
+          },
+        ],
+      },
     });
 
     // For delivering Cloudtrail, S3 access logs
@@ -57,6 +64,16 @@ export class DPCommonStack extends MatanoStack {
         visibilityTimeout: cdk.Duration.seconds(185),
       },
       s3Filters: [{ prefix: "lake", suffix: "mtn_append.zstd.parquet" }],
+      bucketProps: {
+        versioned: true,
+        lifecycleRules: [
+          {
+            noncurrentVersionExpiration: cdk.Duration.days(14),
+            expiredObjectDeleteMarker: true,
+            prefix: "lake",
+          },
+        ],
+      },
     });
 
     this.realtimeBucket = new Bucket(this, "MatanoRealtimeBucket", {

@@ -215,13 +215,13 @@ transform: |-
   }
 
   if .o365.audit.Severity == "informational" { 
-    .event.severity = "1"
+    .event.severity = 1
   } else if .o365.audit.Severity == "low" { 
-    .event.severity = "2"
+    .event.severity = 2
   } else if .o365.audit.Severity == "medium" { 
-    .event.severity = "3"
+    .event.severity = 3
   } else if .o365.audit.Severity == "high" { 
-    .event.severity = "4"
+    .event.severity = 4
   }
 
   if .event.code == "ExchangeAdmin" { 
