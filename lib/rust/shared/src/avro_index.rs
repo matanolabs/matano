@@ -1,6 +1,7 @@
 use crate::avro::AvroValueExt;
 use crate::ArcMutexExt;
 use apache_avro::from_avro_datum;
+use apache_avro::AvroResult;
 use log::info;
 use memmap2::{Mmap, MmapOptions};
 use once_cell::sync::OnceCell;
@@ -47,11 +48,6 @@ pub struct AvroIndex {
 }
 
 impl AvroIndex {
-    /// There's an offset of 2 bytes between the start positions written in Index and where raw compressed block starts.
-    const OFFSET: u64 = 2;
-    /// The length of the sync marker at the end of each block. Remove to get actual data.
-    const SYNC_LENGTH: usize = 16;
-
     pub fn new(indices_paths: HashMap<String, String>, avro_file_path: &str) -> Result<Self> {
         let file = std::fs::File::open(avro_file_path)?;
         let mmap = unsafe { MmapOptions::new().populate().map(&file)? };
@@ -125,19 +121,21 @@ impl AvroIndex {
             .context(format!("Invalid lookup key: {}", index_key))?;
         match index.get(key) {
             Some([start_pos, block_len]) => {
-                let start_pos = *start_pos as u64 + Self::OFFSET;
-                let block_len = *block_len as usize - (Self::OFFSET as usize + Self::SYNC_LENGTH);
+                let start_pos = *start_pos as usize;
+                let block_len = *block_len as usize;
 
                 // Read the whole block since we know the length and avoid multiple reads.
-                let raw_block: Vec<u8> = {
-                    let reader = self.reader.clone();
-                    let start_pos = start_pos as usize;
-                    let buf = reader[start_pos..start_pos + block_len].to_vec();
+                // The count and size are variable length encoded so we need to read so we can seek to the start of the block data.
+                // (The block_len from the input here is the total block len which includes the count and size.)
+                let raw_block = {
+                    let mut buf = &self.reader[start_pos..start_pos + block_len];
+                    let _count = decode_long(&mut buf)?;
+                    let _size = decode_long(&mut buf)?;
                     buf
                 };
 
                 let mut block = vec![];
-                zstd::Decoder::new(raw_block.as_slice())?
+                zstd::Decoder::new(raw_block)?
                     .read_to_end(block.as_mut())
                     .map_err(|e| anyhow!("Failed to decompress avro idx block").context(e))?;
 
@@ -154,4 +152,43 @@ impl AvroIndex {
             None => Ok(None),
         }
     }
+}
+
+// just vendoring read variable length long from avro
+pub fn zag_i64<R: Read>(reader: &mut R) -> AvroResult<i64> {
+    let z = decode_variable(reader)?;
+    Ok(if z & 0x1 == 0 {
+        (z >> 1) as i64
+    } else {
+        !(z >> 1) as i64
+    })
+}
+
+#[inline]
+fn decode_long<R: Read>(reader: &mut R) -> AvroResult<apache_avro::types::Value> {
+    zag_i64(reader).map(apache_avro::types::Value::Long)
+}
+
+fn decode_variable<R: Read>(reader: &mut R) -> AvroResult<u64> {
+    let mut i = 0u64;
+    let mut buf = [0u8; 1];
+
+    let mut j = 0;
+    loop {
+        if j > 9 {
+            // if j * 7 > 64
+            return Err(apache_avro::Error::IntegerOverflow);
+        }
+        reader
+            .read_exact(&mut buf[..])
+            .map_err(apache_avro::Error::ReadVariableIntegerBytes)?;
+        i |= (u64::from(buf[0] & 0x7F)) << (j * 7);
+        if (buf[0] >> 7) == 0 {
+            break;
+        } else {
+            j += 1;
+        }
+    }
+
+    Ok(i)
 }

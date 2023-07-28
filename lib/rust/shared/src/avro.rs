@@ -4,6 +4,7 @@ use apache_avro::types::Value;
 pub trait AvroValueExt<'a> {
     fn as_str(&self) -> Option<&str>;
     fn as_int(&self) -> Option<i32>;
+    fn as_long(&self) -> Option<i64>;
     fn as_bool(&self) -> Option<bool>;
     fn as_ts(&self) -> Option<i64>;
 
@@ -46,6 +47,20 @@ impl<'a> AvroValueExt<'a> for Value {
                     None
                 } else {
                     v.as_int()
+                }
+            }
+            _ => None,
+        }
+    }
+
+    fn as_long(&self) -> Option<i64> {
+        match self {
+            Value::Long(i) => Some(*i),
+            Value::Union(pos, v) => {
+                if *pos == 0 {
+                    None
+                } else {
+                    v.as_long()
                 }
             }
             _ => None,
