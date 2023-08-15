@@ -26,6 +26,8 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: 1.63
+          override: true
+          default: true
     
       # Use rust-cache to cache dependencies, which is a large chunk of the build.
       - name: Cache Rust
