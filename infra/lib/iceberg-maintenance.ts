@@ -291,7 +291,7 @@ class IcebergExpireSnapshots extends Construct {
 
     const smScheduleRule = new events.Rule(this, "Rule", {
       description: "[Matano] Schedules the Iceberg expire snapshots workflow.",
-      schedule: events.Schedule.rate(cdk.Duration.days(1)),
+      schedule: events.Schedule.rate(cdk.Duration.hours(1)),
     });
 
     smScheduleRule.addTarget(
@@ -388,7 +388,7 @@ export class IcebergMaintenance extends Construct {
       lakeStorageBucket: props.lakeStorageBucket,
     });
 
-    new IcebergAthenaExpireSnapshots(this, "ExpireSnapshotsAthena", {
+    new IcebergExpireSnapshots(this, "ExpireSnapshotsAthena", {
       tableNames,
       lakeStorageBucket: props.lakeStorageBucket,
     });
