@@ -45,7 +45,7 @@ class ExpireSnapshots {
             return
         }
 
-        val dtMark = dt.minusDays(1).toInstant().toEpochMilli()
+        val dtMark = dt.minusMinutes(15).toInstant().toEpochMilli()
         val start = System.currentTimeMillis()
 
         val expire = table
@@ -53,10 +53,20 @@ class ExpireSnapshots {
             .expireOlderThan(dtMark)
             .planWith(planExecutorService)
             .executeDeleteWith(expireExecutorService)
+
+
         val toDelete = expire.apply()
         logger.info("Expiring snapshots: $toDelete")
         expire.commit()
         val end = System.currentTimeMillis()
         logger.info("Expired snapshots in ${(end - start) / 1000} seconds")
+
+        logger.info("Rewriting manifests")
+        table
+            .rewriteManifests()
+            .scanManifestsWith(planExecutorService)
+            .rewriteIf { r -> r.length() < 10 * 1024 * 1024 } // 10MB
+            .commit()
+        logger.info("Successfully rewrote manifests")
     }
 }
