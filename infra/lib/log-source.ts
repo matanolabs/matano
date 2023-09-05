@@ -319,6 +319,11 @@ export class MatanoLogSource extends Construct {
             );
           }
 
+          if (isLogSourceConfig) {
+            // delete name key from managed config to avoid merge overwrite
+            delete managedConfig.name;
+          }
+
           const config: any =
             configInfo.type == "shared"
               ? mergeManagedConfig(userConfig, managedConfig, managedLogSourceType)
