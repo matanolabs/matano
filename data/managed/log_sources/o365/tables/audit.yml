@@ -260,7 +260,7 @@ transform: |-
     .event.category = push(.event.category, "authentication")
     .event.type = push(.event.type, "start") 
     .event.type = push(.event.type, "access") 
-  } else if .event.code == "SharePointFileOperation" || .event.code == "SharePointSharingOperation" { { 
+  } else if .event.code == "SharePointFileOperation" || .event.code == "SharePointSharingOperation" {  
     .url.original = del(.o365.audit.ObjectId)
     .file.directory = del(.o365.audit.SourceRelativeUrl)
     .file.name = del(.o365.audit.SourceFileName)
