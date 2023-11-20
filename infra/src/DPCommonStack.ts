@@ -124,7 +124,7 @@ export class DPCommonStack extends MatanoStack {
       description: "[Matano] Matano System Athena Work Group. Used for system queries such as table maintenance.",
       workGroupConfiguration: {
         engineVersion: {
-          selectedEngineVersion: "Athena engine version 2",
+          selectedEngineVersion: "Athena engine version 3",
         },
         publishCloudWatchMetricsEnabled: true,
         resultConfiguration: {
