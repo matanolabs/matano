@@ -164,7 +164,7 @@ impl<'a> AvroValueExt<'a> for Value {
         record_mut.insert_record(tail, insert_value)
     }
 }
-
+#[allow(invalid_reference_casting)] // TODO: remove this, upstream fix in avro-rs
 unsafe fn make_mut<T>(reference: &T) -> &mut T {
     &mut *((reference as *const T) as *mut T)
 }
