@@ -14,17 +14,12 @@
 <a href="https://bestpractices.coreinfrastructure.org/projects/6478"><img src="https://bestpractices.coreinfrastructure.org/projects/6478/badge"></a>
 </p>
 
-## Matano is an open source security lake platform for AWS
+## Open source security data lake for AWS
 
-<p align="center">
-  <strong>
-    <a href="https://www.matano.dev/blog/2022/08/11/announcing-matano?utm_source=ghr">🔔 Read our announcement blog post 🔔</a>
-  </strong>
-</p>
+Matano Open Source Security data lake is an open source **cloud-native security data lake**, built for security teams on AWS.
 
-Matano is an open source **cloud-native alternative to SIEM**, built for security teams on AWS.
-
-We are on a mission to build the first open platform for threat hunting, detection & response, and cybersecurity analytics at petabyte scale.
+> [!NOTE]
+> Matano offers a commercial managed Cloud SIEM for a complete enterprise Security Operations platform. [Learn more](https://matanosecurity.com).
 
 <div>
 <h3 align="center">
@@ -45,13 +40,13 @@ We are on a mission to build the first open platform for threat hunting, detecti
 
 <br>
 
-- **Security Data Lake:** Matano normalizes unstructured security logs into a structured realtime data lake in your AWS account.
-- **Collect All Your Logs:** Matano integrates out of the box with [50+ sources](https://www.matano.dev/docs/log-sources/managed-log-sources) for security logs and can easily be extended with custom sources.
+- **Security Data Lake:** Normalize unstructured security logs into a structured realtime data lake in your AWS account.
+- **Collect All Your Logs:** Integrates out of the box with [50+ sources](https://www.matano.dev/docs/log-sources/managed-log-sources) for security logs and can easily be extended with custom sources.
 - **Detection-as-Code:** Use Python to build realtime detections as code. Support for automatic import of [Sigma](https://www.matano.dev/docs/detections/importing-from-sigma-rules) detections to Matano.
-- **Log Transformation Pipeline:** Matano supports custom VRL ([Vector Remap Language](https://vector.dev/docs/reference/vrl/)) scripting to parse, enrich, normalize and transform your logs as they are ingested without managing any servers.
-- **No Vendor Lock-In:** Matano uses an open table format ([Apache Iceberg](https://iceberg.apache.org/)) and open schema standards ([ECS](https://github.com/elastic/ecs)), to give you full ownership of your security data in a vendor-neutral format.
+- **Log Transformation Pipeline:** Supports custom VRL ([Vector Remap Language](https://vector.dev/docs/reference/vrl/)) scripting to parse, enrich, normalize and transform your logs as they are ingested without managing any servers.
+- **No Vendor Lock-In:** Uses an open table format ([Apache Iceberg](https://iceberg.apache.org/)) and open schema standards ([ECS](https://github.com/elastic/ecs)), to give you full ownership of your security data in a vendor-neutral format.
 - **Bring Your Own Analytics:** Query your security lake directly from any Iceberg-compatible engine (AWS Athena, Snowflake, Spark, Trino etc.) without having to copy data around.
-- **Serverless:** Matano is _fully serverless_ and designed specifically for AWS and focuses on enabling high scale, low cost, and zero-ops.
+- **Serverless:** Fully serverless and designed specifically for AWS and focuses on enabling high scale, low cost, and zero-ops.
 
 ## Architecture
 
@@ -62,11 +57,9 @@ We are on a mission to build the first open platform for threat hunting, detecti
 
 ## 👀 Use cases
 
-- Reduce SIEM costs drastically (1/10th the cost).
+- Reduce SIEM costs.
 - Augment your SIEM with a security data lake for additional context during investigations.
-- Instantly search for matches to IOCs across your data lake using standardized fields.
 - Write detections-as-code using Python to detect suspicious behavior & create contextualized alerts.
-- Easier to use cloud-native open source SIEM alternative for detection & response.
 - ECS-compatible serverless alternative to ELK / Elastic Security stack.
 
 ## ✨ Integrations
@@ -99,14 +92,6 @@ We are on a mission to build the first open platform for threat hunting, detecti
 - [**Amazon SNS**](https://www.matano.dev/docs/detections/alerting)
 - [**Slack**](https://www.matano.dev/docs/detections/alerting/slack)
 
-#### Enrichment / Threat Intelligence
-
-- **AbuseCH** ([URLhaus](https://urlhaus.abuse.ch), [MalwareBazaar](https://bazaar.abuse.ch), [ThreatFox](https://threatfox.abuse.ch))
-- [**AlienVault OTX**](https://otx.alienvault.com/api)
-- **MaxMind GeoIP** (_coming soon_)
-- **GreyNoise Intelligence** (_coming soon_)
-- **Custom 🔧** (_coming soon_)
-
 #### Query engines
 
 - [**Amazon Athena**](https://docs.aws.amazon.com/athena/latest/ug/querying-iceberg.html) (default)
@@ -122,7 +107,7 @@ We are on a mission to build the first open platform for threat hunting, detecti
 
 ### Installation
 
-Install the matano CLI to deploy Matano into your AWS account, and manage your Matano deployment.
+Install the matano CLI to deploy Matano into your AWS account, and manage your deployment.
 
 **Linux**
 
@@ -144,10 +129,10 @@ sudo ./matano-macos-x64.sh
 
 [**Read the complete docs on getting started**](https://www.matano.dev/docs/getting-started)
 
-To get started with Matano, run the `matano init` command.
+To get started, run the `matano init` command.
 
 - Make sure you have AWS credentials in your environment (or in an AWS CLI profile).
-- The interactive CLI wizard will walk you through getting started by generating an initial [Matano directory](https://www.matano.dev/docs/matano-directory) for you, initializing your AWS account, and deploying Matano into your AWS account.
+- The interactive CLI wizard will walk you through getting started by generating an initial [Matano directory](https://www.matano.dev/docs/matano-directory) for you, initializing your AWS account, and deploying into your AWS account.
 - Initial deployment takes a few minutes.
 
 <div align="center">
@@ -185,7 +170,7 @@ When onboarding a new log source or authoring a detection, run `matano deploy` f
 
 [**Read the complete docs on configuring custom log sources**](https://www.matano.dev/docs/log-sources/configuration)
 
-Matano uses [Vector Remap Language (VRL)](https://vector.dev/docs/reference/vrl/), to allow users to easily onboard custom log sources and encourages you to normalize fields according to the [Elastic Common Schema (ECS)](https://www.elastic.co/guide/en/ecs/current/ecs-reference.html) to enable enhanced pivoting and bulk search for IOCs across your security data lake.
+[Vector Remap Language (VRL)](https://vector.dev/docs/reference/vrl/), allows you to easily onboard custom log sources and encourages you to normalize fields according to the [Elastic Common Schema (ECS)](https://www.elastic.co/guide/en/ecs/current/ecs-reference.html) to enable enhanced pivoting and bulk search for IOCs across your security data lake.
 
 Users can define custom VRL programs to parse and transform unstructured logs as they are being ingested through one of the supported mechanisms for a log source (e.g. S3, SQS).
 
@@ -242,7 +227,7 @@ The resulting event 🎉:
 
 [**Read the complete docs on detections**](https://www.matano.dev/docs/detections)
 
-Use Matano detections to define rules that can alert on threats in your security logs. Matano users define _detections as code_ (DaC). A _detection_ is a Python program that is invoked with data from a log source in realtime and can create an _alert_.
+Use detections to define rules that can alert on threats in your security logs. A _detection_ is a Python program that is invoked with data from a log source in realtime and can create an _alert_.
 
 ### Examples
 
@@ -325,7 +310,7 @@ def detect(record):
 
 [**Read the complete docs on alerting**](https://www.matano.dev/docs/detections/alerting)
 
-#### Alerts Matano table
+#### Alerts table
 
 All alerts are automatically stored in a Matano table named `matano_alerts`. The alerts and rule matches are normalized to ECS and contain context about the original event that triggered the rule match, along with the alert and rule data.
 
@@ -359,7 +344,7 @@ order by
 
 #### Delivering alerts
 
-Matano allows you to deliver alerts to external systems. You can use the Matano alerting SNS topic to deliver alerts to Email, Slack, and other services.
+You can deliver alerts to external systems. You can use the alerting SNS topic to deliver alerts to Email, Slack, and other services.
 
 <div align="center">
   <br>
@@ -368,18 +353,11 @@ Matano allows you to deliver alerts to external systems. You can use the Matano 
   <i>A medium severity alert delivered to Slack</i>
 </div>
 
-## ❔ Why Matano?
-
-- Traditional tools used to analyze security data (SIEMs) don’t scale, and are too expensive and difficult to manage for cloud-based security teams.
-- Cybersecurity vendors lock your data in proprietary formats which make it difficult to use outside of their product. With Matano, all your data is in open Apache Iceberg tables that can can be directly queried from different tools (AWS Athena, Snowflake, etc.) without having to copy any data.
-- **Security is a Big Data problem**: collecting data from your network, SaaS, and cloud environments can exceed 100TBs of data. Security teams are forced to either not collect some data, leave data unprocessed, or build an in-house data lake to cost-effectively analyze large datasets. Matano helps you easily build a security data lake with all features needed for detection and response.
-- At scale, without a strategy to normalize data into a structured format, it is difficult to correlate across data sources & build effective alerts that don’t create many false positives. Traditional SIEM query-based rules fail to accurately identify threats. Matano's detection-as-code approach offers greater flexibility and help's you harden your detections over time.
-
 ## ❤️ Community support
 
-For general help on using Matano, please refer to the official Matano [documentation](https://matano.dev/docs). For additional help, feel free to use one of these channels to ask a question:
+For general help on usage, please refer to the official [documentation](https://matano.dev/docs). For additional help, feel free to use one of these channels to ask a question:
 
-- [Discord](https://discord.gg/YSYfHMbfZQ) \(Come join the Matano family, and hang out with the team and community\)
+- [Discord](https://discord.gg/YSYfHMbfZQ) \(Come join the family, and hang out with the team and community\)
 - [Forum](https://github.com/matanolabs/matano/discussions) \(For deeper conversations about features, the project, or problems\)
 - [GitHub](https://github.com/matanolabs/matano) \(Bug reports, Contributions\)
 - [Twitter](https://twitter.com/matanolabs) \(Get news hot off the press\)
