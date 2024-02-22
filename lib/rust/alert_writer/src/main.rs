@@ -374,6 +374,8 @@ async fn merge_incoming_rule_matches_to_alert_and_compute_cdc(
             del(v.event.created)
             del(v.event.kind)
             del(v.event.duration)
+            del(v.event.original)
+            del(v.message)
 
             flatten(v)
         }

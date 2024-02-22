@@ -129,8 +129,9 @@ impl AvroIndex {
                 // (The block_len from the input here is the total block len which includes the count and size.)
                 let raw_block = {
                     let mut buf = &self.reader[start_pos..start_pos + block_len];
-                    let _count = decode_long(&mut buf)?;
-                    let _size = decode_long(&mut buf)?;
+                    let decoded_count = decode_long(&mut buf)?;
+                    let decoded_block_length = decode_long(&mut buf)? as usize;
+                    let buf = &buf[..decoded_block_length];
                     buf
                 };
 
@@ -165,8 +166,12 @@ pub fn zag_i64<R: Read>(reader: &mut R) -> AvroResult<i64> {
 }
 
 #[inline]
-fn decode_long<R: Read>(reader: &mut R) -> AvroResult<apache_avro::types::Value> {
-    zag_i64(reader).map(apache_avro::types::Value::Long)
+fn decode_long<R: Read>(reader: &mut R) -> AvroResult<i64> {
+    match zag_i64(reader).map(apache_avro::types::Value::Long) {
+        Ok(apache_avro::types::Value::Long(v)) => Ok(v),
+        Ok(_) => unreachable!(),
+        Err(e) => Err(e),
+    }
 }
 
 fn decode_variable<R: Read>(reader: &mut R) -> AvroResult<u64> {
