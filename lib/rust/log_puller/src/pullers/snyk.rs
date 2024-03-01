@@ -209,7 +209,7 @@ impl PullLogs for SnykPuller {
                 let page = next_page;
 
                 let url = format!(
-                    "https://api.snyk.io/reporting/issues/?from={}&to={}page={}&perPage=100&sortBy=issueTitle&order=asc&groupBy=issue",
+                    "https://api.snyk.io/api/v1/reporting/issues/?from={}&to={}page={}&perPage=100&sortBy=issueTitle&order=asc&groupBy=issue",
                     start_day,
                     yesterday,
                     page
