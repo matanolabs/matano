@@ -1,4 +1,4 @@
-aiobotocore==2.4.0
+aiobotocore==2.8.0
 nest_asyncio==1.5.6
 jsonlines==3.0.0
 fastavro[snappy]==1.6.0

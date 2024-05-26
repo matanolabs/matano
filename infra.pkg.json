@@ -5,13 +5,15 @@
     "targets": ["node14.18.1-linux-x64", "node14.18.1-macos-x64"],
     "assets": [
       "./data/**/*",
+      "./infra/node_modules/aws-cdk-lib/custom-resource-handlers/lib/aws-s3/auto-delete-objects-handler/*.js",
       "./infra/node_modules/aws-cdk-lib/custom-resources/lib/provider-framework/runtime/*.js",
       "./infra/node_modules/aws-cdk-lib/lambda-layer-awscli/**/*",
       "./infra/node_modules/aws-cdk-lib/asset-awscli-v1/**/*",
       "./infra/node_modules/@aws-cdk/asset-awscli-v1/**/*",
       "./infra/node_modules/aws-cdk-lib/aws-s3-assets/**/*",
       "./infra/node_modules/aws-cdk-lib/aws-s3-deployment/**/*",
-      "./infra/node_modules/aws-cdk-lib/aws-s3/**/*"
+      "./infra/node_modules/aws-cdk-lib/aws-s3/**/*",
+      "./infra/node_modules/aws-cdk-lib/lazy-index.js"
     ],
     "outputPath": "build"
   }
