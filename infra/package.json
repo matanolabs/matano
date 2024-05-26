@@ -24,9 +24,9 @@
   "dependencies": {
     "@aws-cdk/cx-api": "*",
     "@mrgrain/cdk-esbuild": "^3",
-    "aws-cdk": "2.54.0",
-    "aws-cdk-lib": "2.54.0",
-    "aws-sdk": "^2.1093",
+    "aws-cdk": "2.85.0",
+    "aws-cdk-lib": "2.85.0",
+    "aws-sdk": "^2.1311",
     "constructs": "^10.0.0",
     "fs-extra": "^10.1.0",
     "promptly": "^3.2.0",

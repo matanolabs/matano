@@ -43,7 +43,7 @@ function setCliPackageVersion() {
 }
 
 function prepareCdkPkg() {
-  execSync("npm install aws-cdk@2.54.0", { cwd: workDir });
+  execSync("npm install aws-cdk@2.85.0", { cwd: workDir });
 
   // some js template files mess up pkg, just delete
   fs.rmSync(path.resolve(workDir, "node_modules/aws-cdk/lib/init-templates/app/javascript"), {
