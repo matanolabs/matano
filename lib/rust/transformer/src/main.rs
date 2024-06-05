@@ -99,6 +99,14 @@ lazy_static! {
     };
 }
 
+fn bucket_location_constraint_to_aws_region(blc: &str) -> &str {
+    match blc {
+        "EU" => "eu-west-1",
+        "" => "us-east-1",
+        _ => blc,
+    }
+}
+
 async fn get_s3_client_using_access_role_cached(bucket: &str) -> aws_sdk_s3::Client {
     if let Some(access_role_arn) = CUSTOM_BUCKET_TO_ACCESS_ROLE_ARN_MAP.get(bucket) {
         let mut custom_bucket_to_region_cache = CUSTOM_BUCKET_TO_REGION_CACHE.lock().unwrap();
@@ -121,12 +129,10 @@ async fn get_s3_client_using_access_role_cached(bucket: &str) -> aws_sdk_s3::Cli
                     .await
                     .unwrap()
                     .location_constraint;
-                let region = match location_constraint {
-                    Some(location_constraint) => {
-                        Region::new(location_constraint.as_str().to_owned())
-                    }
-                    None => Region::new("us-east-1"),
-                };
+                let region = location_constraint
+                    .map(|lc| bucket_location_constraint_to_aws_region(lc.as_str()).to_string())
+                    .unwrap_or("us-east-1".to_string());
+                let region = Region::new(region);
                 custom_bucket_to_region_cache.insert(bucket.to_string(), region);
                 custom_bucket_to_region_cache.get(bucket).unwrap()
             }

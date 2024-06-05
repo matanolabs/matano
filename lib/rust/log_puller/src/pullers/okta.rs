@@ -157,6 +157,18 @@ impl PullLogs for OktaPuller {
                 .await?;
 
             let headers = response.headers().clone();
+
+            let status = response.status();
+            if !response.status().is_success() {
+                let msg = response.text().await.unwrap_or_default();
+                log::error!("{}", msg);
+                if status.is_client_error() {
+                    anyhow::bail!(format!("Client error: {}", msg));
+                } else {
+                    anyhow::bail!("Internal error")
+                }
+            }
+
             let response_json: Vec<serde_json::Value> = response.json().await?;
 
             // handle Okta paged responses containing `Link` header for 'self' and 'next'
