@@ -2,7 +2,12 @@
   "name": "matano-cdk",
   "pkg": {
     "scripts": ["./infra/dist/**/*.js"],
-    "targets": ["node14.18.1-linux-x64", "node14.18.1-macos-x64"],
+    "targets": [
+      "node14.18.1-linux-x64",
+      "node14.18.1-macos-x64",
+      "node14.18.1-linux-arm64",
+      "node14.18.1-macos-arm64"
+    ],
     "assets": [
       "./data/**/*",
       "./infra/node_modules/aws-cdk-lib/custom-resource-handlers/lib/aws-s3/auto-delete-objects-handler/*.js",
