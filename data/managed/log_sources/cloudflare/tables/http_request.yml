@@ -496,7 +496,7 @@ transform: |
   if err == null {
       .url = parsed
       if .url.query != null {
-        .url.query = decode_percent!(split!(.json.ClientRequestReferer, "?")[1])
+        .url.query = decode_percent(split!(.json.ClientRequestReferer, "?")[1]) ?? null
       }
       .url.domain = del(.url.host)
   }                                                                         
